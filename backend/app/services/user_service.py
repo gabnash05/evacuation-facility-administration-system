@@ -31,7 +31,7 @@ def authenticate_user(email: str, password: str) -> Dict[str, Any]:
         user = User.get_active_by_email(email)
         
         if not user:
-            logger.warning("Authentication failed: User not found for email %s", email)
+            logger.warning("Authentication failed: User not found for email")
             return {
                 "success": False,
                 "message": "Invalid email or password"
@@ -39,7 +39,7 @@ def authenticate_user(email: str, password: str) -> Dict[str, Any]:
         
         # Verify password
         if not check_password_hash(user.password_hash, password):
-            logger.warning("Authentication failed: Invalid password for email %s", email)
+            logger.warning("Authentication failed: Invalid password for email")
             return {
                 "success": False,
                 "message": "Invalid email or password"

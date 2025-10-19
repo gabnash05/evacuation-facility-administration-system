@@ -64,6 +64,21 @@ class UserUpdateSchema(Schema):
     )
     is_active = fields.Boolean(allow_none=True, description="User active status")
 
+    @validates_schema
+    def validate_center_requirement(self, data, **kwargs):
+        """Validate center_id requirements based on role."""
+        role = data.get('role')
+        center_id = data.get('center_id')
+        
+        # Only validate if role is being updated
+        if role:
+            # Roles that REQUIRE center_id
+            if role in ['center_admin', 'volunteer'] and center_id is None:
+                raise ValidationError('center_id is required for center_admin and volunteer roles')
+            
+            # Roles that MUST NOT have center_id
+            if role in ['super_admin', 'city_admin'] and center_id is not None:
+                raise ValidationError('center_id must be null for super_admin and city_admin roles')
 
 class UserResponseSchema(Schema):
     """Schema for user API responses."""

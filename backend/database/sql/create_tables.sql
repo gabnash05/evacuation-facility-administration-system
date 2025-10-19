@@ -26,7 +26,9 @@ CREATE TABLE IF NOT EXISTS event (
     end_date TIMESTAMP NULL,
     status VARCHAR(20) NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'resolved', 'monitoring')),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    updated_at TIMESTAMP DEFAULT 
+    CHECK (end_date IS NULL OR end_date >= date_declared)
+
 );
 
 -- ========================
@@ -85,6 +87,7 @@ CREATE TABLE IF NOT EXISTS individual (
     gender VARCHAR(10) NULL CHECK (gender IN ('Male', 'Female', 'Other')),
     relationship_to_head VARCHAR(50) NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     
     CONSTRAINT fk_individual_household 
         FOREIGN KEY (household_id) 
