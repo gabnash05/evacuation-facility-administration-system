@@ -1,45 +1,73 @@
-**Edit a file, create a new file, and clone from Bitbucket in under 2 minutes**
+# Evacuation Facility Administration System
 
-When you're done, you can delete the content in this README and update the file with details for others getting started with your repository.
+This repository contains a Flask backend and a React + Vite frontend for managing evacuation centers, events, households, and users.
 
-*We recommend that you open this README in another tab as you perform the tasks below. You can [watch our video](https://youtu.be/0ocf7u76WSo) for a full demo of all the steps in this tutorial. Open the video in a new tab to avoid leaving Bitbucket.*
+The sections below provide concise, collaboration-focused setup instructions for the backend, database, and frontend.
 
----
+## Prerequisites
+- Git
+- Python 3.9+ and pip
+- Pipenv (backend dependency management)
+- Node.js 16+ and npm or pnpm (frontend)
 
-## Edit a file
+## Backend (development)
+1. Clone the repository and change into the project root:
 
-You’ll start by editing this README file to learn how to edit a file in Bitbucket.
+	git clone <repo-url>
+	cd evacuation-facility-administration-system
 
-1. Click **Source** on the left side.
-2. Click the README.md link from the list of files.
-3. Click the **Edit** button.
-4. Delete the following text: *Delete this line to make a change to the README from Bitbucket.*
-5. After making your change, click **Commit** and then **Commit** again in the dialog. The commit page will open and you’ll see the change you just made.
-6. Go back to the **Source** page.
+2. Copy environment file and edit values (backend `.env` lives in `backend/`):
 
----
+	cd backend
+	copy .env.example .env   # Windows PowerShell
+	# Edit `backend/.env` and set DB connection and secret keys
 
-## Create a file
+3. Install Python dependencies with Pipenv and activate the virtual environment:
 
-Next, you’ll add a new file to this repository.
+	pipenv install
+	pipenv shell
 
-1. Click the **New file** button at the top of the **Source** page.
-2. Give the file a filename of **contributors.txt**.
-3. Enter your name in the empty file space.
-4. Click **Commit** and then **Commit** again in the dialog.
-5. Go back to the **Source** page.
+4. Run the development server:
 
-Before you move on, go ahead and explore the repository. You've already seen the **Source** page, but check out the **Commits**, **Branches**, and **Settings** pages.
+	# from `backend/` inside pipenv shell
+	python run.py
 
----
+Notes for collaborators:
+- Use the `.env.example` as the canonical template; do not commit secrets.
+- Lock dependency changes (Pipfile/Pipfile.lock) and open a PR when bumping packages.
 
-## Clone a repository
+## Database
+1. The database setup script is at `backend/database/setup_db.py` and SQL schema at `backend/database/sql/create_tables.sql`.
+2. Ensure your `backend/.env` DB connection string points to your local DB (Postgres).
+3. To create tables locally run (from `backend/`):
 
-Use these steps to clone from SourceTree, our client for using the repository command-line free. Cloning allows you to work on your files locally. If you don't yet have SourceTree, [download and install first](https://www.sourcetreeapp.com/). If you prefer to clone from the command line, see [Clone a repository](https://confluence.atlassian.com/x/4whODQ).
+	pipenv run python backend\database\setup_db.py
 
-1. You’ll see the clone button under the **Source** heading. Click that button.
-2. Now click **Check out in SourceTree**. You may need to create a SourceTree account or log in.
-3. When you see the **Clone New** dialog in SourceTree, update the destination path and name if you’d like to and then click **Clone**.
-4. Open the directory you just created to see your repository’s files.
+4. For collaborative environments:
+- Prefer migrations for production (this project uses a direct setup script; consider adding Alembic or Flask-Migrate for team projects).
+- Share a sample DB dump (without PII) or schema changes in PRs.
 
-Now that you're more familiar with your Bitbucket repository, go ahead and add a new file locally. You can [push your change back to Bitbucket with SourceTree](https://confluence.atlassian.com/x/iqyBMg), or you can [add, commit,](https://confluence.atlassian.com/x/8QhODQ) and [push from the command line](https://confluence.atlassian.com/x/NQ0zDQ).
+## Frontend (development)
+1. From the repo root, change into the `frontend/` folder:
+
+	cd frontend
+
+2. Copy environment file and set the API URL if needed:
+
+	copy .env.example .env   # Windows PowerShell
+
+3. Install dependencies and start the dev server:
+
+	npm install
+	npm run dev
+
+4. The frontend expects the backend API to be available. If running both locally, ensure the backend server URL is set in `frontend/.env` or in `src/services/api.ts`.
+
+Notes for collaborators:
+- Keep frontend dependency updates in a separate PR; include build proof or CI change when necessary.
+
+## Useful commands summary
+- Backend install: `cd backend && pipenv install`
+- Backend run: `cd backend && pipenv run python run.py`
+- Setup DB: `cd backend && pipenv run python backend\database\setup_db.py`
+- Frontend install & run: `cd frontend && npm install && npm run dev`
