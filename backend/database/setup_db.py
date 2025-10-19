@@ -98,15 +98,14 @@ def setup_tables():
             logger.info("[✓] SQL script executed successfully!")
         except psycopg2.Error as e:
             # If objects already exist, that's fine - we just need to verify they're there
-            if "already exists" in str(e).lower():
+            if e.pgcode == '42P07':  # duplicate_table
                 logger.warning(f"[!] Some database objects already exist (normal for re-runs)")
                 conn.rollback()
                 # Don't raise the error - proceed to verification
             else:
                 logger.error(f"[X] Failed to execute SQL script: {e}")
                 conn.rollback()
-                raise
-        
+                raise        
         cursor.close()
         conn.close()
         

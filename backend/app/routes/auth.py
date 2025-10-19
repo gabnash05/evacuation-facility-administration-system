@@ -6,7 +6,7 @@ from typing import Tuple
 from flask import Blueprint, jsonify, request
 from flask_jwt_extended import jwt_required, get_jwt_identity
 
-from backend.app.services.user_service import (
+from app.services.user_service import (
     authenticate_user,
     register_user,
     get_current_user
@@ -16,7 +16,6 @@ from app.schemas.user import (
     UserRegisterSchema,
     UserResponseSchema
 )
-
 # Configure logger for this module
 logger = logging.getLogger(__name__)
 
@@ -43,7 +42,6 @@ def login() -> Tuple:
             - HTTP status code
     """
     try:
-        # Validate and deserialize input using Marshmallow schema
         try:
             data = login_schema.load(request.get_json())
         except Exception as validation_error:
@@ -66,15 +64,27 @@ def login() -> Tuple:
                 "message": auth_result["message"]
             }), 401
         
-        response = {
+        response_data = {
             "success": True,
             "message": "Login successful",
             "data": {
-                "access_token": auth_result["access_token"],
                 "role": auth_result["role"]
             }
         }
-        return jsonify(response), 200
+
+        response = jsonify(response_data)       
+         
+        # Set httpOnly cookie
+        response.set_cookie(
+            'access_token', 
+            auth_result["access_token"], 
+            httponly=True, 
+            secure=True,  # Use True in production
+            samesite='Lax',
+            max_age=86400  # 1 day
+        )
+
+        return response, 200
         
     except Exception as error:
         logger.error("Error during login: %s", str(error))
