@@ -1,0 +1,8 @@
+#!/usr/bin/env sh
+. "$(dirname -- "$0")/_/husky.sh"
+
+echo "Running EFAS pre-commit checks..."
+
+npm run pre-commit
+
+echo "[✔] EFAS pre-commit checks passed!"
