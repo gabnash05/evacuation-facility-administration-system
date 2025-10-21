@@ -620,3 +620,38 @@ npm run lint
 npm run format
 npm run dev
 ```
+
+
+# Master Layout 
+- EFASS-26: Master Layout
+- Kim Gabriel A. Nasayao
+- 10/20/2025 - 10/2X/2025
+
+---
+
+## Create Sidebar Component
+- props: role
+- based on role, it determines which sidebar is generated
+- use Link component from react router to change pages
+
+## Create Topbar Component
+- shows which user role is logged in
+- has ModeToggle for theme
+
+## Create MainLayout
+- instead of separate layouts for each user, a single layout that passes in the user role into the Sidebar component is created
+- it gets the role of the user from useAuth hook
+
+## Create ProtectedRoute.tsx
+- this is a component that handles reroutes if the user is not yet authenticated
+- it uses useAuth hook to determine this and reroutes users
+
+## Create Mock Pages and Mock Login Page for testing
+
+## Create App.tsx that handles all routing
+- refer to App.tsx routing. its hella complicated.
+
+## Create Sample Page
+- `pages/CityAdminDashboardSample.tsx`
+
+## Add Blank Pages
