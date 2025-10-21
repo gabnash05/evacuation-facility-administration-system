@@ -2,6 +2,8 @@
 
 import os
 import logging
+import getpass
+import re
 from typing import Optional
 import psycopg2
 from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT
@@ -115,6 +117,91 @@ def setup_tables():
         logger.error(f"[X] Failed to setup tables: {e}")
         raise
 
+
+def is_valid_email(email):
+    """Basic email validation."""
+    pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
+    return re.match(pattern, email) is not None
+
+
+def create_super_admin():
+    """Create super admin user with prompted email and password."""
+    try:
+        print("\n=== Super Admin Setup ===")
+        
+        # Prompt for email
+        while True:
+            email = input("Enter email for super admin: ").strip()
+            if not email:
+                print("Email cannot be empty. Please try again.")
+                continue
+            if not is_valid_email(email):
+                print("Invalid email format. Please enter a valid email address.")
+                continue
+            break
+        
+        # Prompt for password
+        while True:
+            password = getpass.getpass("Enter password: ")
+            confirm_password = getpass.getpass("Confirm password: ")
+            
+            if not password:
+                print("Password cannot be empty. Please try again.")
+                continue
+                
+            if password != confirm_password:
+                print("Passwords do not match. Please try again.")
+                continue
+                
+            if len(password) < 6:
+                print("Password must be at least 6 characters long. Please try again.")
+                continue
+                
+            break
+        
+        # Read SQL script
+        sql_file_path = os.path.join(os.path.dirname(__file__), "sql", "create_user.sql")
+        
+        if not os.path.exists(sql_file_path):
+            logger.error(f"[X] SQL file not found: {sql_file_path}")
+            return False
+        
+        with open(sql_file_path, 'r', encoding='utf-8') as file:
+            sql_script = file.read()
+        
+        # Execute SQL script with email and password parameters
+        conn = get_database_connection()
+        cursor = conn.cursor()
+        
+        try:
+            # Replace parameter placeholders with actual values
+            # Escape single quotes for SQL
+            email_escaped = email.replace("'", "''")
+            password_escaped = password.replace("'", "''")
+            
+            sql_script = sql_script.replace('&1', email_escaped)
+            sql_script = sql_script.replace('&2', password_escaped)
+            
+            cursor.execute(sql_script)
+            conn.commit()
+            logger.info("[✓] Super admin user created/updated successfully!")
+            logger.info(f"[✓] Email: {email}")
+            logger.info(f"[✓] Role: super_admin")
+            return True
+            
+        except psycopg2.Error as e:
+            logger.error(f"[X] Failed to create super admin: {e}")
+            conn.rollback()
+            return False
+        finally:
+            cursor.close()
+            conn.close()
+            
+    except Exception as e:
+        logger.error(f"[X] Failed to create super admin: {e}")
+        return False
+
+
 def verify_tables():
     """Verify that all tables were created correctly."""
     try:
@@ -173,8 +260,15 @@ def main():
         logger.info("Step 2: Setting up tables...")
         setup_tables()
         
-        # Step 3: Verify setup
-        logger.info("Step 3: Verifying setup...")
+        # Step 3: Create super admin
+        logger.info("Step 3: Creating super admin user...")
+        admin_created = create_super_admin()
+        
+        if not admin_created:
+            logger.warning("[!] Super admin creation failed or skipped!")
+        
+        # Step 4: Verify setup
+        logger.info("Step 4: Verifying setup...")
         success = verify_tables()
         
         if success:
