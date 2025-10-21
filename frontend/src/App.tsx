@@ -1,15 +1,22 @@
 // App.tsx
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { CityAdminDashboard } from '@/pages/samples/CityAdminDashboardSample';
+import { CityAdminDashboardSample } from '@/pages/samples/CityAdminDashboardSample';
+
+import { CityAdminDashboard } from './pages/city-admin/CityAdminDashboard';
+import { CityAdminCentersPage } from '@/pages/city-admin/CityAdminCentersPage';
+import { CityAdminEventsPage } from './pages/city-admin/CityAdminEventsPage';
+import { CityAdminHouseholdsPage } from './pages/city-admin/CityAdminHouseholdsPage';
+
+import { CenterAdminDashboard } from '@/pages/center-admin/CenterAdminDashboard';
+import { CenterAdminHouseholdsPage } from './pages/center-admin/CenterAdminHouseholds';
+
+import { VolunteerDashboard } from '@/pages/volunteer/VolunteerDashboard';
+
 import MainLayout from '@/layouts/MainLayout';
-import LoginPage from '@/pages/auth/login/LoginPage';
+import LoginPage from '@/pages/auth/LoginPage';
 import ProtectedRoute from '@/components/features/auth/ProtectedRoute';
 
 // Mock page components
-const DashboardPage = () => <div className="p-6">Dashboard Content</div>;
-const CentersPage = () => <div className="p-6">Evacuation Centers Management</div>;
-const EventsPage = () => <div className="p-6">Events Management</div>;
-const HouseholdsPage = () => <div className="p-6">Households Management</div>;
 const UnauthorizedPage = () => <div className="min-h-screen flex items-center justify-center">Unauthorized Access</div>;
 
 function App() {
@@ -26,9 +33,9 @@ function App() {
                         <MainLayout>
                             <Routes>
                                 <Route path="dashboard" element={<CityAdminDashboard />} />
-                                <Route path="centers" element={<CentersPage />} />
-                                <Route path="events" element={<EventsPage />} />
-                                <Route path="households" element={<HouseholdsPage />} />
+                                <Route path="centers" element={<CityAdminCentersPage />} />
+                                <Route path="events" element={<CityAdminEventsPage />} />
+                                <Route path="households" element={<CityAdminHouseholdsPage />} />
                                 <Route path="*" element={<Navigate to="dashboard" replace />} />
                             </Routes>
                         </MainLayout>
@@ -39,8 +46,8 @@ function App() {
                     <ProtectedRoute requiredRole={['center_admin']}>
                         <MainLayout>
                             <Routes>
-                                <Route path="dashboard" element={<DashboardPage />} />
-                                <Route path="households" element={<HouseholdsPage />} />
+                                <Route path="dashboard" element={<CenterAdminDashboard />} />
+                                <Route path="households" element={<CenterAdminHouseholdsPage />} />
                                 <Route path="*" element={<Navigate to="dashboard" replace />} />
                             </Routes>
                         </MainLayout>
@@ -51,7 +58,7 @@ function App() {
                     <ProtectedRoute requiredRole={['volunteer']}>
                         <MainLayout>
                             <Routes>
-                                <Route path="dashboard" element={<DashboardPage />} />
+                                <Route path="dashboard" element={<VolunteerDashboard />} />
                                 <Route path="*" element={<Navigate to="dashboard" replace />} />
                             </Routes>
                         </MainLayout>
