@@ -2,12 +2,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 
-export function CityAdminDashboard() {
+export function CityAdminDashboardSample() {
     return (
         <div className="w-full min-w-0 bg-background">
             <div className="w-full p-8">
                 <Card className="w-full border-none shadow-none">
-                    <CardHeader className="px-0 pt-0">
+                    <CardHeader className="px-5 pt-0">
                         <CardTitle className="text-4xl font-bold">City Admin Dashboard</CardTitle>
                         <CardDescription className="text-lg mt-4">
                             Welcome to the City Admin dashboard.
