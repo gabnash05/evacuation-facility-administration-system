@@ -67,7 +67,7 @@ export function AppSidebar({ role, roleLabel, userEmail }: AppSidebarProps) {
     };
 
     return (
-        <Sidebar className="bg-sidebar text-sidebar-foreground border-r border-sidebar-border">
+        <Sidebar className="bg-sidebar text-sidebar-foreground border-r border-sidebar-border shadow-sm">
             <SidebarHeader className="border-sidebar-border">
                 <div className="p-1 flex items-center gap-2">
                     <img

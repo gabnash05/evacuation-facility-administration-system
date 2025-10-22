@@ -140,4 +140,4 @@ QA or the deployment team performs **spotcheck tests** on the deployed environme
 ### Decision: Pass Spotcheck?
 
 * **No:** Create or reopen a Jira issue, assign it back to Dev/QA, and repeat the QA → Merge → Deploy process.
-* **Yes:** Mark the Jira issue as **“Done.”** The feature is officially deployed and complete.
+* **Yes:** Move the Jira issue from **In Review** to **Done**. The feature is officially deployed and complete.
