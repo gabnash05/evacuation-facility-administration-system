@@ -27,7 +27,7 @@ register_schema = UserRegisterSchema()
 user_response_schema = UserResponseSchema()
 
 
-@auth_bp.route("/api/auth/login", methods=["POST"])
+@auth_bp.route("/auth/login", methods=["POST"])
 def login() -> Tuple:
     """
     Authenticate a user and return JWT token.
@@ -94,7 +94,7 @@ def login() -> Tuple:
         }), 500
 
 
-@auth_bp.route("/api/auth/register", methods=["POST"])
+@auth_bp.route("/auth/register", methods=["POST"])
 @jwt_required()
 def register() -> Tuple:
     """
@@ -117,6 +117,7 @@ def register() -> Tuple:
     try:
         # Validate and deserialize input using Marshmallow schema
         try:
+            logger.info("User registration attempt")
             data = register_schema.load(request.get_json())
         except Exception as validation_error:
             return jsonify({
@@ -139,10 +140,16 @@ def register() -> Tuple:
                 "message": "Invalid token"
             }), 401
         
-        if current_user.role != "city_admin" or role != "super_admin":
+        permission_hierarchy = {
+            "super_admin": ["super_admin", "city_admin", "center_admin", "volunteer"],
+            "city_admin": ["center_admin", "volunteer"],
+            "center_admin": []  # Cannot create users
+        }
+
+        if role not in permission_hierarchy.get(current_user.role, []):
             return jsonify({
                 "success": False,
-                "message": "Insufficient permissions"
+                "message": "Insufficient permissions to create this role"
             }), 403
         
         logger.info("Registration attempt by user %s for email: %s", current_user_id, email)
@@ -175,7 +182,46 @@ def register() -> Tuple:
         }), 500
 
 
-@auth_bp.route("/api/auth/me", methods=["GET"])
+@auth_bp.route("/auth/logout", methods=["POST"])
+def logout() -> Tuple:
+    """
+    Logout user by clearing the access token cookie.
+    
+    Returns:
+        Tuple containing:
+            - JSON response with standardized format
+            - HTTP status code
+    """
+
+    try:
+        logger.info("Logout request received")
+        
+        response = jsonify({
+            "success": True,
+            "message": "Logout successful"
+        })
+        
+        response.set_cookie(
+            'access_token', 
+            '', 
+            httponly=True, 
+            secure=True, 
+            samesite='Lax',
+            max_age=0,
+            expires=0 
+        )
+        
+        return response, 200
+    
+    except Exception as error:
+        logger.error("Error during logout: %s", str(error))
+        return jsonify({
+            "success": False,
+            "message": "Internal server error during logout"
+        }), 500
+
+
+@auth_bp.route("/auth/me", methods=["GET"])
 @jwt_required()
 def get_me() -> Tuple:
     """
@@ -219,5 +265,3 @@ def get_me() -> Tuple:
             "message": "Internal server error"
         }), 500
     
-
-# TODO: Logout Route

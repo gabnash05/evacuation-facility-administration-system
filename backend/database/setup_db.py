@@ -7,6 +7,7 @@ import re
 from typing import Optional
 import psycopg2
 from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT
+from werkzeug.security import generate_password_hash
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -158,6 +159,8 @@ def create_super_admin():
                 continue
                 
             break
+
+        password_hash = generate_password_hash(password)
         
         # Read SQL script
         sql_file_path = os.path.join(os.path.dirname(__file__), "sql", "create_user.sql")
@@ -177,10 +180,10 @@ def create_super_admin():
             # Replace parameter placeholders with actual values
             # Escape single quotes for SQL
             email_escaped = email.replace("'", "''")
-            password_escaped = password.replace("'", "''")
+            password_hash_escaped = password_hash.replace("'", "''")
             
             sql_script = sql_script.replace('&1', email_escaped)
-            sql_script = sql_script.replace('&2', password_escaped)
+            sql_script = sql_script.replace('&2', password_hash_escaped)
             
             cursor.execute(sql_script)
             conn.commit()
