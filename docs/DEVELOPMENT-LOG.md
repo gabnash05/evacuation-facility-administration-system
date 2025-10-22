@@ -648,10 +648,12 @@ npm run dev
 
 ## Create Mock Pages and Mock Login Page for testing
 
+## Use a Mock useAuth hook
+
 ## Create App.tsx that handles all routing
 - refer to App.tsx routing. its hella complicated.
 
 ## Create Sample Page
 - `pages/CityAdminDashboardSample.tsx`
 
-## Add Blank Pages
+## Add Blank Pages connected into App.tsx to make it easier for collaborators to develop their parts
