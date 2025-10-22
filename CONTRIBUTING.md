@@ -5,9 +5,10 @@
 ### In Jira:
 
 1. Open the ticket you’ll be working on.
-2. Click **"Create Branch"** directly from the Jira issue — this links the branch to the ticket.
-3. When prompted, select **`dev`** as the source branch (not `main`).
-4. Example branch name: `feature/EFAS-123-description`
+2. Move the ticket from **Selected for Development** to **In Progress**
+3. Click **"Create Branch"** directly from the Jira issue — this links the branch to the ticket.
+4. When prompted, select **`dev`** as the source branch (not `main`).
+5. Example branch name: `feature/EFAS-123-description`
 
 ---
 
@@ -69,6 +70,8 @@ git push origin feature/EFAS-123-description
 
 4. In Jira (or your Git platform like GitHub/GitLab/Bitbucket), create a **Pull Request (PR)** linked to the Jira issue.
 5. Make sure the PR title and description match the Jira issue.
+6. Select **Dev** as the destination branch of the Pull Request.
+7. Move the Jira ticket for this into **For Review**
 
 > **Note:** The QA reviewer and the PR approver must be different people to ensure proper review separation.
 
@@ -76,15 +79,17 @@ git push origin feature/EFAS-123-description
 
 ## 3. Prepare for QA (Dev → QA)
 
-1. QA will locate the PR linked in Jira and check out the branch for testing.
+1. QA will move the ticket for this branch to **In Review** 
+
+2. QA will locate the PR linked in Jira and check out the branch for testing.
 
 ```bash
 git fetch origin
 git checkout feature/EFAS-123-description
 ```
 
-2. QA will test it in the QA environment.
-3. If QA finds issues, they’ll create or update a linked **QA subtask** in Jira (e.g., `EFAS-124 QA - Login button not responsive`).
+3. QA will test it in the QA environment.
+4. If QA finds issues, they’ll create or update a linked **QA subtask** in Jira (e.g., `EFAS-124 QA - Login button not responsive`).
 
 ---
 
@@ -93,13 +98,12 @@ git checkout feature/EFAS-123-description
 QA performs the necessary checks:
 
 * Functional tests
-* Integration tests
 * UI/UX validation
 
 ### Decision: Pass QA?
 
 * **No:** QA updates or reopens the Jira QA issue. The developer fixes issues on the same branch, pushes updates, and QA retests.
-* **Yes:** QA marks the issue as **“QA Passed”** in Jira and moves it forward.
+* **Yes:** QA approves the Pull Request.
 
 ---
 
@@ -117,12 +121,12 @@ git merge feature/EFAS-123-description
 git push origin feature/EFAS-100
 ```
 
-2. Resolve any conflicts and rerun tests before updating the Jira issue to **"Ready for Integration."**
+2. Resolve any conflicts and rerun tests before merging to dev branch
 
 ### If there is no Parent Issue:
 
-* Merge your branch through the standard PR process (e.g., merge to `develop` or `release` branch).
-* Ensure a different developer reviews and merges the PR.
+* Merge your branch through the standard PR process (e.g., merge to **dev** branch).
+* Ensure a different developer reviews, approves, and merges the PR.
 
 ---
 
