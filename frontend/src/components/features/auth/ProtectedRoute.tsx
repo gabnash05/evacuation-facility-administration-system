@@ -1,7 +1,7 @@
 // components/auth/ProtectedRoute.tsx
-import type { UserRole } from '@/types/user';
 import { Navigate } from 'react-router-dom';
-// import { useAuth } from '@/hooks/useAuth';
+import { useAuth } from '@/hooks/useAuth.mock';
+// import { useAuth } from '@/hooks/useAuth'; // Use the real hook when its implemented
 
 interface ProtectedRouteProps {
     children: React.ReactNode;
@@ -9,13 +9,8 @@ interface ProtectedRouteProps {
 }
 
 export default function ProtectedRoute({ children, requiredRole }: ProtectedRouteProps) {
-    // const { isAuthenticated, user, isLoading } = useAuth();
+    const { isAuthenticated, user, isLoading } = useAuth();
     
-    // Mock authentication state - replace with real useAuth
-    const isAuthenticated = true; // Change to false to test protection
-    const user = { role: "city_admin" as UserRole };
-    const isLoading = false;
-
     if (isLoading) {
         return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
     }

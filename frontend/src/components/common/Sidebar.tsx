@@ -119,7 +119,7 @@ export function AppSidebar({ role, roleLabel, userEmail }: AppSidebarProps) {
                         onClick={handleLogout}
                         className={cn(
                             "w-full flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-md transition-colors",
-                            "text-sidebar-foreground hover:bg-destructive hover:text-destructive-foreground",
+                            "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
                             "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring",
                             "cursor-pointer"
                         )}
