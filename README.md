@@ -43,38 +43,59 @@ git pull origin dev
 
 1. Go to the backend directory:
 
-   ```bash
-   cd backend
-   ```
+    ```bash
+    cd backend
+    ```
 2. Copy the environment file and update your local settings:
 
-   ```bash
-   copy .env.example .env   # Windows PowerShell
-   ```
+    ```bash
+    copy .env.example .env   # Windows PowerShell
+    ```
 
-   * Edit `.env` to include your local PostgreSQL connection details and any secret keys.
+    * Edit `.env` to include your local PostgreSQL connection details and any secret keys. These detials are the most important.
+
+    ```txt
+    DATABASE_URL=postgresql://<username>:<password>@localhost:5432/efas_db
+    DB_HOST=localhost
+    DB_PORT=5432
+    DB_NAME=efas_db
+    DB_USER=<username>
+    DB_PASSWORD=<password>
+    ```
+
 3. Install Python dependencies and activate the virtual environment:
 
-   ```bash
-   pipenv install
-   pipenv shell
-   ```
+    ```bash
+    pipenv install
+    pipenv shell
+    ```
 4. Run the backend development server:
 
-   ```bash
-   python run.py
-   ```
+    ```bash
+    python run.py
+    ```
 
 ---
 
 ## 5. Set Up the Database
 
-1. Ensure your database is running (PostgreSQL).
-2. Create tables using the provided setup script:
+1. Ensure your database is running (PostgreSQL) or that you have PostgreSQL installed.
+
+2. Open a new terminal and go to the backend directory.
+
+    ```bash
+    cd backend
+    ```
+
+3. Create tables and super_admin user using the provided setup script:
 
    ```bash
-   python database/setup_db.py #from Backend
+   python database/setup_db.py  # from Backend
    ```
+
+4. The script will prompt for your email and password for the app
+
+5. If no errors are visible, you can close this terminal.
 
 ---
 
@@ -83,7 +104,7 @@ git pull origin dev
 1. Open a new terminal and go to the frontend directory:
 
    ```bash
-   cd ../frontend #from Backend
+   cd ../frontend           # from Backend
    ```
 2. Copy the environment file and adjust the API URL if needed:
 
