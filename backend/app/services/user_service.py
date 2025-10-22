@@ -46,15 +46,15 @@ def authenticate_user(email: str, password: str) -> Dict[str, Any]:
             }
         
         # Create JWT token
-        access_token = create_access_token(identity=user.id)
+        access_token = create_access_token(identity=str(user.user_id))
         
-        logger.info("Authentication successful for user %s with role %s", user.id, user.role)
+        logger.info("Authentication successful for user %s with role %s", user.user_id, user.role)
         
         return {
             "success": True,
             "access_token": access_token,
             "role": user.role,
-            "user_id": user.id
+            "user_id": user.user_id
         }
         
     except Exception as error:
@@ -198,7 +198,7 @@ def deactivate_user(user_id: int, current_user: User) -> Dict[str, Any]:
             }
         
         # Prevent self-deactivation
-        if user_to_deactivate.id == current_user.id:
+        if user_to_deactivate.user_id == current_user.user_id:
             return {
                 "success": False,
                 "message": "Cannot deactivate your own account"
@@ -217,7 +217,7 @@ def deactivate_user(user_id: int, current_user: User) -> Dict[str, Any]:
         success = User.deactivate_user(user_id)
         
         if success:
-            logger.info("User %s deactivated by user %s", user_id, current_user.id)
+            logger.info("User %s deactivated by user %s", user_id, current_user.user_id)
             return {
                 "success": True,
                 "message": "User deactivated successfully"
