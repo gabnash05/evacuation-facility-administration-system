@@ -2,22 +2,16 @@ import { AppSidebar } from "@/components/common/Sidebar";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import Topbar from "@/components/common/Topbar";
 import type { UserRole } from "@/types/user";
-// import { useAuth } from "@/hooks/useAuth";
+import { useAuth } from "@/hooks/useAuth.mock";
+// import { useAuth } from "@/hooks/useAuth"; use the real hook when implemented
 
 interface MainLayoutProps {
     children: React.ReactNode;
 }
 
 export default function MainLayout({ children }: MainLayoutProps) {
-    // const { user, isLoading, isCityAdmin, isCenterAdmin, isVolunteer } = useAuth();
+    const { user, isLoading } = useAuth();
     
-    // Mock data - replace with actual useAuth hook
-    const user = {
-        email: "nasayaokim@gmail.com",
-        role: "city_admin" as UserRole,
-    };
-    const isLoading = false;
-
     if (isLoading) {
         return (
             <div className="min-h-screen flex items-center justify-center">
