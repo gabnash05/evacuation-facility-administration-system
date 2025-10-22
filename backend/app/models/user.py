@@ -22,6 +22,7 @@ class User(db.Model):
 
     # Relationship to center (optional, only for center-specific roles)
     center = db.relationship("EvacuationCenter", backref="users", lazy="joined")
+    #TODO: update this since this doesn't work. Raw SQL does not work with relationship function
 
     def to_dict(self):
         """Convert user to dictionary for JSON serialization."""

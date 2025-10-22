@@ -26,7 +26,7 @@ CREATE TABLE IF NOT EXISTS event (
     end_date TIMESTAMP NULL,
     status VARCHAR(20) NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'resolved', 'monitoring')),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT 
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     CHECK (end_date IS NULL OR end_date >= date_declared)
 
 );
