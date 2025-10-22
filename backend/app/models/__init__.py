@@ -10,7 +10,7 @@ migrate = Migrate()
 jwt = JWTManager()
 
 from app.models.user import User
-from app.models.event import Event
-from app.models.center import EvacuationCenter
-from app.models.household import Household
-from app.models.individual import Individual
+# from app.models.event import Event
+# from app.models.center import EvacuationCenter
+# from app.models.household import Household
+# from app.models.individual import Individual

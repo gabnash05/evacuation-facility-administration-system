@@ -5,7 +5,7 @@ import type { Individual } from "./individual";
 export interface Household {
     householdId: number;
     householdName: string;
-    address?: string | null;
+    address: string | null;
     centerId: number;
     householdHeadId?: number | null;
     createdAt: string;

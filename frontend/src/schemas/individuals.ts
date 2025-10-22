@@ -3,7 +3,7 @@ import { z } from "zod";
 export const createIndividualSchema = z.object({
     first_name: z.string().min(1, "First name is required"),
     last_name: z.string().min(1, "Last name is required"),
-    date_of_birth: z.string().datetime(),
+    date_of_birth: z.string().min(1, "Date of birth is required"), // ISO string
     gender: z.enum(["male", "female", "other"]),
     relationship_to_head: z.enum(["head", "spouse", "child", "parent", "sibling", "other"]),
 });
