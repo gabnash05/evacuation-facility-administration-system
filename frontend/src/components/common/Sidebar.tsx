@@ -12,6 +12,7 @@ import {
     Users,
     LogOut,
 } from "lucide-react";
+import efasLogo from '@/assets/logo/efas-logo.png';
 import { ModeToggle } from "./ModeToggle";
 import { Link, useLocation } from "react-router-dom";
 import { cn } from "@/lib/utils";
@@ -68,10 +69,12 @@ export function AppSidebar({ role, roleLabel, userEmail }: AppSidebarProps) {
     return (
         <Sidebar className="bg-sidebar text-sidebar-foreground border-r border-sidebar-border">
             <SidebarHeader className="border-sidebar-border">
-                <div className="p-4 flex items-center gap-3">
-                    <div className="w-8 h-8 border-2 border-dashed border-sidebar-border rounded flex items-center justify-center">
-                        <span className="text-xs text-muted-foreground">Logo</span>
-                    </div>
+                <div className="p-1 flex items-center gap-2">
+                    <img
+                        src={efasLogo}
+                        alt="EFAS Logo" 
+                        className="w-15 h-15 object-contain"
+                    />
                     <h2 className="text-lg font-semibold tracking-tight">EFAS</h2>
                 </div>
             </SidebarHeader>
