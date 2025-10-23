@@ -75,7 +75,7 @@ class UserUpdateSchema(Schema):
 class UserResponseSchema(Schema):
     """Schema for user API responses."""
     
-    id = fields.Integer(dump_only=True)
+    user_id = fields.Integer(dump_only=True)
     email = fields.Email(dump_only=True)
     role = fields.String(dump_only=True)
     centerId = fields.Integer(
