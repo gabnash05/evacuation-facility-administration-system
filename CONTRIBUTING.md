@@ -69,7 +69,7 @@ git checkout -b feature/EFAS-123-description
    * **For backend work:**
 
      ```bash
-     black app database && isort app database
+    pipenv run black app database
      ```
 
    * **For frontend work:**
