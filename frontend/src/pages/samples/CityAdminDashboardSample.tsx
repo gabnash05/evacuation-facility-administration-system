@@ -1,5 +1,12 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+    Table,
+    TableBody,
+    TableCell,
+    TableHead,
+    TableHeader,
+    TableRow,
+} from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 
 export function CityAdminDashboardSample() {
@@ -14,7 +21,7 @@ export function CityAdminDashboardSample() {
                         </CardDescription>
                     </CardHeader>
                 </Card>
-                
+
                 {/* Stats Cards */}
                 <div className="min-w-max mt-8 grid grid-cols-1 md:grid-cols-3 gap-6">
                     <Card className="min-w-max">
@@ -38,7 +45,7 @@ export function CityAdminDashboardSample() {
                             <p className="text-sm text-muted-foreground">Active centers</p>
                         </CardContent>
                     </Card>
-                    
+
                     <Card className="min-w-max">
                         <CardHeader>
                             <CardTitle className="text-xl">Events</CardTitle>
@@ -49,7 +56,7 @@ export function CityAdminDashboardSample() {
                             <p className="text-sm text-muted-foreground">Ongoing events</p>
                         </CardContent>
                     </Card>
-                    
+
                     <Card className="min-w-max">
                         <CardHeader>
                             <CardTitle className="text-xl">Households</CardTitle>
@@ -88,7 +95,9 @@ export function CityAdminDashboardSample() {
                                         </TableCell>
                                     </TableRow>
                                     <TableRow>
-                                        <TableCell className="font-medium">Earthquake Drill</TableCell>
+                                        <TableCell className="font-medium">
+                                            Earthquake Drill
+                                        </TableCell>
                                         <TableCell>City Sports Complex</TableCell>
                                         <TableCell>2024-01-10</TableCell>
                                         <TableCell>

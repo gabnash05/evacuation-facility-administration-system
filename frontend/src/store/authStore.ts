@@ -30,15 +30,15 @@ export const useAuthStore = create<AuthState>()(
                 try {
                     // 1. Call login service
                     const response = await AuthService.login(credentials);
-                    
+
                     // 2. Get user data after successful login
                     const user = await AuthService.getCurrentUser();
-                    
+
                     // 3. Update store state
-                    set({ 
-                        user, 
-                        isAuthenticated: true, 
-                        isLoading: false 
+                    set({
+                        user,
+                        isAuthenticated: true,
+                        isLoading: false,
                     });
 
                     return response;
@@ -52,17 +52,17 @@ export const useAuthStore = create<AuthState>()(
                 set({ isLoggingOut: true });
                 try {
                     await AuthService.logout();
-                    set({ 
-                        user: null, 
-                        isAuthenticated: false, 
-                        isLoggingOut: false 
+                    set({
+                        user: null,
+                        isAuthenticated: false,
+                        isLoggingOut: false,
                     });
                 } catch (error) {
                     console.error("Logout error:", error);
-                    set({ 
-                        user: null, 
-                        isAuthenticated: false, 
-                        isLoggingOut: false 
+                    set({
+                        user: null,
+                        isAuthenticated: false,
+                        isLoggingOut: false,
                     });
                     throw error;
                 }

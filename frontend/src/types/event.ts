@@ -27,5 +27,5 @@ export interface UpdateEventData {
 }
 
 // API Response types
-export interface EventResponse extends ApiResponse<Event> {}
-export interface EventsResponse extends PaginatedResponse<Event> {}
+export type EventResponse = ApiResponse<Event>;
+export type EventsResponse = PaginatedResponse<Event>;

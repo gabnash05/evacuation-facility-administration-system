@@ -14,4 +14,4 @@ export interface LinkCenterToEventData {
 }
 
 // API Response types
-export interface EventCentersResponse extends PaginatedResponse<EventCenter> {}
+export type EventCentersResponse = PaginatedResponse<EventCenter>;

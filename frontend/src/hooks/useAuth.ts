@@ -3,16 +3,16 @@ import { useAuthStore } from "@/store/authStore";
 import type { UserRole } from "@/types/user";
 
 export function useAuth() {
-    const { 
-        checkAuth, 
-        isLoading, 
+    const {
+        checkAuth,
+        isLoading,
         isAuthenticated,
         isLoggingOut,
-        user, 
-        hasRole, 
+        user,
+        hasRole,
         clearAuth,
         login,
-        logout
+        logout,
     } = useAuthStore();
     const [error, setError] = useState<string | null>(null);
 

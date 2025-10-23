@@ -30,5 +30,5 @@ export interface UpdateHouseholdData {
 }
 
 // API Response types
-export interface HouseholdResponse extends ApiResponse<Household> {}
-export interface HouseholdsResponse extends PaginatedResponse<Household> {}
+export type HouseholdResponse = ApiResponse<Household>;
+export type HouseholdsResponse = PaginatedResponse<Household>;
