@@ -21,11 +21,14 @@ api.interceptors.response.use(
     response => response,
     error => {
         const { status } = error.response || {};
+        const currentPath = window.location.pathname;
 
         switch (status) {
             case 401:
                 // Unauthorized - redirect to login
-                window.location.assign("/login");
+                if (!currentPath.includes('/login')) {
+                    window.location.assign("/login");
+                }
                 break;
             case 403:
                 // Forbidden - user doesn't have permission

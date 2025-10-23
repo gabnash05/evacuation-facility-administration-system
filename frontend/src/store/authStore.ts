@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import type { User, UserRole } from "@/types/user";
+import type { AuthResponse, User, UserRole } from "@/types/user";
 import type { LoginFormData } from "@/schemas";
 import { AuthService } from "@/services/authService";
 
@@ -8,8 +8,9 @@ interface AuthState {
     user: User | null;
     isAuthenticated: boolean;
     isLoading: boolean;
-    login: (credentials: LoginFormData) => Promise<void>;
+    login: (credentials: LoginFormData) => Promise<AuthResponse>;
     logout: () => void;
+    isLoggingOut: boolean;
     setUser: (user: User) => void;
     hasRole: (roles: UserRole[]) => boolean;
     checkAuth: () => Promise<boolean>;
@@ -22,12 +23,13 @@ export const useAuthStore = create<AuthState>()(
             user: null,
             isAuthenticated: false,
             isLoading: false,
+            isLoggingOut: false,
 
-            login: async (credentials: LoginFormData): Promise<void> => {
+            login: async (credentials: LoginFormData): Promise<AuthResponse> => {
                 set({ isLoading: true });
                 try {
                     // 1. Call login service
-                    await AuthService.login(credentials);
+                    const response = await AuthService.login(credentials);
                     
                     // 2. Get user data after successful login
                     const user = await AuthService.getCurrentUser();
@@ -38,6 +40,8 @@ export const useAuthStore = create<AuthState>()(
                         isAuthenticated: true, 
                         isLoading: false 
                     });
+
+                    return response;
                 } catch (error) {
                     set({ isLoading: false });
                     throw error;
@@ -45,8 +49,23 @@ export const useAuthStore = create<AuthState>()(
             },
 
             logout: async () => {
-                await AuthService.logout();
-                set({ user: null, isAuthenticated: false });
+                set({ isLoggingOut: true });
+                try {
+                    await AuthService.logout();
+                    set({ 
+                        user: null, 
+                        isAuthenticated: false, 
+                        isLoggingOut: false 
+                    });
+                } catch (error) {
+                    console.error("Logout error:", error);
+                    set({ 
+                        user: null, 
+                        isAuthenticated: false, 
+                        isLoggingOut: false 
+                    });
+                    throw error;
+                }
             },
 
             setUser: (user: User) => set({ user, isAuthenticated: true }),

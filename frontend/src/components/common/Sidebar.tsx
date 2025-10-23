@@ -14,7 +14,8 @@ import {
 } from "lucide-react";
 import efasLogo from '@/assets/logo/efas-logo.png';
 import { ModeToggle } from "./ModeToggle";
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
+import { useAuth } from "@/hooks/useAuth";
 import { cn } from "@/lib/utils";
 
 interface SidebarItem {
@@ -31,7 +32,9 @@ interface AppSidebarProps {
 }
 
 export function AppSidebar({ role, roleLabel, userEmail }: AppSidebarProps) {
+    const { logout, isLoggingOut } = useAuth();
     const location = useLocation();
+    const navigate = useNavigate();
 
     const getNavigationItems = (): SidebarItem[] => {
         switch (role) {
@@ -61,9 +64,13 @@ export function AppSidebar({ role, roleLabel, userEmail }: AppSidebarProps) {
 
     const navigationItems = getNavigationItems();
 
-    const handleLogout = () => {
-        // Implement logout logic here
-        console.log("Logging out...");
+    const handleLogout = async () => {
+        try {
+            await logout();
+            navigate("/login");
+        } catch (error) {
+            console.error("Logout failed:", error);
+        }
     };
 
     return (
@@ -118,17 +125,18 @@ export function AppSidebar({ role, roleLabel, userEmail }: AppSidebarProps) {
                     </div>
                     
                     {/* Logout Button */}
-                    <button
+                     <button
                         onClick={handleLogout}
+                        disabled={isLoggingOut} // Disable during logout
                         className={cn(
                             "w-full flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-md transition-colors",
                             "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
                             "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring",
-                            "cursor-pointer"
+                            "cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                         )}
                     >
                         <LogOut className="w-4 h-4" />
-                        <span>Logout</span>
+                        <span>{isLoggingOut ? "Logging out..." : "Logout"}</span>
                     </button>
                 </div>
                 
