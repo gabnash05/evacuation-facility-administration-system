@@ -8,8 +8,9 @@ export class AuthService {
     static async login(credentials: LoginFormData): Promise<LoginResponse> {
         try {
             const response = await api.post<ApiResponse<LoginResponse>>(
-                "/api/auth/login",
-                credentials
+                "/auth/login",
+                credentials,
+                { withCredentials: true }
             );
 
             return response.data.data!;
@@ -21,8 +22,9 @@ export class AuthService {
     static async register(userData: RegisterFormData): Promise<UserResponse> {
         try {
             const response = await api.post<ApiResponse<UserResponse>>(
-                "/api/auth/register",
-                userData
+                "/auth/register",
+                userData,
+                { withCredentials: true }
             );
             return response.data.data!;
         } catch (error) {
@@ -32,7 +34,9 @@ export class AuthService {
 
     static async getCurrentUser(): Promise<User> {
         try {
-            const response = await api.get<ApiResponse<User>>("/api/auth/me");
+            const response = await api.get<ApiResponse<User>>("/auth/me", {
+                withCredentials: true,
+            });
             return response.data.data!;
         } catch (error) {
             throw new Error(handleApiError(error));
@@ -41,7 +45,7 @@ export class AuthService {
 
     static async logout(): Promise<void> {
         try {
-            await api.post("/api/auth/logout");
+            await api.post("/auth/logout", {}, { withCredentials: true });
         } catch (error) {
             console.error("Error logging out:", error);
         } finally {

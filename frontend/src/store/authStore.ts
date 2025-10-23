@@ -1,13 +1,14 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import type { User, UserRole } from "@/types/user";
+import type { LoginFormData } from "@/schemas";
 import { AuthService } from "@/services/authService";
 
 interface AuthState {
     user: User | null;
     isAuthenticated: boolean;
     isLoading: boolean;
-    login: (userData: { role: string }) => void;
+    login: (credentials: LoginFormData) => Promise<void>;
     logout: () => void;
     setUser: (user: User) => void;
     hasRole: (roles: UserRole[]) => boolean;
@@ -22,18 +23,30 @@ export const useAuthStore = create<AuthState>()(
             isAuthenticated: false,
             isLoading: false,
 
-            login: (userData: { role: string }) => {
-                const user: User = {
-                    id: 0, // Will be populated by getCurrentUser later
-                    email: "", // Will be populated by getCurrentUser later
-                    role: userData.role as UserRole,
-                    isActive: true,
-                };
-                set({ user, isAuthenticated: true });
+            login: async (credentials: LoginFormData): Promise<void> => {
+                set({ isLoading: true });
+                try {
+                    // 1. Call login service
+                    await AuthService.login(credentials);
+                    
+                    // 2. Get user data after successful login
+                    const user = await AuthService.getCurrentUser();
+                    
+                    // 3. Update store state
+                    set({ 
+                        user, 
+                        isAuthenticated: true, 
+                        isLoading: false 
+                    });
+                } catch (error) {
+                    set({ isLoading: false });
+                    throw error;
+                }
             },
 
             logout: async () => {
                 await AuthService.logout();
+                set({ user: null, isAuthenticated: false });
             },
 
             setUser: (user: User) => set({ user, isAuthenticated: true }),

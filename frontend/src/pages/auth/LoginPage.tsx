@@ -1,31 +1,75 @@
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '@/hooks/useAuth.mock';
+import { useAuth } from '@/hooks/useAuth';
+import { loginSchema } from "@/schemas/auth";
+import type { LoginFormData } from "@/schemas/auth";
 
 export default function LoginPage() {
     const navigate = useNavigate();
-    const { user } = useAuth(); // Get the mock user from useAuth
+    const { user, isLoading, error, login } = useAuth();
+    const [formData, setFormData] = useState<LoginFormData>({
+        email: "",
+        password: "",
+    });
+    const [validationErrors, setValidationErrors] = useState<Partial<LoginFormData>>({});
+    const [loginError, setLoginError] = useState<string | null>(null);
 
-    const handleLogin = () => {
-        // Redirect based on the mock user's role from useAuth
-        if (user) {
-            switch (user.role) {
-                case 'city_admin':
-                case 'super_admin':
-                    navigate('/city-admin/dashboard');
-                    break;
-                case 'center_admin':
-                    navigate('/center-admin/dashboard');
-                    break;
-                case 'volunteer':
-                    navigate('/volunteer/dashboard');
-                    break;
-                default:
-                    navigate('/city-admin/dashboard');
+    const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const { name, value } = e.target;
+        setFormData(prev => ({ ...prev, [name]: value }));
+        // Clear validation error when user types
+        if (validationErrors[name as keyof LoginFormData]) {
+            setValidationErrors(prev => ({ ...prev, [name]: undefined }));
+        }
+        // Clear login error when user types
+        if (loginError) {
+            setLoginError(null);
+        }
+    };
+
+    const handleLogin = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setLoginError(null);
+        
+        // Validate form
+        const validationResult = loginSchema.safeParse(formData);
+        if (!validationResult.success) {
+            const errors: Partial<LoginFormData> = {};
+            validationResult.error.issues.forEach(issue => {
+                errors[issue.path[0] as keyof LoginFormData] = issue.message;
+            });
+            setValidationErrors(errors);
+            return;
+        }
+
+        try {
+            // Use AuthService directly for login
+            await login(formData);
+            
+            // Redirect based on user role from the updated auth state
+            if (user) {
+                switch (user.role) {
+                    case 'city_admin':
+                    case 'super_admin':
+                        navigate('/city-admin/dashboard');
+                        break;
+                    case 'center_admin':
+                        navigate('/center-admin/dashboard');
+                        break;
+                    case 'volunteer':
+                        navigate('/volunteer/dashboard');
+                        break;
+                    default:
+                        navigate('/city-admin/dashboard');
+                }
             }
+        } catch (err) {
+            setLoginError(err instanceof Error ? err.message : "Login failed");
+            console.error("Login failed:", err);
         }
     };
 
@@ -42,43 +86,64 @@ export default function LoginPage() {
                             Enter your credentials to access the EFAS system
                         </CardDescription>
                     </CardHeader>
-                    <CardContent className="space-y-4">
-                        <div className="space-y-2">
-                            <Label htmlFor="email">Email</Label>
-                            <Input
-                                id="email"
-                                type="email"
-                                placeholder="Enter your email"
-                            />
-                        </div>
-                        <div className="space-y-2">
-                            <Label htmlFor="password">Password</Label>
-                            <Input
-                                id="password"
-                                type="password"
-                                placeholder="Enter your password"
-                            />
-                        </div>
-                        
-                        {/* Single Login Button */}
-                        <div className="pt-4">
-                            <Button 
-                                variant="default"
-                                className="w-full"
-                                onClick={handleLogin}
-                                size="lg"
-                            >
-                                Login
-                            </Button>
-                        </div>
-
-                        {/* Mock User Info (for development) */}
-                        {user && (
-                            <div className="text-xs text-muted-foreground text-center border-t pt-3">
-                                <p>Mock Mode: Logging in as <strong>{user.role}</strong></p>
-                                <p className="text-[10px] opacity-70">Change MOCK_ROLE in useAuth to test different roles</p>
+                    <CardContent>
+                        <form onSubmit={handleLogin} className="space-y-4">
+                            <div className="space-y-2">
+                                <Label htmlFor="email">Email</Label>
+                                <Input
+                                    id="email"
+                                    name="email"
+                                    type="email"
+                                    placeholder="Enter your email"
+                                    value={formData.email}
+                                    onChange={handleInputChange}
+                                    className={validationErrors.email ? "border-destructive" : ""}
+                                />
+                                {validationErrors.email && (
+                                    <p className="text-sm text-destructive">{validationErrors.email}</p>
+                                )}
                             </div>
-                        )}
+                            <div className="space-y-2">
+                                <Label htmlFor="password">Password</Label>
+                                <Input
+                                    id="password"
+                                    name="password"
+                                    type="password"
+                                    placeholder="Enter your password"
+                                    value={formData.password}
+                                    onChange={handleInputChange}
+                                    className={validationErrors.password ? "border-destructive" : ""}
+                                />
+                                {validationErrors.password && (
+                                    <p className="text-sm text-destructive">{validationErrors.password}</p>
+                                )}
+                            </div>
+                            
+                            {/* Error messages */}
+                            {loginError && (
+                                <div className="p-3 text-sm text-destructive bg-destructive/15 rounded-md">
+                                    {loginError}
+                                </div>
+                            )}
+                            {error && (
+                                <div className="p-3 text-sm text-destructive bg-destructive/15 rounded-md">
+                                    {error}
+                                </div>
+                            )}
+                            
+                            {/* Login Button */}
+                            <div className="pt-4">
+                                <Button 
+                                    type="submit"
+                                    variant="default"
+                                    className="w-full"
+                                    disabled={isLoading}
+                                    size="lg"
+                                >
+                                    {isLoading ? "Logging in..." : "Login"}
+                                </Button>
+                            </div>
+                        </form>
                     </CardContent>
                 </Card>
             </div>
