@@ -26,5 +26,5 @@ export interface UpdateCenterData {
 }
 
 // API Response types
-export interface CenterResponse extends ApiResponse<EvacuationCenter> {}
-export interface CentersResponse extends PaginatedResponse<EvacuationCenter> {}
+export type CenterResponse = ApiResponse<EvacuationCenter>;
+export type CentersResponse = PaginatedResponse<EvacuationCenter>;

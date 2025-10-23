@@ -26,7 +26,7 @@ api.interceptors.response.use(
         switch (status) {
             case 401:
                 // Unauthorized - redirect to login
-                if (!currentPath.includes('/login')) {
+                if (!currentPath.includes("/login")) {
                     window.location.assign("/login");
                 }
                 break;

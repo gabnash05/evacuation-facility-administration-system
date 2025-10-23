@@ -6,11 +6,9 @@ import type { LoginResponse, AuthResponse, UserResponse } from "@/types/user";
 export class AuthService {
     static async login(credentials: LoginFormData): Promise<AuthResponse> {
         try {
-            const response = await api.post<LoginResponse>(
-                "/auth/login",
-                credentials,
-                { withCredentials: true }
-            );
+            const response = await api.post<LoginResponse>("/auth/login", credentials, {
+                withCredentials: true,
+            });
 
             return response.data.data!;
         } catch (error) {
@@ -20,11 +18,9 @@ export class AuthService {
 
     static async register(userData: RegisterFormData): Promise<User> {
         try {
-            const response = await api.post<UserResponse>(
-                "/auth/register",
-                userData,
-                { withCredentials: true }
-            );
+            const response = await api.post<UserResponse>("/auth/register", userData, {
+                withCredentials: true,
+            });
             return response.data.data!;
         } catch (error) {
             throw new Error(handleApiError(error));
