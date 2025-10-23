@@ -1,9 +1,9 @@
+import { useEffect } from "react";
 import { AppSidebar } from "@/components/common/Sidebar";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import Topbar from "@/components/common/Topbar";
-import type { UserRole } from "@/types/user";
-import { useAuth } from "@/hooks/useAuth.mock";
-// import { useAuth } from "@/hooks/useAuth"; use the real hook when implemented
+import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/hooks/useAuth";
 
 interface MainLayoutProps {
     children: React.ReactNode;
@@ -11,11 +11,26 @@ interface MainLayoutProps {
 
 export default function MainLayout({ children }: MainLayoutProps) {
     const { user, isLoading } = useAuth();
+    const navigate = useNavigate();
+
+    useEffect(() => {
+        if (!isLoading && !user) {
+            navigate("/login");
+        }
+    }, [user, isLoading, navigate]);
     
     if (isLoading) {
         return (
             <div className="min-h-screen flex items-center justify-center">
                 <div>Loading...</div>
+            </div>
+        );
+    }
+
+    if (!user) {
+        return (
+            <div className="min-h-screen flex items-center justify-center">
+                <div>Redirecting to login...</div>
             </div>
         );
     }
