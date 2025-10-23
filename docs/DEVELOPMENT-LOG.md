@@ -657,3 +657,27 @@ npm run dev
 - `pages/CityAdminDashboardSample.tsx`
 
 ## Add Blank Pages connected into App.tsx to make it easier for collaborators to develop their parts
+
+# User Login and Authentication
+
+## Fix Login and Register Routes, Services, and Models
+- refer to changed files, complicated pud siya
+
+## Update JWT Config
+```python
+JWT_SECRET_KEY = os.environ.get("JWT_SECRET_KEY", "jwt-secret-key")
+JWT_ACCESS_TOKEN_EXPIRES = int(os.environ.get("JWT_ACCESS_TOKEN_EXPIRES", 3600))
+JWT_TOKEN_LOCATION = ["cookies"]
+JWT_ACCESS_COOKIE_NAME = "access_token"
+JWT_COOKIE_CSRF_PROTECT = False  # For development
+JWT_COOKIE_SAMESITE = "Lax"
+```
+
+## Refactor authService, authStore, and useAuth
+- authService functions such as logging in, logging out, and getting current user should only be used inside the authStore. For components, they should only be able to access it from useAuth.
+
+## Update Logout routes and in AppSidebar
+- add isLoggingOut state
+
+## Fix inconsistent Typescript Types
+- refer to all type files especially user types

@@ -6,7 +6,8 @@ export function useAuth() {
     const { 
         checkAuth, 
         isLoading, 
-        isAuthenticated, 
+        isAuthenticated,
+        isLoggingOut,
         user, 
         hasRole, 
         clearAuth,
@@ -58,6 +59,7 @@ export function useAuth() {
         user,
         isAuthenticated,
         isLoading,
+        isLoggingOut,
         error,
 
         // Actions

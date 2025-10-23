@@ -10,7 +10,7 @@ import type { LoginFormData } from "@/schemas/auth";
 
 export default function LoginPage() {
     const navigate = useNavigate();
-    const { user, isLoading, error, login } = useAuth();
+    const { isLoading, error, login } = useAuth();
     const [formData, setFormData] = useState<LoginFormData>({
         email: "",
         password: "",
@@ -48,25 +48,23 @@ export default function LoginPage() {
 
         try {
             // Use AuthService directly for login
-            await login(formData);
-            
-            // Redirect based on user role from the updated auth state
-            if (user) {
-                switch (user.role) {
-                    case 'city_admin':
-                    case 'super_admin':
-                        navigate('/city-admin/dashboard');
-                        break;
-                    case 'center_admin':
-                        navigate('/center-admin/dashboard');
-                        break;
-                    case 'volunteer':
-                        navigate('/volunteer/dashboard');
-                        break;
-                    default:
-                        navigate('/city-admin/dashboard');
+            const response = await login(formData);
+        
+            // Redirect based on the login response, not the user state
+            switch (response.role) {
+                case 'city_admin':
+                case 'super_admin':
+                    navigate('/city-admin/dashboard');
+                    break;
+                case 'center_admin':
+                    navigate('/center-admin/dashboard');
+                    break;
+                case 'volunteer':
+                    navigate('/volunteer/dashboard');
+                    break;
+                default:
+                    navigate('/city-admin/dashboard');
                 }
-            }
         } catch (err) {
             setLoginError(err instanceof Error ? err.message : "Login failed");
             console.error("Login failed:", err);
@@ -136,7 +134,7 @@ export default function LoginPage() {
                                 <Button 
                                     type="submit"
                                     variant="default"
-                                    className="w-full"
+                                    className="w-full cursor-pointer"
                                     disabled={isLoading}
                                     size="lg"
                                 >
