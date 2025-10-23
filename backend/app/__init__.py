@@ -4,6 +4,7 @@ from flask import Flask
 from flask_cors import CORS
 from app.models import db, migrate, jwt
 from app.config import Config
+import logging
 
 
 def create_app(config_class=Config):
@@ -18,11 +19,21 @@ def create_app(config_class=Config):
     """
     app = Flask(__name__)
     app.config.from_object(config_class)
+
+    # Configure logging
+    logging.basicConfig(
+        level=logging.INFO,
+        format='%(asctime)s: %(message)s'
+    )
     
     db.init_app(app)
     migrate.init_app(app, db)
     jwt.init_app(app)
-    CORS(app)
+    CORS(app, 
+        origins=["http://localhost:5173"],
+        supports_credentials=True,
+        allow_headers=["Content-Type", "Authorization"]
+    )
 
     # Register blueprints
     from app.routes.auth import auth_bp
