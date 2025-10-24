@@ -16,14 +16,18 @@ export function ModeToggle({ children }: { children?: React.ReactNode }) {
             <DropdownMenuTrigger asChild>
                 <div className="flex items-center gap-3 w-full text-left cursor-pointer">
                     <div className="flex items-center justify-center w-4 h-4">
-                        <Sun className={cn(
-                            "h-4 w-4 scale-100 rotate-0 transition-all",
-                            theme === "dark" && "scale-0 -rotate-90"
-                        )} />
-                        <Moon className={cn(
-                            "absolute h-4 w-4 scale-0 rotate-90 transition-all",
-                            theme === "dark" && "scale-100 rotate-0"
-                        )} />
+                        <Sun
+                            className={cn(
+                                "h-4 w-4 scale-100 rotate-0 transition-all",
+                                theme === "dark" && "scale-0 -rotate-90"
+                            )}
+                        />
+                        <Moon
+                            className={cn(
+                                "absolute h-4 w-4 scale-0 rotate-90 transition-all",
+                                theme === "dark" && "scale-100 rotate-0"
+                            )}
+                        />
                     </div>
                     {children}
                 </div>

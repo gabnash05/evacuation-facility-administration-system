@@ -4,6 +4,7 @@ export type EventStatus = "active" | "resolved" | "monitoring";
 
 export interface Event {
     eventId: number;
+    eventName: string;
     eventType: string;
     dateDeclared: string;
     endDate?: string | null;
@@ -13,6 +14,7 @@ export interface Event {
 }
 
 export interface CreateEventData {
+    eventName: string;
     eventType: string;
     dateDeclared: string;
     endDate?: string | null;
@@ -20,6 +22,7 @@ export interface CreateEventData {
 }
 
 export interface UpdateEventData {
+    eventName?: string;
     eventType?: string;
     dateDeclared?: string;
     endDate?: string | null;
@@ -27,5 +30,5 @@ export interface UpdateEventData {
 }
 
 // API Response types
-export interface EventResponse extends ApiResponse<Event> {}
-export interface EventsResponse extends PaginatedResponse<Event> {}
+export type EventResponse = ApiResponse<Event>;
+export type EventsResponse = PaginatedResponse<Event>;

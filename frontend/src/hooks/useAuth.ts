@@ -1,10 +1,19 @@
-import { useEffect, useCallback, useState } from "react";
+import { useCallback, useState } from "react";
 import { useAuthStore } from "@/store/authStore";
 import type { UserRole } from "@/types/user";
 
 export function useAuth() {
-    const { checkAuth, isLoading, isAuthenticated, user, hasRole, clearAuth } = useAuthStore();
-
+    const {
+        checkAuth,
+        isLoading,
+        isAuthenticated,
+        isLoggingOut,
+        user,
+        hasRole,
+        clearAuth,
+        login,
+        logout,
+    } = useAuthStore();
     const [error, setError] = useState<string | null>(null);
 
     const performAuthCheck = useCallback(async () => {
@@ -17,11 +26,7 @@ export function useAuth() {
             setError(err instanceof Error ? err.message : "Authentication check failed");
             clearAuth();
         }
-    }, [checkAuth, clearAuth, isLoading]);
-
-    useEffect(() => {
-        performAuthCheck();
-    }, [performAuthCheck]);
+    }, [checkAuth, clearAuth]);
 
     // Retry function for manual retry
     const retryAuthCheck = useCallback(() => {
@@ -54,9 +59,12 @@ export function useAuth() {
         user,
         isAuthenticated,
         isLoading,
+        isLoggingOut,
         error,
 
         // Actions
+        login,
+        logout,
         checkAuth: performAuthCheck,
         retryAuthCheck,
 
