@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 export const createEventSchema = z.object({
+    event_name: z.string().min(1, "Event name is required"),
     event_type: z.string().min(1, "Event type is required"),
     date_declared: z.string().min(1, "Declaration date is required"),
     end_date: z.string().optional().nullable(),
@@ -8,6 +9,7 @@ export const createEventSchema = z.object({
 });
 
 export const updateEventSchema = z.object({
+    event_name: z.string().min(1, "Event name is required").optional(),
     event_type: z.string().min(1, "Event type is required").optional(),
     date_declared: z.string().min(1, "Declaration date is required").optional(),
     end_date: z.string().optional().nullable(),
