@@ -21,6 +21,7 @@ CREATE TABLE IF NOT EXISTS evacuation_center (
 -- ========================
 CREATE TABLE IF NOT EXISTS event (
     event_id SERIAL PRIMARY KEY,
+    event_name VARCHAR(150) NOT NULL,
     event_type VARCHAR(50) NOT NULL,
     date_declared TIMESTAMP NOT NULL,
     end_date TIMESTAMP NULL,
