@@ -16,6 +16,6 @@ export interface AuthResponse {
 }
 
 // API Response types
-export interface LoginResponse extends ApiResponse<AuthResponse> {}
-export interface UserResponse extends ApiResponse<User> {}
-export interface UsersResponse extends PaginatedResponse<User> {}
+export type LoginResponse = ApiResponse<AuthResponse>;
+export type UserResponse = ApiResponse<User>;
+export type UsersResponse = PaginatedResponse<User>;

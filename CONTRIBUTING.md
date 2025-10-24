@@ -61,8 +61,39 @@ git checkout -b feature/EFAS-123-description
 ## 2. Complete Development (Developer)
 
 1. When your feature is ready, run all local checks and tests.
+
 2. If it’s not yet ready, continue coding and testing until it is.
-3. Once done, push your branch to the remote repository:
+
+3. Once done, ensure your codebase is properly formatted:
+
+   * **For backend work:**
+
+     ```bash
+    pipenv run black app database
+     ```
+
+   * **For frontend work:**
+
+     ```bash
+     npm run pre-commit
+     ```
+
+4. After formatting, push your branch to the remote repository:
+
+   ```bash
+   git push origin feature/EFAS-123-description
+   ```
+
+5. In Jira (or your Git platform like GitHub/GitLab/Bitbucket), create a **Pull Request (PR)** linked to the Jira issue.
+
+6. Make sure the PR title and description match the Jira issue.
+
+7. Select **Dev** as the destination branch of the Pull Request.
+
+8. Move the Jira ticket for this into **For Review**
+
+> **Note:** The QA reviewer and the PR approver must be different people to ensure proper review separation.
+
 
 ```bash
 git push origin feature/EFAS-123-description
@@ -140,4 +171,4 @@ QA or the deployment team performs **spotcheck tests** on the deployed environme
 ### Decision: Pass Spotcheck?
 
 * **No:** Create or reopen a Jira issue, assign it back to Dev/QA, and repeat the QA → Merge → Deploy process.
-* **Yes:** Mark the Jira issue as **“Done.”** The feature is officially deployed and complete.
+* **Yes:** Move the Jira issue from **In Review** to **Done**. The feature is officially deployed and complete.

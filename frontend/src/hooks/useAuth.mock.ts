@@ -9,15 +9,15 @@ const MOCK_USERS: Record<string, User> = {
         role: "super_admin",
         centerId: null,
         isActive: true,
-        createdAt: "2024-01-01T00:00:00Z"
+        createdAt: "2024-01-01T00:00:00Z",
     },
     city_admin: {
         id: 2,
-        email: "city@efas.gov", 
+        email: "city@efas.gov",
         role: "city_admin",
         centerId: null,
         isActive: true,
-        createdAt: "2024-01-01T00:00:00Z"
+        createdAt: "2024-01-01T00:00:00Z",
     },
     center_admin: {
         id: 3,
@@ -25,7 +25,7 @@ const MOCK_USERS: Record<string, User> = {
         role: "center_admin",
         centerId: 1,
         isActive: true,
-        createdAt: "2024-01-01T00:00:00Z"
+        createdAt: "2024-01-01T00:00:00Z",
     },
     volunteer: {
         id: 4,
@@ -33,8 +33,8 @@ const MOCK_USERS: Record<string, User> = {
         role: "volunteer",
         centerId: 1,
         isActive: true,
-        createdAt: "2024-01-01T00:00:00Z"
-    }
+        createdAt: "2024-01-01T00:00:00Z",
+    },
 };
 
 // Change this to test different roles
@@ -50,10 +50,10 @@ export function useAuth() {
     const performAuthCheck = useCallback(async () => {
         setIsLoading(true);
         setError(null);
-        
+
         // Simulate API call delay
         await new Promise(resolve => setTimeout(resolve, 500));
-        
+
         setIsLoading(false);
     }, []);
 
@@ -66,12 +66,9 @@ export function useAuth() {
         performAuthCheck();
     }, [performAuthCheck]);
 
-    const requireRole = useCallback(
-        (roles: UserRole[]) => {
-            return roles.includes(MOCK_ROLE);
-        },
-        []
-    );
+    const requireRole = useCallback((roles: UserRole[]) => {
+        return roles.includes(MOCK_ROLE);
+    }, []);
 
     const canAccessCenter = useCallback(
         (centerId: number) => {

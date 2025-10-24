@@ -21,6 +21,7 @@ CREATE TABLE IF NOT EXISTS evacuation_center (
 -- ========================
 CREATE TABLE IF NOT EXISTS event (
     event_id SERIAL PRIMARY KEY,
+    event_name VARCHAR(150) NOT NULL,
     event_type VARCHAR(50) NOT NULL,
     date_declared TIMESTAMP NOT NULL,
     end_date TIMESTAMP NULL,
@@ -38,7 +39,7 @@ CREATE TABLE IF NOT EXISTS users (
     user_id SERIAL PRIMARY KEY,
     email VARCHAR(120) UNIQUE NOT NULL,
     password_hash VARCHAR(255) NOT NULL,
-    role VARCHAR(20) NOT NULL CHECK (role IN ('city_admin', 'center_admin', 'volunteer')),
+    role VARCHAR(20) NOT NULL CHECK (role IN ('super_admin', 'city_admin', 'center_admin', 'volunteer')),
     center_id INTEGER NULL,
     is_active BOOLEAN NOT NULL DEFAULT TRUE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -52,8 +53,8 @@ CREATE TABLE IF NOT EXISTS users (
     
     -- Business logic constraints
     CONSTRAINT chk_center_requirements CHECK (
-        (role IN ('center_admin', 'volunteer') AND center_id IS NOT NULL) OR
-        (role = 'city_admin' AND center_id IS NULL)
+        (role IN ('super_admin', 'city_admin') AND center_id IS NULL) OR
+        (role IN ('center_admin', 'volunteer') AND center_id IS NOT NULL)
     )
 );
 
