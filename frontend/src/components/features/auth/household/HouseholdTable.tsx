@@ -1,29 +1,56 @@
 import {
   Table,
   TableBody,
-  TableCaption,
+  TableCell,
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table"; 
+} from "@/components/ui/table";
 
-interface HouseholdTableProps {
-  headers: string[]; 
-  caption?: string;   
+export type TableHeader = {
+  key: string;
+  text: string;
+  className?: string;
+};
+
+interface HouseholdTableProps<TData> {
+  headers: TableHeader[];
+  data: TData[];
 }
 
-export function HouseholdTable({ headers, caption }: HouseholdTableProps) {
+export function HouseholdTable<TData extends { [key: string]: any }>({
+  headers,
+  data,
+}: HouseholdTableProps<TData>) {
   return (
     <Table>
-      {caption && <TableCaption>{caption}</TableCaption>}
       <TableHeader>
         <TableRow>
           {headers.map((header) => (
-            <TableHead key={header} className="text-center">{header}</TableHead>
+            <TableHead key={header.key} className={header.className}>
+              {header.text}
+            </TableHead>
           ))}
         </TableRow>
       </TableHeader>
       <TableBody>
+        {data.length > 0 ? (
+          data.map((row, rowIndex) => (
+            <TableRow key={`row-${rowIndex}`}>
+              {headers.map((header) => (
+                <TableCell key={`cell-${rowIndex}-${header.key}`}>
+                  {row[header.key]}
+                </TableCell>
+              ))}
+            </TableRow>
+          ))
+        ) : (
+          <TableRow>
+            <TableCell colSpan={headers.length} className="h-24 text-center">
+              No results.
+            </TableCell>
+          </TableRow>
+        )}
       </TableBody>
     </Table>
   );
