@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -10,6 +9,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Map, EyeOff, Eye, Search, ChevronsUpDown } from "lucide-react";
+import { EventDetailsModal } from "@/components/common/EventDetailsModal";
+import { Badge } from "@/components/ui/badge";
 import {
   Table,
   TableBody,
@@ -18,8 +20,6 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Search, Map, ChevronsUpDown, EyeOff, Eye } from "lucide-react";
-import { EventDetailsModal } from "@/components/common/EventDetailsModal";
 
 export function CityAdminDashboard() {
   const [entriesPerPage, setEntriesPerPage] = useState(10);
@@ -41,13 +41,13 @@ export function CityAdminDashboard() {
     }
   };
 
-  const handleRowClick = (id: string, name: string, type: string, declared: string, end: string, status: string) => {
+  const handleRowClick = (row: any) => {
     setSelectedEvent({
-      eventTitle: name,
-      eventType: type,
-      status: status,
-      dateDeclared: declared,
-      endDate: end,
+      eventTitle: row.eventName,
+      eventType: row.eventType,
+      status: row.status,
+      dateDeclared: row.dateDeclared,
+      endDate: row.endDate,
       evacuationCenters: [
         {
           centerName: "San Lorenzo Parish Church",
@@ -67,6 +67,24 @@ export function CityAdminDashboard() {
     });
     setIsModalOpen(true);
   };
+
+  // Event History data
+  const eventHistoryData = [
+    { eventName: "Palao Fire", eventType: "Fire", dateDeclared: "13/05/2022", endDate: "NA", status: "Active" },
+    { eventName: "June Flash Flood", eventType: "Flood", dateDeclared: "22/05/2022", endDate: "22/05/2022", status: "Recovery" },
+    { eventName: "July Storm Surge", eventType: "Flood", dateDeclared: "15/06/2022", endDate: "15/06/2022", status: "Closed" },
+    { eventName: "Tibanga Flood", eventType: "Flood", dateDeclared: "06/09/2022", endDate: "06/09/2022", status: "Closed" },
+    { eventName: "Typhoon Odette", eventType: "Typhoon", dateDeclared: "25/09/2022", endDate: "25/09/2022", status: "Closed" },
+    { eventName: "Typhoon Odette", eventType: "Typhoon", dateDeclared: "25/09/2022", endDate: "25/09/2022", status: "Closed" },
+  ];
+
+  const eventColumns = [
+    { key: "eventName", label: "Event Name" },
+    { key: "eventType", label: "Event Type" },
+    { key: "dateDeclared", label: "Date Declared" },
+    { key: "endDate", label: "End Date" },
+    { key: "status", label: "Status" },
+  ];
 
   return (
     <div className="w-full min-w-0 bg-background flex flex-col relative">
@@ -248,75 +266,39 @@ export function CityAdminDashboard() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>
-                  <div className="flex items-center justify-between">
-                    Event ID
-                    <ChevronsUpDown className="h-4 w-4" />
-                  </div>
-                </TableHead>
-                <TableHead>
-                  <div className="flex items-center justify-between">
-                    Event Name
-                    <ChevronsUpDown className="h-4 w-4" />
-                  </div>
-                </TableHead>
-                <TableHead>
-                  <div className="flex items-center justify-between">
-                    Event Type
-                    <ChevronsUpDown className="h-4 w-4" />
-                  </div>
-                </TableHead>
-                <TableHead>
-                  <div className="flex items-center justify-between">
-                    Date Declared
-                    <ChevronsUpDown className="h-4 w-4" />
-                  </div>
-                </TableHead>
-                <TableHead>
-                  <div className="flex items-center justify-between">
-                    End Date
-                    <ChevronsUpDown className="h-4 w-4" />
-                  </div>
-                </TableHead>
-                <TableHead>
-                  <div className="flex items-center justify-between">
-                    Status
-                    <ChevronsUpDown className="h-4 w-4" />
-                  </div>
-                </TableHead>
+                {eventColumns.map((column) => (
+                  <TableHead key={column.key}>
+                    <div className="flex items-center justify-between">
+                      {column.label}
+                      <ChevronsUpDown className="h-4 w-4" />
+                    </div>
+                  </TableHead>
+                ))}
               </TableRow>
             </TableHeader>
             <TableBody>
-              {[
-                ["#20462", "Palao Fire", "Fire", "13/05/2022", "NA", "Active"],
-                ["#18933", "June Flash Flood", "Flood", "22/05/2022", "22/05/2022", "Recovery"],
-                ["#45169", "July Storm Surge", "Flood", "15/06/2022", "15/06/2022", "Closed"],
-                ["#54304", "Tibanga Flood", "Flood", "06/09/2022", "06/09/2022", "Closed"],
-                ["#17188", "Typhoon Odette", "Typhoon", "25/09/2022", "25/09/2022", "Closed"],
-                ["#17188", "Typhoon Odette", "Typhoon", "25/09/2022", "25/09/2022", "Closed"],
-              ].map(([id, name, type, declared, end, status], i) => (
-                <TableRow 
-                  key={i} 
+              {eventHistoryData.map((row, i) => (
+                <TableRow
+                  key={i}
                   className={`${i % 2 === 1 ? "bg-muted" : ""} cursor-pointer hover:bg-muted/50 transition-colors`}
-                  onClick={() => handleRowClick(id, name, type, declared, end, status)}
+                  onClick={() => handleRowClick(row)}
                 >
-                  <TableCell className="font-medium">{id}</TableCell>
-                  <TableCell>{name}</TableCell>
-                  <TableCell>{type}</TableCell>
-                  <TableCell>{declared}</TableCell>
-                  <TableCell>{end}</TableCell>
+                  <TableCell className="font-medium">{row.eventName}</TableCell>
+                  <TableCell>{row.eventType}</TableCell>
+                  <TableCell>{row.dateDeclared}</TableCell>
+                  <TableCell>{row.endDate}</TableCell>
                   <TableCell>
                     <Badge
                       variant="secondary"
                       className={
-                        status === "Active"
+                        row.status === "Active"
                           ? "bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-200"
-                          : status === "Recovery"
+                          : row.status === "Recovery"
                           ? "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200"
                           : "bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-200"
                       }
                     >
-                      {status}
+                      {row.status}
                     </Badge>
                   </TableCell>
                 </TableRow>
