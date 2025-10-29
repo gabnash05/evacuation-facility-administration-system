@@ -1,13 +1,16 @@
 "use client";
 
 import { useState } from "react";
+import { Input } from "@/components/ui/input";
 import { SquarePen, Trash2, UserRoundCheck, Ambulance, HousePlus, HandHeart } from "lucide-react";
 import { DataTable } from "@/components/common/DataTable";
+import { SearchBar } from "@/components/common/SearchBar";
 
 export function VolunteerDashboard() {
   const [entriesPerPage, setEntriesPerPage] = useState(10);
+  const [searchQuery, setSearchQuery] = useState("");
 
-  // Active Events data
+  // Active Events data - removed id field
   const activeEventsData = [
     { task: "Check-in evacuee", center: "Bagong Silang Barangay Hall/Gym", dateDeclared: "13/05/2022", endDate: "NA", status: "Active" },
     { task: "Distribute Relief", center: "Bagong Silang Barangay Hall/Gym", dateDeclared: "22/05/2022", endDate: "22/05/2022", status: "Ongoing" },
@@ -16,6 +19,7 @@ export function VolunteerDashboard() {
     { task: "Request Aid", center: "Bagong Silang Barangay Hall/Gym", dateDeclared: "25/09/2022", endDate: "25/09/2022", status: "Closed" },
   ];
 
+  // Columns without Task ID
   const taskColumns = [
     { key: "task", label: "Task" },
     { key: "center", label: "Center" },
@@ -62,16 +66,35 @@ export function VolunteerDashboard() {
           <h2 className="text-2xl font-semibold">Active Events</h2>
         </div>
 
+        {/* Controls Bar */}
+        <div className="bg-card border border-border border-t-0 p-4">
+          <div className="flex items-center gap-6">
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <span>Show</span>
+              <Input
+                type="number"
+                value={entriesPerPage}
+                onChange={(e) => setEntriesPerPage(Number(e.target.value))}
+                className="w-16 h-9 text-center"
+                min={1}
+              />
+              <span>entries</span>
+            </div>
+
+            <SearchBar 
+              placeholder="Search..." 
+              value={searchQuery}
+              onChange={setSearchQuery}
+            />
+          </div>
+        </div>
+
         {/* Active Events Table */}
         <DataTable
-          title=""
           columns={taskColumns}
           data={activeEventsData}
-          entriesPerPage={entriesPerPage}
-          onEntriesChange={setEntriesPerPage}
-          showSearch={true}
-          showFilter={false}
           renderActions={renderActions}
+          showTitle={false}
         />
       </div>
     </div>
