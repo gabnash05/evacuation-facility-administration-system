@@ -18,11 +18,15 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Search, Map, ChevronsUpDown } from "lucide-react";
+import { Search, Map, ChevronsUpDown, EyeOff, Eye } from "lucide-react";
+import { EventDetailsModal } from "@/components/common/EventDetailsModal";
 
 export function CenterAdminDashboard() {
   const [entriesPerPage, setEntriesPerPage] = useState(10);
   const [centerStatus, setCenterStatus] = useState("Active");
+  const [isPanelVisible, setIsPanelVisible] = useState(true);
+  const [selectedEvent, setSelectedEvent] = useState<any>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   const getStatusStyles = (status: string) => {
     switch (status) {
@@ -37,6 +41,33 @@ export function CenterAdminDashboard() {
     }
   };
 
+  const handleRowClick = (id: string, name: string, type: string, declared: string, end: string, status: string) => {
+    setSelectedEvent({
+      eventTitle: name,
+      eventType: type,
+      status: status,
+      dateDeclared: declared,
+      endDate: end,
+      evacuationCenters: [
+        {
+          centerName: "San Lorenzo Parish Church",
+          barangay: "Hinaplanon",
+          capacity: 500,
+          currentOccupancy: 400,
+          occupancy: "80%"
+        },
+        {
+          centerName: "Don Juana Elementary School",
+          barangay: "Palao",
+          capacity: 500,
+          currentOccupancy: 300,
+          occupancy: "60%"
+        }
+      ]
+    });
+    setIsModalOpen(true);
+  };
+
   return (
     <div className="w-full min-w-0 bg-background flex flex-col relative">
       {/* === MAP + RIGHT PANEL === */}
@@ -46,86 +77,137 @@ export function CenterAdminDashboard() {
           <p>Map Placeholder</p>
         </div>
 
-        {/* Right Info Panel - No floating, no radius */}
-        <div className="w-[500px] bg-card border-l border-border">
-          <div className="p-6">
-            <div className="flex items-start gap-4 mb-5">
-              <div className="flex-1">
-                <h2 className="text-3xl font-semibold text-foreground leading-tight">
-                  Bagong Silang<br />
-                  Barangay Gym/<br />
-                  Hall
-                </h2>
-              </div>
-              <div className="w-40 h-28 bg-muted rounded-lg" />
-            </div>
-
-            <div className="space-y-4">
-              {/* Barangay Row */}
-              <div className="flex items-center gap-3">
-                <div className="w-48 flex-none">
-                  <p className="text-xs text-muted-foreground mb-1">Barangay</p>
-                  <div className="border border-border rounded-lg px-3 py-2 bg-background flex items-center justify-between">
-                    <p className="text-sm font-medium">Hinaplanon</p>
-                    <Map className="h-6 w-6 text-muted-foreground" />
-                  </div>
+        {/* Right Info Panel - Conditional rendering */}
+        {isPanelVisible && (
+          <div className="w-[500px] bg-card border-l border-border">
+            <div className="p-6">
+              <div className="flex items-start gap-4 mb-5">
+                <div className="flex-1">
+                  <h2 className="text-3xl font-semibold text-foreground leading-tight">
+                    Bagong Silang<br />
+                    Barangay Gym/<br />
+                    Hall
+                  </h2>
                 </div>
-                <div className="w-40 flex-none">
-                  <p className="text-xs text-muted-foreground mb-1">Status</p>
-                  <Select value={centerStatus} onValueChange={setCenterStatus}>
-                    <SelectTrigger className={`rounded-lg px-3 py-2 text-sm font-medium h-auto w-full ${getStatusStyles(centerStatus)}`}>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="Active">Active</SelectItem>
-                      <SelectItem value="Recovery">Recovery</SelectItem>
-                      <SelectItem value="Closed">Closed</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
+                <div className="w-40 h-28 bg-muted rounded-lg" />
               </div>
 
-              {/* Capacity and Current Row */}
-              <div className="flex items-center gap-3">
-                <div className="w-30">
-                  <p className="text-xs text-muted-foreground mb-1">Capacity</p>
-                  <div className="border border-border rounded-lg px-3 py-2 bg-background">
-                    <p className="text-sm font-medium">500</p>
+              <div className="space-y-4">
+                {/* Barangay Row */}
+                <div className="flex items-center gap-3">
+                  <div className="w-48 flex-none">
+                    <p className="text-xs text-muted-foreground mb-1">Barangay</p>
+                    <div className="border border-border rounded-lg px-3 py-2 bg-background flex items-center justify-between">
+                      <p className="text-sm font-medium">Hinaplanon</p>
+                      <Map className="h-6 w-6 text-muted-foreground" />
+                    </div>
+                  </div>
+                  <div className="w-40 flex-none">
+                    <p className="text-xs text-muted-foreground mb-1">Status</p>
+                    <Select value={centerStatus} onValueChange={setCenterStatus}>
+                      <SelectTrigger className={`rounded-lg px-3 py-2 text-sm font-medium h-auto w-full ${getStatusStyles(centerStatus)}`}>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Active">Active</SelectItem>
+                        <SelectItem value="Recovery">Recovery</SelectItem>
+                        <SelectItem value="Closed">Closed</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
                 </div>
-                <div className="w-30">
-                  <p className="text-xs text-muted-foreground mb-1">Current Occupancy</p>
-                  <div className="border border-border rounded-lg px-3 py-2 bg-background">
-                    <p className="text-sm font-medium">300</p>
+
+                {/* Capacity, Current, Usage, and Hide Button Row */}
+                <div className="flex items-center gap-3">
+                  <div className="w-30">
+                    <p className="text-xs text-muted-foreground mb-1">Capacity</p>
+                    <div className="border border-border rounded-lg px-3 py-2 bg-background">
+                      <p className="text-sm font-medium">500</p>
+                    </div>
                   </div>
-                </div>
-                <div className="w-20">
-                  <p className="text-xs text-muted-foreground mb-1">Usage</p>
-                  <div className="border border-border rounded-lg px-3 py-2 bg-yellow-100 text-center">
-                    <p className="text-sm font-semibold text-black">60%</p>
+                  <div className="w-30">
+                    <p className="text-xs text-muted-foreground mb-1">Current Occupancy</p>
+                    <div className="border border-border rounded-lg px-3 py-2 bg-background">
+                      <p className="text-sm font-medium">300</p>
+                    </div>
+                  </div>
+                  <div className="w-20">
+                    <p className="text-xs text-muted-foreground mb-1">Usage</p>
+                    <div className="border border-border rounded-lg px-3 py-2 bg-yellow-100 text-center">
+                      <p className="text-sm font-semibold text-black">60%</p>
+                    </div>
+                  </div>
+                  <div className="w-16">
+                    <p className="text-xs text-muted-foreground mb-1 opacity-0">Hide</p>
+                    <button
+                      onClick={() => setIsPanelVisible(false)}
+                      className="border border-border rounded-lg px-3 py-2 bg-background hover:bg-muted transition-colors w-full flex items-center justify-center"
+                      title="Hide panel"
+                    >
+                      <EyeOff className="h-5 w-5 text-muted-foreground" />
+                    </button>
                   </div>
                 </div>
               </div>
             </div>
           </div>
-        </div>
+        )}
+
+        {/* Show Panel Button (when hidden) */}
+        {!isPanelVisible && (
+          <button
+            onClick={() => setIsPanelVisible(true)}
+            className="absolute top-4 right-4 bg-card border border-border rounded-lg px-3 py-2 shadow-md hover:bg-muted transition-colors z-10"
+            title="Show panel"
+          >
+            <Eye className="h-5 w-5 text-muted-foreground" />
+          </button>
+        )}
       </div>
 
       {/* === STATS ROW === */}
       <div className="w-full bg-card border-b border-border flex justify-around py-4 text-center">
         {[
-          { label: "Total Checked In", value: "300", max: "1000" },
-          { label: "Total Checked Out", value: "271", max: "500" },
-          { label: "Total Missing", value: "5", max: "" },
-          { label: "Total Unaccounted", value: "429", max: "1000" },
+          { label: "Total Checked In", value: "300", max: "1000", percentage: 30 },
+          { label: "Total Checked Out", value: "271", max: "500", percentage: 54 },
+          { label: "Total Missing", value: "5", max: "", percentage: 0 },
+          { label: "Total Unaccounted", value: "429", max: "1000", percentage: 43 },
         ].map((stat, i) => (
           <div key={i} className="flex flex-col items-center gap-1">
             <div className="flex items-center gap-2">
-              <div className="w-10 h-10 border-2 border-muted rounded-full flex items-center justify-center text-xs font-medium">
-                25%
+              {/* Rotating Progress Circle */}
+              <div className="relative w-10 h-10">
+                <svg className="w-10 h-10 -rotate-90" viewBox="0 0 36 36">
+                  {/* Background circle */}
+                  <circle
+                    cx="18"
+                    cy="18"
+                    r="16"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="3"
+                    className="text-muted"
+                  />
+                  {/* Progress circle */}
+                  <circle
+                    cx="18"
+                    cy="18"
+                    r="16"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="3"
+                    strokeDasharray={`${stat.percentage} ${100 - stat.percentage}`}
+                    className="text-blue-500"
+                  />
+                </svg>
+                {/* Percentage text */}
+                <div className="absolute inset-0 flex items-center justify-center text-xs font-medium">
+                  {stat.percentage}%
+                </div>
               </div>
+              
               <div className="text-xl font-semibold">{stat.value}</div>
-              <p className="text-sm text-muted-foreground">/{stat.max}</p>
+              {stat.max && <p className="text-sm text-muted-foreground">/{stat.max}</p>}
             </div>
             <p className="text-sm font-medium">{stat.label}</p>
           </div>
@@ -213,7 +295,11 @@ export function CenterAdminDashboard() {
                 ["#17188", "Typhoon Odette", "Typhoon", "25/09/2022", "25/09/2022", "Closed"],
                 ["#17188", "Typhoon Odette", "Typhoon", "25/09/2022", "25/09/2022", "Closed"],
               ].map(([id, name, type, declared, end, status], i) => (
-                <TableRow key={i} className={i % 2 === 1 ? "bg-muted" : ""}>
+                <TableRow 
+                  key={i} 
+                  className={`${i % 2 === 1 ? "bg-muted" : ""} cursor-pointer hover:bg-muted/50 transition-colors`}
+                  onClick={() => handleRowClick(id, name, type, declared, end, status)}
+                >
                   <TableCell className="font-medium">{id}</TableCell>
                   <TableCell>{name}</TableCell>
                   <TableCell>{type}</TableCell>
@@ -239,6 +325,13 @@ export function CenterAdminDashboard() {
           </Table>
         </div>
       </div>
+
+      {/* Event Details Modal */}
+      <EventDetailsModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        eventData={selectedEvent}
+      />
     </div>
   );
 }
