@@ -1,3 +1,5 @@
+// HouseholdTable.tsx
+
 import {
   Table,
   TableBody,
@@ -38,7 +40,7 @@ export function HouseholdTable<TData extends { [key: string]: any }>({
           data.map((row, rowIndex) => (
             <TableRow key={`row-${rowIndex}`}>
               {headers.map((header) => (
-                <TableCell key={`cell-${rowIndex}-${header.key}`}>
+                <TableCell key={`cell-${rowIndex}-${header.key}`} className="text-center">
                   {row[header.key]}
                 </TableCell>
               ))}
