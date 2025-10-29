@@ -1,7 +1,6 @@
 "use client";
 
 import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
 import {
   Table,
   TableBody,
@@ -10,7 +9,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Search, Filter, ChevronsUpDown } from "lucide-react";
+import { ChevronsUpDown } from "lucide-react";
 
 interface Column {
   key: string;
@@ -19,31 +18,23 @@ interface Column {
 }
 
 interface DataTableProps {
-  title: string;
+  title?: string;
   columns: Column[];
   data: any[];
-  showEntries?: boolean;
-  entriesPerPage?: number;
-  onEntriesChange?: (value: number) => void;
-  showSearch?: boolean;
-  showFilter?: boolean;
   onRowClick?: (row: any, index: number) => void;
   renderCell?: (key: string, value: any, row: any) => React.ReactNode;
   renderActions?: (row: any, index: number) => React.ReactNode;
+  showTitle?: boolean;
 }
 
 export function DataTable({
   title,
   columns,
   data,
-  showEntries = true,
-  entriesPerPage = 10,
-  onEntriesChange,
-  showSearch = true,
-  showFilter = false,
   onRowClick,
   renderCell,
   renderActions,
+  showTitle = true,
 }: DataTableProps) {
   
   const getStatusColor = (status: string) => {
@@ -72,87 +63,53 @@ export function DataTable({
   };
 
   return (
-    <div className="p-0">
-      {/* Controls Bar */}
-      <div className="bg-card border border-border p-4">
-        <div className="flex items-center justify-between">
-          {showEntries && (
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <span>Show</span>
-              <Input
-                type="number"
-                value={entriesPerPage}
-                onChange={(e) => onEntriesChange?.(Number(e.target.value))}
-                className="w-16 h-9 text-center"
-                min={1}
-              />
-              <span>entries</span>
-            </div>
-          )}
-
-          <div className="flex items-center gap-2 ml-auto">
-            {showSearch && (
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input placeholder="Search..." className="w-64 h-9 pl-9" />
-              </div>
-            )}
-            {showFilter && (
-              <button className="bg-muted hover:bg-muted/80 p-2 h-9 w-9 flex items-center justify-center border border-border rounded">
-                <Filter className="h-4 w-4" />
-              </button>
-            )}
-          </div>
-        </div>
-      </div>
-
-      {/* Table */}
-      <div className="border border-border">
+    <div className="border border-border border-t-0">
+      {showTitle && title && (
         <div className="p-4 border-b border-border">
           <h3 className="font-semibold text-base text-foreground">{title}</h3>
         </div>
-        <Table>
-          <TableHeader>
-            <TableRow>
-              {columns.map((column) => (
-                <TableHead key={column.key}>
-                  <div className="flex items-center justify-between">
-                    {column.label}
-                    {column.sortable !== false && (
-                      <ChevronsUpDown className="h-4 w-4" />
-                    )}
-                  </div>
-                </TableHead>
-              ))}
-              {renderActions && <TableHead>Action</TableHead>}
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {data.map((row, i) => (
-              <TableRow
-                key={i}
-                className={`${i % 2 === 1 ? "bg-muted" : ""} ${
-                  onRowClick ? "cursor-pointer hover:bg-muted/50 transition-colors" : ""
-                }`}
-                onClick={() => onRowClick?.(row, i)}
-              >
-                {columns.map((column) => (
-                  <TableCell key={column.key} className={column.key === columns[0].key ? "font-medium" : ""}>
-                    {renderCell
-                      ? renderCell(column.key, row[column.key], row)
-                      : defaultRenderCell(column.key, row[column.key], row)}
-                  </TableCell>
-                ))}
-                {renderActions && (
-                  <TableCell onClick={(e) => e.stopPropagation()}>
-                    {renderActions(row, i)}
-                  </TableCell>
-                )}
-              </TableRow>
+      )}
+      <Table>
+        <TableHeader>
+          <TableRow>
+            {columns.map((column) => (
+              <TableHead key={column.key}>
+                <div className="flex items-center justify-between">
+                  {column.label}
+                  {column.sortable !== false && (
+                    <ChevronsUpDown className="h-4 w-4" />
+                  )}
+                </div>
+              </TableHead>
             ))}
-          </TableBody>
-        </Table>
-      </div>
+            {renderActions && <TableHead>Action</TableHead>}
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {data.map((row, i) => (
+            <TableRow
+              key={i}
+              className={`${i % 2 === 1 ? "bg-muted" : ""} ${
+                onRowClick ? "cursor-pointer hover:bg-muted/50 transition-colors" : ""
+              }`}
+              onClick={() => onRowClick?.(row, i)}
+            >
+              {columns.map((column) => (
+                <TableCell key={column.key} className={column.key === columns[0].key ? "font-medium" : ""}>
+                  {renderCell
+                    ? renderCell(column.key, row[column.key], row)
+                    : defaultRenderCell(column.key, row[column.key], row)}
+                </TableCell>
+              ))}
+              {renderActions && (
+                <TableCell onClick={(e) => e.stopPropagation()}>
+                  {renderActions(row, i)}
+                </TableCell>
+              )}
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
     </div>
   );
 }
