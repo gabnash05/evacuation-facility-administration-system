@@ -4,7 +4,7 @@
 DO $$
 DECLARE
     user_email TEXT := '&1';    -- Email will be provided as parameter
-    user_password TEXT := '&2'; -- Password will be provided as parameter
+    user_password_hash TEXT := '&2'; -- Pre-hashed password from Python
     user_exists BOOLEAN;
 BEGIN
     -- Check if admin user already exists
@@ -15,7 +15,7 @@ BEGIN
         
         -- Update existing admin user password
         UPDATE users 
-        SET password_hash = crypt(user_password, gen_salt('bf')),
+        SET password_hash = user_password_hash,
             updated_at = CURRENT_TIMESTAMP
         WHERE email = user_email;
         
@@ -29,7 +29,7 @@ BEGIN
             is_active
         ) VALUES (
             user_email,
-            crypt(user_password, gen_salt('bf')),
+            user_password_hash,
             'super_admin',
             NULL,
             TRUE

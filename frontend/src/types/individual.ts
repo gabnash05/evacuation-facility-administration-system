@@ -36,5 +36,5 @@ export interface UpdateIndividualData {
 }
 
 // API Response types
-export interface IndividualResponse extends ApiResponse<Individual> {}
-export interface IndividualsResponse extends PaginatedResponse<Individual> {}
+export type IndividualResponse = ApiResponse<Individual>;
+export type IndividualsResponse = PaginatedResponse<Individual>;

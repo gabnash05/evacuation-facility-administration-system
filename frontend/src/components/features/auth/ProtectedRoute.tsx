@@ -1,6 +1,6 @@
 // components/auth/ProtectedRoute.tsx
-import { Navigate } from 'react-router-dom';
-import { useAuth } from '@/hooks/useAuth.mock';
+import { Navigate } from "react-router-dom";
+import { useAuth } from "@/hooks/useAuth.mock";
 // import { useAuth } from '@/hooks/useAuth'; // Use the real hook when its implemented
 
 interface ProtectedRouteProps {
@@ -10,7 +10,7 @@ interface ProtectedRouteProps {
 
 export default function ProtectedRoute({ children, requiredRole }: ProtectedRouteProps) {
     const { isAuthenticated, user, isLoading } = useAuth();
-    
+
     if (isLoading) {
         return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
     }

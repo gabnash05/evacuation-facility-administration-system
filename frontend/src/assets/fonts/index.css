@@ -1,17 +1,17 @@
 /* Lexend Variable Font */
 @font-face {
-    font-family: 'Lexend';
+    font-family: "Lexend";
     font-style: normal;
     font-weight: 100 900;
     font-display: swap;
-    src: url('./lexend/Lexend-VariableFont_wght.ttf') format('truetype-variations');
+    src: url("./lexend/Lexend-VariableFont_wght.ttf") format("truetype-variations");
 }
 
 /* Fallback for browsers that don't support variable fonts */
 @font-face {
-    font-family: 'Lexend Fallback';
+    font-family: "Lexend Fallback";
     font-style: normal;
     font-weight: 400;
     font-display: swap;
-    src: url('./lexend/Lexend-VariableFont_wght.ttf') format('truetype');
+    src: url("./lexend/Lexend-VariableFont_wght.ttf") format("truetype");
 }

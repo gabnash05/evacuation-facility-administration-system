@@ -1,16 +1,14 @@
 import { api, handleApiError } from "./api";
 import type { User } from "@/types/user";
 import type { LoginFormData, RegisterFormData } from "@/schemas/auth";
-import type { LoginResponse, UserResponse } from "@/types/user";
-import type { ApiResponse } from "@/types/api";
+import type { LoginResponse, AuthResponse, UserResponse } from "@/types/user";
 
 export class AuthService {
-    static async login(credentials: LoginFormData): Promise<LoginResponse> {
+    static async login(credentials: LoginFormData): Promise<AuthResponse> {
         try {
-            const response = await api.post<ApiResponse<LoginResponse>>(
-                "/api/auth/login",
-                credentials
-            );
+            const response = await api.post<LoginResponse>("/auth/login", credentials, {
+                withCredentials: true,
+            });
 
             return response.data.data!;
         } catch (error) {
@@ -18,12 +16,11 @@ export class AuthService {
         }
     }
 
-    static async register(userData: RegisterFormData): Promise<UserResponse> {
+    static async register(userData: RegisterFormData): Promise<User> {
         try {
-            const response = await api.post<ApiResponse<UserResponse>>(
-                "/api/auth/register",
-                userData
-            );
+            const response = await api.post<UserResponse>("/auth/register", userData, {
+                withCredentials: true,
+            });
             return response.data.data!;
         } catch (error) {
             throw new Error(handleApiError(error));
@@ -32,7 +29,9 @@ export class AuthService {
 
     static async getCurrentUser(): Promise<User> {
         try {
-            const response = await api.get<ApiResponse<User>>("/api/auth/me");
+            const response = await api.get<UserResponse>("/auth/me", {
+                withCredentials: true,
+            });
             return response.data.data!;
         } catch (error) {
             throw new Error(handleApiError(error));
@@ -41,11 +40,9 @@ export class AuthService {
 
     static async logout(): Promise<void> {
         try {
-            await api.post("/api/auth/logout");
+            await api.post("/auth/logout", {}, { withCredentials: true });
         } catch (error) {
             console.error("Error logging out:", error);
-        } finally {
-            window.location.assign("/login");
         }
     }
 
