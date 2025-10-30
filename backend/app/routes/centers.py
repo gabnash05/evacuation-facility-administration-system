@@ -71,9 +71,12 @@ def create_new_center() -> Tuple[Dict[str, Any], int]:
 
     Request Body:
         {
+            "name": "string",           # NEW
+            "barangay": "string",       # NEW  
             "address": "string",
             "capacity": 0,
-            "status": "open"
+            "currentOccupancy": 0,      # NEW
+            "status": "Active"          # CHANGED: "Active"/"Inactive" instead of "open"/"full"/"closed"
         }
 
     Returns:
@@ -81,23 +84,18 @@ def create_new_center() -> Tuple[Dict[str, Any], int]:
     """
     try:
         data = request.get_json()
-
-        # Validate required fields
-        required_fields = ["address", "capacity"]
+        
+        # Validate required fields - UPDATED
+        required_fields = ['name', 'barangay', 'address', 'capacity']  # CHANGED
         for field in required_fields:
             if field not in data:
-                return (
-                    jsonify(
-                        {
-                            "success": False,
-                            "message": f"Missing required field: {field}",
-                        }
-                    ),
-                    400,
-                )
-
-        logger.info("Creating new evacuation center at: %s", data["address"])
-
+                return jsonify({
+                    "success": False,
+                    "message": f"Missing required field: {field}"
+                }), 400
+        
+        logger.info("Creating new evacuation center: %s", data['name'])  # CHANGED
+        
         # Create center and get ID
         center_id = create_center(data)
 
