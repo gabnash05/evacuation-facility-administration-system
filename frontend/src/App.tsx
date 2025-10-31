@@ -53,7 +53,7 @@ function App() {
                 <Route
                     path="/center-admin/*"
                     element={
-                        <ProtectedRoute requiredRole={["center_admin"]}>
+                        <ProtectedRoute requiredRole={["center_admin", "city_admin", "super_admin"]}>
                             <MainLayout>
                                 <Routes>
                                     <Route path="dashboard" element={<CenterAdminDashboard />} />
