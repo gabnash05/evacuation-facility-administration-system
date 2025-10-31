@@ -1,16 +1,37 @@
 import { z } from "zod";
 
 export const createCenterSchema = z.object({
-    address: z.string().min(1, "Address is required"),
-    capacity: z.number().min(1, "Capacity must be at least 1"),
-    status: z.enum(["active", "inactive", "closed"]).default("active"),
+    center_name: z.string().min(1, "Center name is required").max(255, "Center name is too long"),
+    address: z.string().min(1, "Address is required").max(500, "Address is too long"),
+    capacity: z.number().min(1, "Capacity must be at least 1").max(10000, "Capacity is too high"),
+    current_occupancy: z.number().min(0, "Current occupancy cannot be negative")
+        .refine((val) => val >= 0, "Current occupancy cannot be negative")
+        .optional()
+        .default(0),
+    status: z.enum(["active", "inactive", "closed", "open"]).default("active"),
 });
 
 export const updateCenterSchema = z.object({
-    address: z.string().min(1, "Address is required").optional(),
-    capacity: z.number().min(1, "Capacity must be at least 1").optional(),
-    status: z.enum(["active", "inactive", "closed"]).optional(),
-});
+    center_name: z.string().min(1, "Center name is required").max(255, "Center name is too long").optional(),
+    address: z.string().min(1, "Address is required").max(500, "Address is too long").optional(),
+    capacity: z.number().min(1, "Capacity must be at least 1").max(10000, "Capacity is too high").optional(),
+    current_occupancy: z.number().min(0, "Current occupancy cannot be negative")
+        .refine((val) => val >= 0, "Current occupancy cannot be negative")
+        .optional(),
+    status: z.enum(["active", "inactive", "closed", "open"]).optional(),
+}).refine(
+    (data) => {
+        // Ensure current_occupancy doesn't exceed capacity if both are provided
+        if (data.current_occupancy !== undefined && data.capacity !== undefined) {
+            return data.current_occupancy <= data.capacity;
+        }
+        return true;
+    },
+    {
+        message: "Current occupancy cannot exceed capacity",
+        path: ["current_occupancy"],
+    }
+);
 
 export type CreateCenterFormData = z.infer<typeof createCenterSchema>;
 export type UpdateCenterFormData = z.infer<typeof updateCenterSchema>;

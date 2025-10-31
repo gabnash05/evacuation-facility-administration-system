@@ -223,11 +223,11 @@ def verify_tables():
         # Check if all expected tables exist
         expected_tables = [
             "users",
-            "event",
-            "evacuation_center",
-            "household",
-            "individual",
-            "event_center",
+            "events",
+            "evacuation_centers",
+            "households",
+            "individuals",
+            "event_centers",
         ]
 
         cursor.execute(
