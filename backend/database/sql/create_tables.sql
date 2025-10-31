@@ -6,8 +6,9 @@
 -- ========================
 -- TABLE: EVACUATION_CENTER (must be first due to foreign key dependencies)
 -- ========================
-CREATE TABLE IF NOT EXISTS evacuation_center (
+CREATE TABLE IF NOT EXISTS evacuation_centers (
     center_id SERIAL PRIMARY KEY,
+    center_name VARCHAR(255) NOT NULL,
     address VARCHAR(255) NOT NULL,
     capacity INTEGER NOT NULL CHECK (capacity > 0),
     status VARCHAR(20) NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'inactive', 'closed')),
@@ -19,7 +20,7 @@ CREATE TABLE IF NOT EXISTS evacuation_center (
 -- ========================
 -- TABLE: EVENT
 -- ========================
-CREATE TABLE IF NOT EXISTS event (
+CREATE TABLE IF NOT EXISTS events (
     event_id SERIAL PRIMARY KEY,
     event_name VARCHAR(150) NOT NULL,
     event_type VARCHAR(50) NOT NULL,
@@ -48,7 +49,7 @@ CREATE TABLE IF NOT EXISTS users (
     -- Foreign key constraint
     CONSTRAINT fk_user_center 
         FOREIGN KEY (center_id) 
-        REFERENCES evacuation_center(center_id)
+        REFERENCES evacuation_centers(center_id)
         ON DELETE SET NULL,
     
     -- Business logic constraints
@@ -61,7 +62,7 @@ CREATE TABLE IF NOT EXISTS users (
 -- ========================
 -- TABLE: HOUSEHOLD
 -- ========================
-CREATE TABLE IF NOT EXISTS household (
+CREATE TABLE IF NOT EXISTS households (
     household_id SERIAL PRIMARY KEY,
     household_head_id INTEGER NULL,  -- Will be self-referencing to individual (added later)
     center_id INTEGER NOT NULL,
@@ -72,14 +73,14 @@ CREATE TABLE IF NOT EXISTS household (
     
     CONSTRAINT fk_household_center 
         FOREIGN KEY (center_id) 
-        REFERENCES evacuation_center(center_id)
+        REFERENCES evacuation_centers(center_id)
         ON DELETE CASCADE
 );
 
 -- ========================
 -- TABLE: INDIVIDUAL
 -- ========================
-CREATE TABLE IF NOT EXISTS individual (
+CREATE TABLE IF NOT EXISTS individuals (
     individual_id SERIAL PRIMARY KEY,
     household_id INTEGER NOT NULL,
     first_name VARCHAR(50) NOT NULL,
@@ -92,14 +93,14 @@ CREATE TABLE IF NOT EXISTS individual (
     
     CONSTRAINT fk_individual_household 
         FOREIGN KEY (household_id) 
-        REFERENCES household(household_id)
+        REFERENCES households(household_id)
         ON DELETE CASCADE
 );
 
 -- ========================
 -- JUNCTION TABLE: EVENT_CENTER
 -- ========================
-CREATE TABLE IF NOT EXISTS event_center (
+CREATE TABLE IF NOT EXISTS event_centers (
     event_id INTEGER NOT NULL,
     center_id INTEGER NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -108,22 +109,22 @@ CREATE TABLE IF NOT EXISTS event_center (
     
     CONSTRAINT fk_event_center_event 
         FOREIGN KEY (event_id) 
-        REFERENCES event(event_id)
+        REFERENCES events(event_id)
         ON DELETE CASCADE,
         
     CONSTRAINT fk_event_center_center 
         FOREIGN KEY (center_id) 
-        REFERENCES evacuation_center(center_id)
+        REFERENCES evacuation_centers(center_id)
         ON DELETE CASCADE
 );
 
 -- ========================
 -- ADD DEFERRED FOREIGN KEY FOR HOUSEHOLD HEAD
 -- ========================
-ALTER TABLE household 
+ALTER TABLE households 
 ADD CONSTRAINT fk_household_head 
     FOREIGN KEY (household_head_id) 
-    REFERENCES individual(individual_id)
+    REFERENCES individuals(individual_id)
     ON DELETE SET NULL;
 
 -- ========================
@@ -139,7 +140,7 @@ $$ language 'plpgsql';
 
 -- Create triggers for all tables with updated_at
 CREATE TRIGGER update_users_updated_at BEFORE UPDATE ON users FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-CREATE TRIGGER update_event_updated_at BEFORE UPDATE ON event FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-CREATE TRIGGER update_evacuation_center_updated_at BEFORE UPDATE ON evacuation_center FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-CREATE TRIGGER update_household_updated_at BEFORE UPDATE ON household FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-CREATE TRIGGER update_individual_updated_at BEFORE UPDATE ON individual FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER update_events_updated_at BEFORE UPDATE ON events FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER update_evacuation_centers_updated_at BEFORE UPDATE ON evacuation_centers FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER update_households_updated_at BEFORE UPDATE ON households FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER update_individuals_updated_at BEFORE UPDATE ON individuals FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();

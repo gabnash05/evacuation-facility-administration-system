@@ -10,9 +10,9 @@ export interface PaginatedResponse<T> {
     data: {
         results: T[];
         pagination: {
-            currentPage: number;
-            totalPages: number;
-            totalItems: number;
+            current_page: number;
+            total_pages: number;
+            total_items: number;
             limit: number;
         };
     };
@@ -22,7 +22,11 @@ export interface SearchParams {
     search?: string;
     page?: number;
     limit?: number;
-    status?: string;
-    center_id?: number;
-    [key: string]: any;
+    sortBy?: string;
+    sortOrder?: 'asc' | 'desc';
+}
+
+export interface SortConfig {
+    key: string;
+    direction: "asc" | "desc" | null;
 }
