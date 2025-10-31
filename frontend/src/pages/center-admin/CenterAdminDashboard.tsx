@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import {
   Select,
   SelectContent,
@@ -8,12 +8,21 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Map, EyeOff, Eye, ChevronLeft, ChevronRight, AlertCircle, Search as SearchIcon } from "lucide-react";
+import { Map, EyeOff, Eye, ChevronLeft, ChevronRight, AlertCircle, Search, ChevronsUpDown } from "lucide-react";
 import { EventDetailsModal } from "@/components/common/EventDetailsModal";
-import { DataTable } from "@/components/common/DataTable";
 import { SearchBar } from "@/components/common/SearchBar";
+import { Badge } from "@/components/ui/badge";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 
 interface Event {
+  eventId?: number; 
   eventName: string;
   eventType: string;
   dateDeclared: string;
@@ -53,18 +62,21 @@ interface SelectedCenter {
   currentOccupancy: number;
 }
 
-export function CityAdminDashboard() {
+export function CenterAdminDashboard() {
   const [isPanelVisible, setIsPanelVisible] = useState(true);
   const [selectedEvent, setSelectedEvent] = useState<EventDetails | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
-  const [sortColumn, setSortColumn] = useState<string>("");
-  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
+  const [sortConfig, setSortConfig] = useState<{
+    key: string;
+    direction: 'asc' | 'desc' | null;
+  } | null>(null);
   const [isLoadingEvents, setIsLoadingEvents] = useState(false);
   const [isLoadingStats, setIsLoadingStats] = useState(false);
   const [isLoadingCenter, setIsLoadingCenter] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [eventHistoryData, setEventHistoryData] = useState<Event[]>([]);
   const [selectedCenter, setSelectedCenter] = useState<SelectedCenter>({
     name: "Bagong Silang Barangay Gym/Hall",
     barangay: "Hinaplanon",
@@ -100,45 +112,77 @@ export function CityAdminDashboard() {
     (selectedCenter.currentOccupancy / selectedCenter.capacity) * 100
   );
 
+  useEffect(() => {
+    const fetchEvents = async () => {
+      setIsLoadingEvents(true);
+      setError(null);
+      try {
+        const response = await fetch('http://localhost:5000/api/events/');
+        if (!response.ok) {
+          throw new Error('Failed to fetch events');
+        }
+        const result = await response.json();
+        if (result.success) {
+          const formattedEvents = result.data.map((event: any) => ({
+            eventId: event.event_id, 
+            eventName: event.event_name,
+            eventType: event.event_type,
+            dateDeclared: new Date(event.date_declared).toLocaleDateString('en-GB'),
+            endDate: event.end_date ? new Date(event.end_date).toLocaleDateString('en-GB') : 'NA',
+            status: event.status as "Active" | "Recovery" | "Closed"
+          }));
+          setEventHistoryData(formattedEvents);
+        }
+      } catch (err) {
+        console.error('Error fetching events:', err);
+        setError('Failed to load events. Please try again.');
+      } finally {
+        setIsLoadingEvents(false);
+      }
+    };
+
+    fetchEvents();
+  }, []);
+
   const handleRowClick = async (row: Event) => {
+    if (!row.eventId) {
+      setError("Event ID not found");
+      return;
+    }
+
     try {
       setIsLoadingEvents(true);
       setError(null);
       
-      // TODO: Replace with actual API call when backend is ready
-      // const response = await fetch(`/api/events/${row.eventId}/details`);
-      // const eventDetails = await response.json();
+      const response = await fetch(`http://localhost:5000/api/events/${row.eventId}`);
       
-      // Simulate API delay for testing
-      await new Promise(resolve => setTimeout(resolve, 500));
+      if (!response.ok) {
+        throw new Error('Failed to fetch event details');
+      }
       
-      // Mock data - replace with API response
-      const eventDetails = {
-        eventTitle: row.eventName,
-        eventType: row.eventType,
-        status: row.status,
-        dateDeclared: row.dateDeclared,
-        endDate: row.endDate,
-        evacuationCenters: [
-          {
-            centerName: "San Lorenzo Parish Church",
-            barangay: "Hinaplanon",
-            capacity: 500,
-            currentOccupancy: 400,
-            occupancy: "80%"
-          },
-          {
-            centerName: "Don Juana Elementary School",
-            barangay: "Palao",
-            capacity: 500,
-            currentOccupancy: 300,
-            occupancy: "60%"
-          }
-        ]
-      };
+      const result = await response.json();
       
-      setSelectedEvent(eventDetails);
-      setIsModalOpen(true);
+      if (result.success) {
+        const eventDetails = {
+          eventTitle: result.data.event.event_name,
+          eventType: result.data.event.event_type,
+          status: result.data.event.status,
+          dateDeclared: new Date(result.data.event.date_declared).toLocaleDateString('en-GB'),
+          endDate: result.data.event.end_date 
+            ? new Date(result.data.event.end_date).toLocaleDateString('en-GB') 
+            : 'NA',
+          evacuationCenters: result.data.centers.map((center: any) => ({
+            centerName: center.center_name,
+            barangay: center.barangay,
+            capacity: center.capacity,
+            currentOccupancy: center.current_occupancy,
+            occupancy: center.occupancy
+          }))
+        };
+        
+        setSelectedEvent(eventDetails);
+        setIsModalOpen(true);
+      }
     } catch (err) {
       setError("Failed to load event details. Please try again.");
       console.error("Event details error:", err);
@@ -147,13 +191,23 @@ export function CityAdminDashboard() {
     }
   };
 
-  const handleSort = (column: string): void => {
-    if (sortColumn === column) {
-      setSortDirection(sortDirection === "asc" ? "desc" : "asc");
-    } else {
-      setSortColumn(column);
-      setSortDirection("asc");
-    }
+  const handleSort = (key: string) => {
+    setSortConfig(current => {
+      if (!current || current.key !== key) {
+        return { key, direction: 'asc' };
+      }
+      
+      switch (current.direction) {
+        case 'asc':
+          return { key, direction: 'desc' };
+        case 'desc':
+          return { key, direction: null };
+        case null:
+        default:
+          return { key, direction: 'asc' };
+      }
+    });
+    setCurrentPage(1);
   };
 
   const handleStatusChange = (newStatus: string) => {
@@ -162,19 +216,6 @@ export function CityAdminDashboard() {
       status: newStatus as "Active" | "Recovery" | "Closed"
     });
   };
-
-  const eventHistoryData: Event[] = [
-    { eventName: "Palao Fire", eventType: "Fire", dateDeclared: "13/05/2022", endDate: "NA", status: "Active" },
-    { eventName: "June Flash Flood", eventType: "Flood", dateDeclared: "22/05/2022", endDate: "22/05/2022", status: "Recovery" },
-    { eventName: "July Storm Surge", eventType: "Flood", dateDeclared: "15/06/2022", endDate: "15/06/2022", status: "Closed" },
-    { eventName: "Tibanga Flood", eventType: "Flood", dateDeclared: "06/09/2022", endDate: "06/09/2022", status: "Closed" },
-    { eventName: "Typhoon Odette", eventType: "Typhoon", dateDeclared: "25/09/2022", endDate: "25/09/2022", status: "Closed" },
-    { eventName: "Typhoon Odette", eventType: "Typhoon", dateDeclared: "25/09/2022", endDate: "25/09/2022", status: "Closed" },
-    { eventName: "Earthquake Alert", eventType: "Earthquake", dateDeclared: "10/11/2022", endDate: "10/11/2022", status: "Closed" },
-    { eventName: "Volcanic Activity", eventType: "Volcano", dateDeclared: "15/12/2022", endDate: "NA", status: "Active" },
-    { eventName: "Landslide Warning", eventType: "Landslide", dateDeclared: "20/01/2023", endDate: "21/01/2023", status: "Closed" },
-    { eventName: "Tsunami Warning", eventType: "Tsunami", dateDeclared: "05/02/2023", endDate: "05/02/2023", status: "Closed" },
-  ];
 
   const eventColumns = [
     { key: "eventName", label: "Event Name" },
@@ -198,19 +239,29 @@ export function CityAdminDashboard() {
       )
     );
 
-    if (sortColumn) {
-      filtered = [...filtered].sort((a: any, b: any) => {
-        const aValue = a[sortColumn];
-        const bValue = b[sortColumn];
+    if (sortConfig && sortConfig.direction) {
+      filtered = [...filtered].sort((a, b) => {
+        const aValue = a[sortConfig.key as keyof typeof a];
+        const bValue = b[sortConfig.key as keyof typeof b];
         
-        if (aValue < bValue) return sortDirection === "asc" ? -1 : 1;
-        if (aValue > bValue) return sortDirection === "asc" ? 1 : -1;
+        if (typeof aValue === 'string' && typeof bValue === 'string') {
+          return sortConfig.direction === 'asc' 
+            ? aValue.localeCompare(bValue)
+            : bValue.localeCompare(aValue);
+        }
+        
+        if (typeof aValue === 'number' && typeof bValue === 'number') {
+          return sortConfig.direction === 'asc' 
+            ? aValue - bValue
+            : bValue - aValue;
+        }
+        
         return 0;
       });
     }
 
     return filtered;
-  }, [searchQuery, sortColumn, sortDirection]);
+  }, [eventHistoryData, searchQuery, sortConfig]); 
 
   const totalPages = Math.ceil(processedData.length / entriesPerPage);
   const paginatedData = processedData.slice(
@@ -221,6 +272,29 @@ export function CityAdminDashboard() {
   useMemo(() => {
     setCurrentPage(1);
   }, [searchQuery]);
+
+  const getSortIcon = (key: string) => {
+    if (!sortConfig || sortConfig.key !== key) {
+      return <ChevronsUpDown className="h-4 w-4 text-muted-foreground" />;
+    }
+    
+    return sortConfig.direction 
+      ? <ChevronsUpDown className="h-4 w-4 text-foreground" />
+      : <ChevronsUpDown className="h-4 w-4 text-muted-foreground" />;
+  };
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case "Active":
+        return "bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-200";
+      case "Recovery":
+        return "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200";
+      case "Closed":
+        return "bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-200";
+      default:
+        return "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-200";
+    }
+  };
 
   return (
     <div className="w-full min-w-0 bg-background flex flex-col relative">
@@ -267,7 +341,6 @@ export function CityAdminDashboard() {
                 </div>
 
                 <div className="space-y-4">
-                  {/* Barangay Row */}
                   <div className="flex items-center gap-3">
                     <div className="w-48 flex-none">
                       <p className="text-xs text-muted-foreground mb-1">Barangay</p>
@@ -293,7 +366,6 @@ export function CityAdminDashboard() {
                     </div>
                   </div>
 
-                  {/* Capacity, Current, Usage, and Hide Button Row */}
                   <div className="flex items-center gap-3">
                     <div className="w-30">
                       <p className="text-xs text-muted-foreground mb-1">Capacity</p>
@@ -360,7 +432,6 @@ export function CityAdminDashboard() {
             {statsData.map((stat, i) => (
               <div key={i} className="flex flex-col items-center gap-1">
                 <div className="flex items-center gap-2">
-                  {/* Progress Circle */}
                   <div className="relative w-10 h-10">
                     <svg className="w-10 h-10 -rotate-90" viewBox="0 0 36 36">
                       <circle cx="18" cy="18" r="16" fill="none" stroke="currentColor" strokeWidth="3" className="text-muted" />
@@ -451,21 +522,53 @@ export function CityAdminDashboard() {
               <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full" />
             </div>
           ) : paginatedData.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
-              <SearchIcon className="h-12 w-12 mb-4 opacity-50" />
+            <div className="flex flex-col items-center justify-center py-16 text-muted-foreground min-h-[275px]">
+              <Search className="h-12 w-12 mb-4 opacity-50" />
               <p className="text-lg font-medium mb-2">No events found</p>
-              <p className="text-sm">Try adjusting your search or filters</p>
             </div>
           ) : (
-            <DataTable
-              columns={eventColumns}
-              data={paginatedData}
-              onRowClick={handleRowClick}
-              onSort={handleSort}
-              sortColumn={sortColumn}
-              sortDirection={sortDirection}
-              showTitle={false}
-            />
+            <div className="border-t-0">
+              <div className="min-h-[273px]">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      {eventColumns.map((column) => (
+                        <TableHead key={column.key}>
+                          <div 
+                            className="flex items-center justify-between cursor-pointer hover:text-foreground"
+                            onClick={() => handleSort(column.key)}
+                          >
+                            {column.label}
+                            {getSortIcon(column.key)}
+                          </div>
+                        </TableHead>
+                      ))}
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {paginatedData.map((row, i) => (
+                      <TableRow
+                        key={i}
+                        className={`${i % 2 === 1 ? "bg-muted" : ""} cursor-pointer hover:bg-muted/50 transition-colors`}
+                        onClick={() => handleRowClick(row)}
+                      >
+                        {eventColumns.map((column) => (
+                          <TableCell key={column.key} className={column.key === eventColumns[0].key ? "font-medium" : ""}>
+                            {column.key === "status" ? (
+                              <Badge variant="secondary" className={getStatusColor(row[column.key])}>
+                                {row[column.key]}
+                              </Badge>
+                            ) : (
+                              row[column.key as keyof Event]
+                            )}
+                          </TableCell>
+                        ))}
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            </div>
           )}
         </div>
       </div>
