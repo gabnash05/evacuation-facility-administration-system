@@ -40,8 +40,11 @@ def create_app(config_class=Config):
     from app.routes.auth import auth_bp
     from app.routes.households import households_bp  # Import the new blueprint
 
-    # from app.routes.events import events_bp
+    from app.routes.events import bp as event_bp
     # from app.routes.centers import centers_bp
+    # from app.routes.events import events_bp
+    from app.routes.evacuation_centers import evacuation_center_bp
+    # from app.routes.households import households_bp
     # from app.routes.individuals import individuals_bp
 
     app.register_blueprint(auth_bp, url_prefix="/api")
@@ -50,6 +53,9 @@ def create_app(config_class=Config):
     )  # Register the household blueprint
     # app.register_blueprint(events_bp)
     # app.register_blueprint(centers_bp)
+    # app.register_blueprint(events_bp)
+    app.register_blueprint(evacuation_center_bp, url_prefix="/api")
+    # app.register_blueprint(households_bp)
     # app.register_blueprint(individuals_bp)
 
     return app

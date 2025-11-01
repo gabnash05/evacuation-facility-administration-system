@@ -56,7 +56,7 @@ function App() {
                     path="/center-admin/*"
                     element={
                         <ProtectedRoute
-                            requiredRole={["center_admin", "city_admin", "super_admin"]}
+                            requiredRole={["center_admin", "city_admin", "super_admin", "city_admin", "super_admin"]}
                         >
                             <MainLayout>
                                 <Routes>
