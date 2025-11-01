@@ -1,5 +1,7 @@
 import { useState, useEffect } from "react";
-import HouseholdTable, { type SortConfig } from "@/components/features/auth/household/HouseholdTable";
+import HouseholdTable, {
+    type SortConfig,
+} from "@/components/features/auth/household/HouseholdTable";
 import { HouseholdTableToolbar } from "@/components/features/auth/household/HouseholdTableToolbar";
 import { HouseholdTablePagination } from "@/components/features/auth/household/HouseholdTablePagination";
 
@@ -32,8 +34,10 @@ export function CenterAdminHouseholdsPage() {
                     per_page: "15",
                     search: debouncedSearchQuery,
                 });
-                
-                const response = await fetch(`http://localhost:5000/api/households?${params.toString()}`);
+
+                const response = await fetch(
+                    `http://localhost:5000/api/households?${params.toString()}`
+                );
                 if (!response.ok) throw new Error("Failed to fetch data");
 
                 const result = await response.json();
@@ -63,11 +67,11 @@ export function CenterAdminHouseholdsPage() {
         { key: "head", label: "Household Head", sortable: true },
         { key: "address", label: "Address", sortable: true },
     ];
-    
+
     const handleSort = (key: string) => {
-        let direction: 'asc' | 'desc' | null = 'asc';
-        if (sortConfig && sortConfig.key === key && sortConfig.direction === 'asc') {
-            direction = 'desc';
+        let direction: "asc" | "desc" | null = "asc";
+        if (sortConfig && sortConfig.key === key && sortConfig.direction === "asc") {
+            direction = "desc";
         }
         setSortConfig({ key, direction });
     };
@@ -76,9 +80,11 @@ export function CenterAdminHouseholdsPage() {
         <div className="p-6 space-y-6">
             <div>
                 <h1 className="text-2xl font-bold">Household Management</h1>
-                <p className="text-muted-foreground">View and manage household records for your center.</p>
+                <p className="text-muted-foreground">
+                    View and manage household records for your center.
+                </p>
             </div>
-            
+
             <div className="border border-border rounded-lg">
                 <div className="bg-card p-4 border-b border-border">
                     <HouseholdTableToolbar
@@ -88,10 +94,12 @@ export function CenterAdminHouseholdsPage() {
                         loading={isLoading}
                     />
                 </div>
-                
+
                 <div className="border-b border-border">
                     {isLoading && householdsData.length === 0 ? (
-                         <div className="p-8 text-center text-muted-foreground">Loading households...</div>
+                        <div className="p-8 text-center text-muted-foreground">
+                            Loading households...
+                        </div>
                     ) : (
                         <HouseholdTable
                             headers={headers}
@@ -108,7 +116,7 @@ export function CenterAdminHouseholdsPage() {
                         currentPage={pagination.page}
                         totalPages={pagination.page_count}
                         totalRecords={pagination.total_records}
-                        onPageChange={(page) => setPagination(p => ({ ...p, page }))}
+                        onPageChange={page => setPagination(p => ({ ...p, page }))}
                         loading={isLoading}
                     />
                 </div>
