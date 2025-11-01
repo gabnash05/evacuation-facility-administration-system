@@ -8,26 +8,21 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Map, EyeOff, Eye, ChevronLeft, ChevronRight, AlertCircle, Search, ChevronsUpDown } from "lucide-react";
-import { EventDetailsModal } from "@/components/common/EventDetailsModal";
+import { Map, EyeOff, Eye, ChevronLeft, ChevronRight, AlertCircle, Search} from "lucide-react";
+import { EventDetailsModal } from "@/components/features/dashboard/EventDetailsModal";
+import { DataTable } from "@/components/common/DataTable";
 import { SearchBar } from "@/components/common/SearchBar";
-import { Badge } from "@/components/ui/badge";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+
+
+const API_BASE_URL = 'http://localhost:5000';
 
 interface Event {
-  eventId?: number; 
   eventName: string;
   eventType: string;
   dateDeclared: string;
   endDate: string;
-  status: "Active" | "Recovery" | "Closed";
+  status: "Active" | "Monitoring" | "Resolved";
+  eventId?: number;
 }
 
 interface EvacuationCenter {
@@ -68,11 +63,9 @@ export function CenterAdminDashboard() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
-  const [sortConfig, setSortConfig] = useState<{
-    key: string;
-    direction: 'asc' | 'desc' | null;
-  } | null>(null);
-  const [isLoadingEvents, setIsLoadingEvents] = useState(false);
+  const [sortColumn, setSortColumn] = useState<string>("");
+  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
+  const [isLoadingEvents, setIsLoadingEvents] = useState(true);
   const [isLoadingStats, setIsLoadingStats] = useState(false);
   const [isLoadingCenter, setIsLoadingCenter] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -85,15 +78,74 @@ export function CenterAdminDashboard() {
     currentOccupancy: 300,
   });
   
-  const entriesPerPage = 6;
+  const [entriesPerPage, setEntriesPerPage] = useState(5);
+
+  
+  useEffect(() => {
+    fetchEvents();
+  }, []);
+
+  const fetchEvents = async () => {
+    try {
+      setIsLoadingEvents(true);
+      setError(null);
+      
+      const response = await fetch(`${API_BASE_URL}/api/events/`);
+      if (!response.ok) {
+        throw new Error('Failed to fetch events');
+      }
+      
+      const data = await response.json();
+      
+      const transformedEvents: Event[] = data.map((event: any) => ({
+        eventId: event.event_id,
+        eventName: event.event_name,
+        eventType: event.event_type,
+        dateDeclared: formatDate(event.date_declared),
+        endDate: event.end_date ? formatDate(event.end_date) : "NA",
+        status: capitalizeStatus(event.status)
+      }));
+      
+      setEventHistoryData(transformedEvents);
+    } catch (err) {
+      setError("Failed to load events. Please try again.");
+      console.error("Fetch events error:", err);
+    } finally {
+      setIsLoadingEvents(false);
+    }
+  };
+
+  const formatDate = (dateString: string): string => {
+    if (!dateString) return 'NA';
+    
+    const date = new Date(dateString);
+    
+    if (isNaN(date.getTime())) {
+      return dateString; 
+    }
+    
+    const day = String(date.getUTCDate()).padStart(2, '0');
+    const month = String(date.getUTCMonth() + 1).padStart(2, '0');
+    const year = date.getUTCFullYear();
+    return `${day}/${month}/${year}`;
+  };
+
+  const capitalizeStatus = (status: string): "Active" | "Monitoring" | "Resolved" => {
+    const statusMap: Record<string, "Active" | "Monitoring" | "Resolved"> = {
+      'active': 'Active',
+      'monitoring': 'Monitoring',
+      'resolved': 'Resolved'
+    };
+    return statusMap[status.toLowerCase()] || 'Active';
+  };
 
   const getStatusStyles = (status: string) => {
     switch (status) {
       case "Active":
         return "bg-red-100 text-red-700 border-red-100 dark:bg-red-900 dark:text-red-200 dark:border-red-900";
-      case "Recovery":
+      case "Monitoring":
         return "bg-yellow-100 text-yellow-800 border-yellow-100 dark:bg-yellow-900 dark:text-yellow-200 dark:border-yellow-900";
-      case "Closed":
+      case "Resolved":
         return "bg-green-100 text-green-700 border-green-100 dark:bg-green-900 dark:text-green-200 dark:border-green-900";
       default:
         return "bg-red-100 text-red-700 border-red-100 dark:bg-red-900 dark:text-red-200 dark:border-red-900";
@@ -112,77 +164,37 @@ export function CenterAdminDashboard() {
     (selectedCenter.currentOccupancy / selectedCenter.capacity) * 100
   );
 
-  useEffect(() => {
-    const fetchEvents = async () => {
-      setIsLoadingEvents(true);
-      setError(null);
-      try {
-        const response = await fetch('http://localhost:5000/api/events/');
-        if (!response.ok) {
-          throw new Error('Failed to fetch events');
-        }
-        const result = await response.json();
-        if (result.success) {
-          const formattedEvents = result.data.map((event: any) => ({
-            eventId: event.event_id, 
-            eventName: event.event_name,
-            eventType: event.event_type,
-            dateDeclared: new Date(event.date_declared).toLocaleDateString('en-GB'),
-            endDate: event.end_date ? new Date(event.end_date).toLocaleDateString('en-GB') : 'NA',
-            status: event.status as "Active" | "Recovery" | "Closed"
-          }));
-          setEventHistoryData(formattedEvents);
-        }
-      } catch (err) {
-        console.error('Error fetching events:', err);
-        setError('Failed to load events. Please try again.');
-      } finally {
-        setIsLoadingEvents(false);
-      }
-    };
-
-    fetchEvents();
-  }, []);
-
   const handleRowClick = async (row: Event) => {
-    if (!row.eventId) {
-      setError("Event ID not found");
-      return;
-    }
-
+    if (!row.eventId) return;
+    
     try {
       setIsLoadingEvents(true);
       setError(null);
       
-      const response = await fetch(`http://localhost:5000/api/events/${row.eventId}`);
-      
+      const response = await fetch(`${API_BASE_URL}/api/events/${row.eventId}`);
       if (!response.ok) {
         throw new Error('Failed to fetch event details');
       }
       
-      const result = await response.json();
+      const apiResponse = await response.json();
       
-      if (result.success) {
-        const eventDetails = {
-          eventTitle: result.data.event.event_name,
-          eventType: result.data.event.event_type,
-          status: result.data.event.status,
-          dateDeclared: new Date(result.data.event.date_declared).toLocaleDateString('en-GB'),
-          endDate: result.data.event.end_date 
-            ? new Date(result.data.event.end_date).toLocaleDateString('en-GB') 
-            : 'NA',
-          evacuationCenters: result.data.centers.map((center: any) => ({
-            centerName: center.center_name,
-            barangay: center.barangay,
-            capacity: center.capacity,
-            currentOccupancy: center.current_occupancy,
-            occupancy: center.occupancy
-          }))
-        };
-        
-        setSelectedEvent(eventDetails);
-        setIsModalOpen(true);
-      }
+      const eventDetails: EventDetails = {
+        eventTitle: apiResponse.event_name,
+        eventType: apiResponse.event_type,
+        status: capitalizeStatus(apiResponse.status),
+        dateDeclared: formatDate(row.dateDeclared),
+        endDate: row.endDate,
+        evacuationCenters: apiResponse.centers.map((center: any) => ({
+          centerName: center.center_name,
+          barangay: center.barangay,
+          capacity: center.capacity,
+          currentOccupancy: center.current_occupancy,
+          occupancy: center.occupancy
+        }))
+      };
+      
+      setSelectedEvent(eventDetails);
+      setIsModalOpen(true);
     } catch (err) {
       setError("Failed to load event details. Please try again.");
       console.error("Event details error:", err);
@@ -191,23 +203,13 @@ export function CenterAdminDashboard() {
     }
   };
 
-  const handleSort = (key: string) => {
-    setSortConfig(current => {
-      if (!current || current.key !== key) {
-        return { key, direction: 'asc' };
-      }
-      
-      switch (current.direction) {
-        case 'asc':
-          return { key, direction: 'desc' };
-        case 'desc':
-          return { key, direction: null };
-        case null:
-        default:
-          return { key, direction: 'asc' };
-      }
-    });
-    setCurrentPage(1);
+  const handleSort = (column: string): void => {
+    if (sortColumn === column) {
+      setSortDirection(sortDirection === "asc" ? "desc" : "asc");
+    } else {
+      setSortColumn(column);
+      setSortDirection("asc");
+    }
   };
 
   const handleStatusChange = (newStatus: string) => {
@@ -239,29 +241,19 @@ export function CenterAdminDashboard() {
       )
     );
 
-    if (sortConfig && sortConfig.direction) {
-      filtered = [...filtered].sort((a, b) => {
-        const aValue = a[sortConfig.key as keyof typeof a];
-        const bValue = b[sortConfig.key as keyof typeof b];
+    if (sortColumn) {
+      filtered = [...filtered].sort((a: any, b: any) => {
+        const aValue = a[sortColumn];
+        const bValue = b[sortColumn];
         
-        if (typeof aValue === 'string' && typeof bValue === 'string') {
-          return sortConfig.direction === 'asc' 
-            ? aValue.localeCompare(bValue)
-            : bValue.localeCompare(aValue);
-        }
-        
-        if (typeof aValue === 'number' && typeof bValue === 'number') {
-          return sortConfig.direction === 'asc' 
-            ? aValue - bValue
-            : bValue - aValue;
-        }
-        
+        if (aValue < bValue) return sortDirection === "asc" ? -1 : 1;
+        if (aValue > bValue) return sortDirection === "asc" ? 1 : -1;
         return 0;
       });
     }
 
     return filtered;
-  }, [eventHistoryData, searchQuery, sortConfig]); 
+  }, [eventHistoryData, searchQuery, sortColumn, sortDirection]);
 
   const totalPages = Math.ceil(processedData.length / entriesPerPage);
   const paginatedData = processedData.slice(
@@ -272,29 +264,6 @@ export function CenterAdminDashboard() {
   useMemo(() => {
     setCurrentPage(1);
   }, [searchQuery]);
-
-  const getSortIcon = (key: string) => {
-    if (!sortConfig || sortConfig.key !== key) {
-      return <ChevronsUpDown className="h-4 w-4 text-muted-foreground" />;
-    }
-    
-    return sortConfig.direction 
-      ? <ChevronsUpDown className="h-4 w-4 text-foreground" />
-      : <ChevronsUpDown className="h-4 w-4 text-muted-foreground" />;
-  };
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case "Active":
-        return "bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-200";
-      case "Recovery":
-        return "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200";
-      case "Closed":
-        return "bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-200";
-      default:
-        return "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-200";
-    }
-  };
 
   return (
     <div className="w-full min-w-0 bg-background flex flex-col relative">
@@ -341,6 +310,7 @@ export function CenterAdminDashboard() {
                 </div>
 
                 <div className="space-y-4">
+                  {/* Barangay Row */}
                   <div className="flex items-center gap-3">
                     <div className="w-48 flex-none">
                       <p className="text-xs text-muted-foreground mb-1">Barangay</p>
@@ -366,6 +336,7 @@ export function CenterAdminDashboard() {
                     </div>
                   </div>
 
+                  {/* Capacity, Current, Usage, and Hide Button Row */}
                   <div className="flex items-center gap-3">
                     <div className="w-30">
                       <p className="text-xs text-muted-foreground mb-1">Capacity</p>
@@ -432,6 +403,7 @@ export function CenterAdminDashboard() {
             {statsData.map((stat, i) => (
               <div key={i} className="flex flex-col items-center gap-1">
                 <div className="flex items-center gap-2">
+                  {/* Progress Circle */}
                   <div className="relative w-10 h-10">
                     <svg className="w-10 h-10 -rotate-90" viewBox="0 0 36 36">
                       <circle cx="18" cy="18" r="16" fill="none" stroke="currentColor" strokeWidth="3" className="text-muted" />
@@ -458,10 +430,29 @@ export function CenterAdminDashboard() {
           <div className="flex items-center gap-6">
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
               <span>Show</span>
-              <span className="w-16 h-9 flex items-center justify-center border border-border rounded-lg bg-muted/50 text-foreground font-medium">
-                {paginatedData.length}
-              </span>
+              <input
+                type="number"
+                min="1"
+                max="20"
+                value={entriesPerPage}
+                onChange={(e) => {
+                  const value = parseInt(e.target.value) || 1;
+                  setEntriesPerPage(Math.max(1, Math.min(20, value)));
+                  setCurrentPage(1);
+                }}
+                className="w-16 h-9 px-2 border border-border rounded-lg bg-background 
+                text-foreground font-medium text-center [appearance:textfield]
+                 [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none hover:[appearance:auto] 
+                 hover:[&::-webkit-outer-spin-button]:appearance-auto hover:[&::-webkit-inner-spin-button]:appearance-auto"
+              />
               <span>Entries</span>
+              <span className="ml-2 text-foreground font-medium">
+                {processedData.length > 0 
+                  ? `${(currentPage - 1) * entriesPerPage + 1}-${Math.min(currentPage * entriesPerPage, processedData.length)}`
+                  : '0-0'
+                }
+              </span>
+              <span>of {processedData.length}</span>
             </div>
 
             <SearchBar 
@@ -488,21 +479,8 @@ export function CenterAdminDashboard() {
                 <ChevronLeft className="h-4 w-4" />
               </button>
               
-              <div className="flex items-center gap-1">
-                {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
-                  <button
-                    key={page}
-                    onClick={() => setCurrentPage(page)}
-                    disabled={isLoadingEvents}
-                    className={`px-3 py-1 text-sm rounded ${
-                      currentPage === page
-                        ? "bg-primary text-primary-foreground"
-                        : "hover:bg-muted"
-                    } disabled:cursor-not-allowed`}
-                  >
-                    {page}
-                  </button>
-                ))}
+              <div className="px-3 py-1 text-sm rounded bg-primary text-primary-foreground">
+                {currentPage}
               </div>
 
               <button
@@ -517,59 +495,31 @@ export function CenterAdminDashboard() {
           </div>
 
           {/* Table Content */}
-          {isLoadingEvents ? (
-            <div className="flex justify-center p-8">
-              <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full" />
-            </div>
-          ) : paginatedData.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-16 text-muted-foreground min-h-[275px]">
-              <Search className="h-12 w-12 mb-4 opacity-50" />
-              <p className="text-lg font-medium mb-2">No events found</p>
-            </div>
-          ) : (
-            <div className="border-t-0">
-              <div className="min-h-[273px]">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      {eventColumns.map((column) => (
-                        <TableHead key={column.key}>
-                          <div 
-                            className="flex items-center justify-between cursor-pointer hover:text-foreground"
-                            onClick={() => handleSort(column.key)}
-                          >
-                            {column.label}
-                            {getSortIcon(column.key)}
-                          </div>
-                        </TableHead>
-                      ))}
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {paginatedData.map((row, i) => (
-                      <TableRow
-                        key={i}
-                        className={`${i % 2 === 1 ? "bg-muted" : ""} cursor-pointer hover:bg-muted/50 transition-colors`}
-                        onClick={() => handleRowClick(row)}
-                      >
-                        {eventColumns.map((column) => (
-                          <TableCell key={column.key} className={column.key === eventColumns[0].key ? "font-medium" : ""}>
-                            {column.key === "status" ? (
-                              <Badge variant="secondary" className={getStatusColor(row[column.key])}>
-                                {row[column.key]}
-                              </Badge>
-                            ) : (
-                              row[column.key as keyof Event]
-                            )}
-                          </TableCell>
-                        ))}
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+          <div className="min-h-[234px]">
+            {isLoadingEvents ? (
+              <div className="flex justify-center items-center h-[234px]">
+                <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full" />
               </div>
-            </div>
-          )}
+            ) : (
+              <>
+                <DataTable
+                  columns={eventColumns}
+                  data={paginatedData}
+                  onRowClick={handleRowClick}
+                  onSort={handleSort}
+                  sortColumn={sortColumn}
+                  sortDirection={sortDirection}
+                  showTitle={false}
+                />
+                {paginatedData.length === 0 && (
+                  <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
+                    <Search className="h-12 w-12 mb-4 opacity-50" />
+                    <p className="text-lg font-medium mb-2">No events found</p>
+                  </div>
+                )}
+              </>
+            )}
+          </div>
         </div>
       </div>
 
