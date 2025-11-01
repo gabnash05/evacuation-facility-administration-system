@@ -19,7 +19,7 @@ export function HouseholdTablePagination({
     // Calculate the 5-page sliding window
     const getVisiblePages = () => {
         let startPage = Math.max(1, currentPage - 2);
-        let endPage = Math.min(totalPages, startPage + 4);
+        const endPage = Math.min(totalPages, startPage + 4);
 
         if (endPage - startPage < 4) {
             startPage = Math.max(1, endPage - 4);
@@ -36,9 +36,7 @@ export function HouseholdTablePagination({
 
     return (
         <div className="flex items-center justify-between">
-            <div className="text-sm text-muted-foreground">
-                Total {totalRecords} households
-            </div>
+            <div className="text-sm text-muted-foreground">Total {totalRecords} households</div>
 
             <div className="flex items-center space-x-2">
                 <Button

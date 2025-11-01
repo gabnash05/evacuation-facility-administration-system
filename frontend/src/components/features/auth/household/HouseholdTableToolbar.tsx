@@ -1,4 +1,3 @@
-
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
@@ -23,7 +22,7 @@ export function HouseholdTableToolbar({
                     type="text"
                     placeholder="Search by name, head, address..."
                     value={searchQuery}
-                    onChange={(e) => onSearchChange(e.target.value)}
+                    onChange={e => onSearchChange(e.target.value)}
                     className="w-full max-w-sm"
                 />
             </div>

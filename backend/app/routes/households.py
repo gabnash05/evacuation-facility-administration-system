@@ -7,6 +7,7 @@ households_bp = Blueprint("households_bp", __name__)
 query_schema = HouseholdQuerySchema()
 response_schema = HouseholdListResponseSchema()
 
+
 @households_bp.route("/households", methods=["GET"])
 def get_households():
     """

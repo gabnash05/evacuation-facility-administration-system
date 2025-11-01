@@ -5,9 +5,13 @@ from typing import Any, Dict, Tuple
 
 from flask import Blueprint, jsonify, request
 
-from app.services.center_service import (create_center, delete_center,
-                                         get_all_centers, get_center_by_id,
-                                         update_center)
+from app.services.center_service import (
+    create_center,
+    delete_center,
+    get_all_centers,
+    get_center_by_id,
+    update_center,
+)
 
 # Configure logger for this module
 logger = logging.getLogger(__name__)
