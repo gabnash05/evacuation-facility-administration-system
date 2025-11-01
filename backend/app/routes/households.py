@@ -1,4 +1,3 @@
-# app/routes/household_routes.py
 from flask import Blueprint, jsonify, request
 from app.services.household_service import HouseholdService
 from app.schemas.household import HouseholdQuerySchema, HouseholdListResponseSchema

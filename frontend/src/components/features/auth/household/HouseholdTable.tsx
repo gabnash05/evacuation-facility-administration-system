@@ -1,61 +1,107 @@
-// HouseholdTable.tsx
+import { ChevronUp, ChevronDown, ChevronsUpDown, MoreVertical, Edit, Trash2 } from "lucide-react";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Button } from "@/components/ui/button";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { cn } from "@/lib/utils";
 
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-
-export type TableHeader = {
-  key: string;
-  text: string;
-  className?: string;
-};
-
-interface HouseholdTableProps<TData> {
-  headers: TableHeader[];
-  data: TData[];
+export interface Household {
+    household_id: number;
+    name: string;
+    head: string;
+    address: string;
+    evacCenter?: string; // Optional for Center Admin view
 }
 
-export function HouseholdTable<TData extends { [key: string]: any }>({
-  headers,
-  data,
-}: HouseholdTableProps<TData>) {
-  return (
-    <Table>
-      <TableHeader>
-        <TableRow>
-          {headers.map((header) => (
-            <TableHead key={header.key} className={header.className}>
-              {header.text}
-            </TableHead>
-          ))}
-        </TableRow>
-      </TableHeader>
-      <TableBody>
-        {data.length > 0 ? (
-          data.map((row, rowIndex) => (
-            <TableRow key={`row-${rowIndex}`}>
-              {headers.map((header) => (
-                <TableCell key={`cell-${rowIndex}-${header.key}`} className="text-center">
-                  {row[header.key]}
-                </TableCell>
-              ))}
-            </TableRow>
-          ))
-        ) : (
-          <TableRow>
-            <TableCell colSpan={headers.length} className="h-24 text-center">
-              No results.
-            </TableCell>
-          </TableRow>
-        )}
-      </TableBody>
-    </Table>
-  );
+export type SortConfig = {
+    key: string;
+    direction: "asc" | "desc" | null;
+} | null;
+
+interface HouseholdTableProps {
+    data: Household[];
+    headers: { key: string; label: string; sortable: boolean }[];
+    sortConfig: SortConfig;
+    onSort: (key: string) => void;
+    loading?: boolean;
+}
+
+export function HouseholdTable({ data, headers, sortConfig, onSort, loading }: HouseholdTableProps) {
+    const getSortIcon = (key: string) => {
+        if (!sortConfig || sortConfig.key !== key || !sortConfig.direction) {
+            return <ChevronsUpDown className="h-4 w-4 text-muted-foreground" />;
+        }
+        if (sortConfig.direction === "asc") return <ChevronUp className="h-4 w-4" />;
+        return <ChevronDown className="h-4 w-4" />;
+    };
+    
+    const handleDelete = (id: number) => {
+        if(confirm(`Are you sure you want to delete household ID ${id}?`)) {
+            console.log("Deleting household:", id);
+            // Add your delete logic here, e.g., call a state management function
+        }
+    };
+
+    return (
+        <div className="w-full">
+            <Table>
+                <TableHeader>
+                    <TableRow className="hover:bg-transparent">
+                        {headers.map(header => (
+                            <TableHead
+                                key={header.key}
+                                className={cn(header.sortable && "cursor-pointer hover:bg-muted")}
+                                onClick={header.sortable ? () => onSort(header.key) : undefined}
+                            >
+                                <div className="flex items-center justify-between">
+                                    <span>{header.label}</span>
+                                    {header.sortable && getSortIcon(header.key)}
+                                </div>
+                            </TableHead>
+                        ))}
+                         <TableHead className="text-right">Actions</TableHead>
+                    </TableRow>
+                </TableHeader>
+                <TableBody>
+                    {data.length === 0 && !loading ? (
+                        <TableRow>
+                            <TableCell colSpan={headers.length + 1} className="h-32 text-center">
+                                <div className="text-muted-foreground">
+                                    <div className="text-lg font-medium">No households found</div>
+                                </div>
+                            </TableCell>
+                        </TableRow>
+                    ) : (
+                        data.map((row, index) => (
+                            <TableRow key={row.household_id} className={cn(index % 2 === 1 && "bg-muted/30")}>
+                                {headers.map(header => (
+                                    <TableCell key={header.key} className="py-3">
+                                        {row[header.key as keyof Household]}
+                                    </TableCell>
+                                ))}
+                                <TableCell className="text-right">
+                                    <DropdownMenu>
+                                        <DropdownMenuTrigger asChild>
+                                            <Button variant="ghost" size="icon" className="h-8 w-8">
+                                                <MoreVertical className="h-4 w-4" />
+                                            </Button>
+                                        </DropdownMenuTrigger>
+                                        <DropdownMenuContent align="end">
+                                            <DropdownMenuItem onClick={() => console.log("Edit:", row.household_id)}>
+                                                <Edit className="h-4 w-4 mr-2" /> Edit
+                                            </DropdownMenuItem>
+                                            <DropdownMenuItem onClick={() => handleDelete(row.household_id)} className="text-destructive">
+                                                <Trash2 className="h-4 w-4 mr-2" /> Delete
+                                            </DropdownMenuItem>
+                                        </DropdownMenuContent>
+                                    </DropdownMenu>
+                                </TableCell>
+                            </TableRow>
+                        ))
+                    )}
+                </TableBody>
+            </Table>
+        </div>
+    );
 }
 
 export default HouseholdTable;
