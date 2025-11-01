@@ -43,12 +43,11 @@ interface Task {
 export function VolunteerDashboard() {
   const [searchQuery, setSearchQuery] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
+  const [entriesPerPage, setEntriesPerPage] = useState(5);
   const [sortConfig, setSortConfig] = useState<{
     key: string;
     direction: 'asc' | 'desc' | null;
   } | null>(null);
-
-  const entriesPerPage = 6;
 
   const activeEventsData: Task[] = [
     { task: "Check-in evacuee", center: "Bagong Silang Barangay Hall/Gym", dateDeclared: "13/05/2022", endDate: "NA", status: "Active" },
@@ -87,6 +86,11 @@ export function VolunteerDashboard() {
           return { key, direction: 'asc' };
       }
     });
+    setCurrentPage(1);
+  };
+
+  const handleEntriesPerPageChange = (entries: number) => {
+    setEntriesPerPage(entries);
     setCurrentPage(1);
   };
 
@@ -207,16 +211,33 @@ export function VolunteerDashboard() {
           <h2 className="text-2xl font-semibold">Active Events</h2>
         </div>
 
-        {/* Controls Bar (with pagination moved here) */}
+        {/* Controls Bar */}
         <div className="bg-card border border-border border-t-0 p-4">
           <div className="flex items-center justify-between flex-wrap gap-4">
             <div className="flex items-center gap-6">
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
                 <span>Show</span>
-                <span className="w-16 h-9 flex items-center justify-center border border-border rounded-lg bg-muted/50 text-foreground font-medium">
-                  {paginatedData.length}
-                </span>
+                <input
+                  type="number"
+                  min="1"
+                  max="20"
+                  value={entriesPerPage}
+                  onChange={(e) => {
+                    const value = parseInt(e.target.value) || 1;
+                    handleEntriesPerPageChange(Math.max(1, Math.min(20, value)));
+                  }}
+                  className="w-16 h-9 px-2 border border-border rounded-lg bg-background 
+                  text-foreground font-medium text-center [appearance:textfield]
+                   [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none hover:[appearance:auto] 
+                   hover:[&::-webkit-outer-spin-button]:appearance-auto hover:[&::-webkit-inner-spin-button]:appearance-auto"
+                />
                 <span>Entries</span>
+                <span className="ml-2 text-foreground font-medium">
+                  {processedData.length > 0
+                    ? `${(currentPage - 1) * entriesPerPage + 1}-${Math.min(currentPage * entriesPerPage, processedData.length)}`
+                    : "0-0"}
+                </span>
+                <span>of {processedData.length}</span>
               </div>
 
               <SearchBar
@@ -226,7 +247,7 @@ export function VolunteerDashboard() {
               />
             </div>
 
-            {/* Pagination moved here */}
+            {/* Simplified Pagination */}
             <div className="flex items-center gap-2">
               <button
                 onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
@@ -237,20 +258,8 @@ export function VolunteerDashboard() {
                 <ChevronLeft className="h-4 w-4" />
               </button>
 
-              <div className="flex items-center gap-1">
-                {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
-                  <button
-                    key={page}
-                    onClick={() => setCurrentPage(page)}
-                    className={`px-3 py-1 text-sm rounded ${
-                      currentPage === page
-                        ? "bg-primary text-primary-foreground"
-                        : "hover:bg-muted"
-                    }`}
-                  >
-                    {page}
-                  </button>
-                ))}
+              <div className="px-3 py-1 text-sm rounded bg-primary text-primary-foreground">
+                {currentPage}
               </div>
 
               <button
@@ -265,60 +274,58 @@ export function VolunteerDashboard() {
           </div>
         </div>
 
-        {/* Table Content (Task List bar removed) */}
+        {/* Table Content with Fixed Height */}
         <div className="border border-border border-t-0">
-          {paginatedData.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-16 text-muted-foreground min-h-[275px]">
-              <SearchIcon className="h-12 w-12 mb-4 opacity-50" />
-              <p className="text-lg font-medium mb-2">No tasks found</p>
-            </div>
-          ) : (
-            <div className="border-t-0">
-              <div className="min-h-[273px]">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      {taskColumns.map((column) => (
-                        <TableHead key={column.key}>
-                          <div 
-                            className="flex items-center justify-between cursor-pointer hover:text-foreground"
-                            onClick={() => handleSort(column.key)}
-                          >
-                            {column.label}
-                            {getSortIcon(column.key)}
-                          </div>
-                        </TableHead>
-                      ))}
-                      <TableHead>Action</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {paginatedData.map((row, i) => (
-                      <TableRow
-                        key={i}
-                        className={`${i % 2 === 1 ? "bg-muted" : ""}`}
-                      >
-                        {taskColumns.map((column) => (
-                          <TableCell key={column.key} className={column.key === taskColumns[0].key ? "font-medium" : ""}>
-                            {column.key === "status" ? (
-                              <Badge variant="secondary" className={getStatusColor(row[column.key as keyof Task] as string)}>
-                                {row[column.key as keyof Task]}
-                              </Badge>
-                            ) : (
-                              row[column.key as keyof Task]
-                            )}
-                          </TableCell>
-                        ))}
-                        <TableCell onClick={(e) => e.stopPropagation()}>
-                          {renderActions(row, i)}
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+          <div className="min-h-[234px]">
+            {paginatedData.length === 0 ? (
+              <div className="flex flex-col items-center justify-center h-[234px] text-muted-foreground">
+                <SearchIcon className="h-12 w-12 mb-4 opacity-50" />
+                <p className="text-lg font-medium mb-2">No tasks found</p>
               </div>
-            </div>
-          )}
+            ) : (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    {taskColumns.map((column) => (
+                      <TableHead key={column.key}>
+                        <div 
+                          className="flex items-center justify-between cursor-pointer hover:text-foreground"
+                          onClick={() => handleSort(column.key)}
+                        >
+                          {column.label}
+                          {getSortIcon(column.key)}
+                        </div>
+                      </TableHead>
+                    ))}
+                    <TableHead>Action</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {paginatedData.map((row, i) => (
+                    <TableRow
+                      key={i}
+                      className={`${i % 2 === 1 ? "bg-muted" : ""}`}
+                    >
+                      {taskColumns.map((column) => (
+                        <TableCell key={column.key} className={column.key === taskColumns[0].key ? "font-medium" : ""}>
+                          {column.key === "status" ? (
+                            <Badge variant="secondary" className={getStatusColor(row[column.key as keyof Task] as string)}>
+                              {row[column.key as keyof Task]}
+                            </Badge>
+                          ) : (
+                            row[column.key as keyof Task]
+                          )}
+                        </TableCell>
+                      ))}
+                      <TableCell onClick={(e) => e.stopPropagation()}>
+                        {renderActions(row, i)}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            )}
+          </div>
         </div>
       </div>
     </div>
