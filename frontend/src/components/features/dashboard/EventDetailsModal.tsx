@@ -24,7 +24,8 @@ interface EvacuationCenter {
 }
 
 interface EventDetails {
-  eventType: string;  // Changed from eventTitle
+  eventTitle: string;
+  eventType: string;
   status: string;
   dateDeclared: string;
   endDate: string;
@@ -70,6 +71,12 @@ export function EventDetailsModal({ isOpen, onClose, eventData }: EventDetailsMo
         {/* Event Info Section */}
         <div className="grid grid-cols-3 gap-3 mt-4">
           <div>
+            <label className="text-xs text-muted-foreground">Event Title</label>
+            <div className="border border-border rounded-lg px-3 py-2 mt-1 bg-background">
+              <p className="text-sm">{eventData.eventTitle}</p>
+            </div>
+          </div>
+          <div>
             <label className="text-xs text-muted-foreground">Event Type</label>
             <div className="border border-border rounded-lg px-3 py-2 mt-1 bg-background">
               <p className="text-sm">{eventData.eventType}</p>
@@ -78,18 +85,18 @@ export function EventDetailsModal({ isOpen, onClose, eventData }: EventDetailsMo
           <div>
             <label className="text-xs text-muted-foreground">Status</label>
             <div className={`rounded-lg px-3 py-2 mt-1 text-center ${getStatusColor(eventData.status)}`}>
-              <p className="text-sm font-medium capitalize">{eventData.status}</p>
+              <p className="text-sm font-medium">{eventData.status}</p>
             </div>
           </div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-3 mt-2">
           <div>
             <label className="text-xs text-muted-foreground">Date Declared</label>
             <div className="border border-border rounded-lg px-3 py-2 mt-1 bg-background">
               <p className="text-sm">{eventData.dateDeclared}</p>
             </div>
           </div>
-        </div>
-
-        <div className="grid grid-cols-1 gap-3 mt-2">
           <div>
             <label className="text-xs text-muted-foreground">End Date</label>
             <div className="border border-border rounded-lg px-3 py-2 mt-1 bg-background">
@@ -101,40 +108,34 @@ export function EventDetailsModal({ isOpen, onClose, eventData }: EventDetailsMo
         {/* Evacuation Centers Table */}
         <div className="mt-6">
           <h3 className="font-semibold mb-3">Evacuation Centers Affected</h3>
-          {eventData.evacuationCenters.length === 0 ? (
-            <div className="border border-border rounded-lg p-8 text-center">
-              <p className="text-muted-foreground">No evacuation centers assigned to this event yet.</p>
-            </div>
-          ) : (
-            <div className="border border-border rounded-lg overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="min-w-[200px]">Center Name</TableHead>
-                    <TableHead className="min-w-[120px]">Barangay</TableHead>
-                    <TableHead className="min-w-[100px]">Capacity</TableHead>
-                    <TableHead className="min-w-[150px]">Current Occupancy</TableHead>
-                    <TableHead className="min-w-[120px]">Occupancy</TableHead>
+          <div className="border border-border rounded-lg overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="min-w-[200px]">Center Name</TableHead>
+                  <TableHead className="min-w-[120px]">Barangay</TableHead>
+                  <TableHead className="min-w-[100px]">Capacity</TableHead>
+                  <TableHead className="min-w-[150px]">Current Occupancy</TableHead>
+                  <TableHead className="min-w-[120px]">Occupancy</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {eventData.evacuationCenters.map((center, i) => (
+                  <TableRow key={i}>
+                    <TableCell className="font-medium">{center.centerName}</TableCell>
+                    <TableCell>{center.barangay}</TableCell>
+                    <TableCell>{center.capacity}</TableCell>
+                    <TableCell>{center.currentOccupancy}</TableCell>
+                    <TableCell>
+                      <span className={`px-3 py-1 rounded text-xs font-medium inline-block ${getOccupancyColor(center.occupancy)}`}>
+                        {center.occupancy}
+                      </span>
+                    </TableCell>
                   </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {eventData.evacuationCenters.map((center, i) => (
-                    <TableRow key={i}>
-                      <TableCell className="font-medium">{center.centerName}</TableCell>
-                      <TableCell>{center.barangay}</TableCell>
-                      <TableCell>{center.capacity}</TableCell>
-                      <TableCell>{center.currentOccupancy}</TableCell>
-                      <TableCell>
-                        <span className={`px-3 py-1 rounded text-xs font-medium inline-block ${getOccupancyColor(center.occupancy)}`}>
-                          {center.occupancy}
-                        </span>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          )}
+                ))}
+              </TableBody>
+            </Table>
+          </div>
         </div>
       </DialogContent>
     </Dialog>
