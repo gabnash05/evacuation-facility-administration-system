@@ -2,7 +2,7 @@ from sqlalchemy import text
 from app.models import db
 
 class Household(db.Model):
-    __tablename__ = "household"
+    __tablename__ = "households"
 
     household_id = db.Column(db.Integer, primary_key=True)
     # ... other columns ...
@@ -38,11 +38,11 @@ class Household(db.Model):
                 CONCAT(i.first_name, ' ', i.last_name) AS head,
                 ec.address AS "evacCenter"
             FROM
-                household h
+                households h
             LEFT JOIN
-                individual i ON h.household_head_id = i.individual_id
+                individuals i ON h.household_head_id = i.individual_id
             LEFT JOIN
-                evacuation_center ec ON h.center_id = ec.center_id
+                evacuation_centers ec ON h.center_id = ec.center_id
             WHERE
                 h.household_name ILIKE :search OR
                 h.address ILIKE :search OR
@@ -60,9 +60,9 @@ class Household(db.Model):
         search_query = f"%{search}%"
         sql = text("""
             SELECT COUNT(h.household_id)
-            FROM household h
-            LEFT JOIN individual i ON h.household_head_id = i.individual_id
-            LEFT JOIN evacuation_center ec ON h.center_id = ec.center_id
+            FROM households h
+            LEFT JOIN individuals i ON h.household_head_id = i.individual_id
+            LEFT JOIN evacuation_centers ec ON h.center_id = ec.center_id
             WHERE
                 h.household_name ILIKE :search OR
                 h.address ILIKE :search OR
