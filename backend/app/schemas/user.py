@@ -1,7 +1,6 @@
 """Marshmallow schemas for user API validation and serialization."""
 
-from marshmallow import (Schema, ValidationError, fields, validate,
-                         validates_schema)
+from marshmallow import Schema, ValidationError, fields, validate, validates_schema
 
 
 class UserLoginSchema(Schema):

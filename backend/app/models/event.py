@@ -1,6 +1,7 @@
 from sqlalchemy import text
 from app.models import db
 
+
 class Event(db.Model):
     __tablename__ = "events"
 
