@@ -2,12 +2,13 @@ from marshmallow import Schema, fields, validate, pre_load
 from datetime import datetime
 
 class EventCreateSchema(Schema):
+    event_name = fields.String(required=True, validate=validate.Length(min=1))
     event_type = fields.String(required=True, validate=validate.Length(min=1))
     date_declared = fields.String(required=True)
     end_date = fields.String(allow_none=True)
     status = fields.String(
         validate=validate.OneOf(["active", "resolved", "monitoring"]),
-        load_default="active"  # Changed from missing to load_default
+        load_default="active"
     )
 
     @pre_load
@@ -22,12 +23,17 @@ class EventCreateSchema(Schema):
                     pass
         return data
 
+
 class EventResponseSchema(Schema):
     event_id = fields.Integer()
+    event_name = fields.String()
     event_type = fields.String()
     date_declared = fields.DateTime()
     end_date = fields.DateTime(allow_none=True)
     status = fields.String()
+    created_at = fields.DateTime()
+    updated_at = fields.DateTime()
+
 
 class EventCenterSchema(Schema):
     center_id = fields.Integer()
@@ -45,12 +51,14 @@ class EventCenterSchema(Schema):
             return f"{percent}%"
         return "0%"
 
+
 class EventDetailsSchema(Schema):
     event_id = fields.Integer()
+    event_name = fields.String()
     event_type = fields.String()
     status = fields.String()
     centers = fields.List(fields.Nested(EventCenterSchema))
 
+
 class AddCenterSchema(Schema):
-    """Schema for adding a single center to an event"""
     center_id = fields.Integer(required=True)
