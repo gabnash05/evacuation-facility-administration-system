@@ -1,4 +1,3 @@
-# app/services/household_service.py
 import logging
 import math
 from app.models.household import Household
@@ -9,15 +8,25 @@ class HouseholdService:
     @staticmethod
     def get_all_households(params):
         """
-        Orchestrates fetching paginated household data.
+        Orchestrates fetching paginated and sorted household data.
         """
         try:
-            page = params.get('page', 1)
-            per_page = params.get('per_page', 15)
-            search = params.get('search', "")
+            # Get pagination and search params
+            page = params.get('page')
+            per_page = params.get('per_page')
+            search = params.get('search')
             offset = (page - 1) * per_page
+            
+            sort_by = params.get('sort_by')
+            sort_direction = params.get('sort_direction')
 
-            households = Household.get_all_paginated(search=search, offset=offset, limit=per_page)
+            households = Household.get_all_paginated(
+                search=search, 
+                offset=offset, 
+                limit=per_page,
+                sort_by=sort_by,          # Pass sort_by
+                sort_direction=sort_direction # Pass sort_direction
+            )
             total_records = Household.get_count(search=search)
             
             page_count = math.ceil(total_records / per_page) if total_records > 0 else 1

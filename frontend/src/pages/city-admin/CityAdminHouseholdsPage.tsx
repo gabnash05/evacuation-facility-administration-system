@@ -1,122 +1,121 @@
 import { useState, useEffect } from "react";
-import HouseholdTable, { type TableHeader } from "@/components/features/auth/household/HouseholdTable";
-import { DataTablePagination } from "@/components/features/auth/household/DataTablePagination";
-import { SearchBar } from "@/components/features/auth/household/Searchbar";
+import HouseholdTable, { type SortConfig } from "@/components/features/auth/household/HouseholdTable";
+import { HouseholdTableToolbar } from "@/components/features/auth/household/HouseholdTableToolbar";
+import { HouseholdTablePagination } from "@/components/features/auth/household/HouseholdTablePagination";
 
-// Define an interface for the pagination metadata from the API
 interface PaginationState {
-  page: number;
-  per_page: number;
-  page_count: number;
-  total_records: number;
-  can_next_page: boolean;
-  can_previous_page: boolean;
+    page: number;
+    page_count: number;
+    total_records: number;
 }
 
 export function CityAdminHouseholdsPage() {
-  // --- STATE MANAGEMENT ---
-  const [householdsData, setHouseholdsData] = useState<any[]>([]);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("");
-  const [isLoading, setIsLoading] = useState(true);
-  
-  // State for pagination, initialized with default values
-  const [pagination, setPagination] = useState<PaginationState>({
-    page: 1,
-    per_page: 15,
-    page_count: 1,
-    total_records: 0,
-    can_next_page: false,
-    can_previous_page: false,
-  });
+    // --- STATE MANAGEMENT ---
+    const [householdsData, setHouseholdsData] = useState<any[]>([]);
+    const [searchQuery, setSearchQuery] = useState("");
+    const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("");
+    const [isLoading, setIsLoading] = useState(true);
+    const [sortConfig, setSortConfig] = useState<SortConfig>(null);
+    const [pagination, setPagination] = useState<PaginationState>({
+        page: 1,
+        page_count: 1,
+        total_records: 0,
+    });
 
-  // --- DATA FETCHING ---
-  
-  // Effect to fetch data when page or search query changes
-  useEffect(() => {
-    const fetchHouseholds = async () => {
-      setIsLoading(true);
-      try {
-        // Construct the URL with query parameters for pagination and search
-        const params = new URLSearchParams({
-          page: String(pagination.page),
-          per_page: String(pagination.per_page),
-          search: debouncedSearchQuery,
-        });
-        
-        const response = await fetch(`http://localhost:5000/api/households?${params.toString()}`);
-        if (!response.ok) {
-          throw new Error("Failed to fetch data");
+    // --- DATA FETCHING ---
+    useEffect(() => {
+        const fetchHouseholds = async () => {
+            setIsLoading(true);
+            try {
+                const params = new URLSearchParams({
+                    page: String(pagination.page),
+                    per_page: "15",
+                    search: debouncedSearchQuery,
+                });
+                
+                const response = await fetch(`http://localhost:5000/api/households?${params.toString()}`);
+                if (!response.ok) throw new Error("Failed to fetch data");
+
+                const result = await response.json();
+                setHouseholdsData(result.data);
+                setPagination(result.pagination);
+            } catch (error) {
+                console.error("Error fetching households:", error);
+            } finally {
+                setIsLoading(false);
+            }
+        };
+        fetchHouseholds();
+    }, [pagination.page, debouncedSearchQuery, sortConfig]);
+
+    // Effect to debounce search input
+    useEffect(() => {
+        const handler = setTimeout(() => {
+            setDebouncedSearchQuery(searchQuery);
+            if (pagination.page !== 1) setPagination(p => ({ ...p, page: 1 }));
+        }, 500);
+        return () => clearTimeout(handler);
+    }, [searchQuery]);
+
+    // --- COMPONENT LOGIC ---
+    const headers = [
+        { key: "name", label: "Household Name", sortable: true },
+        { key: "head", label: "Household Head", sortable: true },
+        { key: "address", label: "Address", sortable: true },
+        { key: "evacCenter", label: "Evacuation Center", sortable: true },
+    ];
+    
+    const handleSort = (key: string) => {
+        let direction: 'asc' | 'desc' | null = 'asc';
+        if (sortConfig && sortConfig.key === key && sortConfig.direction === 'asc') {
+            direction = 'desc';
         }
-        const result = await response.json();
-        
-        // Update state with data and pagination info from the API
-        setHouseholdsData(result.data);
-        setPagination(result.pagination);
-
-      } catch (error) {
-        console.error("Error fetching households:", error);
-        // Handle error state here, e.g., show a toast notification
-      } finally {
-        setIsLoading(false);
-      }
+        // In a real scenario, you'd add direction to the API call.
+        // For now, this just sets the state for the UI icon.
+        setSortConfig({ key, direction });
     };
 
-    fetchHouseholds();
-  }, [pagination.page, pagination.per_page, debouncedSearchQuery]);
+    return (
+        <div className="p-6 space-y-6">
+            <div>
+                <h1 className="text-2xl font-bold">Household Management</h1>
+                <p className="text-muted-foreground">View and manage household records.</p>
+            </div>
+            
+            <div className="border border-border rounded-lg">
+                <div className="bg-card p-4 border-b border-border">
+                    <HouseholdTableToolbar
+                        searchQuery={searchQuery}
+                        onSearchChange={setSearchQuery}
+                        onAddHousehold={() => console.log("Add Household Clicked")}
+                        loading={isLoading}
+                    />
+                </div>
+                
+                <div className="border-b border-border">
+                    {isLoading && householdsData.length === 0 ? (
+                         <div className="p-8 text-center text-muted-foreground">Loading households...</div>
+                    ) : (
+                        <HouseholdTable
+                            headers={headers}
+                            data={householdsData}
+                            sortConfig={sortConfig}
+                            onSort={handleSort}
+                            loading={isLoading}
+                        />
+                    )}
+                </div>
 
-  // Effect to debounce the search input
-  useEffect(() => {
-    const handler = setTimeout(() => {
-      setDebouncedSearchQuery(searchQuery);
-      // Reset to page 1 when a new search is performed
-      if (pagination.page !== 1) {
-          setPagination(p => ({ ...p, page: 1 }));
-      }
-    }, 500); // 500ms delay
-
-    return () => {
-      clearTimeout(handler);
-    };
-  }, [searchQuery]);
-
-
-  // --- COMPONENT LOGIC ---
-  const headers: TableHeader[] = [
-    { key: "name",    text: "HOUSEHOLD NAME", className: "text-center" },
-    { key: "head",    text: "HOUSEHOLD HEAD", className: "text-center" },
-    { key: "address", text: "ADDRESS",        className: "text-center" },
-    { key: "evacCenter", text: "EVACUATION CENTER", className: "text-center" },
-  ];
-
-  return (
-    <div className="w-full bg-background text-foreground p-8 space-y-6">
-      <h1 className="text-3xl font-bold">City Admin - Household Management</h1>
-
-      <SearchBar
-        placeholder="Search households..."
-        className="max-w-sm"
-        value={searchQuery}
-        onChange={(e) => setSearchQuery(e.target.value)}
-      />
-
-      <div className="border border-border rounded-lg bg-card">
-        <HouseholdTable
-          headers={headers}
-          // Show a loading message or the data
-          data={isLoading ? [] : householdsData} 
-        />
-        {/* You can add a loading indicator inside the table as well */}
-        
-        <DataTablePagination
-          pageIndex={pagination.page - 1} // API is 1-based, component is 0-based
-          pageCount={pagination.page_count}
-          canPreviousPage={pagination.can_previous_page}
-          canNextPage={pagination.can_next_page}
-          onPreviousPage={() => setPagination(p => ({ ...p, page: p.page - 1 }))}
-          onNextPage={() => setPagination(p => ({ ...p, page: p.page + 1 }))}
-        />
-      </div>
-    </div>
-  );
+                <div className="bg-card p-4">
+                    <HouseholdTablePagination
+                        currentPage={pagination.page}
+                        totalPages={pagination.page_count}
+                        totalRecords={pagination.total_records}
+                        onPageChange={(page) => setPagination(p => ({ ...p, page }))}
+                        loading={isLoading}
+                    />
+                </div>
+            </div>
+        </div>
+    );
 }
