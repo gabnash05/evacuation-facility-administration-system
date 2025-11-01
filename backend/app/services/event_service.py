@@ -16,13 +16,18 @@ class EventService:
 
     @staticmethod
     def create_event(data):
-        # Duplicate name check
         existing_events = Event.get_all()
         for event in existing_events:
             if event["event_name"].lower() == data["event_name"].lower():
                 return {"success": False, "message": "Event name already exists"}
 
+        center_ids = data.pop("center_ids", [])
+        
         new_event = Event.create(data)
+        
+        if center_ids:
+            EventCenter.add_centers(new_event["event_id"], center_ids)
+        
         return {"success": True, "data": new_event}
 
     @staticmethod

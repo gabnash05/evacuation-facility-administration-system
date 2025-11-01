@@ -10,6 +10,7 @@ class EventCreateSchema(Schema):
         validate=validate.OneOf(["active", "resolved", "monitoring"]),
         load_default="active"
     )
+    center_ids = fields.List(fields.Integer(), load_default=[])
 
     @pre_load
     def convert_dates(self, data, **kwargs):
