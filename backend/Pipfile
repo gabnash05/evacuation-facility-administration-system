@@ -14,12 +14,13 @@ psycopg2-binary = "*"
 gunicorn = "*"
 werkzeug = "*"
 marshmallow = "*"
+sqlalchemy = "*"
 
 [dev-packages]
 flake8 = "*"
-black = "*"
 isort = "*"
 python-dotenv = "*"
+black = "*"
 
 [requires]
 python_version = "3.13"

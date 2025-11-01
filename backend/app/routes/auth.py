@@ -6,10 +6,8 @@ from typing import Tuple
 from flask import Blueprint, jsonify, request
 from flask_jwt_extended import get_jwt_identity, jwt_required
 
-from app.schemas.user import (UserLoginSchema, UserRegisterSchema,
-                              UserResponseSchema)
-from app.services.user_service import (authenticate_user, get_current_user,
-                                       register_user)
+from app.schemas.user import UserLoginSchema, UserRegisterSchema, UserResponseSchema
+from app.services.user_service import authenticate_user, get_current_user, register_user
 
 # Configure logger for this module
 logger = logging.getLogger(__name__)
