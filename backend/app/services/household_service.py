@@ -1,18 +1,28 @@
+# FILE NAME: app/services/household_service.py
+
 import logging
 import math
 from app.models.household import Household
 
 logger = logging.getLogger(__name__)
 
-
 class HouseholdService:
+    # --- NEW: Service logic for deleting a household ---
+    @staticmethod
+    def delete_household(household_id: int):
+        try:
+            rows_deleted = Household.delete(household_id)
+            if rows_deleted == 0:
+                return {"success": False, "message": "Household not found."}, 404
+            return {"success": True, "message": "Household deleted successfully."}, 200
+        except Exception as e:
+            logger.error(f"Error deleting household {household_id}: {e}")
+            return {"success": False, "message": "An error occurred during household deletion."}, 500
+
+    # --- Existing service logic for listing households ---
     @staticmethod
     def get_all_households(params):
-        """
-        Orchestrates fetching paginated and sorted household data.
-        """
         try:
-            # Get pagination and search params
             page = params.get("page")
             per_page = params.get("per_page")
             search = params.get("search")
@@ -25,8 +35,8 @@ class HouseholdService:
                 search=search,
                 offset=offset,
                 limit=per_page,
-                sort_by=sort_by,  # Pass sort_by
-                sort_direction=sort_direction,  # Pass sort_direction
+                sort_by=sort_by,
+                sort_direction=sort_direction,
             )
             total_records = Household.get_count(search=search)
 

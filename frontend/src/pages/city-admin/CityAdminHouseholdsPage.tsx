@@ -1,7 +1,5 @@
-import { useState, useEffect } from "react";
-import HouseholdTable, {
-    type SortConfig,
-} from "@/components/features/auth/household/HouseholdTable";
+import { useState, useEffect, useCallback } from "react";
+import HouseholdTable, { type SortConfig } from "@/components/features/auth/household/HouseholdTable";
 import { HouseholdTableToolbar } from "@/components/features/auth/household/HouseholdTableToolbar";
 import { HouseholdTablePagination } from "@/components/features/auth/household/HouseholdTablePagination";
 
@@ -12,7 +10,6 @@ interface PaginationState {
 }
 
 export function CityAdminHouseholdsPage() {
-    // --- STATE MANAGEMENT ---
     const [householdsData, setHouseholdsData] = useState<any[]>([]);
     const [searchQuery, setSearchQuery] = useState("");
     const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("");
@@ -23,36 +20,35 @@ export function CityAdminHouseholdsPage() {
         page_count: 1,
         total_records: 0,
     });
+    
+    const fetchHouseholds = useCallback(async () => {
+        setIsLoading(true);
+        try {
+            const params = new URLSearchParams({
+                page: String(pagination.page),
+                per_page: "15",
+                search: debouncedSearchQuery,
+                sort_by: sortConfig?.key ?? 'name',
+                sort_direction: sortConfig?.direction ?? 'asc',
+            });
+            
+            const response = await fetch(`http://localhost:5000/api/households?${params.toString()}`);
+            if (!response.ok) throw new Error("Failed to fetch data");
 
-    // --- DATA FETCHING ---
-    useEffect(() => {
-        const fetchHouseholds = async () => {
-            setIsLoading(true);
-            try {
-                const params = new URLSearchParams({
-                    page: String(pagination.page),
-                    per_page: "15",
-                    search: debouncedSearchQuery,
-                });
-
-                const response = await fetch(
-                    `http://localhost:5000/api/households?${params.toString()}`
-                );
-                if (!response.ok) throw new Error("Failed to fetch data");
-
-                const result = await response.json();
-                setHouseholdsData(result.data);
-                setPagination(result.pagination);
-            } catch (error) {
-                console.error("Error fetching households:", error);
-            } finally {
-                setIsLoading(false);
-            }
-        };
-        fetchHouseholds();
+            const result = await response.json();
+            setHouseholdsData(result.data);
+            setPagination(result.pagination);
+        } catch (error) {
+            console.error("Error fetching households:", error);
+        } finally {
+            setIsLoading(false);
+        }
     }, [pagination.page, debouncedSearchQuery, sortConfig]);
 
-    // Effect to debounce search input
+    useEffect(() => {
+        fetchHouseholds();
+    }, [fetchHouseholds]);
+
     useEffect(() => {
         const handler = setTimeout(() => {
             setDebouncedSearchQuery(searchQuery);
@@ -61,7 +57,35 @@ export function CityAdminHouseholdsPage() {
         return () => clearTimeout(handler);
     }, [searchQuery]);
 
-    // --- COMPONENT LOGIC ---
+    const handleSort = (key: string) => {
+        let direction: 'asc' | 'desc' = 'asc';
+        if (sortConfig && sortConfig.key === key && sortConfig.direction === 'asc') {
+            direction = 'desc';
+        }
+        setSortConfig({ key, direction });
+    };
+
+    const handleDelete = async (id: number) => {
+        if (confirm("Are you sure you want to delete this household? This action cannot be undone.")) {
+            try {
+                const response = await fetch(`http://localhost:5000/api/households/${id}`, {
+                    method: 'DELETE',
+                });
+
+                if (!response.ok) {
+                    const errorResult = await response.json();
+                    throw new Error(errorResult.message || "Failed to delete household.");
+                }
+                
+                // Refresh data from the server after successful deletion
+                fetchHouseholds();
+            } catch (error) {
+                console.error("Error deleting household:", error);
+                alert("Could not delete the household. Please try again.");
+            }
+        }
+    };
+    
     const headers = [
         { key: "name", label: "Household Name", sortable: true },
         { key: "head", label: "Household Head", sortable: true },
@@ -69,44 +93,33 @@ export function CityAdminHouseholdsPage() {
         { key: "evacCenter", label: "Evacuation Center", sortable: true },
     ];
 
-    const handleSort = (key: string) => {
-        let direction: "asc" | "desc" | null = "asc";
-        if (sortConfig && sortConfig.key === key && sortConfig.direction === "asc") {
-            direction = "desc";
-        }
-        // In a real scenario, you'd add direction to the API call.
-        // For now, this just sets the state for the UI icon.
-        setSortConfig({ key, direction });
-    };
-
     return (
         <div className="p-6 space-y-6">
             <div>
                 <h1 className="text-2xl font-bold">Household Management</h1>
                 <p className="text-muted-foreground">View and manage household records.</p>
             </div>
-
+            
             <div className="border border-border rounded-lg">
                 <div className="bg-card p-4 border-b border-border">
                     <HouseholdTableToolbar
                         searchQuery={searchQuery}
                         onSearchChange={setSearchQuery}
-                        onAddHousehold={() => console.log("Add Household Clicked")}
+                        onAddHousehold={() => alert("Add Household feature is not yet implemented.")}
                         loading={isLoading}
                     />
                 </div>
-
+                
                 <div className="border-b border-border">
                     {isLoading && householdsData.length === 0 ? (
-                        <div className="p-8 text-center text-muted-foreground">
-                            Loading households...
-                        </div>
+                        <div className="p-8 text-center text-muted-foreground">Loading households...</div>
                     ) : (
                         <HouseholdTable
                             headers={headers}
                             data={householdsData}
                             sortConfig={sortConfig}
                             onSort={handleSort}
+                            onDelete={handleDelete}
                             loading={isLoading}
                         />
                     )}
@@ -117,7 +130,7 @@ export function CityAdminHouseholdsPage() {
                         currentPage={pagination.page}
                         totalPages={pagination.page_count}
                         totalRecords={pagination.total_records}
-                        onPageChange={page => setPagination(p => ({ ...p, page }))}
+                        onPageChange={(page) => setPagination(p => ({ ...p, page }))}
                         loading={isLoading}
                     />
                 </div>
