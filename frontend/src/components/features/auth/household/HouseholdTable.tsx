@@ -1,19 +1,7 @@
 import { ChevronUp, ChevronDown, ChevronsUpDown, MoreVertical, Edit, Trash2 } from "lucide-react";
-import {
-    Table,
-    TableBody,
-    TableCell,
-    TableHead,
-    TableHeader,
-    TableRow,
-} from "@/components/ui/table";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
 
 export interface Household {
@@ -21,7 +9,7 @@ export interface Household {
     name: string;
     head: string;
     address: string;
-    evacCenter?: string; // Optional for Center Admin view
+    evacCenter?: string;
 }
 
 export type SortConfig = {
@@ -34,29 +22,17 @@ interface HouseholdTableProps {
     headers: { key: string; label: string; sortable: boolean }[];
     sortConfig: SortConfig;
     onSort: (key: string) => void;
+    onDelete: (id: number) => void;
     loading?: boolean;
 }
 
-export function HouseholdTable({
-    data,
-    headers,
-    sortConfig,
-    onSort,
-    loading,
-}: HouseholdTableProps) {
+export function HouseholdTable({ data, headers, sortConfig, onSort, onDelete, loading }: HouseholdTableProps) {
     const getSortIcon = (key: string) => {
         if (!sortConfig || sortConfig.key !== key || !sortConfig.direction) {
             return <ChevronsUpDown className="h-4 w-4 text-muted-foreground" />;
         }
         if (sortConfig.direction === "asc") return <ChevronUp className="h-4 w-4" />;
         return <ChevronDown className="h-4 w-4" />;
-    };
-
-    const handleDelete = (id: number) => {
-        if (confirm(`Are you sure you want to delete household ID ${id}?`)) {
-            console.log("Deleting household:", id);
-            // Add your delete logic here, e.g., call a state management function
-        }
     };
 
     return (
@@ -76,7 +52,7 @@ export function HouseholdTable({
                                 </div>
                             </TableHead>
                         ))}
-                        <TableHead className="text-right">Actions</TableHead>
+                         <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -90,10 +66,7 @@ export function HouseholdTable({
                         </TableRow>
                     ) : (
                         data.map((row, index) => (
-                            <TableRow
-                                key={row.household_id}
-                                className={cn(index % 2 === 1 && "bg-muted/30")}
-                            >
+                            <TableRow key={row.household_id} className={cn(index % 2 === 1 && "bg-muted/30")}>
                                 {headers.map(header => (
                                     <TableCell key={header.key} className="py-3">
                                         {row[header.key as keyof Household]}
@@ -107,17 +80,10 @@ export function HouseholdTable({
                                             </Button>
                                         </DropdownMenuTrigger>
                                         <DropdownMenuContent align="end">
-                                            <DropdownMenuItem
-                                                onClick={() =>
-                                                    console.log("Edit:", row.household_id)
-                                                }
-                                            >
+                                            <DropdownMenuItem onClick={() => alert("Edit not implemented yet.")}>
                                                 <Edit className="h-4 w-4 mr-2" /> Edit
                                             </DropdownMenuItem>
-                                            <DropdownMenuItem
-                                                onClick={() => handleDelete(row.household_id)}
-                                                className="text-destructive"
-                                            >
+                                            <DropdownMenuItem onClick={() => onDelete(row.household_id)} className="text-destructive">
                                                 <Trash2 className="h-4 w-4 mr-2" /> Delete
                                             </DropdownMenuItem>
                                         </DropdownMenuContent>
