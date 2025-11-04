@@ -1,29 +1,37 @@
 # FILE NAME: app/schemas/individual.py
 
-from marshmallow import Schema, fields, validate
+from marshmallow import Schema, fields, validate, ValidationError
+from datetime import date # <-- Import the date object
+
+# --- NEW: Custom validation function ---
+def validate_not_in_future(value):
+    """
+    Validator that raises an error if the provided date is in the future.
+    """
+    if value and value > date.today():
+        raise ValidationError("Date of birth cannot be in the future.")
 
 class IndividualCreateSchema(Schema):
-    """
-    Schema for validating a new individual when creating a household.
-    """
     first_name = fields.Str(required=True, validate=validate.Length(min=1, max=50))
     last_name = fields.Str(required=True, validate=validate.Length(min=1, max=50))
+    
+    # --- THIS FIELD IS UPDATED ---
+    date_of_birth = fields.Date(
+        allow_none=True, 
+        required=False,
+        validate=validate_not_in_future # <-- Apply the custom validator
+    )
+    
+    gender = fields.Str(allow_none=True, required=False, validate=validate.OneOf(['Male', 'Female', 'Other']))
     relationship_to_head = fields.Str(required=True, validate=validate.Length(min=1, max=50))
 
 class IndividualUpdateSchema(IndividualCreateSchema):
-    """
-    Schema for updating/creating an individual within a household update.
-    ID is optional because new members won't have one.
-    """
     individual_id = fields.Int(required=False)
 
-# --- THIS IS THE CORRECTED SCHEMA ---
 class IndividualSelectionSchema(Schema):
-    """
-    A simple schema for populating selection dropdowns and lists.
-    """
     individual_id = fields.Int(dump_only=True)
     first_name = fields.Str(dump_only=True)
     last_name = fields.Str(dump_only=True)
-    # This is the crucial missing line that fixes the bug.
+    date_of_birth = fields.Date(dump_only=True, allow_none=True)
+    gender = fields.Str(dump_only=True, allow_none=True)
     relationship_to_head = fields.Str(dump_only=True)
