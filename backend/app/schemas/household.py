@@ -1,4 +1,7 @@
+# FILE NAME: app/schemas/household.py
+
 from marshmallow import Schema, fields, validate
+from app.schemas.individual import IndividualCreateSchema, IndividualUpdateSchema
 
 class HouseholdQuerySchema(Schema):
     page = fields.Int(load_default=1, validate=validate.Range(min=1))
@@ -17,10 +20,19 @@ class HouseholdUpdateSchema(Schema):
     address = fields.Str(required=True, validate=validate.Length(min=5, max=255))
     center_id = fields.Int(required=True, validate=validate.Range(min=1))
     household_head_id = fields.Int(allow_none=True, required=False)
+    individuals = fields.List(fields.Nested(IndividualUpdateSchema), required=False)
 
+class HouseholdWithIndividualsCreateSchema(HouseholdCreateSchema):
+    individuals = fields.List(fields.Nested(IndividualCreateSchema), required=True, validate=validate.Length(min=1))
+
+# --- THIS IS THE CORRECTED SCHEMA ---
 class HouseholdResponseSchema(Schema):
     household_id = fields.Int(dump_only=True)
+    
+    # This is the fix. We have removed 'attribute="household_name"'.
+    # The schema now correctly expects a 'name' field from the model and outputs a 'name' field.
     name = fields.Str(dump_only=True)
+    
     head = fields.Str(dump_only=True)
     address = fields.Str(dump_only=True)
     evacCenter = fields.Str(dump_only=True)
