@@ -1,14 +1,13 @@
 import axios from 'axios';
 
-const API_BASE_URL = 'http://localhost:5000'; // Adjust to your Flask port
+const API_BASE_URL = 'http://localhost:5000';
 
-// Create axios instance with default config
 const api = axios.create({
   baseURL: API_BASE_URL,
   headers: {
     'Content-Type': 'application/json',
   },
-  timeout: 10000, // 10 second timeout
+  timeout: 10000,
 });
 
 export interface EventResponse {
@@ -37,6 +36,23 @@ export interface EventDetailsResponse {
   }[];
 }
 
+export interface CreateEventData {
+  event_name: string;
+  event_type: string;
+  date_declared: string; // Format: DD/MM/YYYY
+  end_date: string | null; // Format: DD/MM/YYYY or null
+  status: 'active' | 'monitoring' | 'resolved';
+  center_ids: number[];
+}
+
+export interface UpdateEventData {
+  event_name: string;
+  event_type: string;
+  date_declared: string;
+  end_date: string | null;
+  status: 'active' | 'monitoring' | 'resolved';
+}
+
 export const eventService = {
   async getAllEvents(): Promise<EventResponse[]> {
     try {
@@ -62,12 +78,68 @@ export const eventService = {
     }
   },
 
+  async createEvent(data: CreateEventData): Promise<EventResponse> {
+    try {
+      const response = await api.post<EventResponse>('/api/events/', data);
+      return response.data;
+    } catch (error) {
+      if (axios.isAxiosError(error)) {
+        throw new Error(error.response?.data?.message || 'Failed to create event');
+      }
+      throw error;
+    }
+  },
+
+  async updateEvent(eventId: number, data: UpdateEventData): Promise<void> {
+    try {
+      await api.put(`/api/events/${eventId}`, data);
+    } catch (error) {
+      if (axios.isAxiosError(error)) {
+        throw new Error(error.response?.data?.message || 'Failed to update event');
+      }
+      throw error;
+    }
+  },
+
   async updateEventStatus(eventId: number, status: string): Promise<void> {
     try {
       await api.put(`/api/events/${eventId}`, { status });
     } catch (error) {
       if (axios.isAxiosError(error)) {
         throw new Error(error.response?.data?.message || 'Failed to update event status');
+      }
+      throw error;
+    }
+  },
+
+  async deleteEvent(eventId: number): Promise<void> {
+    try {
+      await api.delete(`/api/events/${eventId}`);
+    } catch (error) {
+      if (axios.isAxiosError(error)) {
+        throw new Error(error.response?.data?.message || 'Failed to delete event');
+      }
+      throw error;
+    }
+  },
+
+  async addCenterToEvent(eventId: number, centerId: number): Promise<void> {
+    try {
+      await api.post(`/api/events/${eventId}/centers`, { center_id: centerId });
+    } catch (error) {
+      if (axios.isAxiosError(error)) {
+        throw new Error(error.response?.data?.message || 'Failed to add center to event');
+      }
+      throw error;
+    }
+  },
+
+  async removeCenterFromEvent(eventId: number, centerId: number): Promise<void> {
+    try {
+      await api.delete(`/api/events/${eventId}/centers/${centerId}`);
+    } catch (error) {
+      if (axios.isAxiosError(error)) {
+        throw new Error(error.response?.data?.message || 'Failed to remove center from event');
       }
       throw error;
     }
