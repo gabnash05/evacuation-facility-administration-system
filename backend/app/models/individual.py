@@ -16,16 +16,12 @@ class Individual(db.Model):
     created_at = db.Column(db.DateTime, default=db.func.now())
     updated_at = db.Column(db.DateTime, default=db.func.now(), onupdate=db.func.now())
 
-    # --- THIS IS THE CORRECTED METHOD ---
     @classmethod
     def get_by_household_id(cls, household_id: int):
-        """Fetches all individuals for a given household, including their relationship."""
         sql = text("""
             SELECT 
-                individual_id, 
-                first_name, 
-                last_name, 
-                relationship_to_head 
+                individual_id, first_name, last_name, 
+                date_of_birth, gender, relationship_to_head 
             FROM individuals 
             WHERE household_id = :household_id 
             ORDER BY first_name
@@ -35,20 +31,32 @@ class Individual(db.Model):
 
     @classmethod
     def create(cls, data: dict):
-        """Creates a new individual record. Does not commit."""
         sql = text("""
-            INSERT INTO individuals (household_id, first_name, last_name, relationship_to_head)
-            VALUES (:household_id, :first_name, :last_name, :relationship_to_head)
+            INSERT INTO individuals (household_id, first_name, last_name, date_of_birth, gender, relationship_to_head)
+            VALUES (:household_id, :first_name, :last_name, :date_of_birth, :gender, :relationship_to_head)
             RETURNING *
         """)
-        result = db.session.execute(sql, data).fetchone()
+        params = {
+            "household_id": data.get("household_id"),
+            "first_name": data.get("first_name"),
+            "last_name": data.get("last_name"),
+            "date_of_birth": data.get("date_of_birth"),
+            "gender": data.get("gender"),
+            "relationship_to_head": data.get("relationship_to_head"),
+        }
+        result = db.session.execute(sql, params).fetchone()
         return result._asdict() if result else None
 
     @classmethod
     def update(cls, individual_id: int, data: dict):
-        """Updates a single individual record. Does not commit."""
         sql = text("""
-            UPDATE individuals SET first_name = :first_name, last_name = :last_name, relationship_to_head = :relationship_to_head
+            UPDATE individuals 
+            SET 
+                first_name = :first_name, 
+                last_name = :last_name, 
+                date_of_birth = :date_of_birth,
+                gender = :gender,
+                relationship_to_head = :relationship_to_head
             WHERE individual_id = :individual_id
         """)
         params = {**data, "individual_id": individual_id}
@@ -56,7 +64,6 @@ class Individual(db.Model):
 
     @classmethod
     def delete_by_ids(cls, ids: list):
-        """Deletes a list of individuals by their IDs. Does not commit."""
         if not ids:
             return
         sql = text("DELETE FROM individuals WHERE individual_id = ANY(:ids)")

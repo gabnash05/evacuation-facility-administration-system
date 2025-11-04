@@ -49,29 +49,16 @@ export function AddHouseholdModal({ isOpen, onClose, onSuccess }: AddHouseholdMo
     }, [isOpen]);
     
     const resetForm = () => {
-        setHouseholdName("");
-        setAddress("");
-        setCenterId(undefined);
-        setIndividuals([]);
-        setError(null);
+        setHouseholdName(""); setAddress(""); setCenterId(undefined);
+        setIndividuals([]); setError(null);
     };
 
-    const handleClose = () => {
-        resetForm();
-        onClose();
-    };
+    const handleClose = () => { resetForm(); onClose(); };
 
-    // --- THIS FUNCTION IS NOW SMARTER ---
     const handleAddIndividual = (newIndividual: NewIndividual) => {
-        // Check if the new member is being set as 'Head'
         if (newIndividual.relationship_to_head.toLowerCase().trim() === 'head') {
-            // Check if a head already exists in the current list
             const hasHead = individuals.some(ind => ind.relationship_to_head.toLowerCase().trim() === 'head');
-            if (hasHead) {
-                // If a head exists, show an error and do not add the new member
-                alert("Error: This household already has a designated Head. Please change the relationship before adding.");
-                return; // Stop the function
-            }
+            if (hasHead) { alert("Error: This household already has a head."); return; }
         }
         setIndividuals(prev => [...prev, newIndividual]);
     };
@@ -84,6 +71,16 @@ export function AddHouseholdModal({ isOpen, onClose, onSuccess }: AddHouseholdMo
         if (individuals.length === 0) {
             setError("You must add at least one member to the household.");
             return;
+        }
+
+        // --- NEW: Final date validation for all individuals before submitting ---
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        for (const ind of individuals) {
+            if (ind.date_of_birth && new Date(ind.date_of_birth) > today) {
+                setError(`Error for ${ind.first_name}: Date of birth cannot be in the future.`);
+                return; // Stop the submission
+            }
         }
 
         setIsSubmitting(true);
@@ -113,11 +110,7 @@ export function AddHouseholdModal({ isOpen, onClose, onSuccess }: AddHouseholdMo
 
     return (
         <>
-            <AddIndividualModal
-                isOpen={isIndividualModalOpen}
-                onClose={() => setIsIndividualModalOpen(false)}
-                onAdd={handleAddIndividual}
-            />
+            <AddIndividualModal isOpen={isIndividualModalOpen} onClose={() => setIsIndividualModalOpen(false)} onAdd={handleAddIndividual} />
             <Dialog open={isOpen} onOpenChange={handleClose}>
                 <DialogContent className="max-w-2xl">
                     <DialogHeader><DialogTitle>Add New Household</DialogTitle></DialogHeader>

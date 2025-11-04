@@ -5,10 +5,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 export interface NewIndividual {
     first_name: string;
     last_name: string;
+    date_of_birth?: string;
+    gender?: string;
     relationship_to_head: string;
 }
 
@@ -21,25 +24,39 @@ interface AddIndividualModalProps {
 export function AddIndividualModal({ isOpen, onClose, onAdd }: AddIndividualModalProps) {
     const [firstName, setFirstName] = useState("");
     const [lastName, setLastName] = useState("");
+    const [dob, setDob] = useState("");
+    const [gender, setGender] = useState("");
     const [relationship, setRelationship] = useState("");
     const [error, setError] = useState<string | null>(null);
 
+    const resetForm = () => {
+        setFirstName(""); setLastName(""); setDob("");
+        setGender(""); setRelationship(""); setError(null);
+    };
+
     const handleAdd = () => {
         if (!firstName || !lastName || !relationship) {
-            setError("All fields are required.");
+            setError("First Name, Last Name, and Relationship are required.");
+            return;
+        }
+
+        // --- NEW: Date validation ---
+        const today = new Date();
+        today.setHours(0, 0, 0, 0); // Normalize to the start of the day
+        if (dob && new Date(dob) > today) {
+            setError("Date of birth cannot be in the future.");
             return;
         }
         
         onAdd({
             first_name: firstName,
             last_name: lastName,
+            date_of_birth: dob || undefined,
+            gender: gender || undefined,
             relationship_to_head: relationship,
         });
 
-        setFirstName("");
-        setLastName("");
-        setRelationship("");
-        setError(null);
+        resetForm();
         onClose();
     };
 
@@ -49,8 +66,14 @@ export function AddIndividualModal({ isOpen, onClose, onAdd }: AddIndividualModa
                 <DialogHeader><DialogTitle>Add New Member</DialogTitle></DialogHeader>
                 <div className="space-y-4 py-4">
                     {error && <p className="text-sm text-destructive">{error}</p>}
-                    <div className="space-y-2"><Label htmlFor="firstName">First Name</Label><Input id="firstName" value={firstName} onChange={(e) => setFirstName(e.target.value)} /></div>
-                    <div className="space-y-2"><Label htmlFor="lastName">Last Name</Label><Input id="lastName" value={lastName} onChange={(e) => setLastName(e.target.value)} /></div>
+                    <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2"><Label htmlFor="firstName">First Name</Label><Input id="firstName" value={firstName} onChange={(e) => setFirstName(e.target.value)} /></div>
+                        <div className="space-y-2"><Label htmlFor="lastName">Last Name</Label><Input id="lastName" value={lastName} onChange={(e) => setLastName(e.target.value)} /></div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2"><Label htmlFor="dob">Date of Birth</Label><Input id="dob" type="date" value={dob} onChange={(e) => setDob(e.target.value)} /></div>
+                        <div className="space-y-2"><Label>Gender</Label><Select value={gender} onValueChange={setGender}><SelectTrigger><SelectValue placeholder="Select gender" /></SelectTrigger><SelectContent><SelectItem value="Male">Male</SelectItem><SelectItem value="Female">Female</SelectItem><SelectItem value="Other">Other</SelectItem></SelectContent></Select></div>
+                    </div>
                     <div className="space-y-2"><Label htmlFor="relationship">Relationship to Head</Label><Input id="relationship" value={relationship} onChange={(e) => setRelationship(e.target.value)} placeholder="e.g., Head, Spouse, Child" /></div>
                 </div>
                 <DialogFooter>
