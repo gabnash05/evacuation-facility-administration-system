@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import {
   SquarePen,
   Trash2,
@@ -30,10 +30,10 @@ import {
 } from "@/components/ui/table";
 import { EventDetailsModal } from "@/components/features/dashboard/EventDetailsModal";
 import { CreateEventModal } from "@/components/features/events/CreateEventModal";
-import { AddCenterModal } from "@/components/features/events/AddCenterModal";
+import { eventService } from "@/services/eventService";
 
 interface Event {
-  id: number;
+  eventId: number;
   eventName: string;
   eventType: string;
   dateDeclared: string;
@@ -58,39 +58,6 @@ interface EventDetails {
   evacuationCenters: EvacuationCenter[];
 }
 
-// Generate dummy events data
-const generateDummyEvents = () => {
-  const eventTypes = ["Fire", "Flood", "Typhoon", "Earthquake", "Landslide"];
-  const statuses: ("Active" | "Monitoring" | "Resolved")[] = ["Active", "Monitoring", "Resolved"];
-  const barangays = [
-    "Hinaplanon", "Palao", "Mahayahay", "Tibanga", "San Miguel", 
-    "Sta. Felomina", "Tominobo", "Upper Hinaplanon", "Puga-an", "Dalipuga"
-  ];
-
-  const events: Event[] = [];
-  
-  for (let i = 1; i <= 30; i++) {
-    const barangay = barangays[Math.floor(Math.random() * barangays.length)];
-    const eventType = eventTypes[Math.floor(Math.random() * eventTypes.length)];
-    const status = statuses[Math.floor(Math.random() * statuses.length)];
-    const month = Math.floor(Math.random() * 12) + 1;
-    const day = Math.floor(Math.random() * 28) + 1;
-    const dateDeclared = `${day.toString().padStart(2, '0')}/${month.toString().padStart(2, '0')}/2024`;
-    const endDate = status === "Active" ? "NA" : dateDeclared;
-    
-    events.push({
-      id: i,
-      eventName: `${barangay} ${eventType}`,
-      eventType: eventType,
-      dateDeclared: dateDeclared,
-      endDate: endDate,
-      status: status
-    });
-  }
-  
-  return events;
-};
-
 export function CityAdminEventsPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
@@ -104,8 +71,62 @@ export function CityAdminEventsPage() {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editingEvent, setEditingEvent] = useState<Event | null>(null);
+  const [allEvents, setAllEvents] = useState<Event[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const allEvents = useMemo(() => generateDummyEvents(), []);
+  useEffect(() => {
+    fetchEvents();
+  }, []);
+
+  const fetchEvents = async () => {
+    try {
+      setIsLoading(true);
+      setError(null);
+      
+      const data = await eventService.getAllEvents();
+      
+      const transformedEvents: Event[] = data.map((event) => ({
+        eventId: event.event_id,
+        eventName: event.event_name,
+        eventType: event.event_type,
+        dateDeclared: formatDate(event.date_declared),
+        endDate: event.end_date ? formatDate(event.end_date) : "NA",
+        status: capitalizeStatus(event.status)
+      }));
+      
+      setAllEvents(transformedEvents);
+    } catch (err) {
+      setError("Failed to load events. Please try again.");
+      console.error("Fetch events error:", err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const formatDate = (dateString: string): string => {
+    if (!dateString) return 'NA';
+    
+    const date = new Date(dateString);
+    
+    if (isNaN(date.getTime())) {
+      return dateString;
+    }
+    
+    const day = String(date.getUTCDate()).padStart(2, '0');
+    const month = String(date.getUTCMonth() + 1).padStart(2, '0');
+    const year = date.getUTCFullYear();
+    return `${day}/${month}/${year}`;
+  };
+
+  const capitalizeStatus = (status: string): "Active" | "Monitoring" | "Resolved" => {
+    const statusMap: Record<string, "Active" | "Monitoring" | "Resolved"> = {
+      'active': 'Active',
+      'monitoring': 'Monitoring',
+      'resolved': 'Resolved'
+    };
+    return statusMap[status.toLowerCase()] || 'Active';
+  };
 
   const eventColumns = [
     { key: "eventName", label: "Event Name" },
@@ -150,9 +171,25 @@ export function CityAdminEventsPage() {
     setIsCreateModalOpen(true);
   };
 
-  const handleCreateEvent = (eventData: any) => {
-    console.log("Create event:", eventData);
-    // TODO: API call to create event
+  const handleCreateEvent = async (eventData: any) => {
+    try {
+      setError(null);
+      
+      await eventService.createEvent({
+        event_name: eventData.eventTitle,
+        event_type: eventData.eventType,
+        date_declared: eventData.dateDeclared,
+        end_date: eventData.endDate === "NA" ? null : eventData.endDate,
+        status: eventData.status.toLowerCase() as 'active' | 'monitoring' | 'resolved',
+        center_ids: eventData.centerIds || []
+      });
+      
+      await fetchEvents();
+      setIsCreateModalOpen(false);
+    } catch (err: any) {
+      setError(err.message || "Failed to create event");
+      console.error("Create event error:", err);
+    }
   };
 
   const handleEditEvent = (row: Event) => {
@@ -160,49 +197,67 @@ export function CityAdminEventsPage() {
     setIsEditModalOpen(true);
   };
 
-  const handleUpdateEvent = (eventData: any) => {
-    console.log("Update event:", editingEvent?.id, eventData);
-    // TODO: API call to update event
+  const handleUpdateEvent = async (eventData: any) => {
+    if (!editingEvent) return;
+    
+    try {
+      setError(null);
+      
+      await eventService.updateEvent(editingEvent.eventId, {
+        event_name: eventData.eventTitle,
+        event_type: eventData.eventType,
+        date_declared: eventData.dateDeclared,
+        end_date: eventData.endDate === "NA" ? null : eventData.endDate,
+        status: eventData.status.toLowerCase() as 'active' | 'monitoring' | 'resolved'
+      });
+      
+      await fetchEvents();
+      setIsEditModalOpen(false);
+      setEditingEvent(null);
+    } catch (err: any) {
+      setError(err.message || "Failed to update event");
+      console.error("Update event error:", err);
+    }
   };
 
-  const handleDeleteEvent = (row: Event) => {
-    console.log("Delete event:", row.id);
-    // TODO: API call to delete event
+  const handleDeleteEvent = async (row: Event) => {
+    if (!confirm(`Are you sure you want to delete "${row.eventName}"?`)) return;
+    
+    try {
+      setError(null);
+      await eventService.deleteEvent(row.eventId);
+      await fetchEvents();
+    } catch (err: any) {
+      setError(err.message || "Failed to delete event");
+      console.error("Delete event error:", err);
+    }
   };
 
   const handleRowClick = async (row: Event) => {
     try {
-      // Simulate API delay
-      await new Promise(resolve => setTimeout(resolve, 300));
+      setError(null);
       
-      // Mock event details data
+      const apiResponse = await eventService.getEventDetails(row.eventId);
+      
       const eventDetails: EventDetails = {
-        eventTitle: row.eventName,
-        eventType: row.eventType,
-        status: row.status,
+        eventTitle: apiResponse.event_name,
+        eventType: apiResponse.event_type,
+        status: capitalizeStatus(apiResponse.status),
         dateDeclared: row.dateDeclared,
         endDate: row.endDate,
-        evacuationCenters: [
-          {
-            centerName: "San Lorenzo Parish Church",
-            barangay: "Hinaplanon",
-            capacity: 500,
-            currentOccupancy: 400,
-            occupancy: "80%"
-          },
-          {
-            centerName: "Don Juana Elementary School",
-            barangay: "Palao",
-            capacity: 500,
-            currentOccupancy: 300,
-            occupancy: "60%"
-          }
-        ]
+        evacuationCenters: apiResponse.centers.map((center) => ({
+          centerName: center.center_name,
+          barangay: center.barangay,
+          capacity: center.capacity,
+          currentOccupancy: center.current_occupancy,
+          occupancy: center.occupancy
+        }))
       };
       
       setSelectedEvent(eventDetails);
       setIsDetailsModalOpen(true);
-    } catch (err) {
+    } catch (err: any) {
+      setError(err.message || "Failed to load event details");
       console.error("Event details error:", err);
     }
   };
@@ -304,6 +359,13 @@ export function CityAdminEventsPage() {
           <p className="text-muted-foreground">Manage events and their information</p>
         </div>
 
+        {/* Error Alert */}
+        {error && (
+          <div className="bg-destructive/10 border border-destructive text-destructive px-4 py-3 rounded">
+            {error}
+          </div>
+        )}
+
         {/* Main Content Card */}
         <div className="border border-border">
           {/* Controls Bar */}
@@ -374,7 +436,11 @@ export function CityAdminEventsPage() {
           {/* Table Content */}
           <div className="border-t-0">
             <div className="min-h-[400px]">
-              {paginatedData.length === 0 ? (
+              {isLoading ? (
+                <div className="flex items-center justify-center h-[400px] text-muted-foreground">
+                  <p className="text-lg">Loading events...</p>
+                </div>
+              ) : paginatedData.length === 0 ? (
                 <div className="flex flex-col items-center justify-center h-[400px] text-muted-foreground">
                   <SearchIcon className="h-12 w-12 mb-4 opacity-50" />
                   <p className="text-lg font-medium mb-2">No events found</p>
@@ -400,7 +466,7 @@ export function CityAdminEventsPage() {
                   <TableBody>
                     {paginatedData.map((row, i) => (
                       <TableRow
-                        key={row.id}
+                        key={row.eventId}
                         className={`${i % 2 === 1 ? "bg-muted" : ""} cursor-pointer hover:bg-muted/50 transition-colors`}
                         onClick={() => handleRowClick(row)}
                       >
@@ -445,7 +511,7 @@ export function CityAdminEventsPage() {
         onSubmit={handleCreateEvent}
       />
 
-      {/* Edit Event Modal (reuses CreateEventModal with initial data) */}
+      {/* Edit Event Modal */}
       {editingEvent && (
         <CreateEventModal
           isOpen={isEditModalOpen}

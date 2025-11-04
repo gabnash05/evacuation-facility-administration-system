@@ -17,6 +17,8 @@ import {
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Plus, CirclePlus, CircleMinus } from "lucide-react";
+import { EvacuationCenterService } from "@/services/evacuationCenterService";
+import type { EvacuationCenter } from "@/types/center";
 
 interface Center {
   id: number;
@@ -34,51 +36,60 @@ interface AddCenterModalProps {
   onAddCenters: (centers: Center[]) => void;
 }
 
-// Mock data for available evacuation centers
-const generateAvailableCenters = (): Center[] => {
-  const barangays = [
-    "Hinaplanon", "Palao", "Mahayahay", "Tibanga", "San Miguel", 
-    "Sta. Felomina", "Tominobo", "Upper Hinaplanon", "Puga-an", "Dalipuga",
-    "Buru-un", "Suarez", "Tambo", "Ubaldo Laya", "Villa Verde"
-  ];
-  
-  const centerTypes = [
-    "Elementary School", "National High School", "Barangay Hall", 
-    "Gymnasium", "Community Center", "Parish Church", "Covered Court"
-  ];
-
-  const centers: Center[] = [];
-  
-  for (let i = 1; i <= 15; i++) {
-    const barangay = barangays[i - 1];
-    const centerType = centerTypes[Math.floor(Math.random() * centerTypes.length)];
-    const capacity = Math.floor(Math.random() * 500) + 100;
-    const currentOccupancy = Math.floor(Math.random() * capacity);
-    const occupancy = Math.round((currentOccupancy / capacity) * 100);
-    
-    centers.push({
-      id: i,
-      centerName: `${barangay} ${centerType}`,
-      barangay: barangay,
-      status: Math.random() > 0.3 ? "Active" : "Inactive",
-      capacity: capacity,
-      currentOccupancy: currentOccupancy,
-      occupancy: `${occupancy}%`
-    });
-  }
-  
-  return centers;
-};
-
 export function AddCenterModal({ isOpen, onClose, onAddCenters }: AddCenterModalProps) {
   const [availableCenters, setAvailableCenters] = useState<Center[]>([]);
   const [selectedCenterIds, setSelectedCenterIds] = useState<Set<number>>(new Set());
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (isOpen) {
-      setAvailableCenters(generateAvailableCenters());
+      fetchCenters();
     }
   }, [isOpen]);
+
+  const fetchCenters = async () => {
+    try {
+      setIsLoading(true);
+      setError(null);
+      
+      const response = await EvacuationCenterService.getCenters();
+      
+      // Extract from PaginatedResponse: { success, data: { results: [], pagination: {} } }
+      const centersData: EvacuationCenter[] = response.data?.results || [];
+      
+      const transformedCenters: Center[] = centersData.map((center) => {
+        const occupancy = center.capacity > 0 
+          ? Math.round((center.current_occupancy / center.capacity) * 100)
+          : 0;
+        
+        const barangay = center.address.includes(',') 
+          ? center.address.split(',')[0].trim() 
+          : center.address;
+        
+        return {
+          id: center.center_id,
+          centerName: center.center_name,
+          barangay: barangay,
+          status: capitalizeStatus(center.status),
+          capacity: center.capacity,
+          currentOccupancy: center.current_occupancy,
+          occupancy: `${occupancy}%`
+        };
+      });
+      
+      setAvailableCenters(transformedCenters);
+    } catch (err: any) {
+      setError(err.message || "Failed to load evacuation centers");
+      console.error("Fetch centers error:", err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const capitalizeStatus = (status: string): string => {
+    return status.charAt(0).toUpperCase() + status.slice(1).toLowerCase();
+  };
 
   const handleToggleCenter = (centerId: number) => {
     setSelectedCenterIds(prev => {
@@ -103,6 +114,7 @@ export function AddCenterModal({ isOpen, onClose, onAddCenters }: AddCenterModal
 
   const handleClose = () => {
     setSelectedCenterIds(new Set());
+    setError(null);
     onClose();
   };
 
@@ -113,6 +125,19 @@ export function AddCenterModal({ isOpen, onClose, onAddCenters }: AddCenterModal
     return "bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-200";
   };
 
+  const getStatusColor = (status: string) => {
+    switch (status.toLowerCase()) {
+      case "active":
+        return "bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-200";
+      case "inactive":
+        return "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200";
+      case "closed":
+        return "bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-200";
+      default:
+        return "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-200";
+    }
+  };
+
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
       <DialogContent className="!max-w-[1100px] w-[95vw] max-h-[90vh] overflow-y-auto p-6">
@@ -120,60 +145,78 @@ export function AddCenterModal({ isOpen, onClose, onAddCenters }: AddCenterModal
           <DialogTitle className="text-xl font-semibold">Add Center</DialogTitle>
         </DialogHeader>
 
-        {/* Centers Table */}
+        {error && (
+          <div className="bg-destructive/10 border border-destructive text-destructive px-4 py-3 rounded mt-4">
+            {error}
+          </div>
+        )}
+
         <div className="mt-4 border border-border rounded-lg overflow-x-auto">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="min-w-[200px]">Center Name</TableHead>
-                <TableHead className="min-w-[120px]">Barangay</TableHead>
-                <TableHead className="min-w-[100px]">Status</TableHead>
-                <TableHead className="min-w-[100px]">Capacity</TableHead>
-                <TableHead className="min-w-[150px]">Current Occupancy</TableHead>
-                <TableHead className="min-w-[120px]">Occupancy</TableHead>
-                <TableHead className="min-w-[80px]">Action</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {availableCenters.map((center, i) => {
-                const isSelected = selectedCenterIds.has(center.id);
-                return (
-                  <TableRow 
-                    key={center.id} 
-                    className={`${i % 2 === 1 ? "bg-muted" : ""} ${isSelected ? "bg-green-50 dark:bg-green-950" : ""}`}
-                  >
-                    <TableCell className="font-medium">{center.centerName}</TableCell>
-                    <TableCell>{center.barangay}</TableCell>
-                    <TableCell>{center.status}</TableCell>
-                    <TableCell>{center.capacity}</TableCell>
-                    <TableCell>{center.currentOccupancy}</TableCell>
-                    <TableCell>
-                      <span className={`px-3 py-1 rounded text-xs font-medium inline-block ${getOccupancyColor(center.occupancy)}`}>
-                        {center.occupancy}
-                      </span>
-                    </TableCell>
-                    <TableCell>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => handleToggleCenter(center.id)}
-                        className="h-8 w-8"
-                      >
-                        {isSelected ? (
-                          <CircleMinus className="h-4 w-4 text-red-600" />
-                        ) : (
-                          <CirclePlus className="h-4 w-4 text-green-600" />
-                        )}
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                );
-              })}
-            </TableBody>
-          </Table>
+          {isLoading ? (
+            <div className="flex items-center justify-center h-[400px] text-muted-foreground">
+              <p className="text-lg">Loading evacuation centers...</p>
+            </div>
+          ) : availableCenters.length === 0 ? (
+            <div className="flex items-center justify-center h-[400px] text-muted-foreground">
+              <p className="text-lg">No evacuation centers available</p>
+            </div>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="min-w-[200px]">Center Name</TableHead>
+                  <TableHead className="min-w-[120px]">Barangay</TableHead>
+                  <TableHead className="min-w-[100px]">Status</TableHead>
+                  <TableHead className="min-w-[100px]">Capacity</TableHead>
+                  <TableHead className="min-w-[150px]">Current Occupancy</TableHead>
+                  <TableHead className="min-w-[120px]">Occupancy</TableHead>
+                  <TableHead className="min-w-[80px]">Action</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {availableCenters.map((center, i) => {
+                  const isSelected = selectedCenterIds.has(center.id);
+                  return (
+                    <TableRow 
+                      key={center.id} 
+                      className={`${i % 2 === 1 ? "bg-muted" : ""} ${isSelected ? "bg-green-50 dark:bg-green-950" : ""}`}
+                    >
+                      <TableCell className="font-medium">{center.centerName}</TableCell>
+                      <TableCell>{center.barangay}</TableCell>
+                      <TableCell>
+                        <span className={`px-3 py-1 rounded text-xs font-medium inline-block ${getStatusColor(center.status)}`}>
+                          {center.status}
+                        </span>
+                      </TableCell>
+                      <TableCell>{center.capacity}</TableCell>
+                      <TableCell>{center.currentOccupancy}</TableCell>
+                      <TableCell>
+                        <span className={`px-3 py-1 rounded text-xs font-medium inline-block ${getOccupancyColor(center.occupancy)}`}>
+                          {center.occupancy}
+                        </span>
+                      </TableCell>
+                      <TableCell>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleToggleCenter(center.id)}
+                          className="h-8 w-8"
+                        >
+                          {isSelected ? (
+                            <CircleMinus className="h-4 w-4 text-red-600" />
+                          ) : (
+                            <CirclePlus className="h-4 w-4 text-green-600" />
+                          )}
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          )}
         </div>
 
-        {/* Footer with selected count and button */}
         <div className="flex items-center justify-between mt-6">
           <p className="text-sm text-muted-foreground">
             {selectedCenterIds.size} center{selectedCenterIds.size !== 1 ? 's' : ''} selected
@@ -181,7 +224,7 @@ export function AddCenterModal({ isOpen, onClose, onAddCenters }: AddCenterModal
           <Button 
             onClick={handleAddCenters} 
             className="gap-2 bg-green-600 hover:bg-green-700"
-            disabled={selectedCenterIds.size === 0}
+            disabled={selectedCenterIds.size === 0 || isLoading}
           >
             <Plus className="h-4 w-4" />
             Add Centers ({selectedCenterIds.size})

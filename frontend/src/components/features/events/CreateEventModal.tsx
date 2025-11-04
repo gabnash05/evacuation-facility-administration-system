@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Dialog,
   DialogContent,
@@ -36,6 +36,7 @@ import { cn } from "@/lib/utils";
 import { AddCenterModal } from "@/components/features/events/AddCenterModal";
 
 interface EvacuationCenter {
+  centerId: number;
   centerName: string;
   barangay: string;
   capacity: number;
@@ -51,7 +52,7 @@ interface CreateEventModalProps {
 }
 
 interface Event {
-  id: number;
+  eventId: number;
   eventName: string;
   eventType: string;
   dateDeclared: string;
@@ -60,13 +61,40 @@ interface Event {
 }
 
 export function CreateEventModal({ isOpen, onClose, onSubmit, initialData }: CreateEventModalProps) {
-  const [eventTitle, setEventTitle] = useState(initialData?.eventName || "");
-  const [eventType, setEventType] = useState(initialData?.eventType || "");
-  const [status, setStatus] = useState<string>(initialData?.status || "Active");
+  const [eventTitle, setEventTitle] = useState("");
+  const [eventType, setEventType] = useState("");
+  const [status, setStatus] = useState<string>("Active");
   const [dateDeclared, setDateDeclared] = useState<Date>();
   const [endDate, setEndDate] = useState<Date | "N/A">("N/A");
   const [evacuationCenters, setEvacuationCenters] = useState<EvacuationCenter[]>([]);
   const [isAddCenterOpen, setIsAddCenterOpen] = useState(false);
+
+  // Parse DD/MM/YYYY to Date object
+  const parseDate = (dateStr: string): Date | undefined => {
+    if (!dateStr || dateStr === "NA") return undefined;
+    
+    const [day, month, year] = dateStr.split('/');
+    if (!day || !month || !year) return undefined;
+    
+    return new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+  };
+
+  // Initialize form with initialData when editing
+  useEffect(() => {
+    if (initialData && isOpen) {
+      setEventTitle(initialData.eventName);
+      setEventType(initialData.eventType);
+      setStatus(initialData.status);
+      setDateDeclared(parseDate(initialData.dateDeclared));
+      setEndDate(initialData.endDate === "NA" ? "N/A" : parseDate(initialData.endDate) || "N/A");
+      
+      // When editing, we could fetch the event's centers here if needed
+      // For now, start with empty centers since we can't modify them via update
+      setEvacuationCenters([]);
+    } else if (isOpen) {
+      handleReset();
+    }
+  }, [initialData, isOpen]);
 
   const handleAddEvent = () => {
     const eventData = {
@@ -74,20 +102,24 @@ export function CreateEventModal({ isOpen, onClose, onSubmit, initialData }: Cre
       eventType,
       status,
       dateDeclared: dateDeclared ? format(dateDeclared, "dd/MM/yyyy") : "",
-      endDate: endDate === "N/A" ? "N/A" : endDate ? format(endDate, "dd/MM/yyyy") : "N/A",
-      evacuationCenters,
+      endDate: endDate === "N/A" ? "NA" : endDate ? format(endDate, "dd/MM/yyyy") : "NA",
+      centerIds: evacuationCenters.map(c => c.centerId)
     };
     onSubmit(eventData);
     handleClose();
   };
 
-  const handleClose = () => {
+  const handleReset = () => {
     setEventTitle("");
     setEventType("");
     setStatus("Active");
     setDateDeclared(undefined);
     setEndDate("N/A");
     setEvacuationCenters([]);
+  };
+
+  const handleClose = () => {
+    handleReset();
     onClose();
   };
 
@@ -96,7 +128,20 @@ export function CreateEventModal({ isOpen, onClose, onSubmit, initialData }: Cre
   };
 
   const handleAddCenters = (centers: any[]) => {
-    setEvacuationCenters([...evacuationCenters, ...centers]);
+    const newCenters: EvacuationCenter[] = centers.map(c => ({
+      centerId: c.id,
+      centerName: c.centerName,
+      barangay: c.barangay,
+      capacity: c.capacity,
+      currentOccupancy: c.currentOccupancy,
+      occupancy: c.occupancy
+    }));
+    
+    // Avoid duplicates
+    const existingIds = new Set(evacuationCenters.map(c => c.centerId));
+    const filtered = newCenters.filter(c => !existingIds.has(c.centerId));
+    
+    setEvacuationCenters([...evacuationCenters, ...filtered]);
   };
 
   const getStatusColor = (status: string) => {
@@ -118,6 +163,8 @@ export function CreateEventModal({ isOpen, onClose, onSubmit, initialData }: Cre
     if (percentage >= 50) return "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200";
     return "bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-200";
   };
+
+  const isFormValid = eventTitle && eventType && dateDeclared;
 
   return (
     <>
@@ -238,61 +285,65 @@ export function CreateEventModal({ isOpen, onClose, onSubmit, initialData }: Cre
               <h3 className="font-semibold">Evacuation Centers Affected</h3>
               <Button onClick={() => setIsAddCenterOpen(true)} className="gap-2">
                 <Plus className="h-4 w-4" />
-                Add Center
+                {initialData ? "Update Centers" : "Add Center"}
               </Button>
             </div>
-            <div className="border border-border rounded-lg overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="min-w-[200px]">Center Name</TableHead>
-                    <TableHead className="min-w-[120px]">Barangay</TableHead>
-                    <TableHead className="min-w-[100px]">Capacity</TableHead>
-                    <TableHead className="min-w-[150px]">Current Occupancy</TableHead>
-                    <TableHead className="min-w-[120px]">Occupancy</TableHead>
-                    <TableHead className="min-w-[80px]">Action</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {evacuationCenters.length === 0 ? (
+              <div className="border border-border rounded-lg overflow-x-auto">
+                <Table>
+                  <TableHeader>
                     <TableRow>
-                      <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
-                        No evacuation centers added yet
-                      </TableCell>
+                      <TableHead className="min-w-[200px]">Center Name</TableHead>
+                      <TableHead className="min-w-[120px]">Barangay</TableHead>
+                      <TableHead className="min-w-[100px]">Capacity</TableHead>
+                      <TableHead className="min-w-[150px]">Current Occupancy</TableHead>
+                      <TableHead className="min-w-[120px]">Occupancy</TableHead>
+                      <TableHead className="min-w-[80px]">Action</TableHead>
                     </TableRow>
-                  ) : (
-                    evacuationCenters.map((center, i) => (
-                      <TableRow key={i}>
-                        <TableCell className="font-medium">{center.centerName}</TableCell>
-                        <TableCell>{center.barangay}</TableCell>
-                        <TableCell>{center.capacity}</TableCell>
-                        <TableCell>{center.currentOccupancy}</TableCell>
-                        <TableCell>
-                          <span className={`px-3 py-1 rounded text-xs font-medium inline-block ${getOccupancyColor(center.occupancy)}`}>
-                            {center.occupancy}
-                          </span>
-                        </TableCell>
-                        <TableCell>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => handleRemoveCenter(i)}
-                            className="h-8 w-8 text-destructive hover:text-destructive"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
+                  </TableHeader>
+                  <TableBody>
+                    {evacuationCenters.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                          No evacuation centers added yet
                         </TableCell>
                       </TableRow>
-                    ))
-                  )}
-                </TableBody>
-              </Table>
+                    ) : (
+                      evacuationCenters.map((center, i) => (
+                        <TableRow key={i}>
+                          <TableCell className="font-medium">{center.centerName}</TableCell>
+                          <TableCell>{center.barangay}</TableCell>
+                          <TableCell>{center.capacity}</TableCell>
+                          <TableCell>{center.currentOccupancy}</TableCell>
+                          <TableCell>
+                            <span className={`px-3 py-1 rounded text-xs font-medium inline-block ${getOccupancyColor(center.occupancy)}`}>
+                              {center.occupancy}
+                            </span>
+                          </TableCell>
+                          <TableCell>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleRemoveCenter(i)}
+                              className="h-8 w-8 text-destructive hover:text-destructive"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
             </div>
-          </div>
 
           {/* Footer Button */}
           <div className="flex justify-end mt-6">
-            <Button onClick={handleAddEvent} className="gap-2 bg-green-600 hover:bg-green-700">
+            <Button 
+              onClick={handleAddEvent} 
+              className="gap-2 bg-green-600 hover:bg-green-700"
+              disabled={!isFormValid}
+            >
               <Plus className="h-4 w-4" />
               {initialData ? "Update Event" : "Add Event"}
             </Button>
