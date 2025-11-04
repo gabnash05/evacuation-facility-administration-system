@@ -1,5 +1,3 @@
-// FILE NAME: src/components/features/auth/household/AddIndividualModal.tsx
-
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -40,9 +38,8 @@ export function AddIndividualModal({ isOpen, onClose, onAdd }: AddIndividualModa
             return;
         }
 
-        // --- NEW: Date validation ---
         const today = new Date();
-        today.setHours(0, 0, 0, 0); // Normalize to the start of the day
+        today.setHours(0, 0, 0, 0); 
         if (dob && new Date(dob) > today) {
             setError("Date of birth cannot be in the future.");
             return;

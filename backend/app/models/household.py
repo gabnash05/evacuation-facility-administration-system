@@ -1,5 +1,3 @@
-# FILE NAME: app/models/household.py
-
 from sqlalchemy import text
 from app.models import db
 
@@ -64,7 +62,6 @@ class Household(db.Model):
         db.session.execute(sql, {"id": household_id})
         db.session.commit()
 
-    # --- THIS METHOD IS UPDATED ---
     @classmethod
     def get_all_paginated(cls, search: str, offset: int, limit: int, sort_by: str, sort_direction: str):
         search_query = f"%{search}%"
@@ -73,7 +70,6 @@ class Household(db.Model):
         if sort_direction.lower() not in ['asc', 'desc']: sort_direction = 'asc'
         order_by_clause = f"ORDER BY {sort_column} {sort_direction}"
         
-        # The WHERE clause is updated to search through ALL individuals
         sql_query = f"""
             SELECT
                 h.household_id,
@@ -102,11 +98,9 @@ class Household(db.Model):
         result = db.session.execute(text(sql_query), {"search": search_query, "limit": limit, "offset": offset}).fetchall()
         return [dict(row._mapping) for row in result]
 
-    # --- THIS METHOD IS ALSO UPDATED ---
     @classmethod
     def get_count(cls, search: str):
         search_query = f"%{search}%"
-        # The WHERE clause is updated to match the main query for accurate counting
         sql = text("""
             SELECT COUNT(h.household_id)
             FROM households h

@@ -1,5 +1,3 @@
-// FILE NAME: src/components/features/auth/household/EditHouseholdModal.tsx
-
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -113,7 +111,6 @@ export function EditHouseholdModal({ householdId, isOpen, onClose, onSuccess }: 
     const handleSubmit = async () => {
         if (!formData.household_name || !formData.address || !formData.center_id) { setError("Household details are required."); return; }
 
-        // --- NEW: Date validation for all individuals ---
         const today = new Date();
         today.setHours(0, 0, 0, 0);
         for (const ind of individuals) {

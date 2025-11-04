@@ -1,5 +1,3 @@
-// FILE NAME: src/components/features/auth/household/AddHouseholdModal.tsx
-
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -73,13 +71,12 @@ export function AddHouseholdModal({ isOpen, onClose, onSuccess }: AddHouseholdMo
             return;
         }
 
-        // --- NEW: Final date validation for all individuals before submitting ---
         const today = new Date();
         today.setHours(0, 0, 0, 0);
         for (const ind of individuals) {
             if (ind.date_of_birth && new Date(ind.date_of_birth) > today) {
                 setError(`Error for ${ind.first_name}: Date of birth cannot be in the future.`);
-                return; // Stop the submission
+                return; 
             }
         }
 

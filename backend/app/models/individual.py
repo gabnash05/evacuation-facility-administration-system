@@ -1,5 +1,3 @@
-# FILE NAME: app/models/individual.py
-
 from sqlalchemy import text
 from app.models import db
 

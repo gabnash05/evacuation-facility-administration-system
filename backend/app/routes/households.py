@@ -1,5 +1,3 @@
-# FILE NAME: app/routes/households.py
-
 from flask import Blueprint, jsonify, request
 from app.services.household_service import HouseholdService
 from app.schemas.household import (

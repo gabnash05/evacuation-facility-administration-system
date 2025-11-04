@@ -1,5 +1,3 @@
-# FILE NAME: app/__init__.py
-
 """EFAS Flask application factory."""
 
 import logging
