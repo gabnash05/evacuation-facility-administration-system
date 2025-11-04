@@ -1,9 +1,6 @@
-# FILE NAME: app/schemas/individual.py
-
 from marshmallow import Schema, fields, validate, ValidationError
-from datetime import date # <-- Import the date object
+from datetime import date 
 
-# --- NEW: Custom validation function ---
 def validate_not_in_future(value):
     """
     Validator that raises an error if the provided date is in the future.
@@ -15,11 +12,10 @@ class IndividualCreateSchema(Schema):
     first_name = fields.Str(required=True, validate=validate.Length(min=1, max=50))
     last_name = fields.Str(required=True, validate=validate.Length(min=1, max=50))
     
-    # --- THIS FIELD IS UPDATED ---
     date_of_birth = fields.Date(
         allow_none=True, 
         required=False,
-        validate=validate_not_in_future # <-- Apply the custom validator
+        validate=validate_not_in_future 
     )
     
     gender = fields.Str(allow_none=True, required=False, validate=validate.OneOf(['Male', 'Female', 'Other']))

@@ -1,5 +1,3 @@
-# FILE NAME: app/services/household_service.py
-
 import logging
 import math
 from app.models.household import Household
@@ -21,14 +19,11 @@ class HouseholdService:
         individuals_payload = data.pop('individuals', [])
 
         try:
-            # --- TRANSACTION START ---
             
-            # 1. Update the household details itself
             updated_household = Household.update(household_id, data)
             if not updated_household:
                 raise Exception("Household update failed.")
 
-            # 2. Separate individuals into create, update, and delete lists
             existing_individuals = Individual.get_by_household_id(household_id)
             existing_ids = {ind['individual_id'] for ind in existing_individuals}
             
@@ -38,7 +33,6 @@ class HouseholdService:
             incoming_ids = {ind['individual_id'] for ind in incoming_individuals}
             ids_to_delete = list(existing_ids - incoming_ids)
             
-            # 3. Perform database operations
             if ids_to_delete:
                 Individual.delete_by_ids(ids_to_delete)
 
@@ -49,7 +43,6 @@ class HouseholdService:
                 ind_data['household_id'] = household_id
                 Individual.create(ind_data)
 
-            # 4. If everything succeeded, commit the transaction
             db.session.commit()
             
             return {"success": True, "data": updated_household}, 200
@@ -59,7 +52,6 @@ class HouseholdService:
             logger.error(f"Error during transactional household update for ID {household_id}: {e}")
             return {"success": False, "message": "A critical error occurred. The operation has been cancelled."}, 500
 
-    # ... (The rest of the file is the same as before)
     @staticmethod
     def create_household_with_individuals(data: dict):
         if Household.get_by_name(data["household_name"]): return {"success": False, "message": "A household with this name already exists."}, 409
