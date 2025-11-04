@@ -1,4 +1,3 @@
-# app/__init__.py
 """EFAS Flask application factory."""
 
 import logging
@@ -57,5 +56,6 @@ def create_app(config_class=Config):
     app.register_blueprint(evacuation_center_bp, url_prefix="/api")
     # app.register_blueprint(households_bp)
     # app.register_blueprint(individuals_bp)
+    
 
     return app

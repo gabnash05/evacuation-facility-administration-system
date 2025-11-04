@@ -1,5 +1,3 @@
-# FILE NAME: app/models/household.py
-
 from sqlalchemy import text
 from app.models import db
 
@@ -14,26 +12,67 @@ class Household(db.Model):
     created_at = db.Column(db.DateTime, default=db.func.now())
     updated_at = db.Column(db.DateTime, default=db.func.now(), onupdate=db.func.now())
 
-    # --- NEW: Helper method to find a household by ID ---
     @classmethod
     def get_by_id(cls, household_id: int):
-        sql = text("SELECT household_id FROM households WHERE household_id = :id")
+        sql = text("""
+            SELECT 
+                h.household_id, 
+                h.household_name AS name, 
+                h.address, 
+                h.center_id,
+                h.household_head_id
+            FROM households h WHERE h.household_id = :id
+        """)
         result = db.session.execute(sql, {"id": household_id}).fetchone()
+        return result._asdict() if result else None
+
+    @classmethod
+    def get_by_name(cls, name: str):
+        sql = text("SELECT household_id FROM households WHERE household_name ILIKE :name")
+        result = db.session.execute(sql, {"name": name}).fetchone()
         return result
 
-    # --- NEW: Method to delete a household ---
+    @classmethod
+    def create(cls, data: dict):
+        sql = text("""
+            INSERT INTO households (household_name, address, center_id)
+            VALUES (:household_name, :address, :center_id)
+            RETURNING household_id, household_name AS name, address, center_id
+        """)
+        result = db.session.execute(sql, data).fetchone()
+        db.session.commit()
+        return result._asdict() if result else None
+
+    @classmethod
+    def update(cls, household_id: int, data: dict):
+        sql = text("""
+            UPDATE households
+            SET 
+                household_name = :household_name, 
+                address = :address, 
+                center_id = :center_id,
+                household_head_id = :household_head_id
+            WHERE household_id = :household_id
+            RETURNING household_id, household_name AS name, address, center_id, household_head_id
+        """)
+        params = {
+            "household_name": data.get("household_name"),
+            "address": data.get("address"),
+            "center_id": data.get("center_id"),
+            "household_head_id": data.get("household_head_id"),
+            "household_id": household_id
+        }
+        result = db.session.execute(sql, params).fetchone()
+        db.session.commit()
+        return result._asdict() if result else None
+    
     @classmethod
     def delete(cls, household_id: int):
-        # First, confirm the household exists before attempting to delete
-        if not cls.get_by_id(household_id):
-            return 0 # Indicates no rows were affected
 
         sql = text("DELETE FROM households WHERE household_id = :id")
-        result = db.session.execute(sql, {"id": household_id})
+        db.session.execute(sql, {"id": household_id})
         db.session.commit()
-        return result.rowcount # Returns the number of rows deleted (should be 1)
-
-    # --- Existing method for listing households ---
+        
     @classmethod
     def get_all_paginated(cls, search: str, offset: int, limit: int, sort_by: str, sort_direction: str):
         search_query = f"%{search}%"
@@ -42,7 +81,7 @@ class Household(db.Model):
             "name": "h.household_name",
             "head": "head",
             "address": "h.address",
-            "evacCenter": "evacCenter"
+            "evacCenter": "ec.center_name"
         }
         
         sort_column = allowed_sort_columns.get(sort_by, "h.household_name")
@@ -77,7 +116,6 @@ class Household(db.Model):
         result = db.session.execute(text(sql_query), {"search": search_query, "limit": limit, "offset": offset}).fetchall()
         return [dict(row._mapping) for row in result]
 
-    # --- Existing method for counting households ---
     @classmethod
     def get_count(cls, search: str):
         search_query = f"%{search}%"
