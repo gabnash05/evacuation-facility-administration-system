@@ -51,7 +51,7 @@ def create_app(config_class=Config):
     app.register_blueprint(
         households_bp, url_prefix="/api"
     )  # Register the household blueprint
-    # app.register_blueprint(events_bp)
+    app.register_blueprint(event_bp)
     # app.register_blueprint(centers_bp)
     # app.register_blueprint(events_bp)
     app.register_blueprint(evacuation_center_bp, url_prefix="/api")

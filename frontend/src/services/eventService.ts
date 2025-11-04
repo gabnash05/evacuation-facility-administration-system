@@ -1,4 +1,15 @@
+import axios from 'axios';
+
 const API_BASE_URL = 'http://localhost:5000'; // Adjust to your Flask port
+
+// Create axios instance with default config
+const api = axios.create({
+  baseURL: API_BASE_URL,
+  headers: {
+    'Content-Type': 'application/json',
+  },
+  timeout: 10000, // 10 second timeout
+});
 
 export interface EventResponse {
   event_id: number;
@@ -28,31 +39,37 @@ export interface EventDetailsResponse {
 
 export const eventService = {
   async getAllEvents(): Promise<EventResponse[]> {
-    const response = await fetch(`${API_BASE_URL}/api/events/`);
-    if (!response.ok) {
-      throw new Error('Failed to fetch events');
+    try {
+      const response = await api.get<EventResponse[]>('/api/events/');
+      return response.data;
+    } catch (error) {
+      if (axios.isAxiosError(error)) {
+        throw new Error(error.response?.data?.message || 'Failed to fetch events');
+      }
+      throw error;
     }
-    return response.json();
   },
 
   async getEventDetails(eventId: number): Promise<EventDetailsResponse> {
-    const response = await fetch(`${API_BASE_URL}/api/events/${eventId}`);
-    if (!response.ok) {
-      throw new Error('Failed to fetch event details');
+    try {
+      const response = await api.get<EventDetailsResponse>(`/api/events/${eventId}`);
+      return response.data;
+    } catch (error) {
+      if (axios.isAxiosError(error)) {
+        throw new Error(error.response?.data?.message || 'Failed to fetch event details');
+      }
+      throw error;
     }
-    return response.json();
   },
 
   async updateEventStatus(eventId: number, status: string): Promise<void> {
-    const response = await fetch(`${API_BASE_URL}/api/events/${eventId}`, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ status }),
-    });
-    if (!response.ok) {
-      throw new Error('Failed to update event status');
+    try {
+      await api.put(`/api/events/${eventId}`, { status });
+    } catch (error) {
+      if (axios.isAxiosError(error)) {
+        throw new Error(error.response?.data?.message || 'Failed to update event status');
+      }
+      throw error;
     }
   }
 };
