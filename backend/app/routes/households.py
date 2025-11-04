@@ -1,11 +1,12 @@
+# FILE NAME: app/routes/households.py
+
 from flask import Blueprint, jsonify, request
 from app.services.household_service import HouseholdService
 from app.schemas.household import (
     HouseholdQuerySchema, 
     HouseholdListResponseSchema,
-    HouseholdCreateSchema,
     HouseholdUpdateSchema,
-    HouseholdResponseSchema
+    HouseholdWithIndividualsCreateSchema
 )
 from marshmallow import ValidationError
 
@@ -24,17 +25,17 @@ def get_households():
     list_response_schema = HouseholdListResponseSchema()
     return jsonify(list_response_schema.dump(result)), 200
 
-@households_bp.route("/households", methods=["POST"])
-def create_household():
+@households_bp.route("/households-with-individuals", methods=["POST"])
+def create_household_with_individuals():
     json_data = request.get_json()
     if not json_data:
         return jsonify({"success": False, "message": "No input data provided"}), 400
-    schema = HouseholdCreateSchema()
+    schema = HouseholdWithIndividualsCreateSchema()
     try:
         data = schema.load(json_data)
     except ValidationError as err:
         return jsonify({"success": False, "message": err.messages}), 400
-    result, status_code = HouseholdService.create_household(data)
+    result, status_code = HouseholdService.create_household_with_individuals(data)
     return jsonify(result), status_code
 
 @households_bp.route("/households/<int:household_id>", methods=["GET"])
@@ -57,6 +58,5 @@ def update_household(household_id: int):
 
 @households_bp.route("/households/<int:household_id>", methods=["DELETE"])
 def delete_household(household_id: int):
-
     result, status_code = HouseholdService.delete_household(household_id)
     return jsonify(result), status_code
