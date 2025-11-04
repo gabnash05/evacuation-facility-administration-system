@@ -1,20 +1,26 @@
-"""Service layer for authentication operations."""
+"""Service layer for user management and authentication operations."""
 
 import logging
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List, Optional
 
 from flask_jwt_extended import create_access_token
-from werkzeug.security import check_password_hash
+from werkzeug.security import check_password_hash, generate_password_hash
 
 from app.models.user import User
-from app.schemas.user import UserRegisterSchema
+from app.schemas.user import UserCreateSchema, UserUpdateSchema, UserRegisterSchema
 
 # Configure logger for this module
 logger = logging.getLogger(__name__)
 
-# Initialize schema for validation
+# Initialize schemas for validation
+create_schema = UserCreateSchema()
+update_schema = UserUpdateSchema()
 register_schema = UserRegisterSchema()
 
+
+# ========================
+# AUTHENTICATION FUNCTIONS
+# ========================
 
 def authenticate_user(email: str, password: str) -> Dict[str, Any]:
     """
@@ -235,3 +241,243 @@ def update_user_profile(user_id: int, update_data: Dict[str, Any]) -> Dict[str, 
     except Exception as error:
         logger.error("Error updating user %s: %s", user_id, str(error))
         return {"success": False, "message": "Failed to update user"}
+
+
+# ========================
+# USER MANAGEMENT FUNCTIONS
+# ========================
+
+def get_users(
+    search: Optional[str] = None,
+    role: Optional[str] = None,
+    status: Optional[str] = None,
+    page: int = 1,
+    limit: int = 10,
+    sort_by: Optional[str] = None,
+    sort_order: Optional[str] = "asc"
+) -> Dict[str, Any]:
+    """
+    Get all users with filtering, pagination, and sorting.
+
+    Args:
+        search: Search term for email
+        role: Filter by role
+        status: Filter by status (active/inactive)
+        page: Page number for pagination
+        limit: Number of items per page
+        sort_by: Field to sort by
+        sort_order: Sort direction (asc/desc)
+
+    Returns:
+        Dictionary with users and pagination info
+    """
+    try:
+        result = User.get_all(
+            search=search,
+            role=role,
+            status=status,
+            page=page,
+            limit=limit,
+            sort_by=sort_by,
+            sort_order=sort_order
+        )
+
+        users_data = [user.to_schema() for user in result["users"]]
+
+        return {
+            "success": True,
+            "data": {
+                "results": users_data,
+                "pagination": {
+                    "current_page": result["page"],
+                    "total_pages": result["total_pages"],
+                    "total_items": result["total_count"],
+                    "limit": result["limit"]
+                }
+            }
+        }
+
+    except Exception as error:
+        logger.error("Error fetching users: %s", str(error))
+        return {"success": False, "message": "Failed to fetch users"}
+
+
+def get_user_by_id(user_id: int) -> Dict[str, Any]:
+    """
+    Get a specific user by ID.
+
+    Args:
+        user_id: User ID
+
+    Returns:
+        Dictionary with user data or error message
+    """
+    try:
+        user = User.get_by_id(user_id)
+
+        if not user:
+            return {"success": False, "message": "User not found"}
+
+        return {
+            "success": True,
+            "data": user.to_schema()
+        }
+
+    except Exception as error:
+        logger.error("Error fetching user %s: %s", user_id, str(error))
+        return {"success": False, "message": "Failed to fetch user"}
+
+
+def create_user(data: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Create a new user.
+
+    Args:
+        data: User data
+
+    Returns:
+        Dictionary with creation result
+    """
+    try:
+        # Validate input data
+        try:
+            valid_data = create_schema.load(data)
+        except Exception as validation_error:
+            return {"success": False, "message": f"Validation error: {str(validation_error)}"}
+
+        # Check if email already exists
+        existing_user = User.get_by_email(valid_data["email"])
+        if existing_user:
+            return {"success": False, "message": "Email already registered"}
+
+        # Create new user
+        user = User.create(valid_data)
+
+        logger.info("User created: %s", user.email)
+
+        return {
+            "success": True,
+            "message": "User created successfully",
+            "data": user.to_schema()
+        }
+
+    except Exception as error:
+        logger.error("Error creating user: %s", str(error))
+        return {"success": False, "message": "Failed to create user"}
+
+
+def update_user(user_id: int, update_data: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Update a user.
+
+    Args:
+        user_id: User ID
+        update_data: Fields to update
+
+    Returns:
+        Dictionary with update result
+    """
+    try:
+        # Validate input data
+        try:
+            valid_data = update_schema.load(update_data)
+        except Exception as validation_error:
+            return {"success": False, "message": f"Validation error: {str(validation_error)}"}
+
+        # Check if user exists
+        existing_user = User.get_by_id(user_id)
+        if not existing_user:
+            return {"success": False, "message": "User not found"}
+
+        # Check for duplicate email if email is being updated
+        if "email" in valid_data and valid_data["email"]:
+            existing_user_with_email = User.get_by_email(valid_data["email"])
+            if existing_user_with_email and existing_user_with_email.user_id != user_id:
+                return {"success": False, "message": "Email already registered"}
+
+        # Update user
+        updated_user = User.update(user_id, valid_data)
+
+        if not updated_user:
+            return {"success": False, "message": "Failed to update user"}
+
+        logger.info("User updated: %s", user_id)
+
+        return {
+            "success": True,
+            "message": "User updated successfully",
+            "data": updated_user.to_schema()
+        }
+
+    except Exception as error:
+        logger.error("Error updating user %s: %s", user_id, str(error))
+        return {"success": False, "message": "Failed to update user"}
+
+
+def delete_user(user_id: int) -> Dict[str, Any]:
+    """
+    Delete a user.
+
+    Args:
+        user_id: User ID
+
+    Returns:
+        Dictionary with deletion result
+    """
+    try:
+        # Check if user exists
+        existing_user = User.get_by_id(user_id)
+        if not existing_user:
+            return {"success": False, "message": "User not found"}
+
+        # Delete user
+        success = User.delete(user_id)
+
+        if not success:
+            return {"success": False, "message": "Failed to delete user"}
+
+        logger.info("User deleted: %s", user_id)
+
+        return {
+            "success": True,
+            "message": "User deleted successfully"
+        }
+
+    except Exception as error:
+        logger.error("Error deleting user %s: %s", user_id, str(error))
+        return {"success": False, "message": "Failed to delete user"}
+
+
+def deactivate_user_service(user_id: int) -> Dict[str, Any]:
+    """
+    Deactivate a user (for user management routes).
+
+    Args:
+        user_id: User ID
+
+    Returns:
+        Dictionary with deactivation result
+    """
+    try:
+        # Check if user exists
+        existing_user = User.get_by_id(user_id)
+        if not existing_user:
+            return {"success": False, "message": "User not found"}
+
+        # Deactivate user
+        updated_user = User.update(user_id, {"is_active": False})
+
+        if not updated_user:
+            return {"success": False, "message": "Failed to deactivate user"}
+
+        logger.info("User deactivated: %s", user_id)
+
+        return {
+            "success": True,
+            "message": "User deactivated successfully",
+            "data": updated_user.to_schema()
+        }
+
+    except Exception as error:
+        logger.error("Error deactivating user %s: %s", user_id, str(error))
+        return {"success": False, "message": "Failed to deactivate user"}
