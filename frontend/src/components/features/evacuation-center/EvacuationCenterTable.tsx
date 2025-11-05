@@ -9,16 +9,13 @@ import {
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
 import { Edit, Trash2 } from "lucide-react";
 import type { EvacuationCenter } from "@/types/center";
 import { useEvacuationCenterStore } from "@/store/evacuationCenterStore";
+import { useState, useRef, useEffect } from "react";
+import { DeleteCenterDialog } from "./DeleteCenterDialog";
+import { EditEvacuationCenterForm } from "./EditEvacuationCenterForm";
 
 interface EvacuationCenterTableProps {
     data: EvacuationCenter[];
@@ -28,10 +25,155 @@ interface EvacuationCenterTableProps {
     } | null;
     onSort: (key: string) => void;
     loading?: boolean;
+    onShowSuccessToast?: (message: string) => void;
 }
 
-export function EvacuationCenterTable({ data, sortConfig, onSort, loading }: EvacuationCenterTableProps) {
+// Custom dropdown component with theme support and proper positioning
+function ActionDropdown({ centerId, centerName, onEdit, onDelete }: { 
+    centerId: number; 
+    centerName: string;
+    onEdit: (id: number) => void; 
+    onDelete: (id: number, name: string) => void; 
+}) {
+    const [isOpen, setIsOpen] = useState(false);
+    const dropdownRef = useRef<HTMLDivElement>(null);
+    const dropdownContentRef = useRef<HTMLDivElement>(null);
+
+    // Close dropdown when clicking outside
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+                setIsOpen(false);
+            }
+        };
+
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
+
+    // Reposition dropdown when opened or when scrolling
+    useEffect(() => {
+        if (!isOpen || !dropdownRef.current || !dropdownContentRef.current) return;
+
+        const updatePosition = () => {
+            const triggerRect = dropdownRef.current!.getBoundingClientRect();
+            const dropdownContent = dropdownContentRef.current!;
+            
+            // Calculate position relative to the trigger
+            let top = triggerRect.bottom;
+            let left = triggerRect.right - 132; // 132 = dropdown width (128) + some offset
+
+            // Adjust if dropdown would go off-screen to the right
+            if (left + 132 > window.innerWidth) {
+                left = window.innerWidth - 132 - 8; // 8px margin from edge
+            }
+
+            // Adjust if dropdown would go off-screen to the bottom
+            if (top + dropdownContent.offsetHeight > window.innerHeight) {
+                top = triggerRect.top - dropdownContent.offsetHeight;
+            }
+
+            dropdownContent.style.top = `${top}px`;
+            dropdownContent.style.left = `${left}px`;
+        };
+
+        updatePosition();
+
+        // Update position on scroll and resize
+        window.addEventListener('scroll', updatePosition, true);
+        window.addEventListener('resize', updatePosition);
+
+        return () => {
+            window.removeEventListener('scroll', updatePosition, true);
+            window.removeEventListener('resize', updatePosition);
+        };
+    }, [isOpen]);
+
+    const handleButtonClick = (e: React.MouseEvent) => {
+        e.stopPropagation();
+        e.preventDefault();
+        setIsOpen(!isOpen);
+    };
+
+    const handleEdit = (e: React.MouseEvent) => {
+        e.stopPropagation();
+        setIsOpen(false);
+        onEdit(centerId);
+    };
+
+    const handleDelete = (e: React.MouseEvent) => {
+        e.stopPropagation();
+        setIsOpen(false);
+        onDelete(centerId, centerName);
+    };
+
+    return (
+        <div ref={dropdownRef} className="relative inline-block">
+            <Button 
+                variant="ghost" 
+                size="icon" 
+                className="h-8 w-8"
+                onClick={handleButtonClick}
+            >
+                <MoreVertical className="h-4 w-4" />
+                <span className="sr-only">Open menu</span>
+            </Button>
+            
+            {isOpen && (
+                <div className="fixed inset-0 z-50" style={{ pointerEvents: 'none' }}>
+                    <div 
+                        ref={dropdownContentRef}
+                        className="absolute bg-popover text-popover-foreground border border-border rounded-md shadow-lg w-32"
+                        style={{
+                            pointerEvents: 'auto',
+                        }}
+                    >
+                        <button
+                            className="w-full text-left px-3 py-2 text-sm hover:bg-accent hover:text-accent-foreground flex items-center gap-2 rounded-sm"
+                            onClick={handleEdit}
+                        >
+                            <Edit className="h-4 w-4" />
+                            Edit
+                        </button>
+                        <button
+                            className="w-full text-left px-3 py-2 text-sm hover:bg-destructive/10 hover:text-destructive flex items-center gap-2 rounded-sm text-destructive"
+                            onClick={handleDelete}
+                        >
+                            <Trash2 className="h-4 w-4" />
+                            Delete
+                        </button>
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+}
+
+// Helper function to capitalize the first letter
+const capitalizeFirstLetter = (text: string): string => {
+    if (!text) return text;
+    return text.charAt(0).toUpperCase() + text.slice(1).toLowerCase();
+};
+
+export function EvacuationCenterTable({ data, sortConfig, onSort, loading, onShowSuccessToast }: EvacuationCenterTableProps) {
     const { deleteCenter } = useEvacuationCenterStore();
+    const [deleteDialog, setDeleteDialog] = useState<{
+        isOpen: boolean;
+        centerId: number | null;
+        centerName: string;
+    }>({
+        isOpen: false,
+        centerId: null,
+        centerName: "",
+    });
+    const [editDialog, setEditDialog] = useState<{
+        isOpen: boolean;
+        center: EvacuationCenter | null;
+    }>({
+        isOpen: false,
+        center: null,
+    });
+    const [deleteLoading, setDeleteLoading] = useState(false);
 
     const getSortIcon = (key: string) => {
         if (!sortConfig || sortConfig.key !== key) {
@@ -53,6 +195,12 @@ export function EvacuationCenterTable({ data, sortConfig, onSort, loading }: Eva
     const calculateUsage = (center: EvacuationCenter): number => {
         if (center.capacity === 0) return 0;
         return Math.round((center.current_occupancy / center.capacity) * 100);
+    };
+
+    // Get display percentage (capped at 100% for visual representation)
+    const getDisplayPercentage = (center: EvacuationCenter): number => {
+        const usagePercentage = calculateUsage(center);
+        return Math.min(usagePercentage, 100); // Cap at 100% for visual bar
     };
 
     const columnWidths = {
@@ -86,25 +234,71 @@ export function EvacuationCenterTable({ data, sortConfig, onSort, loading }: Eva
             case "open":
                 return "bg-green-100 text-green-700 border-green-100 dark:bg-green-900 dark:text-green-200 dark:border-green-900";
             case "inactive":
-            case "closed":
                 return "bg-gray-100 text-gray-700 border-gray-100 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-800";
+            case "closed":
+                return "bg-red-100 text-red-700 border-red-100 dark:bg-red-900 dark:text-red-200 dark:border-red-900";
             default:
                 return "bg-gray-100 text-gray-700 border-gray-100 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-800";
         }
     };
 
-    const handleDelete = async (id: number) => {
-        if (confirm("Are you sure you want to delete this evacuation center?")) {
+    const handleDeleteClick = (centerId: number, centerName: string) => {
+        setDeleteDialog({
+            isOpen: true,
+            centerId,
+            centerName,
+        });
+    };
+
+    const handleEditClick = (centerId: number) => {
+        const centerToEdit = data.find(center => center.center_id === centerId);
+        if (centerToEdit) {
+            setEditDialog({
+                isOpen: true,
+                center: centerToEdit,
+            });
+        }
+    };
+
+    const handleDeleteConfirm = async () => {
+        if (deleteDialog.centerId) {
+            setDeleteLoading(true);
             try {
-                await deleteCenter(id);
+                await deleteCenter(deleteDialog.centerId);
+                setDeleteDialog({
+                    isOpen: false,
+                    centerId: null,
+                    centerName: "",
+                });
+
+                if (onShowSuccessToast) {
+                  onShowSuccessToast("Evacuation center deleted successfully.");
+                }
             } catch (error) {
                 console.error("Failed to delete center:", error);
+            } finally {
+                setDeleteLoading(false);
             }
         }
     };
 
+    const handleDeleteCancel = () => {
+        setDeleteDialog({
+            isOpen: false,
+            centerId: null,
+            centerName: "",
+        });
+    };
+
+    const handleEditClose = () => {
+        setEditDialog({
+            isOpen: false,
+            center: null,
+        });
+    };
+
     return (
-        <div className="w-full">
+        <div className="w-full overflow-visible">
             <Table className="table-fixed w-full">
                 <TableHeader>
                     <TableRow className="hover:bg-transparent">
@@ -153,66 +347,70 @@ export function EvacuationCenterTable({ data, sortConfig, onSort, loading }: Eva
                     ) : (
                         data.map((center, index) => {
                             const usagePercentage = calculateUsage(center);
+                            const displayPercentage = getDisplayPercentage(center);
                             
                             return (
                                 <TableRow
                                     key={center.center_id}
                                     className={cn(
-                                        "cursor-pointer hover:bg-muted/50 transition-colors",
-                                        index % 2 === 1 ? "bg-muted/30" : ""
+                                        "hover:bg-muted/50 transition-colors",
+                                        index % 2 === 1 ? "bg-muted/50" : "" // Increased opacity for better visibility
                                     )}
                                 >
                                     <TableCell
-                                        className="font-medium py-3 truncate align-top text-left"
+                                        className="font-medium py-3 truncate align-middle text-left"
                                         style={{ width: columnWidths.center_name }}
                                         title={center.center_name}
                                     >
                                         {center.center_name}
                                     </TableCell>
                                     <TableCell
-                                        className="py-3 truncate align-top text-left"
+                                        className="py-3 truncate align-middle text-left"
                                         style={{ width: columnWidths.address }}
                                         title={center.address}
                                     >
                                         {center.address}
                                     </TableCell>
                                     <TableCell
-                                        className="py-3 align-top text-left"
+                                        className="py-3 align-middle text-left"
                                         style={{ width: columnWidths.capacity }}
                                     >
                                         {center.capacity.toLocaleString()}
                                     </TableCell>
                                     <TableCell
-                                        className="py-3 align-top text-left"
+                                        className="py-3 align-middle text-left"
                                         style={{ width: columnWidths.current_occupancy }}
                                     >
                                         {center.current_occupancy.toLocaleString()}
                                     </TableCell>
                                     <TableCell
-                                        className="py-3 align-top text-left"
+                                        className="py-3 align-middle text-left"
                                         style={{ width: columnWidths.usage }}
                                     >
                                         <div className="flex items-center gap-2">
-                                            <div className="w-16 bg-secondary rounded-full h-2 flex-shrink-0">
+                                            <div className="w-16 bg-gray-300 dark:bg-secondary rounded-full h-2 flex-shrink-0 border border-gray-400 dark:border-border">
                                                 <div
                                                     className={cn(
                                                         "h-2 rounded-full",
-                                                        usagePercentage >= 80
+                                                        usagePercentage >= 100
+                                                            ? "bg-red-600" // Special color for overcapacity
+                                                            : usagePercentage >= 80
                                                             ? "bg-red-500"
                                                             : usagePercentage >= 60
                                                               ? "bg-yellow-500"
                                                               : "bg-green-500"
                                                     )}
-                                                    style={{ width: `${usagePercentage}%` }}
+                                                    style={{ width: `${displayPercentage}%` }}
                                                 />
                                             </div>
                                             <span className="text-sm font-medium whitespace-nowrap">
                                                 {usagePercentage}%
+                                                {usagePercentage > 100}
                                             </span>
                                         </div>
                                     </TableCell>
                                     <TableCell
-                                        className="py-3 align-top text-left"
+                                        className="py-3 align-middle text-left"
                                         style={{ width: columnWidths.status }}
                                     >
                                         <Badge
@@ -222,36 +420,19 @@ export function EvacuationCenterTable({ data, sortConfig, onSort, loading }: Eva
                                                 "truncate max-w-full inline-block"
                                             )}
                                         >
-                                            {center.status}
+                                            {capitalizeFirstLetter(center.status)}
                                         </Badge>
                                     </TableCell>
                                     <TableCell
-                                        className="py-3 align-top text-left"
+                                        className="py-3 align-middle text-left"
                                         style={{ width: columnWidths.actions }}
                                     >
-                                        <DropdownMenu>
-                                            <DropdownMenuTrigger asChild>
-                                                <Button variant="ghost" size="icon" className="h-8 w-8">
-                                                    <MoreVertical className="h-4 w-4" />
-                                                    <span className="sr-only">Open menu</span>
-                                                </Button>
-                                            </DropdownMenuTrigger>
-                                            <DropdownMenuContent align="end">
-                                                <DropdownMenuItem
-                                                    onClick={() => console.log(`Edit ${center.center_id}`)}
-                                                >
-                                                    <Edit className="h-4 w-4 mr-2" />
-                                                    Edit
-                                                </DropdownMenuItem>
-                                                <DropdownMenuItem
-                                                    onClick={() => handleDelete(center.center_id)}
-                                                    className="text-destructive focus:text-destructive"
-                                                >
-                                                    <Trash2 className="h-4 w-4 mr-2" />
-                                                    Delete
-                                                </DropdownMenuItem>
-                                            </DropdownMenuContent>
-                                        </DropdownMenu>
+                                        <ActionDropdown 
+                                            centerId={center.center_id}
+                                            centerName={center.center_name}
+                                            onEdit={handleEditClick}
+                                            onDelete={handleDeleteClick}
+                                        />
                                     </TableCell>
                                 </TableRow>
                             );
@@ -259,6 +440,23 @@ export function EvacuationCenterTable({ data, sortConfig, onSort, loading }: Eva
                     )}
                 </TableBody>
             </Table>
+
+            {/* Delete Confirmation Dialog */}
+            <DeleteCenterDialog
+                isOpen={deleteDialog.isOpen}
+                onClose={handleDeleteCancel}
+                onConfirm={handleDeleteConfirm}
+                centerName={deleteDialog.centerName}
+                loading={deleteLoading}
+            />
+
+            {/* Edit Center Dialog */}
+            <EditEvacuationCenterForm
+                isOpen={editDialog.isOpen}
+                onClose={handleEditClose}
+                center={editDialog.center}
+                onShowSuccessToast={onShowSuccessToast}
+            />
         </div>
     );
 }

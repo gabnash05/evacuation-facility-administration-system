@@ -1,6 +1,7 @@
 """Service layer for evacuation center operations."""
 
 import logging
+import base64
 from typing import Any, Dict, Optional
 
 from app.models.evacuation_center import EvacuationCenter
@@ -13,6 +14,27 @@ logger = logging.getLogger(__name__)
 create_schema = EvacuationCenterCreateSchema()
 update_schema = EvacuationCenterUpdateSchema()
 
+# Maximum file size for base64 (5MB)
+MAX_FILE_SIZE = 5 * 1024 * 1024
+
+def process_photo_file(photo_file) -> Optional[str]:
+    """Process uploaded photo file and return base64 string."""
+    if not photo_file:
+        return None
+        
+    # Validate file size
+    photo_file.seek(0, 2)  # Seek to end to get file size
+    file_size = photo_file.tell()
+    photo_file.seek(0)  # Reset file pointer
+    
+    if file_size > MAX_FILE_SIZE:
+        raise ValueError("Image too large. Maximum size is 5MB.")
+    
+    # Read file and encode as base64
+    photo_data = photo_file.read()
+    base64_data = base64.b64encode(photo_data).decode('utf-8')
+    
+    return base64_data
 
 def get_centers(
     search: Optional[str] = None,
@@ -92,12 +114,13 @@ def get_center_by_id(center_id: int) -> Dict[str, Any]:
         return {"success": False, "message": "Failed to fetch evacuation center"}
 
 
-def create_center(data: Dict[str, Any]) -> Dict[str, Any]:
+def create_center(data: Dict[str, Any], photo_file=None) -> Dict[str, Any]:
     """
     Create a new evacuation center.
 
     Args:
         data: Center data
+        photo_file: Optional photo file
 
     Returns:
         Dictionary with creation result
@@ -116,6 +139,18 @@ def create_center(data: Dict[str, Any]) -> Dict[str, Any]:
                 if center.center_name.lower() == valid_data["center_name"].lower():
                     return {"success": False, "message": "Evacuation center name already exists"}
 
+        # Handle photo upload as base64
+        if photo_file:
+            try:
+                base64_data = process_photo_file(photo_file)
+                if base64_data:
+                    valid_data["photo_data"] = base64_data
+            except ValueError as e:
+                return {"success": False, "message": str(e)}
+            except Exception as e:
+                logger.error("Error processing photo: %s", str(e))
+                return {"success": False, "message": "Failed to process photo"}
+
         # Create new center
         center = EvacuationCenter.create(valid_data)
 
@@ -132,18 +167,14 @@ def create_center(data: Dict[str, Any]) -> Dict[str, Any]:
         return {"success": False, "message": "Failed to create evacuation center"}
 
 
-def update_center(center_id: int, update_data: Dict[str, Any]) -> Dict[str, Any]:
-    """
-    Update an evacuation center.
-
-    Args:
-        center_id: Center ID
-        update_data: Fields to update
-
-    Returns:
-        Dictionary with update result
-    """
+def update_center(center_id: int, update_data: Dict[str, Any], photo_file=None, remove_photo: bool = False) -> Dict[str, Any]:
     try:
+        # DEBUG: Log the incoming parameters
+        logger.info("🔧 [Backend Service] update_center called with:")
+        logger.info("🔧 [Backend Service] center_id: %s, remove_photo: %s", center_id, remove_photo)
+        logger.info("🔧 [Backend Service] update_data: %s", update_data)
+        logger.info("🔧 [Backend Service] photo_file: %s", photo_file is not None)
+
         # Validate input data
         try:
             valid_data = update_schema.load(update_data)
@@ -162,6 +193,36 @@ def update_center(center_id: int, update_data: Dict[str, Any]) -> Dict[str, Any]
                 if (center.center_id != center_id and 
                     center.center_name.lower() == valid_data["center_name"].lower()):
                     return {"success": False, "message": "Evacuation center name already exists"}
+
+        # Handle photo upload/removal - FIXED with explicit None handling
+        if remove_photo:
+            # Remove existing photo - explicitly set to None
+            valid_data["photo_data"] = None
+            logger.info("🔧 [Backend Service] Explicitly setting photo_data to None for removal")
+        elif photo_file:
+            # Handle new photo upload
+            try:
+                base64_data = process_photo_file(photo_file)
+                if base64_data:
+                    valid_data["photo_data"] = base64_data
+                    logger.info("🔧 [Backend Service] Setting new photo data")
+            except ValueError as e:
+                return {"success": False, "message": str(e)}
+            except Exception as e:
+                logger.error("Error processing photo: %s", str(e))
+                return {"success": False, "message": "Failed to process photo"}
+        else:
+            # If no photo changes, ensure photo_data is not in valid_data
+            # so it doesn't override existing photo
+            if 'photo_data' in valid_data:
+                del valid_data['photo_data']
+            logger.info("🔧 [Backend Service] No photo changes, keeping existing photo")
+
+        # DEBUG: Log what will be sent to model
+        logger.info("🔧 [Backend Service] Final update data keys: %s", list(valid_data.keys()))
+        if 'photo_data' in valid_data:
+            logger.info("🔧 [Backend Service] photo_data value: %s", 
+                       "None" if valid_data['photo_data'] is None else "Base64 string (length: {})".format(len(valid_data['photo_data'])))
 
         # Update center
         updated_center = EvacuationCenter.update(center_id, valid_data)
