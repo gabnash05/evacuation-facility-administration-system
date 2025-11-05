@@ -6,7 +6,7 @@ from typing import Any, Dict, Optional
 from flask_jwt_extended import create_access_token
 from werkzeug.security import check_password_hash
 
-from app.models.users import User
+from app.models.user import User
 from app.schemas.user import UserRegisterSchema
 
 # Configure logger for this module

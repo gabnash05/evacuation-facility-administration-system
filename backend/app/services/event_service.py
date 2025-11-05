@@ -1,4 +1,4 @@
-from app.models.events import Event, EventCenter
+from app.models.event import Event, EventCenter
 
 class EventService:
     @staticmethod

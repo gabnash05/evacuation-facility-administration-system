@@ -21,7 +21,7 @@ class User(db.Model):
         db.String(20), nullable=False
     )  # super_admin, city_admin, center_admin, volunteer
     center_id = db.Column(
-        db.Integer, db.ForeignKey("evacuation_centers.center_id"), nullable=True
+        db.Integer, db.ForeignKey("evacuation_center.center_id"), nullable=True
     )  # Fixed table name
     is_active = db.Column(db.Boolean, default=True, nullable=False)
     created_at = db.Column(db.DateTime, default=db.func.now())

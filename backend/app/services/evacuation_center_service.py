@@ -3,7 +3,7 @@
 import logging
 from typing import Any, Dict, Optional
 
-from app.models.evacuation_centers import EvacuationCenter
+from app.models.evacuation_center import EvacuationCenter
 from app.schemas.evacuation_center import EvacuationCenterCreateSchema, EvacuationCenterUpdateSchema
 
 # Configure logger for this module
