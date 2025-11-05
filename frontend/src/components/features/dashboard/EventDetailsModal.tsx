@@ -120,20 +120,24 @@ export function EventDetailsModal({ isOpen, onClose, eventData }: EventDetailsMo
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {eventData.evacuationCenters.map((center, i) => (
-                  <TableRow key={i}>
-                    <TableCell className="font-medium">{center.centerName}</TableCell>
-                    <TableCell>{center.barangay}</TableCell>
-                    <TableCell>{center.capacity}</TableCell>
-                    <TableCell>{center.currentOccupancy}</TableCell>
-                    <TableCell>
-                      <span className={`px-3 py-1 rounded text-xs font-medium inline-block ${getOccupancyColor(center.occupancy)}`}>
-                        {center.occupancy}
-                      </span>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
+              {eventData.evacuationCenters.map((center, i) => (
+                <TableRow key={i}>
+                  <TableCell className="font-medium max-w-[200px] truncate" title={center.centerName}>
+                    {center.centerName}
+                  </TableCell>
+                  <TableCell className="max-w-[120px] truncate" title={center.barangay}>
+                    {center.barangay}
+                  </TableCell>
+                  <TableCell>{center.capacity}</TableCell>
+                  <TableCell>{center.currentOccupancy}</TableCell>
+                  <TableCell>
+                    <span className={`px-3 py-1 rounded text-xs font-medium inline-block ${getOccupancyColor(center.occupancy)}`}>
+                      {center.occupancy}
+                    </span>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
             </Table>
           </div>
         </div>
