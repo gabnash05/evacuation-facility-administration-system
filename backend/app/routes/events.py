@@ -87,7 +87,27 @@ def delete_event(event_id):
 @bp.route("/<int:event_id>/centers", methods=["GET"])
 def get_event_centers(event_id):
     result = EventService.get_event_centers(event_id)
-    return jsonify(result["data"]), (200 if result["success"] else 404)
+    if not result["success"]:
+        return jsonify({"success": False, "data": []}), 404
+    
+    centers = result["data"]
+    
+    # Process each center - add barangay extraction and occupancy calculation
+    for center in centers:
+        # Extract barangay from address (first part before comma)
+        address = center.get("address", "")
+        center["barangay"] = address.split(',')[0].strip() if ',' in address else address
+        
+        # Calculate occupancy percentage
+        capacity = center.get("capacity", 0)
+        current = center.get("current_occupancy", 0)
+        if capacity > 0:
+            percent = int((current / capacity) * 100)
+            center["occupancy"] = f"{percent}%"
+        else:
+            center["occupancy"] = "0%"
+    
+    return jsonify(centers), 200
 
 @bp.route("/<int:event_id>/centers", methods=["POST"])
 def add_event_center(event_id):
