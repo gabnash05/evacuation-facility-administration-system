@@ -29,15 +29,7 @@ class EvacuationCenterCreateSchema(Schema):
             error="Status must be one of: active, inactive, closed"
         )
     )
-
-    @validates_schema
-    def validate_occupancy_capacity(self, data, **kwargs):
-        """Validate that occupancy doesn't exceed capacity."""
-        capacity = data.get("capacity")
-        current_occupancy = data.get("current_occupancy", 0)
-        
-        if current_occupancy > capacity:
-            raise ValidationError("Current occupancy cannot exceed capacity")
+    photo_data = fields.String(required=False)  # For base64 image data
 
 
 class EvacuationCenterUpdateSchema(Schema):
@@ -66,16 +58,7 @@ class EvacuationCenterUpdateSchema(Schema):
             error="Status must be one of: active, inactive, closed"
         )
     )
-
-    @validates_schema
-    def validate_occupancy_capacity(self, data, **kwargs):
-        """Validate that occupancy doesn't exceed capacity when both are provided."""
-        capacity = data.get("capacity")
-        current_occupancy = data.get("current_occupancy")
-        
-        if current_occupancy is not None and capacity is not None:
-            if current_occupancy > capacity:
-                raise ValidationError("Current occupancy cannot exceed capacity")
+    photo_data = fields.String(allow_none=True)  # This must allow None values
 
 
 class EvacuationCenterResponseSchema(Schema):
@@ -87,6 +70,7 @@ class EvacuationCenterResponseSchema(Schema):
     capacity = fields.Integer(dump_only=True)
     current_occupancy = fields.Integer(dump_only=True)
     status = fields.String(dump_only=True)
+    photo_data = fields.String(dump_only=True)  # Return base64 string
     created_at = fields.DateTime(dump_only=True)
     updated_at = fields.DateTime(dump_only=True)
 
