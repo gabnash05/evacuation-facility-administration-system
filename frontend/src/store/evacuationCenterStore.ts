@@ -26,8 +26,8 @@ interface EvacuationCenterState {
     setEntriesPerPage: (entries: number) => void;
     setSortConfig: (config: { key: string; direction: 'asc' | 'desc' | null } | null) => void;
     fetchCenters: () => Promise<void>;
-    addCenter: (center: Omit<EvacuationCenter, 'center_id'>) => Promise<void>;
-    updateCenter: (id: number, updates: Partial<EvacuationCenter>) => Promise<void>;
+    addCenter: (center: Omit<EvacuationCenter, 'center_id' | 'created_at' | 'updated_at'>, photo?: File) => Promise<void>;
+    updateCenter: (id: number, updates: Partial<EvacuationCenter>, photo?: File | 'remove') => Promise<void>; // Update this line
     deleteCenter: (id: number) => Promise<void>;
     resetState: () => void;
 }
@@ -91,25 +91,25 @@ export const useEvacuationCenterStore = create<EvacuationCenterState>((set, get)
         }
     },
     
-    addCenter: async (center) => {
+    addCenter: async (center: Omit<EvacuationCenter, 'center_id' | 'created_at' | 'updated_at'>, photo?: File) => {
         try {
-            await EvacuationCenterService.createCenter(center);
+            await EvacuationCenterService.createCenter(center, photo);
             await get().fetchCenters(); // Refresh the list
         } catch (error) {
             throw new Error(error instanceof Error ? error.message : 'Failed to add center');
         }
     },
-    
-    updateCenter: async (id, updates) => {
+
+    updateCenter: async (id: number, updates: Partial<EvacuationCenter>, photo?: File | 'remove') => {
         try {
-            await EvacuationCenterService.updateCenter(id, updates);
+            await EvacuationCenterService.updateCenter(id, updates, photo);
             await get().fetchCenters(); // Refresh the list
         } catch (error) {
             throw new Error(error instanceof Error ? error.message : 'Failed to update center');
         }
     },
     
-    deleteCenter: async (id) => {
+    deleteCenter: async (id: number) => {
         try {
             await EvacuationCenterService.deleteCenter(id);
             await get().fetchCenters(); // Refresh the list
