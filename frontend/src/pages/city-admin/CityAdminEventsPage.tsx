@@ -176,12 +176,12 @@ export function CityAdminEventsPage() {
       setError(null);
       
       await eventService.createEvent({
-        event_name: eventData.eventTitle,
-        event_type: eventData.eventType,
-        date_declared: eventData.dateDeclared,
-        end_date: eventData.endDate === "NA" ? null : eventData.endDate,
-        status: eventData.status.toLowerCase() as 'active' | 'monitoring' | 'resolved',
-        center_ids: eventData.centerIds || []
+        event_name: eventData.event_name,
+        event_type: eventData.event_type,
+        date_declared: eventData.date_declared,
+        end_date: eventData.end_date,
+        status: eventData.status,
+        center_ids: eventData.center_ids
       });
       
       await fetchEvents();
@@ -203,13 +203,41 @@ export function CityAdminEventsPage() {
     try {
       setError(null);
       
+      // Update basic event info
       await eventService.updateEvent(editingEvent.eventId, {
-        event_name: eventData.eventTitle,
-        event_type: eventData.eventType,
-        date_declared: eventData.dateDeclared,
-        end_date: eventData.endDate === "NA" ? null : eventData.endDate,
-        status: eventData.status.toLowerCase() as 'active' | 'monitoring' | 'resolved'
+        event_name: eventData.event_name,
+        event_type: eventData.event_type,
+        date_declared: eventData.date_declared,
+        end_date: eventData.end_date,
+        status: eventData.status
       });
+      
+      // Handle center associations - ALWAYS process this, even if empty array
+      if (eventData.center_ids !== undefined) {
+        // Get current centers for this event
+        const currentCenters = await eventService.getEventCenters(editingEvent.eventId);
+        const currentCenterIds = currentCenters.map(c => c.center_id);
+        
+        // Find centers to add (in new list but not in current)
+        const centersToAdd = eventData.center_ids.filter(
+          (id: number) => !currentCenterIds.includes(id)
+        );
+        
+        // Find centers to remove (in current but not in new list)
+        const centersToRemove = currentCenterIds.filter(
+          id => !eventData.center_ids.includes(id)
+        );
+        
+        // Add new centers
+        for (const centerId of centersToAdd) {
+          await eventService.addCenterToEvent(editingEvent.eventId, centerId);
+        }
+        
+        // Remove old centers
+        for (const centerId of centersToRemove) {
+          await eventService.removeCenterFromEvent(editingEvent.eventId, centerId);
+        }
+      }
       
       await fetchEvents();
       setIsEditModalOpen(false);
@@ -436,35 +464,48 @@ export function CityAdminEventsPage() {
           {/* Table Content */}
           <div className="border-t-0">
             <div className="min-h-[400px]">
-              {isLoading ? (
-                <div className="flex items-center justify-center h-[400px] text-muted-foreground">
-                  <p className="text-lg">Loading events...</p>
-                </div>
-              ) : paginatedData.length === 0 ? (
-                <div className="flex flex-col items-center justify-center h-[400px] text-muted-foreground">
-                  <SearchIcon className="h-12 w-12 mb-4 opacity-50" />
-                  <p className="text-lg font-medium mb-2">No events found</p>
-                </div>
-              ) : (
-                <Table>
-                  <TableHeader>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    {eventColumns.map((column) => (
+                      <TableHead key={column.key}>
+                        <div
+                          className="flex items-center justify-between cursor-pointer hover:text-foreground"
+                          onClick={() => handleSort(column.key)}
+                        >
+                          {column.label}
+                          {getSortIcon(column.key)}
+                        </div>
+                      </TableHead>
+                    ))}
+                    <TableHead>Action</TableHead>
+                  </TableRow>
+                </TableHeader>
+
+                <TableBody>
+                  {isLoading ? (
                     <TableRow>
-                      {eventColumns.map((column) => (
-                        <TableHead key={column.key}>
-                          <div 
-                            className="flex items-center justify-between cursor-pointer hover:text-foreground"
-                            onClick={() => handleSort(column.key)}
-                          >
-                            {column.label}
-                            {getSortIcon(column.key)}
-                          </div>
-                        </TableHead>
-                      ))}
-                      <TableHead>Action</TableHead>
+                      <TableCell
+                        colSpan={eventColumns.length + 1}
+                        className="text-center py-10 text-muted-foreground"
+                      >
+                        Loading events...
+                      </TableCell>
                     </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {paginatedData.map((row, i) => (
+                  ) : paginatedData.length === 0 ? (
+                    <TableRow>
+                      <TableCell
+                        colSpan={eventColumns.length + 1}
+                        className="text-center py-10 text-muted-foreground"
+                      >
+                        <div className="flex flex-col items-center justify-center">
+                          <SearchIcon className="h-12 w-12 mb-3 opacity-50" />
+                          <p className="text-lg font-medium">No events found</p>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    paginatedData.map((row, i) => (
                       <TableRow
                         key={row.eventId}
                         className={`${i % 2 === 1 ? "bg-muted" : ""} cursor-pointer hover:bg-muted/50 transition-colors`}
@@ -485,10 +526,10 @@ export function CityAdminEventsPage() {
                           {renderActions(row, i)}
                         </TableCell>
                       </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              )}
+                    ))
+                  )}
+                </TableBody>
+              </Table>
             </div>
           </div>
         </div>

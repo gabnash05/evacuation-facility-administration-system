@@ -1,6 +1,6 @@
 import logging
 import math
-from app.models.household import Household
+from app.models.households import Household
 
 logger = logging.getLogger(__name__)
 

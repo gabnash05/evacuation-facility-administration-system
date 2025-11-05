@@ -95,7 +95,7 @@ class EventCenter(db.Model):
         try:
             result = db.session.execute(
                 text("""
-                    SELECT ec.center_id, ec.center_name, ec.barangay, ec.capacity, ec.current_occupancy
+                    SELECT ec.center_id, ec.center_name, ec.address, ec.capacity, ec.current_occupancy
                     FROM event_centers ecj
                     JOIN evacuation_centers ec ON ecj.center_id = ec.center_id
                     WHERE ecj.event_id = :event_id

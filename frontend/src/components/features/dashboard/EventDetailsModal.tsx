@@ -71,7 +71,7 @@ export function EventDetailsModal({ isOpen, onClose, eventData }: EventDetailsMo
         {/* Event Info Section */}
         <div className="grid grid-cols-3 gap-3 mt-4">
           <div>
-            <label className="text-xs text-muted-foreground">Event Title</label>
+            <label className="text-xs text-muted-foreground">Event Name</label>
             <div className="border border-border rounded-lg px-3 py-2 mt-1 bg-background">
               <p className="text-sm">{eventData.eventTitle}</p>
             </div>

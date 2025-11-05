@@ -34,6 +34,7 @@ import { CalendarIcon, Plus, Trash2 } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { AddCenterModal } from "@/components/features/events/AddCenterModal";
+import { eventService } from "@/services/eventService";
 
 interface EvacuationCenter {
   centerId: number;
@@ -47,8 +48,17 @@ interface EvacuationCenter {
 interface CreateEventModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSubmit: (eventData: any) => void;
+  onSubmit: (eventData: EventData) => void;
   initialData?: Event;
+}
+
+interface EventData {
+  event_name: string;
+  event_type: string;
+  status: string;
+  date_declared: string;
+  end_date: string | null;
+  center_ids: number[];
 }
 
 interface Event {
@@ -81,29 +91,54 @@ export function CreateEventModal({ isOpen, onClose, onSubmit, initialData }: Cre
 
   // Initialize form with initialData when editing
   useEffect(() => {
-    if (initialData && isOpen) {
-      setEventTitle(initialData.eventName);
-      setEventType(initialData.eventType);
-      setStatus(initialData.status);
-      setDateDeclared(parseDate(initialData.dateDeclared));
-      setEndDate(initialData.endDate === "NA" ? "N/A" : parseDate(initialData.endDate) || "N/A");
-      
-      // When editing, we could fetch the event's centers here if needed
-      // For now, start with empty centers since we can't modify them via update
-      setEvacuationCenters([]);
-    } else if (isOpen) {
-      handleReset();
-    }
+    const loadEventData = async () => {
+      if (initialData && isOpen) {
+        setEventTitle(initialData.eventName);
+        setEventType(initialData.eventType);
+        setStatus(initialData.status);
+        setDateDeclared(parseDate(initialData.dateDeclared));
+        setEndDate(initialData.endDate === "NA" ? "N/A" : parseDate(initialData.endDate) || "N/A");
+        
+        // Fetch existing centers for this event
+        try {
+          const centersResponse = await eventService.getEventCenters(initialData.eventId);
+          
+          const transformedCenters: EvacuationCenter[] = centersResponse.map((center) => {
+            const occupancy = center.capacity > 0 
+              ? Math.round((center.current_occupancy / center.capacity) * 100)
+              : 0;
+            
+            return {
+              centerId: center.center_id,
+              centerName: center.center_name,
+              barangay: center.barangay,
+              capacity: center.capacity,
+              currentOccupancy: center.current_occupancy,
+              occupancy: `${occupancy}%`
+            };
+          });
+          
+          setEvacuationCenters(transformedCenters);
+        } catch (error) {
+          console.error("Failed to load event centers:", error);
+          setEvacuationCenters([]);
+        }
+      } else if (isOpen) {
+        handleReset();
+      }
+    };
+
+    loadEventData();
   }, [initialData, isOpen]);
 
   const handleAddEvent = () => {
     const eventData = {
-      eventTitle,
-      eventType,
-      status,
-      dateDeclared: dateDeclared ? format(dateDeclared, "dd/MM/yyyy") : "",
-      endDate: endDate === "N/A" ? "NA" : endDate ? format(endDate, "dd/MM/yyyy") : "NA",
-      centerIds: evacuationCenters.map(c => c.centerId)
+      event_name: eventTitle,
+      event_type: eventType,
+      status: status.toLowerCase(),
+      date_declared: dateDeclared ? format(dateDeclared, "dd/MM/yyyy") : "",
+      end_date: endDate === "N/A" ? null : endDate ? format(endDate, "dd/MM/yyyy") : null,
+      center_ids: evacuationCenters.map(center => center.centerId)
     };
     onSubmit(eventData);
     handleClose();
@@ -128,13 +163,13 @@ export function CreateEventModal({ isOpen, onClose, onSubmit, initialData }: Cre
   };
 
   const handleAddCenters = (centers: any[]) => {
-    const newCenters: EvacuationCenter[] = centers.map(c => ({
-      centerId: c.id,
-      centerName: c.centerName,
-      barangay: c.barangay,
-      capacity: c.capacity,
-      currentOccupancy: c.currentOccupancy,
-      occupancy: c.occupancy
+    const newCenters: EvacuationCenter[] = centers.map(center => ({
+      centerId: center.id,
+      centerName: center.centerName,
+      barangay: center.barangay,
+      capacity: center.capacity,
+      currentOccupancy: center.currentOccupancy,
+      occupancy: center.occupancy
     }));
     
     // Avoid duplicates
@@ -179,11 +214,11 @@ export function CreateEventModal({ isOpen, onClose, onSubmit, initialData }: Cre
           {/* Event Info Section */}
           <div className="grid grid-cols-3 gap-3 mt-4">
             <div>
-              <label className="text-xs text-muted-foreground">Event Title</label>
+              <label className="text-xs text-muted-foreground">Event Name</label>
               <Input
                 value={eventTitle}
                 onChange={(e) => setEventTitle(e.target.value)}
-                placeholder="Enter event title"
+                placeholder="Enter event name"
                 className="mt-1"
               />
             </div>
