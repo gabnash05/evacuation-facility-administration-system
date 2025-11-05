@@ -42,7 +42,7 @@ function EvacuationCenterTableToolbarComponent({
                 <Input
                     ref={inputRef}
                     type="text"
-                    placeholder="Search by center name..."
+                    placeholder="Search"
                     value={searchQuery}
                     onChange={(e) => onSearchChange(e.target.value)}
                     className="w-full md:w-64"
