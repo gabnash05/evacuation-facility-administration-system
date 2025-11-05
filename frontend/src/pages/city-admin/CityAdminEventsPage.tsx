@@ -8,6 +8,8 @@ import {
   ChevronRight,
   Search as SearchIcon,
   ChevronsUpDown,
+  ChevronUp,
+  ChevronDown,
   MoreVertical,
   Plus,
 } from "lucide-react";
@@ -302,12 +304,19 @@ export function CityAdminEventsPage() {
         const aValue = a[sortConfig.key as keyof typeof a];
         const bValue = b[sortConfig.key as keyof typeof b];
         
+        // Handle null/undefined values
+        if (aValue == null && bValue == null) return 0;
+        if (aValue == null) return 1;
+        if (bValue == null) return -1;
+        
+        // String comparison (case-insensitive for text)
         if (typeof aValue === 'string' && typeof bValue === 'string') {
           return sortConfig.direction === 'asc' 
-            ? aValue.localeCompare(bValue)
-            : bValue.localeCompare(aValue);
+            ? aValue.toLowerCase().localeCompare(bValue.toLowerCase())
+            : bValue.toLowerCase().localeCompare(aValue.toLowerCase());
         }
         
+        // Numeric comparison
         if (typeof aValue === 'number' && typeof bValue === 'number') {
           return sortConfig.direction === 'asc' 
             ? aValue - bValue
@@ -336,9 +345,13 @@ export function CityAdminEventsPage() {
       return <ChevronsUpDown className="h-4 w-4 text-muted-foreground" />;
     }
     
-    return sortConfig.direction 
-      ? <ChevronsUpDown className="h-4 w-4 text-foreground" />
-      : <ChevronsUpDown className="h-4 w-4 text-muted-foreground" />;
+    if (sortConfig.direction === 'asc') {
+      return <ChevronUp className="h-4 w-4 text-foreground" />;
+    } else if (sortConfig.direction === 'desc') {
+      return <ChevronDown className="h-4 w-4 text-foreground" />;
+    } else {
+      return <ChevronsUpDown className="h-4 w-4 text-muted-foreground" />;
+    }
   };
 
   const getStatusColor = (status: string) => {
@@ -413,10 +426,17 @@ export function CityAdminEventsPage() {
                     }}
                     className="w-16 h-9 px-2 border border-border rounded-lg bg-background 
                     text-foreground font-medium text-center [appearance:textfield]
-                     [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none hover:[appearance:auto] 
-                     hover:[&::-webkit-outer-spin-button]:appearance-auto hover:[&::-webkit-inner-spin-button]:appearance-auto"
+                    [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none hover:[appearance:auto] 
+                    hover:[&::-webkit-outer-spin-button]:appearance-auto hover:[&::-webkit-inner-spin-button]:appearance-auto"
                   />
                   <span>Entries</span>
+                  {/* ✅ ADD THIS COUNTER */}
+                  <span className="ml-2 text-foreground font-medium">
+                    {processedData.length > 0
+                      ? `${(currentPage - 1) * entriesPerPage + 1}-${Math.min(currentPage * entriesPerPage, processedData.length)}`
+                      : "0-0"}
+                  </span>
+                  <span>of {processedData.length}</span>
                 </div>
 
                 <SearchBar
@@ -516,7 +536,7 @@ export function CityAdminEventsPage() {
                             key={column.key} 
                             className={`
                               ${column.key === eventColumns[0].key ? "font-medium" : ""}
-                              ${column.key === "eventName" ? "max-w-[250px] truncate" : ""}
+                              ${column.key === "eventName" ? "max-w-[150px] truncate" : ""}
                               ${column.key === "eventType" ? "max-w-[150px] truncate" : ""}
                             `}
                             title={column.key === "eventName" || column.key === "eventType" ? String(row[column.key as keyof Event]) : undefined}
