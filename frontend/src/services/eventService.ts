@@ -78,6 +78,24 @@ export const eventService = {
     }
   },
 
+  async getEventCenters(eventId: number): Promise<{
+    center_id: number;
+    center_name: string;
+    barangay: string;
+    capacity: number;
+    current_occupancy: number;
+  }[]> {
+    try {
+      const response = await api.get(`/api/events/${eventId}/centers`);
+      return response.data;
+    } catch (error) {
+      if (axios.isAxiosError(error)) {
+        throw new Error(error.response?.data?.message || 'Failed to fetch event centers');
+      }
+      throw error;
+    }
+  },
+
   async createEvent(data: CreateEventData): Promise<EventResponse> {
     try {
       const response = await api.post<EventResponse>('/api/events/', data);

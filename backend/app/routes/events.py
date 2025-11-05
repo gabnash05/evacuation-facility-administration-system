@@ -35,8 +35,25 @@ def get_event_details(event_id):
     result = EventService.get_event_details(event_id)
     if not result["success"]:
         return jsonify({"success": False, "message": result["message"]}), 404
+    
     event = result["data"]["event"]
     centers = result["data"]["centers"]
+    
+    # Process each center
+    for center in centers:
+        # Extract barangay from address (first part before comma)
+        address = center.get("address", "")
+        center["barangay"] = address.split(',')[0].strip() if ',' in address else address
+        
+        # Calculate occupancy percentage
+        capacity = center.get("capacity", 0)
+        current = center.get("current_occupancy", 0)
+        if capacity > 0:
+            percent = int((current / capacity) * 100)
+            center["occupancy"] = f"{percent}%"
+        else:
+            center["occupancy"] = "0%"
+    
     response = {
         "event_id": event["event_id"],
         "event_name": event["event_name"],
@@ -45,6 +62,7 @@ def get_event_details(event_id):
         "centers": centers
     }
     return jsonify(response), 200
+
 
 @bp.route("/<int:event_id>", methods=["PUT"])
 def update_event(event_id):
