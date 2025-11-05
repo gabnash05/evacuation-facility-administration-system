@@ -137,6 +137,19 @@ export function CityAdminDashboard() {
     }
   };
 
+  const getCenterStatusStyles = (status: string) => {
+  switch (status) {
+    case "Active":
+      return "bg-green-100 text-green-700 border-green-100 dark:bg-green-900 dark:text-green-200 dark:border-green-900";
+    case "Recovery":
+      return "bg-orange-100 text-orange-700 border-orange-100 dark:bg-orange-900 dark:text-orange-200 dark:border-orange-900";
+    case "Closed":
+      return "bg-red-100 text-red-700 border-red-100 dark:bg-red-900 dark:text-red-200 dark:border-red-900";
+    default:
+      return "bg-gray-100 text-gray-700 border-gray-100 dark:bg-gray-900 dark:text-gray-200 dark:border-gray-900";
+  }
+};
+
   const getUsageColor = (percentage: number) => {
     if (percentage >= 80) return "bg-red-500";
     if (percentage >= 60) return "bg-orange-500";
@@ -181,7 +194,13 @@ export function CityAdminDashboard() {
 
   const handleSort = (column: string): void => {
     if (sortColumn === column) {
-      setSortDirection(sortDirection === "asc" ? "desc" : "asc");
+      // Cycle through: asc -> desc -> null (unsorted)
+      if (sortDirection === "asc") {
+        setSortDirection("desc");
+      } else if (sortDirection === "desc") {
+        setSortColumn("");
+        setSortDirection("asc");
+      }
     } else {
       setSortColumn(column);
       setSortDirection("asc");
@@ -201,7 +220,7 @@ export function CityAdminDashboard() {
   };
 
   const eventColumns = [
-    { key: "eventName", label: "Event Name", className: "max-w-[200px] truncate" },
+    { key: "eventName", label: "Event Name", className: "max-w-[150px] truncate" },
     { key: "eventType", label: "Event Type", className: "max-w-[150px] truncate" },
     { key: "dateDeclared", label: "Date Declared" },
     { key: "endDate", label: "End Date" },
@@ -222,11 +241,25 @@ export function CityAdminDashboard() {
       )
     );
 
+    // Only sort if sortColumn is not empty
     if (sortColumn) {
       filtered = [...filtered].sort((a: any, b: any) => {
         const aValue = a[sortColumn];
         const bValue = b[sortColumn];
         
+        // Handle null/undefined values
+        if (aValue == null && bValue == null) return 0;
+        if (aValue == null) return 1;
+        if (bValue == null) return -1;
+        
+        // String comparison (case-insensitive for text)
+        if (typeof aValue === 'string' && typeof bValue === 'string') {
+          return sortDirection === "asc" 
+            ? aValue.toLowerCase().localeCompare(bValue.toLowerCase())
+            : bValue.toLowerCase().localeCompare(aValue.toLowerCase());
+        }
+        
+        // Numeric comparison
         if (aValue < bValue) return sortDirection === "asc" ? -1 : 1;
         if (aValue > bValue) return sortDirection === "asc" ? 1 : -1;
         return 0;
@@ -256,7 +289,7 @@ export function CityAdminDashboard() {
         selectedCenter={selectedCenter}
         isLoadingCenter={isLoadingCenter}
         onStatusChange={handleStatusChange}
-        getStatusStyles={getStatusStyles}
+        getCenterStatusStyles={getCenterStatusStyles}
         getUsageColor={getUsageColor}
       />
 

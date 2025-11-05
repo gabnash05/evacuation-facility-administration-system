@@ -23,7 +23,7 @@ interface MapPanelProps {
   selectedCenter: SelectedCenter;
   isLoadingCenter: boolean;
   onStatusChange: (status: string) => void;
-  getStatusStyles: (status: string) => string;
+  getCenterStatusStyles: (status: string) => string; 
   getUsageColor: (percentage: number) => string;
 }
 
@@ -33,7 +33,7 @@ export function MapPanel({
   selectedCenter,
   isLoadingCenter,
   onStatusChange,
-  getStatusStyles,
+  getCenterStatusStyles,
   getUsageColor,
 }: MapPanelProps) {
   const usagePercentage = Math.round(
@@ -84,7 +84,7 @@ export function MapPanel({
                   <div className="w-40 flex-none">
                     <p className="text-xs text-muted-foreground mb-1">Status</p>
                     <Select value={selectedCenter.status} onValueChange={onStatusChange}>
-                      <SelectTrigger className={`rounded-lg px-3 py-2 text-sm font-medium h-auto w-full ${getStatusStyles(selectedCenter.status)}`}>
+                      <SelectTrigger className={`rounded-lg px-3 py-2 text-sm font-medium h-auto w-full ${getCenterStatusStyles(selectedCenter.status)}`}>
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>

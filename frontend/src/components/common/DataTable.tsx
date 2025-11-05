@@ -9,13 +9,13 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { ChevronsUpDown } from "lucide-react";
+import { ChevronsUpDown, ChevronUp, ChevronDown } from "lucide-react";
 
 interface Column {
   key: string;
   label: string;
   sortable?: boolean;
-  className?: string; // Add this line
+  className?: string;
 }
 
 interface DataTableProps {
@@ -70,14 +70,17 @@ export function DataTable({
   };
 
   const getSortIcon = (columnKey: string) => {
+    // If this column is not being sorted, show neutral icon
     if (sortColumn !== columnKey) {
       return <ChevronsUpDown className="h-4 w-4 text-muted-foreground" />;
     }
-    return sortDirection === "asc" ? (
-      <ChevronsUpDown className="h-4 w-4 text-foreground" />
-    ) : (
-      <ChevronsUpDown className="h-4 w-4 text-foreground" />
-    );
+    
+    // If this column is being sorted, show direction-specific icon
+    if (sortDirection === "asc") {
+      return <ChevronUp className="h-4 w-4 text-foreground" />;
+    } else {
+      return <ChevronDown className="h-4 w-4 text-foreground" />;
+    }
   };
 
   return (
@@ -93,7 +96,7 @@ export function DataTable({
             {columns.map((column) => (
               <TableHead 
                 key={column.key}
-                className={column.className || ""} // Add className support to header
+                className={column.className || ""}
               >
                 <div 
                   className={`flex items-center justify-between ${
