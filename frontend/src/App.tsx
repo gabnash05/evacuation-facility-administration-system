@@ -15,6 +15,7 @@ import { VolunteerDashboard } from "@/pages/volunteer/VolunteerDashboard";
 import MainLayout from "@/layouts/MainLayout";
 import LoginPage from "@/pages/auth/LoginPage";
 import ProtectedRoute from "@/components/features/auth/ProtectedRoute";
+import { CityAdminUserManagementPage } from "./pages/city-admin/CityAdminUserMangementPage";
 
 // Mock page components
 const UnauthorizedPage = () => (
@@ -45,6 +46,7 @@ function App() {
                                         path="households"
                                         element={<CityAdminHouseholdsPage />}
                                     />
+                                    <Route path="user-management" element={<CityAdminUserManagementPage/>} />
                                     <Route path="*" element={<Navigate to="dashboard" replace />} />
                                 </Routes>
                             </MainLayout>
