@@ -7,7 +7,7 @@ from app.schemas.event import (
     AddCenterSchema
 )
 
-bp = Blueprint("event_bp", __name__, url_prefix="/api/events")
+bp = Blueprint("event_bp", __name__, url_prefix="/events")
 
 create_schema = EventCreateSchema()
 response_schema = EventResponseSchema()
