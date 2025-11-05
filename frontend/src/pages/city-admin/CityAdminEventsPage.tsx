@@ -512,7 +512,15 @@ export function CityAdminEventsPage() {
                         onClick={() => handleRowClick(row)}
                       >
                         {eventColumns.map((column) => (
-                          <TableCell key={column.key} className={column.key === eventColumns[0].key ? "font-medium" : ""}>
+                          <TableCell 
+                            key={column.key} 
+                            className={`
+                              ${column.key === eventColumns[0].key ? "font-medium" : ""}
+                              ${column.key === "eventName" ? "max-w-[250px] truncate" : ""}
+                              ${column.key === "eventType" ? "max-w-[150px] truncate" : ""}
+                            `}
+                            title={column.key === "eventName" || column.key === "eventType" ? String(row[column.key as keyof Event]) : undefined}
+                          >
                             {column.key === "status" ? (
                               <Badge variant="secondary" className={getStatusColor(row[column.key as keyof Event] as string)}>
                                 {row[column.key as keyof Event]}

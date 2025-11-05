@@ -15,6 +15,7 @@ interface Column {
   key: string;
   label: string;
   sortable?: boolean;
+  className?: string; // Add this line
 }
 
 interface DataTableProps {
@@ -90,7 +91,10 @@ export function DataTable({
         <TableHeader>
           <TableRow>
             {columns.map((column) => (
-              <TableHead key={column.key}>
+              <TableHead 
+                key={column.key}
+                className={column.className || ""} // Add className support to header
+              >
                 <div 
                   className={`flex items-center justify-between ${
                     column.sortable !== false && onSort ? "cursor-pointer hover:text-foreground" : ""
@@ -119,7 +123,14 @@ export function DataTable({
                 onClick={() => onRowClick?.(row, i)}
               >
                 {columns.map((column) => (
-                  <TableCell key={column.key} className={column.key === columns[0].key ? "font-medium" : ""}>
+                  <TableCell 
+                    key={column.key} 
+                    className={`
+                      ${column.key === columns[0].key ? "font-medium" : ""}
+                      ${column.className || ""}
+                    `}
+                    title={column.className?.includes("truncate") ? String(row[column.key]) : undefined}
+                  >
                     {renderCell
                       ? renderCell(column.key, row[column.key], row)
                       : defaultRenderCell(column.key, row[column.key], row)}

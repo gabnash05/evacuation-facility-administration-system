@@ -201,8 +201,8 @@ export function CityAdminDashboard() {
   };
 
   const eventColumns = [
-    { key: "eventName", label: "Event Name" },
-    { key: "eventType", label: "Event Type" },
+    { key: "eventName", label: "Event Name", className: "max-w-[200px] truncate" },
+    { key: "eventType", label: "Event Type", className: "max-w-[150px] truncate" },
     { key: "dateDeclared", label: "Date Declared" },
     { key: "endDate", label: "End Date" },
     { key: "status", label: "Status" },
