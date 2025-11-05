@@ -127,12 +127,13 @@ def create_new_center() -> Tuple:
     """
     Create a new evacuation center.
 
-    Request Body:
+    Request Body (multipart/form-data):
         center_name (string) - Center name
         address (string) - Center address
         capacity (integer) - Center capacity
         current_occupancy (integer, optional) - Current occupancy (default: 0)
         status (string, optional) - Center status (default: active)
+        photo (file, optional) - Center photo
 
     Returns:
         Tuple containing:
@@ -140,14 +141,26 @@ def create_new_center() -> Tuple:
             - HTTP status code
     """
     try:
-        data = request.get_json()
+        # Check if request is multipart/form-data for file upload
+        if request.content_type and 'multipart/form-data' in request.content_type:
+            data = {
+                "center_name": request.form.get("center_name"),
+                "address": request.form.get("address"),
+                "capacity": request.form.get("capacity", type=int),
+                "current_occupancy": request.form.get("current_occupancy", 0, type=int),
+                "status": request.form.get("status", "active")
+            }
+            photo_file = request.files.get('photo')
+        else:
+            data = request.get_json()
+            photo_file = None
 
         if not data:
             return jsonify({"success": False, "message": "No data provided"}), 400
 
         logger.info("Creating new evacuation center: %s", data.get("center_name"))
 
-        result = create_center(data)
+        result = create_center(data, photo_file)
 
         if not result["success"]:
             return jsonify(result), 400
@@ -170,33 +183,31 @@ def create_new_center() -> Tuple:
 @evacuation_center_bp.route("/evacuation_centers/<int:center_id>", methods=["PUT"])
 @jwt_required()
 def update_existing_center(center_id: int) -> Tuple:
-    """
-    Update an existing evacuation center.
-
-    Args:
-        center_id: Center ID
-
-    Request Body:
-        center_name (string, optional) - Center name
-        address (string, optional) - Center address
-        capacity (integer, optional) - Center capacity
-        current_occupancy (integer, optional) - Current occupancy
-        status (string, optional) - Center status
-
-    Returns:
-        Tuple containing:
-            - JSON response with standardized format
-            - HTTP status code
-    """
     try:
-        data = request.get_json()
+        # Check if request is multipart/form-data for file upload
+        if request.content_type and 'multipart/form-data' in request.content_type:
+            data = {
+                "center_name": request.form.get("center_name"),
+                "address": request.form.get("address"),
+                "capacity": request.form.get("capacity", type=int),
+                "current_occupancy": request.form.get("current_occupancy", type=int),
+                "status": request.form.get("status")
+            }
+            # Remove None values
+            data = {k: v for k, v in data.items() if v is not None}
+            photo_file = request.files.get('photo')
+            remove_photo = request.form.get('remove_photo') == 'true'  # This should be working
+        else:
+            data = request.get_json()
+            photo_file = None
+            remove_photo = False
 
-        if not data:
+        if not data and not photo_file and not remove_photo:
             return jsonify({"success": False, "message": "No data provided"}), 400
 
-        logger.info("Updating center with ID: %s", center_id)
+        logger.info("Updating center with ID: %s, remove_photo: %s", center_id, remove_photo)
 
-        result = update_center(center_id, data)
+        result = update_center(center_id, data, photo_file, remove_photo)  # This calls the service
 
         if not result["success"]:
             return jsonify(result), 400
