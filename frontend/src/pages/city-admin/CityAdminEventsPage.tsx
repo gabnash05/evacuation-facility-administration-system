@@ -201,18 +201,24 @@ export function CityAdminEventsPage() {
 
   const handleUpdateEvent = async (eventData: any) => {
     if (!editingEvent) return;
-    
+
+    if (new Date(eventData.end_date) < new Date(eventData.date_declared)) {
+      setError("End date cannot be earlier than the date declared.");
+      return;
+    }
+
     try {
       setError(null);
-      
+
       // Update basic event info
       await eventService.updateEvent(editingEvent.eventId, {
         event_name: eventData.event_name,
         event_type: eventData.event_type,
         date_declared: eventData.date_declared,
         end_date: eventData.end_date,
-        status: eventData.status
+        status: eventData.status,
       });
+
       
       // Handle center associations - ALWAYS process this, even if empty array
       if (eventData.center_ids !== undefined) {
