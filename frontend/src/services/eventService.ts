@@ -1,165 +1,165 @@
-import axios from 'axios';
+// services/eventService.ts
+import { api, handleApiError } from "./api";
+import type { Event, EventDetails, GetEventsParams, EventsResponse } from "@/types/event";
 
-const API_BASE_URL = 'http://localhost:5000';
+export class EventService {
+    static async getEvents(params: GetEventsParams = {}): Promise<EventsResponse> {
+        try {
+            const response = await api.get<EventsResponse>("/events", {
+                params,
+                withCredentials: true,
+            });
+            return response.data;
+        } catch (error) {
+            throw new Error(handleApiError(error));
+        }
+    }
 
-const api = axios.create({
-  baseURL: API_BASE_URL,
-  headers: {
-    'Content-Type': 'application/json',
-  },
-  timeout: 10000,
-});
+    static async getEventById(id: number): Promise<{
+        success: boolean;
+        data: Event;
+    }> {
+        try {
+            const response = await api.get<{ success: boolean; data: Event }>(`/events/${id}`, {
+                withCredentials: true,
+            });
+            return response.data;
+        } catch (error) {
+            throw new Error(handleApiError(error));
+        }
+    }
 
-export interface EventResponse {
-  event_id: number;
-  event_name: string;
-  event_type: string;
-  date_declared: string;
-  end_date: string | null;
-  status: 'active' | 'monitoring' | 'resolved';
-  created_at: string;
-  updated_at: string;
+    static async createEvent(data: {
+        event_name: string;
+        event_type: string;
+        date_declared: string;
+        end_date?: string | null;
+        status: string;
+        center_ids?: number[];
+    }): Promise<{ success: boolean; data: Event }> {
+        try {
+            const response = await api.post<{ success: boolean; data: Event }>("/events", data, {
+                withCredentials: true,
+            });
+            return response.data;
+        } catch (error) {
+            throw new Error(handleApiError(error));
+        }
+    }
+
+    static async updateEvent(
+        id: number, 
+        data: {
+            event_name?: string;
+            event_type?: string;
+            date_declared?: string;
+            end_date?: string | null;
+            status?: string;
+        }
+    ): Promise<{ success: boolean; data: Event }> {
+        try {
+            const response = await api.put<{ success: boolean; data: Event }>(`/events/${id}`, data, {
+                withCredentials: true,
+            });
+            return response.data;
+        } catch (error) {
+            throw new Error(handleApiError(error));
+        }
+    }
+
+    static async deleteEvent(id: number): Promise<{ success: boolean; message: string }> {
+        try {
+            const response = await api.delete<{ success: boolean; message: string }>(`/events/${id}`, {
+                withCredentials: true,
+            });
+            return response.data;
+        } catch (error) {
+            throw new Error(handleApiError(error));
+        }
+    }
+
+    static async getEventCenters(eventId: number): Promise<{
+        success: boolean;
+        data: Array<{
+            center_id: number;
+            center_name: string;
+            barangay: string;
+            capacity: number;
+            current_occupancy: number;
+            occupancy: string;
+        }>;
+    }> {
+        try {
+            const response = await api.get<{
+                success: boolean;
+                data: Array<{
+                    center_id: number;
+                    center_name: string;
+                    barangay: string;
+                    capacity: number;
+                    current_occupancy: number;
+                    occupancy: string;
+                }>;
+            }>(`/events/${eventId}/centers`, {
+                withCredentials: true,
+            });
+            return response.data;
+        } catch (error) {
+            throw new Error(handleApiError(error));
+        }
+    }
+
+    static async addCenterToEvent(eventId: number, centerId: number): Promise<{ success: boolean; message: string }> {
+        try {
+            const response = await api.post<{ success: boolean; message: string }>(
+                `/events/${eventId}/centers`,
+                { center_id: centerId },
+                { withCredentials: true }
+            );
+            return response.data;
+        } catch (error) {
+            throw new Error(handleApiError(error));
+        }
+    }
+
+    static async removeCenterFromEvent(eventId: number, centerId: number): Promise<{ success: boolean; message: string }> {
+        try {
+            const response = await api.delete<{ success: boolean; message: string }>(
+                `/events/${eventId}/centers/${centerId}`,
+                { withCredentials: true }
+            );
+            return response.data;
+        } catch (error) {
+            throw new Error(handleApiError(error));
+        }
+    }
+
+    static async getEventDetails(eventId: number): Promise<{
+        success: boolean;
+        data: EventDetails;
+    }> {
+        try {
+            const response = await api.get<{ success: boolean; data: EventDetails }>(`/events/${eventId}/details`, {
+                withCredentials: true,
+            });
+            return response.data;
+        } catch (error) {
+            throw new Error(handleApiError(error));
+        }
+    }
+
+    // Keep the old method for backward compatibility
+    static async getAllEvents(): Promise<Event[]> {
+        try {
+            const response = await api.get<Event[]>("/events", {
+                withCredentials: true,
+            });
+            return response.data;
+        } catch (error) {
+            throw new Error(handleApiError(error));
+        }
+    }
 }
 
-export interface EventDetailsResponse {
-  event_id: number;
-  event_name: string;
-  event_type: string;
-  status: string;
-  centers: {
-    center_id: number;
-    center_name: string;
-    barangay: string;
-    capacity: number;
-    current_occupancy: number;
-    occupancy: string;
-  }[];
-}
-
-export interface CreateEventData {
-  event_name: string;
-  event_type: string;
-  date_declared: string; // Format: DD/MM/YYYY
-  end_date: string | null; // Format: DD/MM/YYYY or null
-  status: 'active' | 'monitoring' | 'resolved';
-  center_ids: number[];
-}
-
-export interface UpdateEventData {
-  event_name: string;
-  event_type: string;
-  date_declared: string;
-  end_date: string | null;
-  status: 'active' | 'monitoring' | 'resolved';
-}
-
-export const eventService = {
-  async getAllEvents(): Promise<EventResponse[]> {
-    try {
-      const response = await api.get<EventResponse[]>('/api/events/');
-      return response.data;
-    } catch (error) {
-      if (axios.isAxiosError(error)) {
-        throw new Error(error.response?.data?.message || 'Failed to fetch events');
-      }
-      throw error;
-    }
-  },
-
-  async getEventDetails(eventId: number): Promise<EventDetailsResponse> {
-    try {
-      const response = await api.get<EventDetailsResponse>(`/api/events/${eventId}`);
-      return response.data;
-    } catch (error) {
-      if (axios.isAxiosError(error)) {
-        throw new Error(error.response?.data?.message || 'Failed to fetch event details');
-      }
-      throw error;
-    }
-  },
-
-  async getEventCenters(eventId: number): Promise<{
-    center_id: number;
-    center_name: string;
-    barangay: string;
-    capacity: number;
-    current_occupancy: number;
-  }[]> {
-    try {
-      const response = await api.get(`/api/events/${eventId}/centers`);
-      return response.data;
-    } catch (error) {
-      if (axios.isAxiosError(error)) {
-        throw new Error(error.response?.data?.message || 'Failed to fetch event centers');
-      }
-      throw error;
-    }
-  },
-
-  async createEvent(data: CreateEventData): Promise<EventResponse> {
-    try {
-      const response = await api.post<EventResponse>('/api/events/', data);
-      return response.data;
-    } catch (error) {
-      if (axios.isAxiosError(error)) {
-        throw new Error(error.response?.data?.message || 'Failed to create event');
-      }
-      throw error;
-    }
-  },
-
-  async updateEvent(eventId: number, data: UpdateEventData): Promise<void> {
-    try {
-      await api.put(`/api/events/${eventId}`, data);
-    } catch (error) {
-      if (axios.isAxiosError(error)) {
-        throw new Error(error.response?.data?.message || 'Failed to update event');
-      }
-      throw error;
-    }
-  },
-
-  async updateEventStatus(eventId: number, status: string): Promise<void> {
-    try {
-      await api.put(`/api/events/${eventId}`, { status });
-    } catch (error) {
-      if (axios.isAxiosError(error)) {
-        throw new Error(error.response?.data?.message || 'Failed to update event status');
-      }
-      throw error;
-    }
-  },
-
-  async deleteEvent(eventId: number): Promise<void> {
-    try {
-      await api.delete(`/api/events/${eventId}`);
-    } catch (error) {
-      if (axios.isAxiosError(error)) {
-        throw new Error(error.response?.data?.message || 'Failed to delete event');
-      }
-      throw error;
-    }
-  },
-
-  async addCenterToEvent(eventId: number, centerId: number): Promise<void> {
-    try {
-      await api.post(`/api/events/${eventId}/centers`, { center_id: centerId });
-    } catch (error) {
-      if (axios.isAxiosError(error)) {
-        throw new Error(error.response?.data?.message || 'Failed to add center to event');
-      }
-      throw error;
-    }
-  },
-
-  async removeCenterFromEvent(eventId: number, centerId: number): Promise<void> {
-    try {
-      await api.delete(`/api/events/${eventId}/centers/${centerId}`);
-    } catch (error) {
-      if (axios.isAxiosError(error)) {
-        throw new Error(error.response?.data?.message || 'Failed to remove center from event');
-      }
-      throw error;
-    }
-  }
-};
+// Export a default instance for backward compatibility
+export const eventService = EventService;

@@ -29,11 +29,16 @@ interface EvacuationCenterTableProps {
 }
 
 // Custom dropdown component with theme support and proper positioning
-function ActionDropdown({ centerId, centerName, onEdit, onDelete }: { 
-    centerId: number; 
+function ActionDropdown({
+    centerId,
+    centerName,
+    onEdit,
+    onDelete,
+}: {
+    centerId: number;
     centerName: string;
-    onEdit: (id: number) => void; 
-    onDelete: (id: number, name: string) => void; 
+    onEdit: (id: number) => void;
+    onDelete: (id: number, name: string) => void;
 }) {
     const [isOpen, setIsOpen] = useState(false);
     const dropdownRef = useRef<HTMLDivElement>(null);
@@ -47,8 +52,8 @@ function ActionDropdown({ centerId, centerName, onEdit, onDelete }: {
             }
         };
 
-        document.addEventListener('mousedown', handleClickOutside);
-        return () => document.removeEventListener('mousedown', handleClickOutside);
+        document.addEventListener("mousedown", handleClickOutside);
+        return () => document.removeEventListener("mousedown", handleClickOutside);
     }, []);
 
     // Reposition dropdown when opened or when scrolling
@@ -58,7 +63,7 @@ function ActionDropdown({ centerId, centerName, onEdit, onDelete }: {
         const updatePosition = () => {
             const triggerRect = dropdownRef.current!.getBoundingClientRect();
             const dropdownContent = dropdownContentRef.current!;
-            
+
             // Calculate position relative to the trigger
             let top = triggerRect.bottom;
             let left = triggerRect.right - 132; // 132 = dropdown width (128) + some offset
@@ -80,12 +85,12 @@ function ActionDropdown({ centerId, centerName, onEdit, onDelete }: {
         updatePosition();
 
         // Update position on scroll and resize
-        window.addEventListener('scroll', updatePosition, true);
-        window.addEventListener('resize', updatePosition);
+        window.addEventListener("scroll", updatePosition, true);
+        window.addEventListener("resize", updatePosition);
 
         return () => {
-            window.removeEventListener('scroll', updatePosition, true);
-            window.removeEventListener('resize', updatePosition);
+            window.removeEventListener("scroll", updatePosition, true);
+            window.removeEventListener("resize", updatePosition);
         };
     }, [isOpen]);
 
@@ -109,23 +114,18 @@ function ActionDropdown({ centerId, centerName, onEdit, onDelete }: {
 
     return (
         <div ref={dropdownRef} className="relative inline-block">
-            <Button 
-                variant="ghost" 
-                size="icon" 
-                className="h-8 w-8"
-                onClick={handleButtonClick}
-            >
+            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={handleButtonClick}>
                 <MoreVertical className="h-4 w-4" />
                 <span className="sr-only">Open menu</span>
             </Button>
-            
+
             {isOpen && (
-                <div className="fixed inset-0 z-50" style={{ pointerEvents: 'none' }}>
-                    <div 
+                <div className="fixed inset-0 z-50" style={{ pointerEvents: "none" }}>
+                    <div
                         ref={dropdownContentRef}
                         className="absolute bg-popover text-popover-foreground border border-border rounded-md shadow-lg w-32"
                         style={{
-                            pointerEvents: 'auto',
+                            pointerEvents: "auto",
                         }}
                     >
                         <button
@@ -155,7 +155,13 @@ const capitalizeFirstLetter = (text: string): string => {
     return text.charAt(0).toUpperCase() + text.slice(1).toLowerCase();
 };
 
-export function EvacuationCenterTable({ data, sortConfig, onSort, loading, onShowSuccessToast }: EvacuationCenterTableProps) {
+export function EvacuationCenterTable({
+    data,
+    sortConfig,
+    onSort,
+    loading,
+    onShowSuccessToast,
+}: EvacuationCenterTableProps) {
     const { deleteCenter } = useEvacuationCenterStore();
     const [deleteDialog, setDeleteDialog] = useState<{
         isOpen: boolean;
@@ -214,7 +220,12 @@ export function EvacuationCenterTable({ data, sortConfig, onSort, loading, onSho
     };
 
     const headers = [
-        { key: "center_name", label: "Center Name", sortable: true, width: columnWidths.center_name },
+        {
+            key: "center_name",
+            label: "Center Name",
+            sortable: true,
+            width: columnWidths.center_name,
+        },
         { key: "address", label: "Address", sortable: true, width: columnWidths.address },
         { key: "capacity", label: "Capacity", sortable: true, width: columnWidths.capacity },
         {
@@ -272,7 +283,7 @@ export function EvacuationCenterTable({ data, sortConfig, onSort, loading, onSho
                 });
 
                 if (onShowSuccessToast) {
-                  onShowSuccessToast("Evacuation center deleted successfully.");
+                    onShowSuccessToast("Evacuation center deleted successfully.");
                 }
             } catch (error) {
                 console.error("Failed to delete center:", error);
@@ -348,7 +359,7 @@ export function EvacuationCenterTable({ data, sortConfig, onSort, loading, onSho
                         data.map((center, index) => {
                             const usagePercentage = calculateUsage(center);
                             const displayPercentage = getDisplayPercentage(center);
-                            
+
                             return (
                                 <TableRow
                                     key={center.center_id}
@@ -395,17 +406,16 @@ export function EvacuationCenterTable({ data, sortConfig, onSort, loading, onSho
                                                         usagePercentage >= 100
                                                             ? "bg-red-600" // Special color for overcapacity
                                                             : usagePercentage >= 80
-                                                            ? "bg-red-500"
-                                                            : usagePercentage >= 60
-                                                              ? "bg-yellow-500"
-                                                              : "bg-green-500"
+                                                              ? "bg-red-500"
+                                                              : usagePercentage >= 60
+                                                                ? "bg-yellow-500"
+                                                                : "bg-green-500"
                                                     )}
                                                     style={{ width: `${displayPercentage}%` }}
                                                 />
                                             </div>
                                             <span className="text-sm font-medium whitespace-nowrap">
-                                                {usagePercentage}%
-                                                {usagePercentage > 100}
+                                                {usagePercentage}%{usagePercentage > 100}
                                             </span>
                                         </div>
                                     </TableCell>
@@ -427,7 +437,7 @@ export function EvacuationCenterTable({ data, sortConfig, onSort, loading, onSho
                                         className="py-3 align-middle text-left"
                                         style={{ width: columnWidths.actions }}
                                     >
-                                        <ActionDropdown 
+                                        <ActionDropdown
                                             centerId={center.center_id}
                                             centerName={center.center_name}
                                             onEdit={handleEditClick}

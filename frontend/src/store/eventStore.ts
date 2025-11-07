@@ -1,9 +1,10 @@
+// store/eventStore.ts
 import { create } from "zustand";
-import { EvacuationCenterService } from "@/services/evacuationCenterService";
-import type { EvacuationCenter, CentersResponse } from "@/types/center";
+import { EventService } from "@/services/eventService";
+import type { Event, EventDetails } from "@/types/event";
 
-interface EvacuationCenterState {
-    centers: EvacuationCenter[];
+interface EventState {
+    events: Event[];
     loading: boolean;
     error: string | null;
     searchQuery: string;
@@ -25,22 +26,16 @@ interface EvacuationCenterState {
     setCurrentPage: (page: number) => void;
     setEntriesPerPage: (entries: number) => void;
     setSortConfig: (config: { key: string; direction: "asc" | "desc" | null } | null) => void;
-    fetchCenters: () => Promise<void>;
-    addCenter: (
-        center: Omit<EvacuationCenter, "center_id" | "created_at" | "updated_at">,
-        photo?: File
-    ) => Promise<void>;
-    updateCenter: (
-        id: number,
-        updates: Partial<EvacuationCenter>,
-        photo?: File | "remove"
-    ) => Promise<void>; // Update this line
-    deleteCenter: (id: number) => Promise<void>;
+    fetchEvents: () => Promise<void>;
+    createEvent: (eventData: any) => Promise<void>;
+    updateEvent: (id: number, eventData: any) => Promise<void>;
+    deleteEvent: (id: number) => Promise<void>;
+    getEventDetails: (id: number) => Promise<EventDetails>;
     resetState: () => void;
 }
 
 const initialState = {
-    centers: [],
+    events: [],
     loading: false,
     error: null,
     searchQuery: "",
@@ -50,7 +45,7 @@ const initialState = {
     pagination: null,
 };
 
-export const useEvacuationCenterStore = create<EvacuationCenterState>((set, get) => ({
+export const useEventStore = create<EventState>((set, get) => ({
     ...initialState,
 
     setSearchQuery: (query: string) => {
@@ -69,13 +64,13 @@ export const useEvacuationCenterStore = create<EvacuationCenterState>((set, get)
         set({ sortConfig: config, currentPage: 1 });
     },
 
-    fetchCenters: async () => {
+    fetchEvents: async () => {
         const { searchQuery, currentPage, entriesPerPage, sortConfig } = get();
 
         set({ loading: true, error: null });
 
         try {
-            const response: CentersResponse = await EvacuationCenterService.getCenters({
+            const response = await EventService.getEvents({
                 search: searchQuery,
                 page: currentPage,
                 limit: entriesPerPage,
@@ -84,51 +79,53 @@ export const useEvacuationCenterStore = create<EvacuationCenterState>((set, get)
             });
 
             set({
-                centers: response.data.results,
+                events: response.data.results,
                 pagination: response.data.pagination,
                 loading: false,
             });
         } catch (error) {
             set({
-                error: error instanceof Error ? error.message : "Failed to fetch centers",
+                error: error instanceof Error ? error.message : "Failed to fetch events",
                 loading: false,
-                centers: [],
+                events: [],
                 pagination: null,
             });
         }
     },
 
-    addCenter: async (
-        center: Omit<EvacuationCenter, "center_id" | "created_at" | "updated_at">,
-        photo?: File
-    ) => {
+    createEvent: async (eventData: any) => {
         try {
-            await EvacuationCenterService.createCenter(center, photo);
-            await get().fetchCenters(); // Refresh the list
+            await EventService.createEvent(eventData);
+            await get().fetchEvents(); // Refresh the list
         } catch (error) {
-            throw new Error(error instanceof Error ? error.message : "Failed to add center");
+            throw new Error(error instanceof Error ? error.message : "Failed to create event");
         }
     },
 
-    updateCenter: async (
-        id: number,
-        updates: Partial<EvacuationCenter>,
-        photo?: File | "remove"
-    ) => {
+    updateEvent: async (id: number, eventData: any) => {
         try {
-            await EvacuationCenterService.updateCenter(id, updates, photo);
-            await get().fetchCenters(); // Refresh the list
+            await EventService.updateEvent(id, eventData);
+            await get().fetchEvents(); // Refresh the list
         } catch (error) {
-            throw new Error(error instanceof Error ? error.message : "Failed to update center");
+            throw new Error(error instanceof Error ? error.message : "Failed to update event");
         }
     },
 
-    deleteCenter: async (id: number) => {
+    deleteEvent: async (id: number) => {
         try {
-            await EvacuationCenterService.deleteCenter(id);
-            await get().fetchCenters(); // Refresh the list
+            await EventService.deleteEvent(id);
+            await get().fetchEvents(); // Refresh the list
         } catch (error) {
-            throw new Error(error instanceof Error ? error.message : "Failed to delete center");
+            throw new Error(error instanceof Error ? error.message : "Failed to delete event");
+        }
+    },
+
+    getEventDetails: async (id: number): Promise<EventDetails> => {
+        try {
+            const response = await EventService.getEventDetails(id);
+            return response.data;
+        } catch (error) {
+            throw new Error(error instanceof Error ? error.message : "Failed to fetch event details");
         }
     },
 

@@ -12,12 +12,7 @@ interface SuccessToastProps {
     onClose: () => void;
 }
 
-export function SuccessToast({ 
-    isOpen, 
-    message, 
-    duration = 2000,
-    onClose
-}: SuccessToastProps) {
+export function SuccessToast({ isOpen, message, duration = 2000, onClose }: SuccessToastProps) {
     const { theme } = useTheme();
 
     useEffect(() => {
@@ -33,18 +28,16 @@ export function SuccessToast({
 
     // Theme-based styling
     const getToastStyles = () => {
-        const baseStyles = "fixed top-4 right-4 z-[100] animate-in slide-in-from-right-full duration-300 rounded-lg shadow-lg p-4 max-w-sm";
-        
+        const baseStyles =
+            "fixed top-4 right-4 z-[100] animate-in slide-in-from-right-full duration-300 rounded-lg shadow-lg p-4 max-w-sm";
+
         if (theme === "dark") {
             return cn(
                 baseStyles,
                 "bg-green-900/80 border border-green-700 text-green-100 backdrop-blur-sm"
             );
         } else {
-            return cn(
-                baseStyles,
-                "bg-green-50 border border-green-200 text-green-800"
-            );
+            return cn(baseStyles, "bg-green-50 border border-green-200 text-green-800");
         }
     };
 
@@ -63,9 +56,7 @@ export function SuccessToast({
                     <CheckCircle className={cn("h-5 w-5", getIconColor())} />
                 </div>
                 <div className="flex-1">
-                    <p className={cn("text-sm font-medium", getTextColor())}>
-                        {message}
-                    </p>
+                    <p className={cn("text-sm font-medium", getTextColor())}>{message}</p>
                 </div>
             </div>
         </div>
