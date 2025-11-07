@@ -39,12 +39,8 @@ export function ConfirmationDialog({
                             </div>
                         </div>
                         <div>
-                            <DialogTitle className="text-lg font-semibold">
-                                {title}
-                            </DialogTitle>
-                            <DialogDescription className="mt-1">
-                                {message}
-                            </DialogDescription>
+                            <DialogTitle className="text-lg font-semibold">{title}</DialogTitle>
+                            <DialogDescription className="mt-1">{message}</DialogDescription>
                         </div>
                     </div>
                 </DialogHeader>
