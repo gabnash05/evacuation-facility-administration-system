@@ -22,6 +22,7 @@ register_schema = UserRegisterSchema()
 # AUTHENTICATION FUNCTIONS
 # ========================
 
+
 def authenticate_user(email: str, password: str) -> Dict[str, Any]:
     """
     Authenticate a user with email and password.
@@ -247,6 +248,7 @@ def update_user_profile(user_id: int, update_data: Dict[str, Any]) -> Dict[str, 
 # USER MANAGEMENT FUNCTIONS
 # ========================
 
+
 def get_users(
     search: Optional[str] = None,
     role: Optional[str] = None,
@@ -254,7 +256,7 @@ def get_users(
     page: int = 1,
     limit: int = 10,
     sort_by: Optional[str] = None,
-    sort_order: Optional[str] = "asc"
+    sort_order: Optional[str] = "asc",
 ) -> Dict[str, Any]:
     """
     Get all users with filtering, pagination, and sorting.
@@ -279,7 +281,7 @@ def get_users(
             page=page,
             limit=limit,
             sort_by=sort_by,
-            sort_order=sort_order
+            sort_order=sort_order,
         )
 
         users_data = [user.to_schema() for user in result["users"]]
@@ -292,9 +294,9 @@ def get_users(
                     "current_page": result["page"],
                     "total_pages": result["total_pages"],
                     "total_items": result["total_count"],
-                    "limit": result["limit"]
-                }
-            }
+                    "limit": result["limit"],
+                },
+            },
         }
 
     except Exception as error:
@@ -318,10 +320,7 @@ def get_user_by_id(user_id: int) -> Dict[str, Any]:
         if not user:
             return {"success": False, "message": "User not found"}
 
-        return {
-            "success": True,
-            "data": user.to_schema()
-        }
+        return {"success": True, "data": user.to_schema()}
 
     except Exception as error:
         logger.error("Error fetching user %s: %s", user_id, str(error))
@@ -343,7 +342,10 @@ def create_user(data: Dict[str, Any]) -> Dict[str, Any]:
         try:
             valid_data = create_schema.load(data)
         except Exception as validation_error:
-            return {"success": False, "message": f"Validation error: {str(validation_error)}"}
+            return {
+                "success": False,
+                "message": f"Validation error: {str(validation_error)}",
+            }
 
         # Check if email already exists
         existing_user = User.get_by_email(valid_data["email"])
@@ -358,7 +360,7 @@ def create_user(data: Dict[str, Any]) -> Dict[str, Any]:
         return {
             "success": True,
             "message": "User created successfully",
-            "data": user.to_schema()
+            "data": user.to_schema(),
         }
 
     except Exception as error:
@@ -382,7 +384,10 @@ def update_user(user_id: int, update_data: Dict[str, Any]) -> Dict[str, Any]:
         try:
             valid_data = update_schema.load(update_data)
         except Exception as validation_error:
-            return {"success": False, "message": f"Validation error: {str(validation_error)}"}
+            return {
+                "success": False,
+                "message": f"Validation error: {str(validation_error)}",
+            }
 
         # Check if user exists
         existing_user = User.get_by_id(user_id)
@@ -406,7 +411,7 @@ def update_user(user_id: int, update_data: Dict[str, Any]) -> Dict[str, Any]:
         return {
             "success": True,
             "message": "User updated successfully",
-            "data": updated_user.to_schema()
+            "data": updated_user.to_schema(),
         }
 
     except Exception as error:
@@ -438,10 +443,7 @@ def delete_user(user_id: int) -> Dict[str, Any]:
 
         logger.info("User deleted: %s", user_id)
 
-        return {
-            "success": True,
-            "message": "User deleted successfully"
-        }
+        return {"success": True, "message": "User deleted successfully"}
 
     except Exception as error:
         logger.error("Error deleting user %s: %s", user_id, str(error))
@@ -475,7 +477,7 @@ def deactivate_user_service(user_id: int) -> Dict[str, Any]:
         return {
             "success": True,
             "message": "User deactivated successfully",
-            "data": updated_user.to_schema()
+            "data": updated_user.to_schema(),
         }
 
     except Exception as error:

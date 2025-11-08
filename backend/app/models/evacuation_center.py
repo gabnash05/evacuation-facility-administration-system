@@ -67,7 +67,7 @@ class EvacuationCenter(db.Model):
         page: int = 1,
         limit: int = 10,
         sort_by: Optional[str] = None,
-        sort_order: Optional[str] = "asc"
+        sort_order: Optional[str] = "asc",
     ) -> Dict[str, Any]:
         """Get all centers with pagination, search, and sorting."""
         # Base query
@@ -95,8 +95,17 @@ class EvacuationCenter(db.Model):
         select_query = f"SELECT * {base_query}"
 
         # Add sorting
-        if sort_by and sort_by in ["center_name", "address", "capacity", "current_occupancy", "status", "created_at"]:
-            order_direction = "DESC" if sort_order and sort_order.lower() == "desc" else "ASC"
+        if sort_by and sort_by in [
+            "center_name",
+            "address",
+            "capacity",
+            "current_occupancy",
+            "status",
+            "created_at",
+        ]:
+            order_direction = (
+                "DESC" if sort_order and sort_order.lower() == "desc" else "ASC"
+            )
             select_query += f" ORDER BY {sort_by} {order_direction}"
         else:
             select_query += " ORDER BY created_at DESC"
@@ -110,14 +119,16 @@ class EvacuationCenter(db.Model):
         # Execute query
         results = db.session.execute(text(select_query), params).fetchall()
 
-        centers = [cls._row_to_center(row) for row in results if cls._row_to_center(row)]
+        centers = [
+            cls._row_to_center(row) for row in results if cls._row_to_center(row)
+        ]
 
         return {
             "centers": centers,
             "total_count": total_count,
             "page": page,
             "limit": limit,
-            "total_pages": (total_count + limit - 1) // limit
+            "total_pages": (total_count + limit - 1) // limit,
         }
 
     @classmethod
@@ -127,16 +138,23 @@ class EvacuationCenter(db.Model):
         fields = []
         values = []
         params = {}
-        
-        for field in ['center_name', 'address', 'capacity', 'status', 'current_occupancy', 'photo_data']:
+
+        for field in [
+            "center_name",
+            "address",
+            "capacity",
+            "status",
+            "current_occupancy",
+            "photo_data",
+        ]:
             if field in data and data[field] is not None:
                 fields.append(field)
                 values.append(f":{field}")
                 params[field] = data[field]
-        
+
         if not fields:
             raise ValueError("No data provided to create center")
-        
+
         query = text(
             f"""  
             INSERT INTO evacuation_centers ({', '.join(fields)})
@@ -144,18 +162,20 @@ class EvacuationCenter(db.Model):
             RETURNING center_id, created_at, updated_at
             """
         )
-        
+
         result = db.session.execute(query, params).fetchone()
         db.session.commit()
 
         result_dict = result._asdict()
-        
+
         # Create center object with all data
         center_data = {**data, **result_dict}
         return cls(**center_data)
 
     @classmethod
-    def update(cls, center_id: int, update_data: Dict[str, Any]) -> Optional["EvacuationCenter"]:
+    def update(
+        cls, center_id: int, update_data: Dict[str, Any]
+    ) -> Optional["EvacuationCenter"]:
         """Update center information using raw SQL."""
         # Build dynamic UPDATE query
         set_clauses = []
@@ -204,7 +224,9 @@ class EvacuationCenter(db.Model):
         return result is not None
 
     @classmethod
-    def update_occupancy(cls, center_id: int, new_occupancy: int) -> Optional["EvacuationCenter"]:
+    def update_occupancy(
+        cls, center_id: int, new_occupancy: int
+    ) -> Optional["EvacuationCenter"]:
         """Update current occupancy of a center with validation."""
         center = cls.get_by_id(center_id)
         if not center:

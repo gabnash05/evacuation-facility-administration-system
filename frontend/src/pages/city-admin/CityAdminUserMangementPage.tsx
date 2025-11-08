@@ -1,12 +1,17 @@
-"use client";
 
 import { useEffect, useMemo, useState } from "react";
 import { UserTable } from "@/components/features/user-management/UserTable";
-import { TableToolbar } from "@/components/common/ToolBar";
+import { TableToolbar } from "@/components/common/Toolbar";
 import { TablePagination } from "@/components/common/TablePagination";
 import { useUserStore } from "@/store/userStore";
 import { debounce } from "@/utils/helpers";
-import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
+import {
+    Select,
+    SelectTrigger,
+    SelectValue,
+    SelectContent,
+    SelectItem,
+} from "@/components/ui/select";
 
 export function CityAdminUserManagementPage() {
     const {
@@ -31,27 +36,29 @@ export function CityAdminUserManagementPage() {
     const [statusFilter, setStatusFilter] = useState<string>("all");
 
     // Create debounced fetch function
-    const debouncedFetchUsers = useMemo(
-        () => debounce(() => fetchUsers(), 500),
-        [fetchUsers]
-    );
+    const debouncedFetchUsers = useMemo(() => debounce(() => fetchUsers(), 500), [fetchUsers]);
 
     // Fetch users when dependencies change
     useEffect(() => {
-        if (searchQuery || entriesPerPage !== 10 || roleFilter !== "all" || statusFilter !== "all") {
+        if (
+            searchQuery ||
+            entriesPerPage !== 10 ||
+            roleFilter !== "all" ||
+            statusFilter !== "all"
+        ) {
             debouncedFetchUsers();
         } else {
             fetchUsers();
         }
     }, [
-        searchQuery, 
-        currentPage, 
-        entriesPerPage, 
-        sortConfig, 
-        roleFilter, 
+        searchQuery,
+        currentPage,
+        entriesPerPage,
+        sortConfig,
+        roleFilter,
         statusFilter,
-        fetchUsers, 
-        debouncedFetchUsers
+        fetchUsers,
+        debouncedFetchUsers,
     ]);
 
     const handleSort = (key: string) => {
@@ -105,11 +112,7 @@ export function CityAdminUserManagementPage() {
     // Build additional filters component
     const additionalFilters = (
         <>
-            <Select
-                value={roleFilter}
-                onValueChange={handleRoleFilterChange}
-                disabled={loading}
-            >
+            <Select value={roleFilter} onValueChange={handleRoleFilterChange} disabled={loading}>
                 <SelectTrigger className="w-32">
                     <SelectValue placeholder="All Roles" />
                 </SelectTrigger>

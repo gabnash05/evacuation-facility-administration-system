@@ -11,21 +11,21 @@ import {
 import { Button } from "@/components/ui/button";
 import { AlertTriangle, Trash2 } from "lucide-react";
 
-interface DeleteCenterDialogProps {
+interface DeleteEventDialogProps {
     isOpen: boolean;
     onClose: () => void;
     onConfirm: () => void;
-    centerName: string;
+    eventName: string;
     loading?: boolean;
 }
 
-export function DeleteCenterDialog({
+export function DeleteEventDialog({
     isOpen,
     onClose,
     onConfirm,
-    centerName,
+    eventName,
     loading = false,
-}: DeleteCenterDialogProps) {
+}: DeleteEventDialogProps) {
     return (
         <Dialog open={isOpen} onOpenChange={onClose}>
             <DialogContent className="sm:max-w-md">
@@ -38,7 +38,7 @@ export function DeleteCenterDialog({
                         </div>
                         <div>
                             <DialogTitle className="text-lg font-semibold">
-                                Delete Evacuation Center
+                                Delete Event
                             </DialogTitle>
                             <DialogDescription className="mt-1">
                                 This action cannot be undone.
@@ -50,7 +50,8 @@ export function DeleteCenterDialog({
                 <div className="py-4">
                     <p className="text-sm text-muted-foreground">
                         Are you sure you want to delete{" "}
-                        <strong className="font-semibold text-foreground">"{centerName}"</strong>?
+                        <strong className="font-semibold text-foreground">"{eventName}"</strong>?
+                        This will remove all event data and associations.
                     </p>
                 </div>
 
@@ -79,7 +80,7 @@ export function DeleteCenterDialog({
                         ) : (
                             <>
                                 <Trash2 className="h-4 w-4" />
-                                Delete
+                                Delete Event
                             </>
                         )}
                     </Button>
