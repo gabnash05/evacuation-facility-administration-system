@@ -1,34 +1,56 @@
+// types/event.ts
 import type { ApiResponse, PaginatedResponse } from "./api";
+import type { EvacuationCenter } from "./center";
 
 export type EventStatus = "active" | "resolved" | "monitoring";
 
 export interface Event {
-    eventId: number;
-    eventName: string;
-    eventType: string;
-    dateDeclared: string;
-    endDate?: string | null;
+    event_id: number;
+    event_name: string;
+    event_type: string;
+    date_declared: string;
+    end_date?: string | null;
     status: EventStatus;
-    createdAt: string;
-    updatedAt?: string;
+    created_at: string;
+    updated_at?: string;
 }
 
 export interface CreateEventData {
-    eventName: string;
-    eventType: string;
-    dateDeclared: string;
-    endDate?: string | null;
+    event_name: string;
+    event_type: string;
+    date_declared: string;
+    end_date?: string | null;
     status?: EventStatus;
 }
 
 export interface UpdateEventData {
-    eventName?: string;
-    eventType?: string;
-    dateDeclared?: string;
-    endDate?: string | null;
+    event_name?: string;
+    event_type?: string;
+    date_declared?: string;
+    end_date?: string | null;
     status?: EventStatus;
+}
+
+// For event details modal - matches backend response exactly
+export interface EventDetails {
+    event_id: number;
+    event_name: string;
+    event_type: string;
+    date_declared: string;
+    end_date?: string | null;
+    status: EventStatus;
+    evacuation_centers: EvacuationCenter[];
 }
 
 // API Response types
 export type EventResponse = ApiResponse<Event>;
 export type EventsResponse = PaginatedResponse<Event>;
+
+// Parameters for getting events
+export interface GetEventsParams {
+    search?: string;
+    page?: number;
+    limit?: number;
+    sortBy?: string;
+    sortOrder?: string;
+}

@@ -46,7 +46,10 @@ function App() {
                                         path="households"
                                         element={<CityAdminHouseholdsPage />}
                                     />
-                                    <Route path="user-management" element={<CityAdminUserManagementPage/>} />
+                                    <Route
+                                        path="user-management"
+                                        element={<CityAdminUserManagementPage />}
+                                    />
                                     <Route path="*" element={<Navigate to="dashboard" replace />} />
                                 </Routes>
                             </MainLayout>
@@ -58,7 +61,13 @@ function App() {
                     path="/center-admin/*"
                     element={
                         <ProtectedRoute
-                            requiredRole={["center_admin", "city_admin", "super_admin", "city_admin", "super_admin"]}
+                            requiredRole={[
+                                "center_admin",
+                                "city_admin",
+                                "super_admin",
+                                "city_admin",
+                                "super_admin",
+                            ]}
                         >
                             <MainLayout>
                                 <Routes>

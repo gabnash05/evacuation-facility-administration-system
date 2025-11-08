@@ -6,9 +6,13 @@ from typing import Tuple
 from flask import Blueprint, jsonify, request
 from flask_jwt_extended import jwt_required
 
-from app.services.evacuation_center_service import (create_center, delete_center,
-                                                   get_center_by_id, get_centers,
-                                                   update_center)
+from app.services.evacuation_center_service import (
+    create_center,
+    delete_center,
+    get_center_by_id,
+    get_centers,
+    update_center,
+)
 
 # Configure logger for this module
 logger = logging.getLogger(__name__)
@@ -17,7 +21,7 @@ evacuation_center_bp = Blueprint("evacuation_center_bp", __name__)
 
 
 @evacuation_center_bp.route("/evacuation_centers", methods=["GET"])
-#@jwt_required()
+@jwt_required()
 def get_all_centers() -> Tuple:
     """
     Get all evacuation centers with filtering, pagination, and sorting.
@@ -46,14 +50,25 @@ def get_all_centers() -> Tuple:
 
         # Validate pagination parameters
         if page < 1:
-            return jsonify({"success": False, "message": "Page must be at least 1"}), 400
-        
+            return (
+                jsonify({"success": False, "message": "Page must be at least 1"}),
+                400,
+            )
+
         if limit < 1 or limit > 100:
-            return jsonify({"success": False, "message": "Limit must be between 1 and 100"}), 400
+            return (
+                jsonify(
+                    {"success": False, "message": "Limit must be between 1 and 100"}
+                ),
+                400,
+            )
 
         logger.info(
             "Fetching centers - search: %s, status: %s, page: %s, limit: %s",
-            search, status, page, limit
+            search,
+            status,
+            page,
+            limit,
         )
 
         # Get centers from service
@@ -63,7 +78,7 @@ def get_all_centers() -> Tuple:
             page=page,
             limit=limit,
             sort_by=sort_by,
-            sort_order=sort_order
+            sort_order=sort_order,
         )
 
         if not result["success"]:
@@ -122,7 +137,7 @@ def get_center(center_id: int) -> Tuple:
 
 
 @evacuation_center_bp.route("/evacuation_centers", methods=["POST"])
-#@jwt_required()
+# @jwt_required()
 def create_new_center() -> Tuple:
     """
     Create a new evacuation center.
@@ -142,15 +157,15 @@ def create_new_center() -> Tuple:
     """
     try:
         # Check if request is multipart/form-data for file upload
-        if request.content_type and 'multipart/form-data' in request.content_type:
+        if request.content_type and "multipart/form-data" in request.content_type:
             data = {
                 "center_name": request.form.get("center_name"),
                 "address": request.form.get("address"),
                 "capacity": request.form.get("capacity", type=int),
                 "current_occupancy": request.form.get("current_occupancy", 0, type=int),
-                "status": request.form.get("status", "active")
+                "status": request.form.get("status", "active"),
             }
-            photo_file = request.files.get('photo')
+            photo_file = request.files.get("photo")
         else:
             data = request.get_json()
             photo_file = None
@@ -185,18 +200,20 @@ def create_new_center() -> Tuple:
 def update_existing_center(center_id: int) -> Tuple:
     try:
         # Check if request is multipart/form-data for file upload
-        if request.content_type and 'multipart/form-data' in request.content_type:
+        if request.content_type and "multipart/form-data" in request.content_type:
             data = {
                 "center_name": request.form.get("center_name"),
                 "address": request.form.get("address"),
                 "capacity": request.form.get("capacity", type=int),
                 "current_occupancy": request.form.get("current_occupancy", type=int),
-                "status": request.form.get("status")
+                "status": request.form.get("status"),
             }
             # Remove None values
             data = {k: v for k, v in data.items() if v is not None}
-            photo_file = request.files.get('photo')
-            remove_photo = request.form.get('remove_photo') == 'true'  # This should be working
+            photo_file = request.files.get("photo")
+            remove_photo = (
+                request.form.get("remove_photo") == "true"
+            )  # This should be working
         else:
             data = request.get_json()
             photo_file = None
@@ -205,9 +222,13 @@ def update_existing_center(center_id: int) -> Tuple:
         if not data and not photo_file and not remove_photo:
             return jsonify({"success": False, "message": "No data provided"}), 400
 
-        logger.info("Updating center with ID: %s, remove_photo: %s", center_id, remove_photo)
+        logger.info(
+            "Updating center with ID: %s, remove_photo: %s", center_id, remove_photo
+        )
 
-        result = update_center(center_id, data, photo_file, remove_photo)  # This calls the service
+        result = update_center(
+            center_id, data, photo_file, remove_photo
+        )  # This calls the service
 
         if not result["success"]:
             return jsonify(result), 400

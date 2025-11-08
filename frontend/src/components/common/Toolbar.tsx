@@ -3,7 +3,13 @@
 import { useRef, useEffect, memo } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
+import {
+    Select,
+    SelectTrigger,
+    SelectValue,
+    SelectContent,
+    SelectItem,
+} from "@/components/ui/select";
 import { Search, Plus } from "lucide-react";
 
 interface TableToolbarProps {
@@ -55,16 +61,12 @@ function TableToolbarComponent({
                         type="text"
                         placeholder={searchPlaceholder}
                         value={searchQuery}
-                        onChange={(e) => onSearchChange(e.target.value)}
+                        onChange={e => onSearchChange(e.target.value)}
                         className="w-full pl-9"
                         disabled={loading}
                     />
                 </div>
-                <Button 
-                    onClick={onAddItem} 
-                    disabled={loading}
-                    className="flex items-center gap-2"
-                >
+                <Button onClick={onAddItem} disabled={loading} className="flex items-center gap-2">
                     <Plus className="h-4 w-4" />
                     {addButtonText}
                 </Button>
@@ -74,9 +76,7 @@ function TableToolbarComponent({
             <div className="flex items-center gap-4">
                 {/* Additional Filters */}
                 {additionalFilters && (
-                    <div className="flex items-center gap-2">
-                        {additionalFilters}
-                    </div>
+                    <div className="flex items-center gap-2">{additionalFilters}</div>
                 )}
 
                 {/* Entries per page selector */}
@@ -92,7 +92,7 @@ function TableToolbarComponent({
                                 <SelectValue placeholder="Entries" />
                             </SelectTrigger>
                             <SelectContent>
-                                {[10, 20, 50, 100].map((count) => (
+                                {[10, 20, 50, 100].map(count => (
                                     <SelectItem key={count} value={count.toString()}>
                                         {count}
                                     </SelectItem>

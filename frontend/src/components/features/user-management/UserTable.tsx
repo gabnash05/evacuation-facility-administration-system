@@ -60,7 +60,12 @@ export function UserTable({ data, sortConfig, onSort, loading }: UserTableProps)
     const headers = [
         { key: "email", label: "Email", sortable: true, width: columnWidths.email },
         { key: "role", label: "Role", sortable: true, width: columnWidths.role },
-        { key: "center_name", label: "Assigned Center", sortable: true, width: columnWidths.center_name },
+        {
+            key: "center_name",
+            label: "Assigned Center",
+            sortable: true,
+            width: columnWidths.center_name,
+        },
         { key: "status", label: "Status", sortable: true, width: columnWidths.status },
         { key: "actions", label: "Action", sortable: false, width: columnWidths.actions },
     ];
@@ -81,16 +86,16 @@ export function UserTable({ data, sortConfig, onSort, loading }: UserTableProps)
     };
 
     const getStatusStyles = (isActive: boolean) => {
-        return isActive 
+        return isActive
             ? "bg-green-100 text-green-700 border-green-100 dark:bg-green-900 dark:text-green-200 dark:border-green-900"
             : "bg-gray-100 text-gray-700 border-gray-100 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-800";
     };
 
     const formatDate = (dateString: string) => {
-        return new Date(dateString).toLocaleDateString('en-US', {
-            year: 'numeric',
-            month: 'short',
-            day: 'numeric'
+        return new Date(dateString).toLocaleDateString("en-US", {
+            year: "numeric",
+            month: "short",
+            day: "numeric",
         });
     };
 
@@ -168,9 +173,7 @@ export function UserTable({ data, sortConfig, onSort, loading }: UserTableProps)
                                 style={{ width: "100%" }}
                             >
                                 <div className="text-muted-foreground flex flex-col items-center justify-center">
-                                    <div className="text-lg font-medium mb-2">
-                                        No users found
-                                    </div>
+                                    <div className="text-lg font-medium mb-2">No users found</div>
                                     <div className="text-sm">
                                         Add your first user to get started
                                     </div>
@@ -206,7 +209,7 @@ export function UserTable({ data, sortConfig, onSort, loading }: UserTableProps)
                                     >
                                         <div className="flex items-center">
                                             {getRoleIcon(user.role)}
-                                            {user.role.replace('_', ' ')}
+                                            {user.role.replace("_", " ")}
                                         </div>
                                     </Badge>
                                 </TableCell>
@@ -254,7 +257,9 @@ export function UserTable({ data, sortConfig, onSort, loading }: UserTableProps)
                                                 Edit
                                             </DropdownMenuItem>
                                             <DropdownMenuItem
-                                                onClick={() => handleDeactivate(user.user_id, user.is_active)}
+                                                onClick={() =>
+                                                    handleDeactivate(user.user_id, user.is_active)
+                                                }
                                             >
                                                 <Users className="h-4 w-4 mr-2" />
                                                 {user.is_active ? "Deactivate" : "Activate"}

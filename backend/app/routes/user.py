@@ -6,9 +6,14 @@ from typing import Tuple
 from flask import Blueprint, jsonify, request
 from flask_jwt_extended import jwt_required
 
-from app.services.user_service import (create_user, delete_user,
-                                      get_user_by_id, get_users,
-                                      update_user, deactivate_user)
+from app.services.user_service import (
+    create_user,
+    delete_user,
+    get_user_by_id,
+    get_users,
+    update_user,
+    deactivate_user,
+)
 
 # Configure logger for this module
 logger = logging.getLogger(__name__)
@@ -48,14 +53,26 @@ def get_all_users() -> Tuple:
 
         # Validate pagination parameters
         if page < 1:
-            return jsonify({"success": False, "message": "Page must be at least 1"}), 400
-        
+            return (
+                jsonify({"success": False, "message": "Page must be at least 1"}),
+                400,
+            )
+
         if limit < 1 or limit > 100:
-            return jsonify({"success": False, "message": "Limit must be between 1 and 100"}), 400
+            return (
+                jsonify(
+                    {"success": False, "message": "Limit must be between 1 and 100"}
+                ),
+                400,
+            )
 
         logger.info(
             "Fetching users - search: %s, role: %s, status: %s, page: %s, limit: %s",
-            search, role, status, page, limit
+            search,
+            role,
+            status,
+            page,
+            limit,
         )
 
         # Get users from service
@@ -66,7 +83,7 @@ def get_all_users() -> Tuple:
             page=page,
             limit=limit,
             sort_by=sort_by,
-            sort_order=sort_order
+            sort_order=sort_order,
         )
 
         if not result["success"]:

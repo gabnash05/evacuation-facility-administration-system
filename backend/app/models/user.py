@@ -55,14 +55,14 @@ class User(db.Model):
 
         # Remove center_name from the row_dict before creating User object
         # since it's not a database column in the users table
-        center_name = row_dict.pop('center_name', None)
-        
+        center_name = row_dict.pop("center_name", None)
+
         user = cls(**row_dict)
-        
+
         # Add center_name as an attribute for serialization
         if center_name is not None:
             user.center_name = center_name
-            
+
         return user
 
     @classmethod
@@ -235,7 +235,7 @@ class User(db.Model):
         page: int = 1,
         limit: int = 10,
         sort_by: Optional[str] = None,
-        sort_order: Optional[str] = "asc"
+        sort_order: Optional[str] = "asc",
     ) -> Dict[str, Any]:
         """Get all users with pagination, search, and sorting."""
         # Base query with join to get center name
@@ -294,7 +294,9 @@ class User(db.Model):
 
         # Add sorting
         if sort_by and sort_by in ["email", "role", "is_active", "created_at"]:
-            order_direction = "DESC" if sort_order and sort_order.lower() == "desc" else "ASC"
+            order_direction = (
+                "DESC" if sort_order and sort_order.lower() == "desc" else "ASC"
+            )
             select_query += f" ORDER BY u.{sort_by} {order_direction}"
         else:
             select_query += " ORDER BY u.created_at DESC"
@@ -315,16 +317,16 @@ class User(db.Model):
                 row_dict = row._asdict()
             except AttributeError:
                 row_dict = dict(row)
-            
+
             # Extract center_name before creating User object
-            center_name = row_dict.pop('center_name', None)
-            
+            center_name = row_dict.pop("center_name", None)
+
             # Create User object with only the fields that match the model
             user = cls(**row_dict)
-            
+
             # Store center_name as an attribute for serialization
             user.center_name = center_name
-            
+
             users_with_center.append(user)
 
         return {
@@ -332,7 +334,7 @@ class User(db.Model):
             "total_count": total_count,
             "page": page,
             "limit": limit,
-            "total_pages": (total_count + limit - 1) // limit
+            "total_pages": (total_count + limit - 1) // limit,
         }
 
     @classmethod

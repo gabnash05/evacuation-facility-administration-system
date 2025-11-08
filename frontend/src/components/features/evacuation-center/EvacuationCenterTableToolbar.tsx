@@ -3,7 +3,13 @@
 import { useRef, useEffect, memo } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
+import {
+    Select,
+    SelectTrigger,
+    SelectValue,
+    SelectContent,
+    SelectItem,
+} from "@/components/ui/select";
 
 interface EvacuationCenterTableToolbarProps {
     searchQuery: string;
@@ -44,7 +50,7 @@ function EvacuationCenterTableToolbarComponent({
                     type="text"
                     placeholder="Search"
                     value={searchQuery}
-                    onChange={(e) => onSearchChange(e.target.value)}
+                    onChange={e => onSearchChange(e.target.value)}
                     className="w-full md:w-64"
                 />
                 <Button onClick={onAddCenter} disabled={loading}>
@@ -64,7 +70,7 @@ function EvacuationCenterTableToolbarComponent({
                         <SelectValue placeholder="Entries" />
                     </SelectTrigger>
                     <SelectContent>
-                        {[10, 20, 50, 100].map((count) => (
+                        {[10, 20, 50, 100].map(count => (
                             <SelectItem key={count} value={count.toString()}>
                                 {count}
                             </SelectItem>

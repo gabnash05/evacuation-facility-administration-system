@@ -17,11 +17,7 @@ interface DuplicateCenterDialogProps {
     centerName: string;
 }
 
-export function DuplicateCenterDialog({
-    isOpen,
-    onClose,
-    centerName,
-}: DuplicateCenterDialogProps) {
+export function DuplicateCenterDialog({ isOpen, onClose, centerName }: DuplicateCenterDialogProps) {
     return (
         <Dialog open={isOpen} onOpenChange={onClose}>
             <DialogContent className="sm:max-w-md">
@@ -45,16 +41,14 @@ export function DuplicateCenterDialog({
 
                 <div className="py-4">
                     <p className="text-sm text-muted-foreground">
-                        An evacuation center with the name <strong className="font-semibold text-foreground">"{centerName}"</strong> already exists in the system.
+                        An evacuation center with the name{" "}
+                        <strong className="font-semibold text-foreground">"{centerName}"</strong>{" "}
+                        already exists in the system.
                     </p>
                 </div>
 
                 <DialogFooter>
-                    <Button
-                        type="button"
-                        onClick={onClose}
-                        className="mt-2 sm:mt-0"
-                    >
+                    <Button type="button" onClick={onClose} className="mt-2 sm:mt-0">
                         OK
                     </Button>
                 </DialogFooter>

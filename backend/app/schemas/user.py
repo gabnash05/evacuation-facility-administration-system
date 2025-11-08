@@ -118,7 +118,7 @@ class UserUpdateSchema(Schema):
 
 class UserResponseSchema(Schema):
     """Schema for user response data."""
-    
+
     user_id = fields.Int(dump_only=True)
     email = fields.Str(required=True)
     role = fields.Str(required=True)
@@ -127,7 +127,7 @@ class UserResponseSchema(Schema):
     created_at = fields.DateTime(dump_only=True)
     updated_at = fields.DateTime(dump_only=True)
     center_name = fields.Str(allow_none=True, dump_only=True)  # Add this line
-    
+
     class Meta:
         ordered = True
 

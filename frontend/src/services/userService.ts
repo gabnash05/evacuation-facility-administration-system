@@ -1,5 +1,5 @@
 import { api, handleApiError } from "./api";
-import type { UsersResponse, GetUsersParams } from '@/types/user';
+import type { UsersResponse, GetUsersParams } from "@/types/user";
 import type { CreateUserFormData, UpdateUserFormData } from "@/schemas/user";
 
 export class UserService {
@@ -61,9 +61,13 @@ export class UserService {
 
     static async deactivateUser(id: number): Promise<UsersResponse> {
         try {
-            const response = await api.patch<UsersResponse>(`/users/${id}/deactivate`, {}, {
-                withCredentials: true,
-            });
+            const response = await api.patch<UsersResponse>(
+                `/users/${id}/deactivate`,
+                {},
+                {
+                    withCredentials: true,
+                }
+            );
             return response.data;
         } catch (error) {
             throw new Error(handleApiError(error));

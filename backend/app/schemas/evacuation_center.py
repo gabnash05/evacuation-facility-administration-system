@@ -8,26 +8,32 @@ class EvacuationCenterCreateSchema(Schema):
 
     center_name = fields.String(
         required=True,
-        validate=validate.Length(min=1, max=255, error="Center name must be between 1 and 255 characters")
+        validate=validate.Length(
+            min=1, max=255, error="Center name must be between 1 and 255 characters"
+        ),
     )
     address = fields.String(
         required=True,
-        validate=validate.Length(min=1, max=255, error="Address must be between 1 and 255 characters")
+        validate=validate.Length(
+            min=1, max=255, error="Address must be between 1 and 255 characters"
+        ),
     )
     capacity = fields.Integer(
         required=True,
-        validate=validate.Range(min=1, max=10000, error="Capacity must be between 1 and 10000")
+        validate=validate.Range(
+            min=1, max=10000, error="Capacity must be between 1 and 10000"
+        ),
     )
     current_occupancy = fields.Integer(
         load_default=0,
-        validate=validate.Range(min=0, error="Current occupancy cannot be negative")
+        validate=validate.Range(min=0, error="Current occupancy cannot be negative"),
     )
     status = fields.String(
         load_default="active",
         validate=validate.OneOf(
             ["active", "inactive", "closed"],
-            error="Status must be one of: active, inactive, closed"
-        )
+            error="Status must be one of: active, inactive, closed",
+        ),
     )
     photo_data = fields.String(required=False)  # For base64 image data
 
@@ -37,26 +43,32 @@ class EvacuationCenterUpdateSchema(Schema):
 
     center_name = fields.String(
         allow_none=True,
-        validate=validate.Length(min=1, max=255, error="Center name must be between 1 and 255 characters")
+        validate=validate.Length(
+            min=1, max=255, error="Center name must be between 1 and 255 characters"
+        ),
     )
     address = fields.String(
         allow_none=True,
-        validate=validate.Length(min=1, max=255, error="Address must be between 1 and 255 characters")
+        validate=validate.Length(
+            min=1, max=255, error="Address must be between 1 and 255 characters"
+        ),
     )
     capacity = fields.Integer(
         allow_none=True,
-        validate=validate.Range(min=1, max=10000, error="Capacity must be between 1 and 10000")
+        validate=validate.Range(
+            min=1, max=10000, error="Capacity must be between 1 and 10000"
+        ),
     )
     current_occupancy = fields.Integer(
         allow_none=True,
-        validate=validate.Range(min=0, error="Current occupancy cannot be negative")
+        validate=validate.Range(min=0, error="Current occupancy cannot be negative"),
     )
     status = fields.String(
         allow_none=True,
         validate=validate.OneOf(
             ["active", "inactive", "closed"],
-            error="Status must be one of: active, inactive, closed"
-        )
+            error="Status must be one of: active, inactive, closed",
+        ),
     )
     photo_data = fields.String(allow_none=True)  # This must allow None values
 
