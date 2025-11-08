@@ -16,6 +16,8 @@ def create_app(config_class=Config):
     app = Flask(__name__)
     app.config.from_object(config_class)
 
+    app.url_map.strict_slashes = False
+
     # Configure logging
     logging.basicConfig(level=logging.INFO, format="%(asctime)s: %(message)s")
 
@@ -31,13 +33,19 @@ def create_app(config_class=Config):
 
     # Register blueprints
     from app.routes.auth import auth_bp
-    from app.routes.households import households_bp
+
     from app.routes.evacuation_centers import evacuation_center_bp
-    from app.routes.individuals import individuals_bp # <-- THIS LINE WAS MISSING
+    from app.routes.events import event_bp
+    from app.routes.households import households_bp
+
+    # from app.routes.individuals import individuals_bp
+    from app.routes.user import user_bp
 
     app.register_blueprint(auth_bp, url_prefix="/api")
     app.register_blueprint(households_bp, url_prefix="/api")
+    app.register_blueprint(event_bp, url_prefix="/api")
     app.register_blueprint(evacuation_center_bp, url_prefix="/api")
-    app.register_blueprint(individuals_bp, url_prefix="/api") # <-- THIS LINE WAS MISSING
+    # app.register_blueprint(individuals_bp)
+    app.register_blueprint(user_bp, url_prefix="/api")
 
     return app

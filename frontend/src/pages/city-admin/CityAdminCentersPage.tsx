@@ -1,9 +1,10 @@
-"use client";
 
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { EvacuationCenterTable } from "@/components/features/evacuation-center/EvacuationCenterTable";
 import { EvacuationCenterTableToolbar } from "@/components/features/evacuation-center/EvacuationCenterTableToolbar";
-import { EvacuationCenterTablePagination } from "@/components/features/evacuation-center/EvacuationCenterTablePagination";
+import { TablePagination } from "@/components/common/TablePagination";
+import { AddEvacuationCenterForm } from "@/components/features/evacuation-center/AddEvacuationCenterForm";
+import { SuccessToast } from "@/components/features/evacuation-center/SuccessToast";
 import { useEvacuationCenterStore } from "@/store/evacuationCenterStore";
 import { debounce } from "@/utils/helpers";
 
@@ -22,9 +23,13 @@ export function CityAdminCentersPage() {
         setEntriesPerPage,
         setSortConfig,
         fetchCenters,
-        addCenter,
     } = useEvacuationCenterStore();
 
+    const [isAddFormOpen, setIsAddFormOpen] = useState(false);
+    const [successToast, setSuccessToast] = useState({
+        isOpen: false,
+        message: "",
+    });
 
     const debouncedFetchCenters = useMemo(
         () => debounce(() => fetchCenters(), 500),
@@ -60,9 +65,11 @@ export function CityAdminCentersPage() {
     };
 
     const handleAddCenter = () => {
-        console.log("Add Center clicked");
-        // Implementation for adding a new center
-        // This would typically open a modal or navigate to a form
+        setIsAddFormOpen(true);
+    };
+
+    const handleCloseForm = () => {
+        setIsAddFormOpen(false);
     };
 
     const handleEntriesPerPageChange = (entries: number) => {
@@ -75,6 +82,14 @@ export function CityAdminCentersPage() {
 
     const handlePageChange = (page: number) => {
         setCurrentPage(page);
+    };
+
+    const handleToastClose = () => {
+        setSuccessToast({ isOpen: false, message: "" });
+    };
+
+    const showSuccessToast = (message: string) => {
+        setSuccessToast({ isOpen: true, message });
     };
 
     return (
@@ -98,7 +113,7 @@ export function CityAdminCentersPage() {
                 )}
 
                 {/* Main Table Card */}
-                <div className="border border-border">
+                <div className="border border-border rounded-lg">
                     {/* Card Header */}
                     <div className="bg-card border-b border-border p-4">
                         <h3 className="font-semibold text-base text-foreground">Center List</h3>
@@ -128,13 +143,14 @@ export function CityAdminCentersPage() {
                                 sortConfig={sortConfig}
                                 onSort={handleSort}
                                 loading={loading}
+                                onShowSuccessToast={showSuccessToast}
                             />
                         )}
                     </div>
 
                     {/* Pagination Section */}
                     <div className="bg-card p-4">
-                        <EvacuationCenterTablePagination
+                        <TablePagination
                             currentPage={currentPage}
                             entriesPerPage={entriesPerPage}
                             totalEntries={pagination?.total_items || 0}
@@ -144,6 +160,20 @@ export function CityAdminCentersPage() {
                     </div>
                 </div>
             </div>
+
+            {/* Add Center Form Modal */}
+            <AddEvacuationCenterForm
+                isOpen={isAddFormOpen}
+                onClose={handleCloseForm}
+                onShowSuccessToast={showSuccessToast}
+            />
+
+            {/* Global Success Toast */}
+            <SuccessToast
+                isOpen={successToast.isOpen}
+                message={successToast.message}
+                onClose={handleToastClose}
+            />
         </div>
     );
 }
