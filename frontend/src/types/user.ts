@@ -1,18 +1,25 @@
-import type { ApiResponse, PaginatedResponse } from "./api";
+import type { ApiResponse, PaginatedResponse, SearchParams } from "./api";
 
 export type UserRole = "super_admin" | "city_admin" | "center_admin" | "volunteer";
 
 export interface User {
-    id: number;
+    user_id: number;
     email: string;
     role: UserRole;
-    centerId?: number | null;
-    isActive: boolean;
-    createdAt?: string;
+    center_id?: number | null;
+    center_name?: string | null;
+    is_active: boolean;
+    created_at?: string;
+    updated_at?: string;
 }
 
 export interface AuthResponse {
     role: UserRole;
+}
+
+export interface GetUsersParams extends SearchParams {
+    role?: UserRole;
+    isActive?: boolean;
 }
 
 // API Response types

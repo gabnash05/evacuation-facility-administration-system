@@ -19,6 +19,7 @@ class EvacuationCenter(db.Model):
     capacity = db.Column(db.Integer, nullable=False)
     status = db.Column(db.String(20), nullable=False, default="active")
     current_occupancy = db.Column(db.Integer, nullable=False, default=0)
+    photo_data = db.Column(db.Text, nullable=True)  # Store base64 image data
     created_at = db.Column(db.DateTime, default=db.func.now())
     updated_at = db.Column(db.DateTime, default=db.func.now(), onupdate=db.func.now())
 
@@ -66,7 +67,7 @@ class EvacuationCenter(db.Model):
         page: int = 1,
         limit: int = 10,
         sort_by: Optional[str] = None,
-        sort_order: Optional[str] = "asc"
+        sort_order: Optional[str] = "asc",
     ) -> Dict[str, Any]:
         """Get all centers with pagination, search, and sorting."""
         # Base query
@@ -76,8 +77,8 @@ class EvacuationCenter(db.Model):
 
         # Add search filter
         if search:
-            base_query += " AND (center_name ILIKE :search OR address ILIKE :search)"
-            count_query += " AND (center_name ILIKE :search OR address ILIKE :search)"
+            base_query += " AND (LOWER(center_name) LIKE LOWER(:search) OR LOWER(address) LIKE LOWER(:search))"
+            count_query += " AND (LOWER(center_name) LIKE LOWER(:search) OR LOWER(address) LIKE LOWER(:search))"
             params["search"] = f"%{search}%"
 
         # Add status filter
@@ -94,8 +95,17 @@ class EvacuationCenter(db.Model):
         select_query = f"SELECT * {base_query}"
 
         # Add sorting
-        if sort_by and sort_by in ["center_name", "address", "capacity", "current_occupancy", "status", "created_at"]:
-            order_direction = "DESC" if sort_order and sort_order.lower() == "desc" else "ASC"
+        if sort_by and sort_by in [
+            "center_name",
+            "address",
+            "capacity",
+            "current_occupancy",
+            "status",
+            "created_at",
+        ]:
+            order_direction = (
+                "DESC" if sort_order and sort_order.lower() == "desc" else "ASC"
+            )
             select_query += f" ORDER BY {sort_by} {order_direction}"
         else:
             select_query += " ORDER BY created_at DESC"
@@ -109,61 +119,70 @@ class EvacuationCenter(db.Model):
         # Execute query
         results = db.session.execute(text(select_query), params).fetchall()
 
-        centers = [cls._row_to_center(row) for row in results if cls._row_to_center(row)]
+        centers = [
+            cls._row_to_center(row) for row in results if cls._row_to_center(row)
+        ]
 
         return {
             "centers": centers,
             "total_count": total_count,
             "page": page,
             "limit": limit,
-            "total_pages": (total_count + limit - 1) // limit
+            "total_pages": (total_count + limit - 1) // limit,
         }
 
     @classmethod
     def create(cls, data: Dict[str, Any]) -> "EvacuationCenter":
         """Create a new evacuation center using raw SQL."""
-        result = db.session.execute(
-            text(
-                """  
-                INSERT INTO evacuation_centers (center_name, address, capacity, status, current_occupancy)
-                VALUES (:center_name, :address, :capacity, :status, :current_occupancy)
-                RETURNING center_id, created_at, updated_at
-                """
-            ),
-            {
-                "center_name": data["center_name"],
-                "address": data["address"],
-                "capacity": data["capacity"],
-                "status": data.get("status", "active"),
-                "current_occupancy": data.get("current_occupancy", 0),
-            },
-        ).fetchone()
+        # Build the query dynamically to include photo_data if present
+        fields = []
+        values = []
+        params = {}
 
+        for field in [
+            "center_name",
+            "address",
+            "capacity",
+            "status",
+            "current_occupancy",
+            "photo_data",
+        ]:
+            if field in data and data[field] is not None:
+                fields.append(field)
+                values.append(f":{field}")
+                params[field] = data[field]
+
+        if not fields:
+            raise ValueError("No data provided to create center")
+
+        query = text(
+            f"""  
+            INSERT INTO evacuation_centers ({', '.join(fields)})
+            VALUES ({', '.join(values)})
+            RETURNING center_id, created_at, updated_at
+            """
+        )
+
+        result = db.session.execute(query, params).fetchone()
         db.session.commit()
 
         result_dict = result._asdict()
 
-        center = cls(
-            center_id=result_dict["center_id"],
-            center_name=data["center_name"],
-            address=data["address"],
-            capacity=data["capacity"],
-            status=data.get("status", "active"),
-            current_occupancy=data.get("current_occupancy", 0),
-            created_at=result_dict["created_at"],
-            updated_at=result_dict["updated_at"],
-        )
-        return center
+        # Create center object with all data
+        center_data = {**data, **result_dict}
+        return cls(**center_data)
 
     @classmethod
-    def update(cls, center_id: int, update_data: Dict[str, Any]) -> Optional["EvacuationCenter"]:
+    def update(
+        cls, center_id: int, update_data: Dict[str, Any]
+    ) -> Optional["EvacuationCenter"]:
         """Update center information using raw SQL."""
         # Build dynamic UPDATE query
         set_clauses = []
         params = {"center_id": center_id}
 
         for field, value in update_data.items():
-            if value is not None and field != "center_id":  # Prevent ID modification
+            if field != "center_id":  # Prevent ID modification
                 set_clauses.append(f"{field} = :{field}")
                 params[field] = value
 
@@ -193,7 +212,7 @@ class EvacuationCenter(db.Model):
         result = db.session.execute(
             text(
                 """  
-                DELETE FROM evacuation_centers 
+                DELETE FROM evacuation_centers
                 WHERE center_id = :center_id 
                 RETURNING center_id
                 """
@@ -205,7 +224,9 @@ class EvacuationCenter(db.Model):
         return result is not None
 
     @classmethod
-    def update_occupancy(cls, center_id: int, new_occupancy: int) -> Optional["EvacuationCenter"]:
+    def update_occupancy(
+        cls, center_id: int, new_occupancy: int
+    ) -> Optional["EvacuationCenter"]:
         """Update current occupancy of a center with validation."""
         center = cls.get_by_id(center_id)
         if not center:
@@ -213,7 +234,5 @@ class EvacuationCenter(db.Model):
 
         if new_occupancy < 0:
             raise ValueError("Occupancy cannot be negative")
-        if new_occupancy > center.capacity:
-            raise ValueError("Occupancy cannot exceed capacity")
 
         return cls.update(center_id, {"current_occupancy": new_occupancy})

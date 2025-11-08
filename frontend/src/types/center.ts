@@ -11,6 +11,7 @@ export interface EvacuationCenter {
     current_occupancy: number;
     created_at: string;
     updated_at?: string;
+    photo_data?: string; // Change from photo_url to photo_data for base64
 }
 
 export interface CreateCenterData {
@@ -18,6 +19,7 @@ export interface CreateCenterData {
     address: string;
     capacity: number;
     status?: CenterStatus;
+    photo?: File;
 }
 
 export interface UpdateCenterData {
@@ -26,6 +28,7 @@ export interface UpdateCenterData {
     capacity?: number;
     status?: CenterStatus;
     current_occupancy?: number;
+    photo?: File;
 }
 
 export interface GetCentersParams extends SearchParams {
