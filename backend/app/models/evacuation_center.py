@@ -69,7 +69,6 @@ class EvacuationCenter(db.Model):
         sort_by: Optional[str] = None,
         sort_order: Optional[str] = "asc",
     ) -> Dict[str, Any]:
-        """Get all centers with pagination, search, and sorting."""
         # Base query
         base_query = "FROM evacuation_centers WHERE 1=1"
         count_query = "SELECT COUNT(*) as total_count FROM evacuation_centers WHERE 1=1"
@@ -94,8 +93,12 @@ class EvacuationCenter(db.Model):
         # Build main query
         select_query = f"SELECT * {base_query}"
 
-        # Add sorting
-        if sort_by and sort_by in [
+        # Add sorting - handle usage as a special case
+        if sort_by == "usage":
+            # Calculate usage percentage in the ORDER BY clause
+            order_direction = "DESC" if sort_order and sort_order.lower() == "desc" else "ASC"
+            select_query += f" ORDER BY (current_occupancy * 100.0 / NULLIF(capacity, 0)) {order_direction}"
+        elif sort_by and sort_by in [
             "center_name",
             "address",
             "capacity",
@@ -103,9 +106,7 @@ class EvacuationCenter(db.Model):
             "status",
             "created_at",
         ]:
-            order_direction = (
-                "DESC" if sort_order and sort_order.lower() == "desc" else "ASC"
-            )
+            order_direction = "DESC" if sort_order and sort_order.lower() == "desc" else "ASC"
             select_query += f" ORDER BY {sort_by} {order_direction}"
         else:
             select_query += " ORDER BY created_at DESC"

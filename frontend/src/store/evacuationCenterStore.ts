@@ -126,6 +126,16 @@ export const useEvacuationCenterStore = create<EvacuationCenterState>((set, get)
     deleteCenter: async (id: number) => {
         try {
             await EvacuationCenterService.deleteCenter(id);
+            
+            // Get current state to check pagination
+            const { centers, currentPage} = get();
+            
+            // If this was the last item on the current page and we're not on page 1
+            if (centers.length === 1 && currentPage > 1) {
+                // Decrement the page before fetching
+                set({ currentPage: currentPage - 1 });
+            }
+            
             await get().fetchCenters(); // Refresh the list
         } catch (error) {
             throw new Error(error instanceof Error ? error.message : "Failed to delete center");

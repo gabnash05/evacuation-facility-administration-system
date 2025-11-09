@@ -5,7 +5,9 @@ from typing import Tuple
 
 from flask import Blueprint, jsonify, request
 from flask_jwt_extended import jwt_required
+from sqlalchemy import text
 
+from app.models import db  # Add this import
 from app.services.evacuation_center_service import (
     create_center,
     delete_center,
@@ -134,6 +136,38 @@ def get_center(center_id: int) -> Tuple:
             ),
             500,
         )
+
+
+@evacuation_center_bp.route("/evacuation_centers/<int:center_id>/events", methods=["GET"])
+@jwt_required()
+def get_center_events(center_id: int):
+    """
+    Get all events associated with a specific evacuation center.
+    Uses the event_centers junction table for efficient querying.
+    """
+    try:
+        # Direct SQL query using the event_centers junction table
+        query = """
+            SELECT e.* 
+            FROM events e
+            JOIN event_centers ec ON e.event_id = ec.event_id
+            WHERE ec.center_id = :center_id
+            ORDER BY e.date_declared DESC
+        """
+        result = db.session.execute(text(query), {"center_id": center_id})
+        events = [dict(row._mapping) for row in result.fetchall()]
+        
+        return jsonify({
+            "success": True,
+            "data": events
+        }), 200
+        
+    except Exception as error:
+        logger.error("Error fetching center events: %s", str(error))
+        return jsonify({
+            "success": False,
+            "message": "Failed to fetch center events"
+        }), 500
 
 
 @evacuation_center_bp.route("/evacuation_centers", methods=["POST"])
