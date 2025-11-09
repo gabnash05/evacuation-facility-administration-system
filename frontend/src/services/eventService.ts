@@ -55,7 +55,7 @@ export class EventService {
             date_declared?: string;
             end_date?: string | null;
             status?: string;
-            center_ids?: number[]; 
+            center_ids?: number[];
         }
     ): Promise<{ success: boolean; data: Event }> {
         try {
@@ -181,7 +181,6 @@ export class EventService {
             throw new Error(handleApiError(error));
         }
     }
-
 }
 
 // Export a default instance for backward compatibility

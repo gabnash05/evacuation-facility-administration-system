@@ -119,7 +119,7 @@ def get_center_by_id(center_id: int) -> Dict[str, Any]:
 def get_all_centers() -> Dict[str, Any]:
     """
     Get all evacuation centers without pagination for dropdowns and maps.
-    
+
     Returns:
         Dictionary containing:
             - success: Boolean indicating operation success
@@ -129,46 +129,42 @@ def get_all_centers() -> Dict[str, Any]:
     try:
         # Get all centers without pagination - this returns a DICT, not a list
         result = EvacuationCenter.get_all_centers_no_pagination()
-        
+
         # Extract centers from the result dictionary
         centers_list = result["centers"]
-        
+
         # Convert centers to dictionaries
         centers_data = []
         for center in centers_list:
             try:
-                if hasattr(center, 'to_dict'):
+                if hasattr(center, "to_dict"):
                     center_dict = center.to_dict()
                     centers_data.append(center_dict)
                 else:
                     # Fallback manual conversion
                     center_dict = {
-                        'center_id': getattr(center, 'center_id', None),
-                        'center_name': getattr(center, 'center_name', 'Unknown'),
-                        'address': getattr(center, 'address', ''),
-                        'capacity': getattr(center, 'capacity', 0),
-                        'current_occupancy': getattr(center, 'current_occupancy', 0),
-                        'status': getattr(center, 'status', 'inactive'),
-                        'photo_data': getattr(center, 'photo_data', None),
+                        "center_id": getattr(center, "center_id", None),
+                        "center_name": getattr(center, "center_name", "Unknown"),
+                        "address": getattr(center, "address", ""),
+                        "capacity": getattr(center, "capacity", 0),
+                        "current_occupancy": getattr(center, "current_occupancy", 0),
+                        "status": getattr(center, "status", "inactive"),
+                        "photo_data": getattr(center, "photo_data", None),
                     }
                     centers_data.append(center_dict)
             except Exception as center_error:
                 logger.error(f"Error converting center: {str(center_error)}")
                 continue
-        
+
         return {
             "success": True,
             "message": f"Successfully retrieved {len(centers_data)} centers",
-            "data": centers_data
+            "data": centers_data,
         }
-        
+
     except Exception as error:
         logger.error("Error retrieving all centers: %s", str(error))
-        return {
-            "success": False,
-            "message": "Failed to retrieve centers",
-            "data": []
-        }
+        return {"success": False, "message": "Failed to retrieve centers", "data": []}
 
 
 def create_center(data: Dict[str, Any], photo_file=None) -> Dict[str, Any]:

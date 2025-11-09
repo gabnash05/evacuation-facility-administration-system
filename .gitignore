@@ -77,6 +77,9 @@ env/
 # Flask
 instance/
 
+# Built frontend static files (build artifacts)
+backend/app/static/
+
 # Database
 *.db
 *.sqlite3

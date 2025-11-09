@@ -176,16 +176,16 @@ class Event(db.Model):
         """Update event information using raw SQL."""
         # Check if we're updating the status to 'resolved'
         is_updating_to_resolved = (
-            update_data.get('status') == 'resolved' and 
-            update_data.get('status') is not None
+            update_data.get("status") == "resolved"
+            and update_data.get("status") is not None
         )
-        
+
         # Get current event data before update to check previous status
         current_event = cls.get_by_id(event_id)
-        
+
         # Extract center_ids from update_data before building the UPDATE query
-        center_ids = update_data.pop('center_ids', None)
-        
+        center_ids = update_data.pop("center_ids", None)
+
         # Build dynamic UPDATE query (only for event table fields)
         set_clauses = []
         params = {"event_id": event_id}
@@ -211,7 +211,7 @@ class Event(db.Model):
         )
 
         result = db.session.execute(query, params).fetchone()
-        
+
         # Handle center associations if provided
         if center_ids is not None:  # Changed from "center_ids" in update_data
             from .event import EventCenter
@@ -221,11 +221,15 @@ class Event(db.Model):
             # Add new centers
             if center_ids:  # Only add if there are centers
                 EventCenter.add_centers(event_id, center_ids)
-        
+
         # If we're updating the status to 'resolved', handle center status changes
-        if is_updating_to_resolved and current_event and current_event.status != 'resolved':
+        if (
+            is_updating_to_resolved
+            and current_event
+            and current_event.status != "resolved"
+        ):
             cls._handle_event_resolved(event_id)
-        
+
         db.session.commit()
         return cls._row_to_event(result)
 
@@ -234,11 +238,12 @@ class Event(db.Model):
         """Handle center status changes when an event is resolved."""
         # Get all centers associated with this event
         from .event import EventCenter
+
         centers = EventCenter.get_centers_by_event(event_id)
-        
+
         for center in centers:
-            center_id = center['center_id']
-            
+            center_id = center["center_id"]
+
             # Check if center is associated with any other active events
             result = db.session.execute(
                 text(
@@ -252,7 +257,7 @@ class Event(db.Model):
                 ),
                 {"center_id": center_id, "event_id": event_id},
             ).scalar()
-            
+
             # If center is not associated with any other active events, set status to 'inactive'
             if result == 0:
                 db.session.execute(
@@ -335,7 +340,7 @@ class EventCenter(db.Model):
                 ),
                 {"event_id": event_id, "center_id": center_id},
             )
-            
+
             # Update center status to 'active'
             db.session.execute(
                 text(
@@ -347,7 +352,7 @@ class EventCenter(db.Model):
                 ),
                 {"center_id": center_id},
             )
-        
+
         db.session.commit()
 
     @classmethod
@@ -361,7 +366,7 @@ class EventCenter(db.Model):
                     ),
                     {"event_id": event_id, "center_id": center_id},
                 )
-                
+
                 # Check if center is still associated with any active events
                 result = db.session.execute(
                     text(
@@ -373,7 +378,7 @@ class EventCenter(db.Model):
                     ),
                     {"center_id": center_id},
                 ).scalar()
-                
+
                 # If center is not associated with any active events, set status to 'inactive'
                 if result == 0:
                     db.session.execute(
@@ -392,17 +397,15 @@ class EventCenter(db.Model):
                 text("DELETE FROM event_centers WHERE event_id = :event_id"),
                 {"event_id": event_id},
             )
-            
+
             # Get all centers that were associated with this event
             centers_result = db.session.execute(
-                text(
-                    "SELECT center_id FROM event_centers WHERE event_id = :event_id"
-                ),
+                text("SELECT center_id FROM event_centers WHERE event_id = :event_id"),
                 {"event_id": event_id},
             ).fetchall()
-            
+
             center_ids_removed = [row[0] for row in centers_result]
-            
+
             # For each center, check if it's still associated with any active events
             for center_id in center_ids_removed:
                 result = db.session.execute(
@@ -415,7 +418,7 @@ class EventCenter(db.Model):
                     ),
                     {"center_id": center_id},
                 ).scalar()
-                
+
                 # If center is not associated with any active events, set status to 'inactive'
                 if result == 0:
                     db.session.execute(
@@ -428,5 +431,5 @@ class EventCenter(db.Model):
                         ),
                         {"center_id": center_id},
                     )
-        
+
         db.session.commit()

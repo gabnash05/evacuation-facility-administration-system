@@ -29,13 +29,13 @@ export function AddCenterModal({ isOpen, onClose, onAddCenters }: AddCenterModal
         centers: availableCenters,
         loading: isLoading,
         error,
-        fetchAllCenters
+        fetchAllCenters,
     } = useEvacuationCenterStore();
 
     useEffect(() => {
         if (isOpen) {
             fetchAllCenters();
-            console.log(availableCenters)
+            console.log(availableCenters);
         }
     }, [isOpen, fetchAllCenters]);
 

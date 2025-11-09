@@ -28,12 +28,12 @@ interface EvacuationCenterDetailsModalProps {
 // Helper function to format date for display
 const formatDateForDisplay = (dateString: string): string => {
     if (!dateString) return "NA";
-    
+
     const date = new Date(dateString);
     if (isNaN(date.getTime())) {
         return dateString;
     }
-    
+
     const day = String(date.getUTCDate()).padStart(2, "0");
     const month = String(date.getUTCMonth() + 1).padStart(2, "0");
     const year = date.getUTCFullYear();
@@ -70,7 +70,7 @@ export function EvacuationCenterDetailsModal({
 
             setLoading(true);
             setError(null);
-            
+
             try {
                 // Use the new endpoint to directly get events for this center
                 // You'll need to add this method to your eventService
@@ -159,19 +159,19 @@ export function EvacuationCenterDetailsModal({
         let bValue: any = b[key as keyof Event];
 
         // Handle date sorting
-        if (key === 'date_declared' || key === 'end_date') {
+        if (key === "date_declared" || key === "end_date") {
             aValue = aValue ? new Date(aValue).getTime() : 0;
             bValue = bValue ? new Date(bValue).getTime() : 0;
         }
 
         // Handle string sorting
-        if (typeof aValue === 'string' && typeof bValue === 'string') {
+        if (typeof aValue === "string" && typeof bValue === "string") {
             aValue = aValue.toLowerCase();
             bValue = bValue.toLowerCase();
         }
 
-        if (aValue < bValue) return direction === 'asc' ? -1 : 1;
-        if (aValue > bValue) return direction === 'asc' ? 1 : -1;
+        if (aValue < bValue) return direction === "asc" ? -1 : 1;
+        if (aValue > bValue) return direction === "asc" ? 1 : -1;
         return 0;
     });
 
@@ -179,10 +179,11 @@ export function EvacuationCenterDetailsModal({
 
     return (
         <Dialog open={isOpen} onOpenChange={onClose}>
-            <DialogContent className="max-w-[85vw] min-w-[85vw] max-h-[90vh] min-h-[85vh] overflow-y-auto"
-                        onOpenAutoFocus={(e) => {
-                        e.preventDefault(); // Prevent any auto-focus
-                        }}
+            <DialogContent
+                className="max-w-[85vw] min-w-[85vw] max-h-[90vh] min-h-[85vh] overflow-y-auto"
+                onOpenAutoFocus={e => {
+                    e.preventDefault(); // Prevent any auto-focus
+                }}
             >
                 <DialogHeader>
                     <DialogTitle className="text-xl font-semibold">
@@ -196,7 +197,9 @@ export function EvacuationCenterDetailsModal({
                     <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
                         {/* Left Side - Photo */}
                         <div className="xl:col-span-1 space-y-3">
-                            <Label className="text-sm font-medium">Photo of Evacuation Center</Label>
+                            <Label className="text-sm font-medium">
+                                Photo of Evacuation Center
+                            </Label>
                             <div className="border border-border rounded-lg bg-muted/50 h-80 flex items-center justify-center">
                                 {center.photo_data ? (
                                     <img
@@ -268,40 +271,47 @@ export function EvacuationCenterDetailsModal({
                                                 "text-sm font-medium px-3 py-1.5"
                                             )}
                                         >
-                                            {center.status.charAt(0).toUpperCase() + center.status.slice(1).toLowerCase()}
+                                            {center.status.charAt(0).toUpperCase() +
+                                                center.status.slice(1).toLowerCase()}
                                         </Badge>
                                     </div>
                                 </div>
 
                                 <div className="space-y-2">
-                                    <Label className="text-sm font-medium">
-                                        Usage Percentage
-                                    </Label>
+                                    <Label className="text-sm font-medium">Usage Percentage</Label>
                                     <div className="flex items-center gap-4">
                                         <div className="w-full bg-gray-200 rounded-full h-3 dark:bg-gray-700 flex-1">
-                                            <div 
+                                            <div
                                                 className={cn(
                                                     "h-3 rounded-full",
-                                                    center.capacity > 0 
-                                                        ? Math.round((center.current_occupancy / center.capacity) * 100) >= 80
+                                                    center.capacity > 0
+                                                        ? Math.round(
+                                                              (center.current_occupancy /
+                                                                  center.capacity) *
+                                                                  100
+                                                          ) >= 80
                                                             ? "bg-red-600"
-                                                            : Math.round((center.current_occupancy / center.capacity) * 100) >= 60
-                                                                ? "bg-yellow-500"
-                                                                : "bg-green-500"
+                                                            : Math.round(
+                                                                    (center.current_occupancy /
+                                                                        center.capacity) *
+                                                                        100
+                                                                ) >= 60
+                                                              ? "bg-yellow-500"
+                                                              : "bg-green-500"
                                                         : "bg-gray-400"
                                                 )}
-                                                style={{ 
-                                                    width: center.capacity > 0 
-                                                        ? `${Math.min(Math.round((center.current_occupancy / center.capacity) * 100), 100)}%`
-                                                        : '0%' 
+                                                style={{
+                                                    width:
+                                                        center.capacity > 0
+                                                            ? `${Math.min(Math.round((center.current_occupancy / center.capacity) * 100), 100)}%`
+                                                            : "0%",
                                                 }}
                                             />
                                         </div>
                                         <span className="text-sm font-medium whitespace-nowrap min-w-[60px]">
-                                            {center.capacity > 0 
+                                            {center.capacity > 0
                                                 ? `${Math.round((center.current_occupancy / center.capacity) * 100)}%`
-                                                : '0%'
-                                            }
+                                                : "0%"}
                                         </span>
                                     </div>
                                 </div>
@@ -321,7 +331,10 @@ export function EvacuationCenterDetailsModal({
                                 </div>
 
                                 <div className="space-y-2">
-                                    <Label htmlFor="current_occupancy" className="text-sm font-medium">
+                                    <Label
+                                        htmlFor="current_occupancy"
+                                        className="text-sm font-medium"
+                                    >
                                         Current Occupancy
                                     </Label>
                                     <Input
@@ -341,18 +354,23 @@ export function EvacuationCenterDetailsModal({
                             <h3 className="text-lg font-semibold">Event History</h3>
                             <div className="flex items-center gap-4">
                                 {loading && (
-                                    <Badge variant="secondary" className="bg-blue-100 text-blue-700">
+                                    <Badge
+                                        variant="secondary"
+                                        className="bg-blue-100 text-blue-700"
+                                    >
                                         Loading events...
                                     </Badge>
                                 )}
                                 {!loading && (
                                     <div className="text-sm text-muted-foreground">
-                                        {sortedEvents.length} event{sortedEvents.length !== 1 ? 's' : ''} associated with this center
+                                        {sortedEvents.length} event
+                                        {sortedEvents.length !== 1 ? "s" : ""} associated with this
+                                        center
                                     </div>
                                 )}
                             </div>
                         </div>
-                        
+
                         {error && (
                             <div className="bg-destructive/15 text-destructive p-3 rounded-md mb-4">
                                 <div className="flex items-center gap-2">
@@ -360,12 +378,12 @@ export function EvacuationCenterDetailsModal({
                                 </div>
                             </div>
                         )}
-                        
+
                         <div className="border border-border rounded-lg overflow-hidden">
                             <Table>
                                 <TableHeader>
                                     <TableRow className="hover:bg-transparent">
-                                        <TableHead 
+                                        <TableHead
                                             className="cursor-pointer hover:bg-muted font-semibold min-w-[250px]"
                                             onClick={() => handleSort("event_name")}
                                         >
@@ -374,7 +392,7 @@ export function EvacuationCenterDetailsModal({
                                                 {getSortIcon("event_name")}
                                             </div>
                                         </TableHead>
-                                        <TableHead 
+                                        <TableHead
                                             className="cursor-pointer hover:bg-muted font-semibold min-w-[180px]"
                                             onClick={() => handleSort("event_type")}
                                         >
@@ -383,7 +401,7 @@ export function EvacuationCenterDetailsModal({
                                                 {getSortIcon("event_type")}
                                             </div>
                                         </TableHead>
-                                        <TableHead 
+                                        <TableHead
                                             className="cursor-pointer hover:bg-muted font-semibold min-w-[160px]"
                                             onClick={() => handleSort("date_declared")}
                                         >
@@ -392,7 +410,7 @@ export function EvacuationCenterDetailsModal({
                                                 {getSortIcon("date_declared")}
                                             </div>
                                         </TableHead>
-                                        <TableHead 
+                                        <TableHead
                                             className="cursor-pointer hover:bg-muted font-semibold min-w-[160px]"
                                             onClick={() => handleSort("end_date")}
                                         >
@@ -401,7 +419,7 @@ export function EvacuationCenterDetailsModal({
                                                 {getSortIcon("end_date")}
                                             </div>
                                         </TableHead>
-                                        <TableHead 
+                                        <TableHead
                                             className="cursor-pointer hover:bg-muted font-semibold min-w-[140px]"
                                             onClick={() => handleSort("status")}
                                         >
@@ -418,21 +436,28 @@ export function EvacuationCenterDetailsModal({
                                             <TableCell colSpan={5} className="text-center py-8">
                                                 <div className="flex flex-col items-center justify-center space-y-2">
                                                     <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
-                                                    <div className="text-muted-foreground">Loading event history...</div>
+                                                    <div className="text-muted-foreground">
+                                                        Loading event history...
+                                                    </div>
                                                 </div>
                                             </TableCell>
                                         </TableRow>
                                     ) : sortedEvents.length === 0 ? (
                                         <TableRow>
-                                            <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                                            <TableCell
+                                                colSpan={5}
+                                                className="text-center py-8 text-muted-foreground"
+                                            >
                                                 <div className="flex flex-col items-center justify-center space-y-2">
-                                                    <div>No events associated with this center.</div>
+                                                    <div>
+                                                        No events associated with this center.
+                                                    </div>
                                                 </div>
                                             </TableCell>
                                         </TableRow>
                                     ) : (
                                         sortedEvents.map((event, index) => (
-                                            <TableRow 
+                                            <TableRow
                                                 key={event.event_id}
                                                 className={cn(
                                                     "hover:bg-muted/50 transition-colors",
@@ -449,7 +474,9 @@ export function EvacuationCenterDetailsModal({
                                                     {formatDateForDisplay(event.date_declared)}
                                                 </TableCell>
                                                 <TableCell className="min-w-[160px]">
-                                                    {event.end_date ? formatDateForDisplay(event.end_date) : "NA"}
+                                                    {event.end_date
+                                                        ? formatDateForDisplay(event.end_date)
+                                                        : "NA"}
                                                 </TableCell>
                                                 <TableCell className="min-w-[140px]">
                                                     <Badge

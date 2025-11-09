@@ -15,6 +15,7 @@ export interface User {
 
 export interface AuthResponse {
     role: UserRole;
+    token?: string;
 }
 
 export interface GetUsersParams extends SearchParams {

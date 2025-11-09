@@ -107,7 +107,7 @@ def get_centers_route() -> Tuple:
 def get_all_centers_no_pagination_route() -> Tuple:
     """
     Get all evacuation centers without pagination for dropdowns and maps.
-    
+
     Returns:
         Tuple containing:
             - JSON response with all centers
@@ -115,26 +115,28 @@ def get_all_centers_no_pagination_route() -> Tuple:
     """
     try:
         logger.info("Fetching all evacuation centers without pagination")
-        
+
         # Get all centers without pagination
         result = get_all_centers()
-        
+
         if not result["success"]:
             return jsonify(result), 400
-            
+
         # Return just the centers array without pagination metadata
         return jsonify(result), 200
-        
+
     except Exception as error:
         logger.error("Error fetching all evacuation centers: %s", str(error))
         return (
-            jsonify({
-                "success": False,
-                "message": "Internal server error while fetching all centers"
-            }),
+            jsonify(
+                {
+                    "success": False,
+                    "message": "Internal server error while fetching all centers",
+                }
+            ),
             500,
         )
-    
+
 
 @evacuation_center_bp.route("/evacuation_centers/<int:center_id>", methods=["GET"])
 @jwt_required()
@@ -173,7 +175,9 @@ def get_center_route(center_id: int) -> Tuple:
         )
 
 
-@evacuation_center_bp.route("/evacuation_centers/<int:center_id>/events", methods=["GET"])
+@evacuation_center_bp.route(
+    "/evacuation_centers/<int:center_id>/events", methods=["GET"]
+)
 @jwt_required()
 def get_center_events(center_id: int):
     """
@@ -191,18 +195,15 @@ def get_center_events(center_id: int):
         """
         result = db.session.execute(text(query), {"center_id": center_id})
         events = [dict(row._mapping) for row in result.fetchall()]
-        
-        return jsonify({
-            "success": True,
-            "data": events
-        }), 200
-        
+
+        return jsonify({"success": True, "data": events}), 200
+
     except Exception as error:
         logger.error("Error fetching center events: %s", str(error))
-        return jsonify({
-            "success": False,
-            "message": "Failed to fetch center events"
-        }), 500
+        return (
+            jsonify({"success": False, "message": "Failed to fetch center events"}),
+            500,
+        )
 
 
 @evacuation_center_bp.route("/evacuation_centers", methods=["POST"])

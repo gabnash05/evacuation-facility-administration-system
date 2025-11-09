@@ -151,6 +151,13 @@ class HouseholdService:
             search = params.get("search")
             sort_by = params.get("sort_by")
             sort_order = params.get("sort_order")
+            center_id = params.get("center_id")
+
+            if center_id is not None:
+                try:
+                    center_id = int(center_id)
+                except (ValueError, TypeError):
+                    return {"success": False, "message": "Invalid center_id format"}
 
             # Validate pagination parameters
             if page < 1:
@@ -177,14 +184,15 @@ class HouseholdService:
             search = search or ""
 
             households = Household.get_all_paginated(
-                search=search,  # This will now be "" instead of None
+                search=search,
                 offset=offset,
                 limit=per_page,
                 sort_by=sort_by,
                 sort_direction=sort_direction,
+                center_id=center_id,  # Pass center_id to the model
             )
 
-            total_records = Household.get_count(search=search)
+            total_records = Household.get_count(search=search, center_id=center_id)
             page_count = math.ceil(total_records / per_page) if total_records > 0 else 1
 
             pagination_meta = {
