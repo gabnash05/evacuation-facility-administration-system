@@ -116,6 +116,23 @@ export class EventService {
         }
     }
 
+    static async getEventsByCenterId(centerId: number): Promise<{
+        success: boolean;
+        data: Event[];
+    }> {
+        try {
+            const response = await api.get<{ success: boolean; data: Event[] }>(
+                `/evacuation_centers/${centerId}/events`,
+                {
+                    withCredentials: true,
+                }
+            );
+            return response.data;
+        } catch (error) {
+            throw new Error(handleApiError(error));
+        }
+    }
+
     static async addCenterToEvent(
         eventId: number,
         centerId: number
