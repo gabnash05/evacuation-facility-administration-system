@@ -37,6 +37,7 @@ interface EvacuationCenterState {
     ) => Promise<void>; // Update this line
     deleteCenter: (id: number) => Promise<void>;
     resetState: () => void;
+    fetchAllCenters: () => Promise<void>;
 }
 
 const initialState = {
@@ -139,6 +140,27 @@ export const useEvacuationCenterStore = create<EvacuationCenterState>((set, get)
             await get().fetchCenters(); // Refresh the list
         } catch (error) {
             throw new Error(error instanceof Error ? error.message : "Failed to delete center");
+        }
+    },
+
+    fetchAllCenters: async () => {
+        set({ loading: true, error: null });
+        
+        try {
+            const response = await EvacuationCenterService.getAllCenters();
+            
+            set({
+                centers: response.data,
+                loading: false,
+                pagination: null,
+            });
+        } catch (error) {
+            set({
+                error: error instanceof Error ? error.message : "Failed to fetch centers",
+                loading: false,
+                centers: [],
+                pagination: null,
+            });
         }
     },
 

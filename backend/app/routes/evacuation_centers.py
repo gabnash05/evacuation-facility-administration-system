@@ -14,6 +14,7 @@ from app.services.evacuation_center_service import (
     get_center_by_id,
     get_centers,
     update_center,
+    get_all_centers,
 )
 
 # Configure logger for this module
@@ -24,7 +25,7 @@ evacuation_center_bp = Blueprint("evacuation_center_bp", __name__)
 
 @evacuation_center_bp.route("/evacuation_centers", methods=["GET"])
 @jwt_required()
-def get_all_centers() -> Tuple:
+def get_centers_route() -> Tuple:
     """
     Get all evacuation centers with filtering, pagination, and sorting.
 
@@ -101,9 +102,43 @@ def get_all_centers() -> Tuple:
         )
 
 
+@evacuation_center_bp.route("/evacuation_centers/all", methods=["GET"])
+@jwt_required()
+def get_all_centers_no_pagination_route() -> Tuple:
+    """
+    Get all evacuation centers without pagination for dropdowns and maps.
+    
+    Returns:
+        Tuple containing:
+            - JSON response with all centers
+            - HTTP status code
+    """
+    try:
+        logger.info("Fetching all evacuation centers without pagination")
+        
+        # Get all centers without pagination
+        result = get_all_centers()
+        
+        if not result["success"]:
+            return jsonify(result), 400
+            
+        # Return just the centers array without pagination metadata
+        return jsonify(result), 200
+        
+    except Exception as error:
+        logger.error("Error fetching all evacuation centers: %s", str(error))
+        return (
+            jsonify({
+                "success": False,
+                "message": "Internal server error while fetching all centers"
+            }),
+            500,
+        )
+    
+
 @evacuation_center_bp.route("/evacuation_centers/<int:center_id>", methods=["GET"])
 @jwt_required()
-def get_center(center_id: int) -> Tuple:
+def get_center_route(center_id: int) -> Tuple:
     """
     Get a specific evacuation center by ID.
 
@@ -172,7 +207,7 @@ def get_center_events(center_id: int):
 
 @evacuation_center_bp.route("/evacuation_centers", methods=["POST"])
 # @jwt_required()
-def create_new_center() -> Tuple:
+def create_new_center_route() -> Tuple:
     """
     Create a new evacuation center.
 
@@ -231,7 +266,7 @@ def create_new_center() -> Tuple:
 
 @evacuation_center_bp.route("/evacuation_centers/<int:center_id>", methods=["PUT"])
 @jwt_required()
-def update_existing_center(center_id: int) -> Tuple:
+def update_existing_center_route(center_id: int) -> Tuple:
     try:
         # Check if request is multipart/form-data for file upload
         if request.content_type and "multipart/form-data" in request.content_type:
@@ -284,7 +319,7 @@ def update_existing_center(center_id: int) -> Tuple:
 
 @evacuation_center_bp.route("/evacuation_centers/<int:center_id>", methods=["DELETE"])
 @jwt_required()
-def delete_existing_center(center_id: int) -> Tuple:
+def delete_existing_center_route(center_id: int) -> Tuple:
     """
     Delete an evacuation center.
 

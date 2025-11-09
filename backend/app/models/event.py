@@ -183,7 +183,10 @@ class Event(db.Model):
         # Get current event data before update to check previous status
         current_event = cls.get_by_id(event_id)
         
-        # Build dynamic UPDATE query
+        # Extract center_ids from update_data before building the UPDATE query
+        center_ids = update_data.pop('center_ids', None)
+        
+        # Build dynamic UPDATE query (only for event table fields)
         set_clauses = []
         params = {"event_id": event_id}
 
@@ -210,14 +213,14 @@ class Event(db.Model):
         result = db.session.execute(query, params).fetchone()
         
         # Handle center associations if provided
-        if "center_ids" in update_data:
+        if center_ids is not None:  # Changed from "center_ids" in update_data
             from .event import EventCenter
 
             # Remove all existing centers
             EventCenter.remove_centers(event_id)
             # Add new centers
-            if update_data["center_ids"]:
-                EventCenter.add_centers(event_id, update_data["center_ids"])
+            if center_ids:  # Only add if there are centers
+                EventCenter.add_centers(event_id, center_ids)
         
         # If we're updating the status to 'resolved', handle center status changes
         if is_updating_to_resolved and current_event and current_event.status != 'resolved':
