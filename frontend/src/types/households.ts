@@ -59,4 +59,5 @@ export interface GetHouseholdsParams {
     limit?: number;
     sortBy?: string;
     sortOrder?: "asc" | "desc";
+    centerId?: number;
 }

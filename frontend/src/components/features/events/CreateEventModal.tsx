@@ -111,14 +111,28 @@ export function CreateEventModal({
     }, [initialData, isOpen]);
 
     const handleAddEvent = () => {
+        // Format dates as YYYY-MM-DD to avoid timezone issues
+        const formatForBackend = (date: Date): string => {
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, "0");
+            const day = String(date.getDate()).padStart(2, "0");
+            return `${year}-${month}-${day}`;
+        };
+
         const eventData = {
             event_name: event_name,
-            event_type: event_type,
+            event_type: event_type === "other" ? customEventType : event_type,
             status: status.toLowerCase(),
-            date_declared: date_declared ? format(date_declared, "dd/MM/yyyy") : "",
-            end_date: end_date === "N/A" ? null : end_date ? format(end_date, "dd/MM/yyyy") : null,
+            date_declared: date_declared ? formatForBackend(date_declared) : "",
+            end_date: end_date === "N/A" ? null : end_date ? formatForBackend(end_date) : null,
             center_ids: evacuation_centers.map(center => center.center_id),
         };
+
+        console.log("Sending dates:", {
+            date_declared: eventData.date_declared,
+            end_date: eventData.end_date,
+        });
+
         onSubmit(eventData);
         handleClose();
     };

@@ -95,13 +95,16 @@ export function CityAdminCentersPage() {
     const handleItemDeleted = () => {
         // After deletion, check if we need to adjust the current page
         const totalPages = Math.ceil((pagination?.total_items || 0) / entriesPerPage);
-        
+
         // If current page is empty and we're not on page 1, go back one page
         // OR if current page exceeds total pages after deletion, go to last page
-        if ((centers.length === 0 && currentPage > 1) || (currentPage > totalPages && totalPages > 0)) {
+        if (
+            (centers.length === 0 && currentPage > 1) ||
+            (currentPage > totalPages && totalPages > 0)
+        ) {
             setCurrentPage(Math.max(1, totalPages));
         }
-        
+
         // Refresh the data - this will automatically fetch with the adjusted page if needed
         fetchCenters();
     };

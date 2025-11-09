@@ -113,7 +113,7 @@ export const useEventStore = create<EventState>((set, get) => ({
                 status: eventData.status,
                 center_ids: eventData.center_ids || [], // Include center_ids
             };
-            
+
             await EventService.updateEvent(id, updateData);
             await get().fetchEvents();
         } catch (error) {

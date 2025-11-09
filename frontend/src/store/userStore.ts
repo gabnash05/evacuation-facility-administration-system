@@ -5,6 +5,7 @@ import type { CreateUserFormData, UpdateUserFormData } from "@/schemas/user";
 
 interface UserState {
     users: User[];
+    currentUser: User | null;
     loading: boolean;
     error: string | null;
     searchQuery: string;
@@ -22,11 +23,15 @@ interface UserState {
     } | null;
 
     // Actions
+    setCurrentUser: (user: User) => void;
+    clearCurrentUser: () => void;
     setSearchQuery: (query: string) => void;
     setCurrentPage: (page: number) => void;
     setEntriesPerPage: (entries: number) => void;
     setSortConfig: (config: { key: string; direction: "asc" | "desc" | null } | null) => void;
     fetchUsers: () => Promise<void>;
+    initializeCurrentUser: () => Promise<void>;
+    fetchCurrentUser: () => Promise<void>;
     createUser: (userData: CreateUserFormData) => Promise<void>;
     updateUser: (id: number, updates: UpdateUserFormData) => Promise<void>;
     deleteUser: (id: number) => Promise<void>;
@@ -36,6 +41,7 @@ interface UserState {
 
 const initialState = {
     users: [],
+    currentUser: null,
     loading: false,
     error: null,
     searchQuery: "",
@@ -95,6 +101,38 @@ export const useUserStore = create<UserState>((set, get) => ({
         }
     },
 
+    setCurrentUser: (user: User) => {
+        set({ currentUser: user });
+    },
+
+    clearCurrentUser: () => {
+        set({ currentUser: null });
+    },
+
+    initializeCurrentUser: async () => {
+        const { currentUser } = get();
+        if (!currentUser) {
+            await get().fetchCurrentUser();
+        }
+    },
+
+    fetchCurrentUser: async () => {
+        set({ loading: true, error: null });
+        try {
+            const response = await UserService.getCurrentUser();
+            console.log(response);  
+            set({
+                currentUser: response.data,
+                loading: false,
+            });
+        } catch (error) {
+            set({
+                error: error instanceof Error ? error.message : "Failed to fetch current user",
+                loading: false,
+            });
+        }
+    },
+
     createUser: async (userData: CreateUserFormData) => {
         try {
             await UserService.createUser(userData);
@@ -131,5 +169,12 @@ export const useUserStore = create<UserState>((set, get) => ({
         }
     },
 
-    resetState: () => set(initialState),
+    resetState: () => {
+        set(initialState);
+    },
+
+    name: "user-storage" as const,
+    partialize: (state: UserState): Pick<UserState, "currentUser"> => ({
+        currentUser: state.currentUser,
+    }),
 }));

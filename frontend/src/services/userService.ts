@@ -1,5 +1,5 @@
 import { api, handleApiError } from "./api";
-import type { UsersResponse, GetUsersParams } from "@/types/user";
+import type { UsersResponse, GetUsersParams, User } from "@/types/user";
 import type { CreateUserFormData, UpdateUserFormData } from "@/schemas/user";
 
 export class UserService {
@@ -18,6 +18,17 @@ export class UserService {
     static async getUserById(id: number): Promise<UsersResponse> {
         try {
             const response = await api.get<UsersResponse>(`/users/${id}`, {
+                withCredentials: true,
+            });
+            return response.data;
+        } catch (error) {
+            throw new Error(handleApiError(error));
+        }
+    }
+
+    static async getCurrentUser(): Promise<any> {
+        try {
+            const response = await api.get<UsersResponse>("/auth/me", {
                 withCredentials: true,
             });
             return response.data;

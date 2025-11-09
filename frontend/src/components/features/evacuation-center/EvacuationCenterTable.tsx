@@ -302,7 +302,6 @@ export function EvacuationCenterTable({
                 if (onItemDeleted) {
                     onItemDeleted();
                 }
-                
             } catch (error) {
                 console.error("Failed to delete center:", error);
             } finally {
@@ -386,7 +385,7 @@ export function EvacuationCenterTable({
                                         index % 2 === 1 ? "bg-muted/50" : ""
                                     )}
                                     onClick={() => handleRowClick(center)}
-                                    style={{ cursor: onRowClick ? 'pointer' : 'default' }}
+                                    style={{ cursor: onRowClick ? "pointer" : "default" }}
                                 >
                                     <TableCell
                                         className="font-medium py-3 truncate align-middle text-left"

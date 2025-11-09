@@ -3,7 +3,7 @@
 import logging
 from typing import Tuple
 
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, jsonify, request, current_app  
 from flask_jwt_extended import get_jwt_identity, jwt_required
 
 from app.schemas.user import UserLoginSchema, UserRegisterSchema, UserResponseSchema
@@ -59,22 +59,26 @@ def login() -> Tuple:
         if not auth_result["success"]:
             return jsonify({"success": False, "message": auth_result["message"]}), 401
 
+        # Prepare the response data
         response_data = {
             "success": True,
             "message": "Login successful",
-            "data": {"role": auth_result["role"]},
+            "data": {
+                "role": auth_result["role"],
+                "token": auth_result["access_token"]  # Include token in response
+            },
         }
-
         response = jsonify(response_data)
 
-        # Set httpOnly cookie
+        # Set cookie with JWT token
         response.set_cookie(
             "access_token",
             auth_result["access_token"],
             httponly=True,
-            secure=True,  # Use True in production
+            secure=False,  # Set to True in production with HTTPS
             samesite="Lax",
-            max_age=86400,  # 1 day
+            max_age=86400,  # 24 hours
+            path="/"
         )
 
         return response, 200
@@ -212,14 +216,17 @@ def logout() -> Tuple:
 
         response = jsonify({"success": True, "message": "Logout successful"})
 
+        cookie_secure = current_app.config.get("JWT_COOKIE_SECURE", False)
+
         response.set_cookie(
             "access_token",
             "",
             httponly=True,
-            secure=True,
+            secure=cookie_secure,
             samesite="Lax",
             max_age=0,
             expires=0,
+            path="/",  # Ensure cookie path matches login
         )
 
         return response, 200
@@ -239,9 +246,6 @@ def logout() -> Tuple:
 def get_me() -> Tuple:
     """
     Retrieve current logged-in user information.
-
-    Header:
-        Authorization: Bearer <token>
 
     Returns:
         Tuple containing:
