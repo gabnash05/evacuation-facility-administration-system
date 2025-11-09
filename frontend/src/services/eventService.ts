@@ -55,6 +55,7 @@ export class EventService {
             date_declared?: string;
             end_date?: string | null;
             status?: string;
+            center_ids?: number[]; 
         }
     ): Promise<{ success: boolean; data: Event }> {
         try {
@@ -181,17 +182,6 @@ export class EventService {
         }
     }
 
-    // Keep the old method for backward compatibility
-    static async getAllEvents(): Promise<Event[]> {
-        try {
-            const response = await api.get<Event[]>("/events", {
-                withCredentials: true,
-            });
-            return response.data;
-        } catch (error) {
-            throw new Error(handleApiError(error));
-        }
-    }
 }
 
 // Export a default instance for backward compatibility

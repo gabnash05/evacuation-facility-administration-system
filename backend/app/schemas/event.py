@@ -36,7 +36,7 @@ class EventUpdateSchema(Schema):
     status = fields.String(
         validate=validate.OneOf(["active", "resolved", "monitoring"])
     )
-    center_ids = fields.List(fields.Integer())
+    center_ids = fields.List(fields.Int(), required=False)
 
 
 class EventResponseSchema(Schema):

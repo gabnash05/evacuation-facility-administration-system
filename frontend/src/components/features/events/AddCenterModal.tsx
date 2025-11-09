@@ -29,14 +29,15 @@ export function AddCenterModal({ isOpen, onClose, onAddCenters }: AddCenterModal
         centers: availableCenters,
         loading: isLoading,
         error,
-        fetchCenters,
+        fetchAllCenters
     } = useEvacuationCenterStore();
 
     useEffect(() => {
         if (isOpen) {
-            fetchCenters();
+            fetchAllCenters();
+            console.log(availableCenters)
         }
-    }, [isOpen, fetchCenters]);
+    }, [isOpen, fetchAllCenters]);
 
     const handleToggleCenter = (centerId: number) => {
         setSelectedCenterIds(prev => {
