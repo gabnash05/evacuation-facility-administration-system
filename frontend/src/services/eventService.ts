@@ -48,7 +48,7 @@ export class EventService {
     }
 
     static async updateEvent(
-        id: number, 
+        id: number,
         data: {
             event_name?: string;
             event_type?: string;
@@ -58,9 +58,13 @@ export class EventService {
         }
     ): Promise<{ success: boolean; data: Event }> {
         try {
-            const response = await api.put<{ success: boolean; data: Event }>(`/events/${id}`, data, {
-                withCredentials: true,
-            });
+            const response = await api.put<{ success: boolean; data: Event }>(
+                `/events/${id}`,
+                data,
+                {
+                    withCredentials: true,
+                }
+            );
             return response.data;
         } catch (error) {
             throw new Error(handleApiError(error));
@@ -69,9 +73,12 @@ export class EventService {
 
     static async deleteEvent(id: number): Promise<{ success: boolean; message: string }> {
         try {
-            const response = await api.delete<{ success: boolean; message: string }>(`/events/${id}`, {
-                withCredentials: true,
-            });
+            const response = await api.delete<{ success: boolean; message: string }>(
+                `/events/${id}`,
+                {
+                    withCredentials: true,
+                }
+            );
             return response.data;
         } catch (error) {
             throw new Error(handleApiError(error));
@@ -109,7 +116,10 @@ export class EventService {
         }
     }
 
-    static async addCenterToEvent(eventId: number, centerId: number): Promise<{ success: boolean; message: string }> {
+    static async addCenterToEvent(
+        eventId: number,
+        centerId: number
+    ): Promise<{ success: boolean; message: string }> {
         try {
             const response = await api.post<{ success: boolean; message: string }>(
                 `/events/${eventId}/centers`,
@@ -122,7 +132,10 @@ export class EventService {
         }
     }
 
-    static async removeCenterFromEvent(eventId: number, centerId: number): Promise<{ success: boolean; message: string }> {
+    static async removeCenterFromEvent(
+        eventId: number,
+        centerId: number
+    ): Promise<{ success: boolean; message: string }> {
         try {
             const response = await api.delete<{ success: boolean; message: string }>(
                 `/events/${eventId}/centers/${centerId}`,
@@ -139,9 +152,12 @@ export class EventService {
         data: EventDetails;
     }> {
         try {
-            const response = await api.get<{ success: boolean; data: EventDetails }>(`/events/${eventId}/details`, {
-                withCredentials: true,
-            });
+            const response = await api.get<{ success: boolean; data: EventDetails }>(
+                `/events/${eventId}/details`,
+                {
+                    withCredentials: true,
+                }
+            );
             return response.data;
         } catch (error) {
             throw new Error(handleApiError(error));

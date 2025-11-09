@@ -125,7 +125,9 @@ export const useEventStore = create<EventState>((set, get) => ({
             const response = await EventService.getEventDetails(id);
             return response.data;
         } catch (error) {
-            throw new Error(error instanceof Error ? error.message : "Failed to fetch event details");
+            throw new Error(
+                error instanceof Error ? error.message : "Failed to fetch event details"
+            );
         }
     },
 

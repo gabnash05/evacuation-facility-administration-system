@@ -34,10 +34,14 @@ export function MapPanel({
     // Format status for display
     const formatStatus = (status: string) => {
         switch (status) {
-            case "active": return "Active";
-            case "inactive": return "Inactive";
-            case "closed": return "Closed";
-            default: return status;
+            case "active":
+                return "Active";
+            case "inactive":
+                return "Inactive";
+            case "closed":
+                return "Closed";
+            default:
+                return status;
         }
     };
 

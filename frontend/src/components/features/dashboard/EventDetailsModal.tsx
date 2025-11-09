@@ -43,9 +43,8 @@ export function EventDetailsModal({ isOpen, onClose, eventData }: EventDetailsMo
     };
 
     const formattedDateDeclared = formatDate(eventData.date_declared);
-    const formattedEndDate = eventData.end_date && eventData.end_date !== "NA" 
-        ? formatDate(eventData.end_date) 
-        : "N/A";
+    const formattedEndDate =
+        eventData.end_date && eventData.end_date !== "NA" ? formatDate(eventData.end_date) : "N/A";
 
     return (
         <Dialog open={isOpen} onOpenChange={onClose}>
@@ -130,7 +129,11 @@ export function EventDetailsModal({ isOpen, onClose, eventData }: EventDetailsMo
                                             <span
                                                 className={`px-3 py-1 rounded text-xs font-medium inline-block ${getOccupancyColor(`${Math.round((center.current_occupancy / center.capacity) * 100)}%`)}`}
                                             >
-                                                {Math.round((center.current_occupancy / center.capacity) * 100)}%
+                                                {Math.round(
+                                                    (center.current_occupancy / center.capacity) *
+                                                        100
+                                                )}
+                                                %
                                             </span>
                                         </TableCell>
                                     </TableRow>
