@@ -1,4 +1,3 @@
-
 import { useState, useMemo, useEffect } from "react";
 import { EventDetailsModal } from "@/components/features/dashboard/EventDetailsModal";
 import { MapPanel } from "@/components/features/dashboard/MapPanel";
@@ -28,7 +27,7 @@ export function CityAdminDashboard() {
         capacity: 500,
         current_occupancy: 300,
     });
-    
+
     // Use event store
     const {
         events,
@@ -44,7 +43,7 @@ export function CityAdminDashboard() {
         setEntriesPerPage,
         setSortConfig,
         fetchEvents,
-        getEventDetails
+        getEventDetails,
     } = useEventStore();
 
     // Stats loading state
@@ -88,7 +87,7 @@ export function CityAdminDashboard() {
 
     const handleSort = (column: string): void => {
         const currentSortConfig = sortConfig;
-        
+
         if (currentSortConfig?.key === column) {
             // Cycle through: asc -> desc -> null (unsorted)
             if (currentSortConfig.direction === "asc") {
@@ -100,7 +99,6 @@ export function CityAdminDashboard() {
             setSortConfig({ key: column, direction: "asc" });
         }
     };
-
 
     const handleEntriesPerPageChange = (entries: number) => {
         setEntriesPerPage(entries);
@@ -129,7 +127,6 @@ export function CityAdminDashboard() {
             end_date: event.end_date ? formatDate(event.end_date) : "NA",
         }));
     }, [events]);
-
 
     const processedData = useMemo(() => {
         let filtered = formattedEvents.filter(event =>

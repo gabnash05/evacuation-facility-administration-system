@@ -3,32 +3,60 @@ import type { EvacuationCenter } from "./center";
 import type { Individual } from "./individual";
 
 export interface Household {
-    householdId: number;
-    householdName: string;
+    household_id: number;
+    household_name: string;
     address: string | null;
-    centerId: number;
-    householdHeadId?: number | null;
-    createdAt: string;
-    updatedAt?: string;
-    // Optional joined fields
+    center_id: number;
+    household_head_id?: number | null;
+    created_at: string;
+    updated_at?: string;
     center?: EvacuationCenter;
-    householdHead?: Individual;
+    household_head?: Individual;
 }
 
 export interface CreateHouseholdData {
-    householdName: string;
+    household_name: string;
     address?: string;
-    householdHeadId?: number;
-    centerId: number;
+    household_head_id?: number;
+    center_id: number;
+    individuals: Omit<CreateIndividualData, "household_id">[]; // Remove household_id requirement
+}
+
+// types/individual.ts
+export interface CreateIndividualData {
+    first_name: string;
+    last_name: string;
+    date_of_birth?: string | null;
+    gender?: string | null;
+    relationship_to_head: string;
+    household_id: number; // This will be provided when creating
+}
+
+export interface UpdateIndividualData {
+    individual_id?: number; // For existing individuals
+    first_name: string;
+    last_name: string;
+    date_of_birth?: string | null;
+    gender?: string | null;
+    relationship_to_head: string;
 }
 
 export interface UpdateHouseholdData {
-    householdName?: string;
+    household_name?: string;
     address?: string;
-    householdHeadId?: number;
-    centerId?: number;
+    household_head_id?: number;
+    center_id?: number;
+    individuals?: UpdateIndividualData[];
 }
 
 // API Response types
 export type HouseholdResponse = ApiResponse<Household>;
 export type HouseholdsResponse = PaginatedResponse<Household>;
+
+export interface GetHouseholdsParams {
+    search?: string;
+    page?: number;
+    limit?: number;
+    sortBy?: string;
+    sortOrder?: "asc" | "desc";
+}

@@ -1,127 +1,230 @@
-import { useState, useEffect } from "react";
-import HouseholdTable, {
-    type SortConfig,
-} from "@/components/features/auth/household/HouseholdTable";
-import { HouseholdTableToolbar } from "@/components/features/auth/household/HouseholdTableToolbar";
-import { HouseholdTablePagination } from "@/components/features/auth/household/HouseholdTablePagination";
-
-interface PaginationState {
-    page: number;
-    page_count: number;
-    total_records: number;
-}
+import { useEffect, useMemo, useState } from "react";
+import { HouseholdTable } from "@/components/features/household/HouseholdTable";
+import { HouseholdTableToolbar } from "@/components/features/household/HouseholdTableToolbar";
+import { TablePagination } from "@/components/common/TablePagination";
+import { AddHouseholdModal } from "@/components/features/household/AddHouseholdModal";
+import { EditHouseholdModal } from "@/components/features/household/EditHouseholdModal";
+import { SuccessToast } from "@/components/common/SuccessToast";
+import { useHouseholdStore } from "@/store/householdStore";
+import { debounce } from "@/utils/helpers";
 
 export function CityAdminHouseholdsPage() {
-    // --- STATE MANAGEMENT ---
-    const [householdsData, setHouseholdsData] = useState<any[]>([]);
-    const [searchQuery, setSearchQuery] = useState("");
-    const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("");
-    const [isLoading, setIsLoading] = useState(true);
-    const [sortConfig, setSortConfig] = useState<SortConfig>(null);
-    const [pagination, setPagination] = useState<PaginationState>({
-        page: 1,
-        page_count: 1,
-        total_records: 0,
+    const {
+        households,
+        loading,
+        error,
+        searchQuery,
+        currentPage,
+        entriesPerPage,
+        sortConfig,
+        pagination,
+        setSearchQuery,
+        setCurrentPage,
+        setEntriesPerPage,
+        setSortConfig,
+        fetchHouseholds,
+        deleteHousehold,
+    } = useHouseholdStore();
+
+    const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+    const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+    const [selectedHouseholdId, setSelectedHouseholdId] = useState<number | null>(null);
+    const [successToast, setSuccessToast] = useState({
+        isOpen: false,
+        message: "",
     });
 
-    // --- DATA FETCHING ---
+    const debouncedFetchHouseholds = useMemo(
+        () => debounce(() => fetchHouseholds(), 500),
+        [fetchHouseholds]
+    );
+
     useEffect(() => {
-        const fetchHouseholds = async () => {
-            setIsLoading(true);
-            try {
-                const params = new URLSearchParams({
-                    page: String(pagination.page),
-                    per_page: "15",
-                    search: debouncedSearchQuery,
-                });
-
-                const response = await fetch(
-                    `http://localhost:5000/api/households?${params.toString()}`
-                );
-                if (!response.ok) throw new Error("Failed to fetch data");
-
-                const result = await response.json();
-                setHouseholdsData(result.data);
-                setPagination(result.pagination);
-            } catch (error) {
-                console.error("Error fetching households:", error);
-            } finally {
-                setIsLoading(false);
-            }
-        };
-        fetchHouseholds();
-    }, [pagination.page, debouncedSearchQuery, sortConfig]);
-
-    // Effect to debounce search input
-    useEffect(() => {
-        const handler = setTimeout(() => {
-            setDebouncedSearchQuery(searchQuery);
-            if (pagination.page !== 1) setPagination(p => ({ ...p, page: 1 }));
-        }, 500);
-        return () => clearTimeout(handler);
-    }, [searchQuery]);
-
-    // --- COMPONENT LOGIC ---
-    const headers = [
-        { key: "name", label: "Household Name", sortable: true },
-        { key: "head", label: "Household Head", sortable: true },
-        { key: "address", label: "Address", sortable: true },
-        { key: "evacCenter", label: "Evacuation Center", sortable: true },
-    ];
+        if (searchQuery || entriesPerPage !== 10) {
+            debouncedFetchHouseholds();
+        } else {
+            fetchHouseholds();
+        }
+    }, [
+        searchQuery,
+        currentPage,
+        entriesPerPage,
+        sortConfig,
+        fetchHouseholds,
+        debouncedFetchHouseholds,
+    ]);
 
     const handleSort = (key: string) => {
-        let direction: "asc" | "desc" | null = "asc";
-        if (sortConfig && sortConfig.key === key && sortConfig.direction === "asc") {
-            direction = "desc";
+        if (!sortConfig || sortConfig.key !== key) {
+            setSortConfig({ key, direction: "asc" });
+            return;
         }
-        // In a real scenario, you'd add direction to the API call.
-        // For now, this just sets the state for the UI icon.
-        setSortConfig({ key, direction });
+
+        switch (sortConfig.direction) {
+            case "asc":
+                setSortConfig({ key, direction: "desc" });
+                break;
+            case "desc":
+                setSortConfig({ key, direction: null });
+                break;
+            case null:
+            default:
+                setSortConfig({ key, direction: "asc" });
+                break;
+        }
     };
 
+    const handleOpenEditModal = (id: number) => {
+        setSelectedHouseholdId(id);
+        setIsEditModalOpen(true);
+    };
+
+    const handleDelete = async (id: number) => {
+        try {
+            await deleteHousehold(id);
+            showSuccessToast("Household deleted successfully");
+        } catch (error) {
+            console.error("Error deleting household:", error);
+        }
+    };
+
+    const handleEntriesPerPageChange = (entries: number) => {
+        setEntriesPerPage(entries);
+    };
+
+    const handleSearchChange = (query: string) => {
+        setSearchQuery(query);
+    };
+
+    const handlePageChange = (page: number) => {
+        setCurrentPage(page);
+    };
+
+    const handleToastClose = () => {
+        setSuccessToast({ isOpen: false, message: "" });
+    };
+
+    const showSuccessToast = (message: string) => {
+        setSuccessToast({ isOpen: true, message });
+    };
+
+    const headers = [
+        { key: "householdName", label: "Household Name", sortable: true },
+        { key: "householdHead", label: "Household Head", sortable: true },
+        { key: "address", label: "Address", sortable: true },
+        { key: "center", label: "Evacuation Center", sortable: true },
+    ];
+
+    // Transform household data for the table
+    const tableData = households.map(household => ({
+        household_id: household.household_id,
+        householdName: household.household_name,
+        householdHead: household.household_head
+            ? `${household.household_head.first_name} ${household.household_head.last_name}`
+            : "No head assigned",
+        address: household.address || "No address",
+        center: household.center?.center_name || "Unknown center",
+    }));
+
     return (
-        <div className="p-6 space-y-6">
-            <div>
-                <h1 className="text-2xl font-bold">Household Management</h1>
-                <p className="text-muted-foreground">View and manage household records.</p>
-            </div>
-
-            <div className="border border-border rounded-lg">
-                <div className="bg-card p-4 border-b border-border">
-                    <HouseholdTableToolbar
-                        searchQuery={searchQuery}
-                        onSearchChange={setSearchQuery}
-                        onAddHousehold={() => console.log("Add Household Clicked")}
-                        loading={isLoading}
-                    />
+        <div className="w-full min-w-0 bg-background flex flex-col relative p-6">
+            <div className="space-y-6">
+                {/* Page Header */}
+                <div>
+                    <h1 className="text-2xl font-bold tracking-tight">Household Management</h1>
+                    <p className="text-muted-foreground">View and manage household records</p>
                 </div>
 
-                <div className="border-b border-border">
-                    {isLoading && householdsData.length === 0 ? (
-                        <div className="p-8 text-center text-muted-foreground">
-                            Loading households...
+                {/* Error Display */}
+                {error && (
+                    <div className="bg-destructive/15 text-destructive p-4 rounded-md">
+                        <div className="flex items-center gap-2">
+                            <span className="text-sm font-medium">Error: {error}</span>
                         </div>
-                    ) : (
-                        <HouseholdTable
-                            headers={headers}
-                            data={householdsData}
-                            sortConfig={sortConfig}
-                            onSort={handleSort}
-                            loading={isLoading}
-                        />
-                    )}
-                </div>
+                    </div>
+                )}
 
-                <div className="bg-card p-4">
-                    <HouseholdTablePagination
-                        currentPage={pagination.page}
-                        totalPages={pagination.page_count}
-                        totalRecords={pagination.total_records}
-                        onPageChange={page => setPagination(p => ({ ...p, page }))}
-                        loading={isLoading}
-                    />
+                {/* Main Table Card */}
+                <div className="border border-border rounded-lg">
+                    {/* Card Header */}
+                    <div className="bg-card border-b border-border p-4">
+                        <h3 className="font-semibold text-base text-foreground">Household List</h3>
+                    </div>
+
+                    {/* Controls Bar */}
+                    <div className="bg-card border-b border-border p-4">
+                        <HouseholdTableToolbar
+                            searchQuery={searchQuery}
+                            onSearchChange={handleSearchChange}
+                            onAddHousehold={() => setIsAddModalOpen(true)}
+                            entriesPerPage={entriesPerPage}
+                            onEntriesPerPageChange={handleEntriesPerPageChange}
+                            loading={loading}
+                        />
+                    </div>
+
+                    {/* Table Section */}
+                    <div className="border-b border-border">
+                        {loading && households.length === 0 ? (
+                            <div className="p-8 text-center">
+                                <div className="text-muted-foreground">Loading households...</div>
+                            </div>
+                        ) : (
+                            <HouseholdTable
+                                headers={headers}
+                                data={tableData}
+                                sortConfig={sortConfig}
+                                onSort={handleSort}
+                                onEdit={handleOpenEditModal}
+                                onDelete={handleDelete}
+                                loading={loading}
+                            />
+                        )}
+                    </div>
+
+                    {/* Pagination Section */}
+                    <div className="bg-card p-4">
+                        <TablePagination
+                            currentPage={currentPage}
+                            entriesPerPage={entriesPerPage}
+                            totalEntries={pagination?.total_items || 0}
+                            onPageChange={handlePageChange}
+                            loading={loading}
+                            entriesLabel="households"
+                        />
+                    </div>
                 </div>
             </div>
+
+            {/* Add Household Modal */}
+            <AddHouseholdModal
+                isOpen={isAddModalOpen}
+                onClose={() => setIsAddModalOpen(false)}
+                onSuccess={() => {
+                    setIsAddModalOpen(false);
+                    showSuccessToast("Household created successfully");
+                    fetchHouseholds();
+                }}
+            />
+
+            {/* Edit Household Modal */}
+            <EditHouseholdModal
+                isOpen={isEditModalOpen}
+                householdId={selectedHouseholdId}
+                onClose={() => setIsEditModalOpen(false)}
+                onSuccess={() => {
+                    setIsEditModalOpen(false);
+                    showSuccessToast("Household updated successfully");
+                    fetchHouseholds();
+                }}
+            />
+
+            {/* Global Success Toast */}
+            <SuccessToast
+                isOpen={successToast.isOpen}
+                message={successToast.message}
+                onClose={handleToastClose}
+            />
         </div>
     );
 }

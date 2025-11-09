@@ -1,4 +1,3 @@
-# app/__init__.py
 """EFAS Flask application factory."""
 
 import logging
@@ -13,12 +12,6 @@ from app.models import db, jwt, migrate
 def create_app(config_class=Config):
     """
     Create and configure the Flask application.
-
-    Args:
-        config_class: Configuration class to use
-
-    Returns:
-        Flask: Configured Flask application
     """
     app = Flask(__name__)
     app.config.from_object(config_class)

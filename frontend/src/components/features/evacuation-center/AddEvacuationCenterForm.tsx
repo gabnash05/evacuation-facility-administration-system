@@ -107,7 +107,7 @@ export function AddEvacuationCenterForm({
         address: "",
         capacity: 0,
         current_occupancy: 0,
-        status: "active",
+        status: "inactive",
     });
     const [photo, setPhoto] = useState<File | undefined>(undefined); // Changed from null to undefined
     const [photoPreview, setPhotoPreview] = useState<string | null>(null);
@@ -125,7 +125,7 @@ export function AddEvacuationCenterForm({
                 address: "",
                 capacity: 0,
                 current_occupancy: 0,
-                status: "active",
+                status: "inactive",
             });
             setPhoto(undefined); // Changed from null to undefined
             setPhotoPreview(null);

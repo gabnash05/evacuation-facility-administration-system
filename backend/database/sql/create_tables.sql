@@ -11,7 +11,7 @@ CREATE TABLE IF NOT EXISTS evacuation_centers (
     center_name VARCHAR(255) NOT NULL,
     address VARCHAR(255) NOT NULL,
     capacity INTEGER NOT NULL CHECK (capacity > 0),
-    status VARCHAR(20) NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'inactive', 'closed')),
+    status VARCHAR(20) NOT NULL DEFAULT 'inactive' CHECK (status IN ('active', 'inactive', 'closed')),
     current_occupancy INTEGER NOT NULL DEFAULT 0 CHECK (current_occupancy >= 0),
     photo_data TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,

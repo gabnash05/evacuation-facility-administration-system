@@ -18,7 +18,7 @@ import {
     SelectTrigger,
     SelectValue,
     SelectGroup,
-    SelectLabel
+    SelectLabel,
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -76,7 +76,6 @@ export function CreateEventModal({
     const [isAddCenterOpen, setIsAddCenterOpen] = useState(false);
     const [customEventType, setCustomEventType] = useState("");
 
-
     // Initialize form with initialData when editing
     useEffect(() => {
         const loadEventData = async () => {
@@ -88,12 +87,14 @@ export function CreateEventModal({
                 setEndDate(
                     initialData.end_date === "NA" || !initialData.end_date
                         ? "N/A"
-                        : parseDate(initialData.end_date) ?? "N/A"
+                        : (parseDate(initialData.end_date) ?? "N/A")
                 );
 
                 // Fetch existing centers for this event
                 try {
-                    const centersResponse = await eventService.getEventCenters(initialData.event_id);
+                    const centersResponse = await eventService.getEventCenters(
+                        initialData.event_id
+                    );
                     // Transform the backend data to match EvacuationCenter type
                     const transformedCenters = centersResponse.data.map(transformCenterData);
                     setEvacuationCenters(transformedCenters);
@@ -213,17 +214,19 @@ export function CreateEventModal({
                                     <SelectItem value="Fire">Fire</SelectItem>
                                     <SelectItem value="Landslide">Landslide</SelectItem>
                                     <SelectItem value="Storm Surge">Storm Surge</SelectItem>
-                                    <SelectItem value="Volcanic Eruption">Volcanic Eruption</SelectItem>
+                                    <SelectItem value="Volcanic Eruption">
+                                        Volcanic Eruption
+                                    </SelectItem>
                                     <SelectItem value="Tsunami">Tsunami</SelectItem>
                                     <SelectItem value="Pandemic">Pandemic</SelectItem>
                                     <SelectItem value="other">Other</SelectItem>
                                 </SelectContent>
                             </Select>
-                            
+
                             {event_type === "other" && (
                                 <Input
                                     value={customEventType}
-                                    onChange={(e) => setCustomEventType(e.target.value)}
+                                    onChange={e => setCustomEventType(e.target.value)}
                                     placeholder="Specify disaster type"
                                     className="mt-2"
                                 />
@@ -267,7 +270,8 @@ export function CreateEventModal({
                                         mode="single"
                                         selected={date_declared}
                                         onSelect={setDateDeclared}
-                                        initialFocus
+                                        disabled={date => date > new Date()}
+                                        captionLayout="dropdown-years"
                                     />
                                 </PopoverContent>
                             </Popover>
@@ -287,8 +291,8 @@ export function CreateEventModal({
                                         {end_date === "N/A"
                                             ? "N/A"
                                             : end_date
-                                            ? format(end_date, "dd/MM/yyyy")
-                                            : "Pick a date"}
+                                              ? format(end_date, "dd/MM/yyyy")
+                                              : "Pick a date"}
                                     </Button>
                                 </PopoverTrigger>
                                 <PopoverContent className="w-auto p-0">
@@ -305,7 +309,8 @@ export function CreateEventModal({
                                         mode="single"
                                         selected={end_date === "N/A" ? undefined : end_date}
                                         onSelect={date => setEndDate(date || "N/A")}
-                                        initialFocus
+                                        disabled={date => date > new Date()}
+                                        captionLayout="dropdown-years"
                                     />
                                 </PopoverContent>
                             </Popover>
@@ -316,27 +321,39 @@ export function CreateEventModal({
                     <div className="mt-6">
                         <div className="flex items-center justify-between mb-4">
                             <h3 className="font-semibold text-sm">Evacuation Centers Affected</h3>
-                            <Button 
-                                onClick={() => setIsAddCenterOpen(true)} 
+                            <Button
+                                onClick={() => setIsAddCenterOpen(true)}
                                 className="gap-2 bg-blue-600 hover:bg-blue-700"
                             >
                                 <Plus className="h-4 w-4" />
                                 {initialData ? "Update Centers" : "Add Center"}
                             </Button>
                         </div>
-                        
+
                         {/* Responsive table container */}
                         <div className="border border-border rounded-lg overflow-hidden">
                             <div className="overflow-x-auto">
                                 <Table className="min-w-full">
                                     <TableHeader>
                                         <TableRow>
-                                            <TableHead className="whitespace-nowrap">Center Name</TableHead>
-                                            <TableHead className="whitespace-nowrap">Address</TableHead>
-                                            <TableHead className="whitespace-nowrap">Capacity</TableHead>
-                                            <TableHead className="whitespace-nowrap">Current Occupancy</TableHead>
-                                            <TableHead className="whitespace-nowrap">Occupancy</TableHead>
-                                            <TableHead className="whitespace-nowrap">Action</TableHead>
+                                            <TableHead className="whitespace-nowrap">
+                                                Center Name
+                                            </TableHead>
+                                            <TableHead className="whitespace-nowrap">
+                                                Address
+                                            </TableHead>
+                                            <TableHead className="whitespace-nowrap">
+                                                Capacity
+                                            </TableHead>
+                                            <TableHead className="whitespace-nowrap">
+                                                Current Occupancy
+                                            </TableHead>
+                                            <TableHead className="whitespace-nowrap">
+                                                Occupancy
+                                            </TableHead>
+                                            <TableHead className="whitespace-nowrap">
+                                                Action
+                                            </TableHead>
                                         </TableRow>
                                     </TableHeader>
                                     <TableBody>
@@ -352,14 +369,22 @@ export function CreateEventModal({
                                         ) : (
                                             evacuation_centers.map((center, i) => (
                                                 <TableRow key={i}>
-                                                    <TableCell className="max-w-[120px] truncate" title={center.center_name}>
+                                                    <TableCell
+                                                        className="max-w-[120px] truncate"
+                                                        title={center.center_name}
+                                                    >
                                                         {center.center_name}
                                                     </TableCell>
-                                                    <TableCell className="max-w-[120px] truncate" title={center.address}>
+                                                    <TableCell
+                                                        className="max-w-[120px] truncate"
+                                                        title={center.address}
+                                                    >
                                                         {center.address}
                                                     </TableCell>
                                                     <TableCell>{center.capacity}</TableCell>
-                                                    <TableCell>{center.current_occupancy}</TableCell>
+                                                    <TableCell>
+                                                        {center.current_occupancy}
+                                                    </TableCell>
                                                     <TableCell>
                                                         <span
                                                             className={`px-2 py-1 rounded text-xs font-medium inline-block ${getOccupancyColor(`${Math.round((center.current_occupancy / center.capacity) * 100)}%` || "0%")}`}
