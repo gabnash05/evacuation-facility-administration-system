@@ -43,10 +43,7 @@ export function CityAdminEventsPage() {
     const [deletingEvent, setDeletingEvent] = useState<Event | null>(null);
     const [deleteLoading, setDeleteLoading] = useState(false);
 
-    const debouncedFetchEvents = useMemo(
-        () => debounce(() => fetchEvents(), 500),
-        [fetchEvents]
-    );
+    const debouncedFetchEvents = useMemo(() => debounce(() => fetchEvents(), 500), [fetchEvents]);
 
     useEffect(() => {
         if (searchQuery || entriesPerPage !== 10) {

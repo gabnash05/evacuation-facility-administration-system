@@ -24,12 +24,12 @@ interface AddCenterModalProps {
 
 export function AddCenterModal({ isOpen, onClose, onAddCenters }: AddCenterModalProps) {
     const [selectedCenterIds, setSelectedCenterIds] = useState<Set<number>>(new Set());
-    
+
     const {
         centers: availableCenters,
         loading: isLoading,
         error,
-        fetchCenters
+        fetchCenters,
     } = useEvacuationCenterStore();
 
     useEffect(() => {
@@ -51,7 +51,9 @@ export function AddCenterModal({ isOpen, onClose, onAddCenters }: AddCenterModal
     };
 
     const handleAddCenters = () => {
-        const selectedCenters = availableCenters.filter(center => selectedCenterIds.has(center.center_id));
+        const selectedCenters = availableCenters.filter(center =>
+            selectedCenterIds.has(center.center_id)
+        );
         onAddCenters(selectedCenters);
         setSelectedCenterIds(new Set());
         onClose();
@@ -63,10 +65,11 @@ export function AddCenterModal({ isOpen, onClose, onAddCenters }: AddCenterModal
     };
 
     const getOccupancyColor = (center: EvacuationCenter) => {
-        const percentage = center.capacity > 0 
-            ? Math.round((center.current_occupancy / center.capacity) * 100)
-            : 0;
-        
+        const percentage =
+            center.capacity > 0
+                ? Math.round((center.current_occupancy / center.capacity) * 100)
+                : 0;
+
         if (percentage >= 80) return "bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-200";
         if (percentage >= 50)
             return "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200";
@@ -135,10 +138,13 @@ export function AddCenterModal({ isOpen, onClose, onAddCenters }: AddCenterModal
                             <TableBody>
                                 {availableCenters.map((center, i) => {
                                     const isSelected = selectedCenterIds.has(center.center_id);
-                                    const occupancyPercentage = center.capacity > 0 
-                                        ? Math.round((center.current_occupancy / center.capacity) * 100)
-                                        : 0;
-                                    
+                                    const occupancyPercentage =
+                                        center.capacity > 0
+                                            ? Math.round(
+                                                  (center.current_occupancy / center.capacity) * 100
+                                              )
+                                            : 0;
+
                                     return (
                                         <TableRow
                                             key={center.center_id}
@@ -168,7 +174,9 @@ export function AddCenterModal({ isOpen, onClose, onAddCenters }: AddCenterModal
                                                 <Button
                                                     variant="ghost"
                                                     size="icon"
-                                                    onClick={() => handleToggleCenter(center.center_id)}
+                                                    onClick={() =>
+                                                        handleToggleCenter(center.center_id)
+                                                    }
                                                     className="h-8 w-8"
                                                 >
                                                     {isSelected ? (
