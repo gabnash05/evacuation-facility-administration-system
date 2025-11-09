@@ -11,21 +11,21 @@ import {
 import { Button } from "@/components/ui/button";
 import { AlertTriangle, Trash2 } from "lucide-react";
 
-interface DeleteEventDialogProps {
+interface DeleteHouseholdDialogProps {
     isOpen: boolean;
     onClose: () => void;
     onConfirm: () => void;
-    eventName: string;
+    householdName: string;
     loading?: boolean;
 }
 
-export function DeleteEventDialog({
+export function DeleteHouseholdDialog({
     isOpen,
     onClose,
     onConfirm,
-    eventName,
+    householdName,
     loading = false,
-}: DeleteEventDialogProps) {
+}: DeleteHouseholdDialogProps) {
     return (
         <Dialog open={isOpen} onOpenChange={onClose}>
             <DialogContent className="sm:max-w-md">
@@ -38,7 +38,7 @@ export function DeleteEventDialog({
                         </div>
                         <div>
                             <DialogTitle className="text-lg font-semibold">
-                                Delete Event
+                                Delete Household
                             </DialogTitle>
                             <DialogDescription className="mt-1">
                                 This action cannot be undone.
@@ -50,8 +50,8 @@ export function DeleteEventDialog({
                 <div className="py-4">
                     <p className="text-sm text-muted-foreground">
                         Are you sure you want to delete{" "}
-                        <strong className="font-semibold text-foreground">"{eventName}"</strong>?
-                        This will remove all event data and associations.
+                        <strong className="font-semibold text-foreground">"{householdName}"</strong>
+                        ? This will also remove all individuals associated with this household.
                     </p>
                 </div>
 
@@ -80,7 +80,7 @@ export function DeleteEventDialog({
                         ) : (
                             <>
                                 <Trash2 className="h-4 w-4" />
-                                Delete Event
+                                Delete
                             </>
                         )}
                     </Button>

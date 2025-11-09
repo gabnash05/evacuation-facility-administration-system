@@ -1,7 +1,14 @@
 // components/features/events/EventsTable.tsx
 "use client";
 
-import { ChevronUp, ChevronDown, ChevronsUpDown, MoreVertical, SquarePen, Trash2 } from "lucide-react";
+import {
+    ChevronUp,
+    ChevronDown,
+    ChevronsUpDown,
+    MoreVertical,
+    SquarePen,
+    Trash2,
+} from "lucide-react";
 import {
     Table,
     TableBody,
@@ -308,9 +315,7 @@ export function EventsTable({
                                 style={{ width: "100%" }}
                             >
                                 <div className="text-muted-foreground flex flex-col items-center justify-center">
-                                    <div className="text-lg font-medium mb-2">
-                                        No events found
-                                    </div>
+                                    <div className="text-lg font-medium mb-2">No events found</div>
                                     <div className="text-sm">
                                         Add your first event to get started
                                     </div>

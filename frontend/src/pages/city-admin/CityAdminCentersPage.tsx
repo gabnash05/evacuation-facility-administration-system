@@ -1,4 +1,3 @@
-
 import { useEffect, useMemo, useState } from "react";
 import { EvacuationCenterTable } from "@/components/features/evacuation-center/EvacuationCenterTable";
 import { EvacuationCenterTableToolbar } from "@/components/features/evacuation-center/EvacuationCenterTableToolbar";
