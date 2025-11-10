@@ -26,6 +26,7 @@ def get_all_households() -> Tuple:
         per_page (integer) - Items per page (default: 10)
         sort_by (string) - Field to sort by
         sort_order (string) - Sort direction (asc/desc)
+        center_id (integer) - Filter by center ID (optional)
 
     Returns:
         Tuple containing:
@@ -39,6 +40,7 @@ def get_all_households() -> Tuple:
         per_page = request.args.get("per_page", 10, type=int)
         sort_by = request.args.get("sort_by", type=str)
         sort_order = request.args.get("sort_order", type=str)
+        center_id = request.args.get("center_id", type=int)  # Add center_id parameter
 
         # Validate pagination parameters
         if page < 1:
@@ -62,6 +64,7 @@ def get_all_households() -> Tuple:
             "per_page": per_page,
             "sort_by": sort_by,
             "sort_order": sort_order,
+            "center_id": center_id,  # Add center_id to params
         }
 
         # Get households from service

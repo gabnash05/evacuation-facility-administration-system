@@ -26,7 +26,9 @@ interface ActualHouseholdsResponse {
 }
 
 export class HouseholdService {
-    static async getHouseholds(params: GetHouseholdsParams = {}): Promise<HouseholdsResponse> {
+    static async getHouseholds(
+        params: GetHouseholdsParams & { centerId?: number } = {}
+    ): Promise<HouseholdsResponse> {
         try {
             // Map frontend params to backend expected query params
             const backendParams: any = {};
@@ -35,6 +37,7 @@ export class HouseholdService {
             if (params.limit) backendParams.per_page = params.limit;
             if (params.sortBy) backendParams.sort_by = params.sortBy;
             if (params.sortOrder) backendParams.sort_order = params.sortOrder;
+            if (params.centerId) backendParams.center_id = params.centerId;
 
             const response = await api.get<ActualHouseholdsResponse>("/households", {
                 params: backendParams,

@@ -1,7 +1,6 @@
 // components/auth/ProtectedRoute.tsx
 import { Navigate } from "react-router-dom";
-import { useAuth } from "@/hooks/useAuth.mock";
-// import { useAuth } from '@/hooks/useAuth'; // Use the real hook when its implemented
+import { useAuth } from "@/hooks/useAuth";
 
 interface ProtectedRouteProps {
     children: React.ReactNode;
@@ -19,7 +18,7 @@ export default function ProtectedRoute({ children, requiredRole }: ProtectedRout
         return <Navigate to="/login" replace />;
     }
 
-    if (requiredRole && !requiredRole.includes(user.role)) {
+    if (requiredRole && !requiredRole.includes(user!.role)) {
         return <Navigate to="/unauthorized" replace />;
     }
 

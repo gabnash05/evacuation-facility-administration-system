@@ -1,6 +1,5 @@
 // App.tsx
 import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
-import { CityAdminDashboardSample } from "@/pages/samples/CityAdminDashboardSample";
 
 import { CityAdminDashboard } from "./pages/city-admin/CityAdminDashboard";
 import { CityAdminCentersPage } from "@/pages/city-admin/CityAdminCentersPage";

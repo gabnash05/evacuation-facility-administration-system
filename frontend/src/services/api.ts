@@ -1,20 +1,35 @@
 import axios from "axios";
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
-
-// Validate environment variable
-if (!API_BASE_URL) {
-    console.warn("VITE_API_BASE_URL is not set. Using relative paths.");
-}
+// Use environment variable if set, otherwise use relative path for production
+// When served from backend, relative paths will work since both are on same domain
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "/api";
 
 export const api = axios.create({
     baseURL: API_BASE_URL,
     headers: {
         "Content-Type": "application/json",
+        "Accept": "application/json",
     },
     timeout: 10000,
     withCredentials: true,
 });
+
+// Add request interceptor to ensure Authorization header is set for all requests
+api.interceptors.request.use(
+    (config) => {
+        // Try to get token from cookie
+        const cookies = document.cookie.split(';');
+        const tokenCookie = cookies.find(cookie => cookie.trim().startsWith('access_token='));
+        if (tokenCookie) {
+            const token = tokenCookie.split('=')[1];
+            config.headers.Authorization = `Bearer ${token}`;
+        }
+        return config;
+    },
+    (error) => {
+        return Promise.reject(error);
+    }
+);
 
 // Response interceptor for error handling
 api.interceptors.response.use(

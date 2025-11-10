@@ -6,6 +6,12 @@ import { defineConfig } from "vite"
 // https://vite.dev/config/
 export default defineConfig({
     plugins: [react(), tailwindcss()],
+    build: {
+        outDir: '../backend/app/static',
+        emptyOutDir: true,
+        assetsDir: 'assets',
+    },
+    base: './', // Use relative base path for production builds
     resolve: {
         alias: {
             "@": path.resolve(__dirname, "./src"),

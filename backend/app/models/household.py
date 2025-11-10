@@ -88,7 +88,13 @@ class Household(db.Model):
 
     @classmethod
     def get_all_paginated(
-        cls, search: str, offset: int, limit: int, sort_by: str, sort_direction: str
+        cls,
+        search: str,
+        offset: int,
+        limit: int,
+        sort_by: str,
+        sort_direction: str,
+        center_id: int = None,
     ):
         search_query = f"%{search}%"
         allowed_sort_columns = {
@@ -101,6 +107,11 @@ class Household(db.Model):
         if sort_direction.lower() not in ["asc", "desc"]:
             sort_direction = "asc"
         order_by_clause = f"ORDER BY {sort_column} {sort_direction}"
+
+        # Add center filter condition
+        center_filter = ""
+        if center_id:
+            center_filter = "AND h.center_id = :center_id"
 
         sql_query = f"""
             SELECT
@@ -144,13 +155,16 @@ class Household(db.Model):
                     WHERE ind.household_id = h.household_id
                     AND CONCAT(ind.first_name, ' ', ind.last_name) ILIKE '%' || :search || '%'
                 ))
+                {center_filter}
             {order_by_clause}
             LIMIT :limit OFFSET :offset
         """
 
-        result = db.session.execute(
-            text(sql_query), {"search": search_query, "limit": limit, "offset": offset}
-        ).fetchall()
+        params = {"search": search_query, "limit": limit, "offset": offset}
+        if center_id:
+            params["center_id"] = center_id
+
+        result = db.session.execute(text(sql_query), params).fetchall()
 
         # Transform the flat result into nested objects with snake_case field names
         households = []
@@ -202,72 +216,34 @@ class Household(db.Model):
 
         return households
 
-        # Transform the flat result into nested objects
-        households = []
-        for row in result:
-            row_dict = dict(row._mapping)
-
-            # Build center object if center data exists
-            center = None
-            if row_dict.get("center_center_id"):
-                center = {
-                    "center_id": row_dict["center_center_id"],
-                    "center_name": row_dict["center_center_name"],
-                    "address": row_dict["center_address"],
-                    "capacity": row_dict["center_capacity"],
-                    "current_occupancy": row_dict["center_current_occupancy"],
-                    "status": row_dict["center_status"],
-                    "created_at": row_dict["center_created_at"],
-                    "updated_at": row_dict["center_updated_at"],
-                }
-
-            # Build household head object if head data exists
-            household_head = None
-            if row_dict.get("head_individual_id"):
-                household_head = {
-                    "individual_id": row_dict["head_individual_id"],
-                    "first_name": row_dict["head_first_name"],
-                    "last_name": row_dict["head_last_name"],
-                    "date_of_birth": row_dict["head_date_of_birth"],
-                    "gender": row_dict["head_gender"],
-                    "relationship_to_head": row_dict["head_relationship_to_head"],
-                    "created_at": row_dict["head_created_at"],
-                    "updated_at": row_dict["head_updated_at"],
-                }
-
-            # Build the final household object
-            household = {
-                "householdId": row_dict["householdId"],
-                "householdName": row_dict["householdName"],
-                "address": row_dict["address"],
-                "centerId": row_dict["centerId"],
-                "householdHeadId": row_dict["householdHeadId"],
-                "createdAt": row_dict["createdAt"],
-                "updatedAt": row_dict["updatedAt"],
-                "center": center,
-                "householdHead": household_head,
-            }
-
-            households.append(household)
-
-        return households
-
     @classmethod
-    def get_count(cls, search: str):
+    def get_count(cls, search: str, center_id: int = None):
         search_query = f"%{search}%"
+
+        # Add center filter condition
+        center_filter = ""
+        if center_id:
+            center_filter = "AND h.center_id = :center_id"
+
         sql = text(
-            """
+            f"""
             SELECT COUNT(h.household_id)
             FROM households h
             WHERE
-                h.household_name ILIKE :search OR
+                (h.household_name ILIKE :search OR
                 h.address ILIKE :search OR
                 EXISTS (
                     SELECT 1 FROM individuals ind
                     WHERE ind.household_id = h.household_id
                     AND CONCAT(ind.first_name, ' ', ind.last_name) ILIKE :search
-                )
+                ))
+                {center_filter}
         """
         )
-        result = db.session.execute(sql, {"search": search_query}).scalar()
+
+        params = {"search": search_query}
+        if center_id:
+            params["center_id"] = center_id
+
+        result = db.session.execute(sql, params).scalar()
         return result if result is not None else 0

@@ -104,8 +104,18 @@ export const useEventStore = create<EventState>((set, get) => ({
 
     updateEvent: async (id: number, eventData: any) => {
         try {
-            await EventService.updateEvent(id, eventData);
-            await get().fetchEvents(); // Refresh the list
+            // Include center_ids in the update data
+            const updateData = {
+                event_name: eventData.event_name,
+                event_type: eventData.event_type,
+                date_declared: eventData.date_declared,
+                end_date: eventData.end_date,
+                status: eventData.status,
+                center_ids: eventData.center_ids || [], // Include center_ids
+            };
+
+            await EventService.updateEvent(id, updateData);
+            await get().fetchEvents();
         } catch (error) {
             throw new Error(error instanceof Error ? error.message : "Failed to update event");
         }

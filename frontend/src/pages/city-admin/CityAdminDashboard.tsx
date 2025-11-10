@@ -123,6 +123,7 @@ export function CityAdminDashboard() {
     const formattedEvents = useMemo(() => {
         return events.map(event => ({
             ...event,
+            status: event.status.charAt(0).toUpperCase() + event.status.slice(1),
             date_declared: formatDate(event.date_declared),
             end_date: event.end_date ? formatDate(event.end_date) : "NA",
         }));

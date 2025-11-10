@@ -104,7 +104,10 @@ export function CityAdminEventsPage() {
     const handleUpdateEvent = async (eventData: any) => {
         if (!editingEvent) return;
 
-        if (new Date(eventData.end_date) < new Date(eventData.date_declared)) {
+        if (
+            eventData.end_date &&
+            new Date(eventData.end_date) < new Date(eventData.date_declared)
+        ) {
             // Handle client-side validation error
             console.error("End date cannot be earlier than the date declared.");
             return;
@@ -117,6 +120,7 @@ export function CityAdminEventsPage() {
                 date_declared: eventData.date_declared,
                 end_date: eventData.end_date,
                 status: eventData.status,
+                center_ids: eventData.center_ids,
             });
 
             setIsEditModalOpen(false);

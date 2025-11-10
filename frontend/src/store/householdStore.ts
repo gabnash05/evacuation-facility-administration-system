@@ -26,7 +26,7 @@ interface HouseholdState {
     setCurrentPage: (page: number) => void;
     setEntriesPerPage: (entries: number) => void;
     setSortConfig: (config: { key: string; direction: "asc" | "desc" | null } | null) => void;
-    fetchHouseholds: () => Promise<void>;
+    fetchHouseholds: (centerId?: number) => Promise<void>;
     createHousehold: (householdData: CreateHouseholdData) => Promise<number>; // Returns household ID
     createHouseholdWithIndividuals: (householdData: CreateHouseholdData) => Promise<void>;
     updateHousehold: (id: number, householdData: UpdateHouseholdData) => Promise<void>;
@@ -66,7 +66,7 @@ export const useHouseholdStore = create<HouseholdState>((set, get) => ({
         set({ sortConfig: config, currentPage: 1 });
     },
 
-    fetchHouseholds: async () => {
+    fetchHouseholds: async (centerId?: number) => {
         const { searchQuery, currentPage, entriesPerPage, sortConfig } = get();
 
         set({ loading: true, error: null });
@@ -77,7 +77,8 @@ export const useHouseholdStore = create<HouseholdState>((set, get) => ({
                 page: currentPage,
                 limit: entriesPerPage,
                 sortBy: sortConfig?.key,
-                sortOrder: sortConfig?.direction || undefined, // This can be null now
+                sortOrder: sortConfig?.direction || undefined,
+                centerId: centerId,
             });
 
             set({

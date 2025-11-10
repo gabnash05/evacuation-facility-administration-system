@@ -69,7 +69,98 @@ class EvacuationCenter(db.Model):
         sort_by: Optional[str] = None,
         sort_order: Optional[str] = "asc",
     ) -> Dict[str, Any]:
-        """Get all centers with pagination, search, and sorting."""
+        # Base query
+        base_query = "FROM evacuation_centers WHERE 1=1"
+        count_query = "SELECT COUNT(*) as total_count FROM evacuation_centers WHERE 1=1"
+        params = {}
+
+        # Add search filter
+        if search:
+            base_query += " AND (LOWER(center_name) LIKE LOWER(:search) OR LOWER(address) LIKE LOWER(:search))"
+            count_query += " AND (LOWER(center_name) LIKE LOWER(:search) OR LOWER(address) LIKE LOWER(:search))"
+            params["search"] = f"%{search}%"
+
+        # Add status filter
+        if status:
+            base_query += " AND status = :status"
+            count_query += " AND status = :status"
+            params["status"] = status
+
+        # Get total count
+        count_result = db.session.execute(text(count_query), params).fetchone()
+        total_count = count_result[0] if count_result else 0
+
+        # Build main query
+        select_query = f"SELECT * {base_query}"
+
+        # Add sorting - handle usage as a special case
+        if sort_by == "usage":
+            # Calculate usage percentage in the ORDER BY clause
+            order_direction = (
+                "DESC" if sort_order and sort_order.lower() == "desc" else "ASC"
+            )
+            select_query += f" ORDER BY (current_occupancy * 100.0 / NULLIF(capacity, 0)) {order_direction}"
+        elif sort_by and sort_by in [
+            "center_name",
+            "address",
+            "capacity",
+            "current_occupancy",
+            "status",
+            "created_at",
+        ]:
+            order_direction = (
+                "DESC" if sort_order and sort_order.lower() == "desc" else "ASC"
+            )
+            select_query += f" ORDER BY {sort_by} {order_direction}"
+        else:
+            select_query += " ORDER BY created_at DESC"
+
+        # Add pagination
+        offset = (page - 1) * limit
+        select_query += " LIMIT :limit OFFSET :offset"
+        params["limit"] = limit
+        params["offset"] = offset
+
+        # Execute query
+        results = db.session.execute(text(select_query), params).fetchall()
+
+        centers = [
+            cls._row_to_center(row) for row in results if cls._row_to_center(row)
+        ]
+
+        return {
+            "centers": centers,
+            "total_count": total_count,
+            "page": page,
+            "limit": limit,
+            "total_pages": (total_count + limit - 1) // limit,
+        }
+
+    @classmethod
+    def get_all_centers_no_pagination(
+        cls,
+        search: Optional[str] = None,
+        status: Optional[str] = None,
+        sort_by: Optional[str] = "center_name",
+        sort_order: Optional[str] = "asc",
+    ) -> Dict[str, Any]:
+        """
+        Get all evacuation centers without pagination for dropdowns and maps.
+
+        Args:
+            search: Optional search string for center name or address
+            status: Optional status filter
+            sort_by: Field to sort by (default: center_name)
+            sort_order: Sort direction (asc/desc, default: asc)
+
+        Returns:
+            Dictionary containing:
+                - centers: List of EvacuationCenter objects
+                - total_count: Total number of centers
+                - page: Always 1 (for consistency)
+                - limit: Always total_count (for consistency)
+                - total_pages: Always 1 (for consistency)
+        """
         # Base query
         base_query = "FROM evacuation_centers WHERE 1=1"
         count_query = "SELECT COUNT(*) as total_count FROM evacuation_centers WHERE 1=1"
@@ -108,15 +199,11 @@ class EvacuationCenter(db.Model):
             )
             select_query += f" ORDER BY {sort_by} {order_direction}"
         else:
-            select_query += " ORDER BY created_at DESC"
+            select_query += (
+                " ORDER BY center_name ASC"  # Default sort for non-paginated
+            )
 
-        # Add pagination
-        offset = (page - 1) * limit
-        select_query += " LIMIT :limit OFFSET :offset"
-        params["limit"] = limit
-        params["offset"] = offset
-
-        # Execute query
+        # Execute query (no pagination)
         results = db.session.execute(text(select_query), params).fetchall()
 
         centers = [
@@ -126,9 +213,9 @@ class EvacuationCenter(db.Model):
         return {
             "centers": centers,
             "total_count": total_count,
-            "page": page,
-            "limit": limit,
-            "total_pages": (total_count + limit - 1) // limit,
+            "page": 1,  # Always page 1 for consistency
+            "limit": total_count,  # Limit equals total count for consistency
+            "total_pages": 1,  # Always 1 page for consistency
         }
 
     @classmethod

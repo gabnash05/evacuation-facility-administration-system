@@ -10,7 +10,7 @@ export interface Event {
     event_type: string;
     date_declared: string;
     end_date?: string | null;
-    status: EventStatus;
+    status: string | EventStatus;
     created_at: string;
     updated_at?: string;
 }
