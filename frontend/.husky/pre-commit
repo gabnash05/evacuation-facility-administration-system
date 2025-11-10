@@ -1,0 +1,11 @@
+#!/usr/bin/env sh
+. "$(dirname -- "$0")/_/husky.sh"
+
+echo "Running EFAS pre-commit checks..."
+
+if npm run pre-commit; then
+    echo "[✔] EFAS pre-commit checks passed!"
+else
+    echo "[✘] EFAS pre-commit checks failed!"
+    exit 1
+fi

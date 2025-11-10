@@ -1,0 +1,36 @@
+[[source]]
+url = "https://pypi.org/simple"
+verify_ssl = true
+name = "pypi"
+
+[packages]
+python-dotenv = "*"
+sqlalchemy = "*"
+flask = "*"
+flask-sqlalchemy = "*"
+flask-migrate = "*"
+flask-jwt-extended = "*"
+flask-cors = "*"
+marshmallow = "*"
+gunicorn = "*"
+werkzeug = "*"
+psycopg2-binary = "*"
+
+[dev-packages]
+flake8 = "*"
+isort = "*"
+python-dotenv = "*"
+black = "*"
+
+[requires]
+python_version = "3.13"
+
+[scripts]
+dev = "python run.py"
+start = "gunicorn -w 4 -b 0.0.0.0:5000 wsgi:app"
+setup-db = "python database/setup_db.py"
+init-db = "flask db init"
+migrate = "flask db migrate"
+upgrade = "flask db upgrade"
+lint = "flake8 app database"
+format-black = "black app database"
