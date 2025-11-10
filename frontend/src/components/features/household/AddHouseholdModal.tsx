@@ -40,6 +40,7 @@ interface AddHouseholdModalProps {
     isOpen: boolean;
     onClose: () => void;
     onSuccess: () => void;
+    defaultCenterId?: number;
 }
 
 export function AddHouseholdModal({ isOpen, onClose, onSuccess }: AddHouseholdModalProps) {

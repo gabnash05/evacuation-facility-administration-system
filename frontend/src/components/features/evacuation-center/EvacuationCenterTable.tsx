@@ -1,3 +1,6 @@
+// evacuation-facility-administration-system/frontend/src/components/features/evacuation-center/EvacuationCenterTable.tsx
+"use client";
+
 import { ChevronUp, ChevronDown, ChevronsUpDown, MoreVertical } from "lucide-react";
 import {
     Table,
@@ -26,6 +29,8 @@ interface EvacuationCenterTableProps {
     onSort: (key: string) => void;
     loading?: boolean;
     onShowSuccessToast?: (message: string) => void;
+    onRowClick?: (center: EvacuationCenter) => void;
+    onItemDeleted?: () => void;
 }
 
 // Custom dropdown component with theme support and proper positioning
@@ -161,6 +166,8 @@ export function EvacuationCenterTable({
     onSort,
     loading,
     onShowSuccessToast,
+    onRowClick,
+    onItemDeleted,
 }: EvacuationCenterTableProps) {
     const { deleteCenter } = useEvacuationCenterStore();
     const [deleteDialog, setDeleteDialog] = useState<{
@@ -271,6 +278,12 @@ export function EvacuationCenterTable({
         }
     };
 
+    const handleRowClick = (center: EvacuationCenter) => {
+        if (onRowClick) {
+            onRowClick(center);
+        }
+    };
+
     const handleDeleteConfirm = async () => {
         if (deleteDialog.centerId) {
             setDeleteLoading(true);
@@ -284,6 +297,10 @@ export function EvacuationCenterTable({
 
                 if (onShowSuccessToast) {
                     onShowSuccessToast("Evacuation center deleted successfully.");
+                }
+
+                if (onItemDeleted) {
+                    onItemDeleted();
                 }
             } catch (error) {
                 console.error("Failed to delete center:", error);
@@ -365,8 +382,10 @@ export function EvacuationCenterTable({
                                     key={center.center_id}
                                     className={cn(
                                         "hover:bg-muted/50 transition-colors",
-                                        index % 2 === 1 ? "bg-muted/50" : "" // Increased opacity for better visibility
+                                        index % 2 === 1 ? "bg-muted/50" : ""
                                     )}
+                                    onClick={() => handleRowClick(center)}
+                                    style={{ cursor: onRowClick ? "pointer" : "default" }}
                                 >
                                     <TableCell
                                         className="font-medium py-3 truncate align-middle text-left"
@@ -415,7 +434,7 @@ export function EvacuationCenterTable({
                                                 />
                                             </div>
                                             <span className="text-sm font-medium whitespace-nowrap">
-                                                {usagePercentage}%{usagePercentage > 100}
+                                                {usagePercentage}%
                                             </span>
                                         </div>
                                     </TableCell>
@@ -436,6 +455,7 @@ export function EvacuationCenterTable({
                                     <TableCell
                                         className="py-3 align-middle text-left"
                                         style={{ width: columnWidths.actions }}
+                                        onClick={e => e.stopPropagation()}
                                     >
                                         <ActionDropdown
                                             centerId={center.center_id}

@@ -10,6 +10,12 @@ export class AuthService {
                 withCredentials: true,
             });
 
+            const token = response.data.data?.token;
+            if (token) {
+                // Set the token in the api instance headers
+                api.defaults.headers.common["Authorization"] = `Bearer ${token}`;
+            }
+
             return response.data.data!;
         } catch (error) {
             throw new Error(handleApiError(error));
