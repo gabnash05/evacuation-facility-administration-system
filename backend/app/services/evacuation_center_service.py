@@ -1,0 +1,396 @@
+"""Service layer for evacuation center operations."""
+
+import logging
+import base64
+from typing import Any, Dict, Optional
+
+from app.models.evacuation_center import EvacuationCenter
+from app.schemas.evacuation_center import (
+    EvacuationCenterCreateSchema,
+    EvacuationCenterUpdateSchema,
+)
+
+# Configure logger for this module
+logger = logging.getLogger(__name__)
+
+# Initialize schemas for validation
+create_schema = EvacuationCenterCreateSchema()
+update_schema = EvacuationCenterUpdateSchema()
+
+# Maximum file size for base64 (5MB)
+MAX_FILE_SIZE = 5 * 1024 * 1024
+
+
+def process_photo_file(photo_file) -> Optional[str]:
+    """Process uploaded photo file and return base64 string."""
+    if not photo_file:
+        return None
+
+    # Validate file size
+    photo_file.seek(0, 2)  # Seek to end to get file size
+    file_size = photo_file.tell()
+    photo_file.seek(0)  # Reset file pointer
+
+    if file_size > MAX_FILE_SIZE:
+        raise ValueError("Image too large. Maximum size is 5MB.")
+
+    # Read file and encode as base64
+    photo_data = photo_file.read()
+    base64_data = base64.b64encode(photo_data).decode("utf-8")
+
+    return base64_data
+
+
+def get_centers(
+    search: Optional[str] = None,
+    status: Optional[str] = None,
+    page: int = 1,
+    limit: int = 10,
+    sort_by: Optional[str] = None,
+    sort_order: Optional[str] = "asc",
+) -> Dict[str, Any]:
+    """
+    Get all evacuation centers with filtering, pagination, and sorting.
+
+    Args:
+        search: Search term for center name or address
+        status: Filter by status
+        page: Page number for pagination
+        limit: Number of items per page
+        sort_by: Field to sort by
+        sort_order: Sort direction (asc/desc)
+
+    Returns:
+        Dictionary with centers and pagination info
+    """
+    try:
+        result = EvacuationCenter.get_all(
+            search=search,
+            status=status,
+            page=page,
+            limit=limit,
+            sort_by=sort_by,
+            sort_order=sort_order,
+        )
+
+        centers_data = [center.to_schema() for center in result["centers"]]
+
+        return {
+            "success": True,
+            "data": {
+                "results": centers_data,
+                "pagination": {
+                    "current_page": result["page"],
+                    "total_pages": result["total_pages"],
+                    "total_items": result["total_count"],
+                    "limit": result["limit"],
+                },
+            },
+        }
+
+    except Exception as error:
+        logger.error("Error fetching evacuation centers: %s", str(error))
+        return {"success": False, "message": "Failed to fetch evacuation centers"}
+
+
+def get_center_by_id(center_id: int) -> Dict[str, Any]:
+    """
+    Get a specific evacuation center by ID.
+
+    Args:
+        center_id: Center ID
+
+    Returns:
+        Dictionary with center data or error message
+    """
+    try:
+        center = EvacuationCenter.get_by_id(center_id)
+
+        if not center:
+            return {"success": False, "message": "Evacuation center not found"}
+
+        return {"success": True, "data": center.to_schema()}
+
+    except Exception as error:
+        logger.error("Error fetching evacuation center %s: %s", center_id, str(error))
+        return {"success": False, "message": "Failed to fetch evacuation center"}
+
+
+def get_all_centers() -> Dict[str, Any]:
+    """
+    Get all evacuation centers without pagination for dropdowns and maps.
+
+    Returns:
+        Dictionary containing:
+            - success: Boolean indicating operation success
+            - message: Descriptive message
+            - data: List of all centers
+    """
+    try:
+        # Get all centers without pagination - this returns a DICT, not a list
+        result = EvacuationCenter.get_all_centers_no_pagination()
+
+        # Extract centers from the result dictionary
+        centers_list = result["centers"]
+
+        # Convert centers to dictionaries
+        centers_data = []
+        for center in centers_list:
+            try:
+                if hasattr(center, "to_dict"):
+                    center_dict = center.to_dict()
+                    centers_data.append(center_dict)
+                else:
+                    # Fallback manual conversion
+                    center_dict = {
+                        "center_id": getattr(center, "center_id", None),
+                        "center_name": getattr(center, "center_name", "Unknown"),
+                        "address": getattr(center, "address", ""),
+                        "capacity": getattr(center, "capacity", 0),
+                        "current_occupancy": getattr(center, "current_occupancy", 0),
+                        "status": getattr(center, "status", "inactive"),
+                        "photo_data": getattr(center, "photo_data", None),
+                    }
+                    centers_data.append(center_dict)
+            except Exception as center_error:
+                logger.error(f"Error converting center: {str(center_error)}")
+                continue
+
+        return {
+            "success": True,
+            "message": f"Successfully retrieved {len(centers_data)} centers",
+            "data": centers_data,
+        }
+
+    except Exception as error:
+        logger.error("Error retrieving all centers: %s", str(error))
+        return {"success": False, "message": "Failed to retrieve centers", "data": []}
+
+
+def create_center(data: Dict[str, Any], photo_file=None) -> Dict[str, Any]:
+    """
+    Create a new evacuation center.
+
+    Args:
+        data: Center data
+        photo_file: Optional photo file
+
+    Returns:
+        Dictionary with creation result
+    """
+    try:
+        # Validate input data
+        try:
+            valid_data = create_schema.load(data)
+        except Exception as validation_error:
+            return {
+                "success": False,
+                "message": f"Validation error: {str(validation_error)}",
+            }
+
+        # Check if center name already exists
+        existing_centers = EvacuationCenter.get_all(search=valid_data["center_name"])
+        if existing_centers["centers"]:
+            for center in existing_centers["centers"]:
+                if center.center_name.lower() == valid_data["center_name"].lower():
+                    return {
+                        "success": False,
+                        "message": "Evacuation center name already exists",
+                    }
+
+        # Handle photo upload as base64
+        if photo_file:
+            try:
+                base64_data = process_photo_file(photo_file)
+                if base64_data:
+                    valid_data["photo_data"] = base64_data
+            except ValueError as e:
+                return {"success": False, "message": str(e)}
+            except Exception as e:
+                logger.error("Error processing photo: %s", str(e))
+                return {"success": False, "message": "Failed to process photo"}
+
+        # Create new center
+        center = EvacuationCenter.create(valid_data)
+
+        logger.info("Evacuation center created: %s", center.center_name)
+
+        return {
+            "success": True,
+            "message": "Evacuation center created successfully",
+            "data": center.to_schema(),
+        }
+
+    except Exception as error:
+        logger.error("Error creating evacuation center: %s", str(error))
+        return {"success": False, "message": "Failed to create evacuation center"}
+
+
+def update_center(
+    center_id: int,
+    update_data: Dict[str, Any],
+    photo_file=None,
+    remove_photo: bool = False,
+) -> Dict[str, Any]:
+    try:
+        # DEBUG: Log the incoming parameters
+        logger.info("🔧 [Backend Service] update_center called with:")
+        logger.info(
+            "🔧 [Backend Service] center_id: %s, remove_photo: %s",
+            center_id,
+            remove_photo,
+        )
+        logger.info("🔧 [Backend Service] update_data: %s", update_data)
+        logger.info("🔧 [Backend Service] photo_file: %s", photo_file is not None)
+
+        # Validate input data
+        try:
+            valid_data = update_schema.load(update_data)
+        except Exception as validation_error:
+            return {
+                "success": False,
+                "message": f"Validation error: {str(validation_error)}",
+            }
+
+        # Check if center exists
+        existing_center = EvacuationCenter.get_by_id(center_id)
+        if not existing_center:
+            return {"success": False, "message": "Evacuation center not found"}
+
+        # Check for duplicate center name if name is being updated
+        if "center_name" in valid_data and valid_data["center_name"]:
+            existing_centers = EvacuationCenter.get_all(
+                search=valid_data["center_name"]
+            )
+            for center in existing_centers["centers"]:
+                if (
+                    center.center_id != center_id
+                    and center.center_name.lower() == valid_data["center_name"].lower()
+                ):
+                    return {
+                        "success": False,
+                        "message": "Evacuation center name already exists",
+                    }
+
+        # Handle photo upload/removal - FIXED with explicit None handling
+        if remove_photo:
+            # Remove existing photo - explicitly set to None
+            valid_data["photo_data"] = None
+            logger.info(
+                "🔧 [Backend Service] Explicitly setting photo_data to None for removal"
+            )
+        elif photo_file:
+            # Handle new photo upload
+            try:
+                base64_data = process_photo_file(photo_file)
+                if base64_data:
+                    valid_data["photo_data"] = base64_data
+                    logger.info("🔧 [Backend Service] Setting new photo data")
+            except ValueError as e:
+                return {"success": False, "message": str(e)}
+            except Exception as e:
+                logger.error("Error processing photo: %s", str(e))
+                return {"success": False, "message": "Failed to process photo"}
+        else:
+            # If no photo changes, ensure photo_data is not in valid_data
+            # so it doesn't override existing photo
+            if "photo_data" in valid_data:
+                del valid_data["photo_data"]
+            logger.info("🔧 [Backend Service] No photo changes, keeping existing photo")
+
+        # DEBUG: Log what will be sent to model
+        logger.info(
+            "🔧 [Backend Service] Final update data keys: %s", list(valid_data.keys())
+        )
+        if "photo_data" in valid_data:
+            logger.info(
+                "🔧 [Backend Service] photo_data value: %s",
+                (
+                    "None"
+                    if valid_data["photo_data"] is None
+                    else "Base64 string (length: {})".format(
+                        len(valid_data["photo_data"])
+                    )
+                ),
+            )
+
+        # Update center
+        updated_center = EvacuationCenter.update(center_id, valid_data)
+
+        if not updated_center:
+            return {"success": False, "message": "Failed to update evacuation center"}
+
+        logger.info("Evacuation center updated: %s", center_id)
+
+        return {
+            "success": True,
+            "message": "Evacuation center updated successfully",
+            "data": updated_center.to_schema(),
+        }
+
+    except Exception as error:
+        logger.error("Error updating evacuation center %s: %s", center_id, str(error))
+        return {"success": False, "message": "Failed to update evacuation center"}
+
+
+def delete_center(center_id: int) -> Dict[str, Any]:
+    """
+    Delete an evacuation center.
+
+    Args:
+        center_id: Center ID
+
+    Returns:
+        Dictionary with deletion result
+    """
+    try:
+        # Check if center exists
+        existing_center = EvacuationCenter.get_by_id(center_id)
+        if not existing_center:
+            return {"success": False, "message": "Evacuation center not found"}
+
+        # Delete center
+        success = EvacuationCenter.delete(center_id)
+
+        if not success:
+            return {"success": False, "message": "Failed to delete evacuation center"}
+
+        logger.info("Evacuation center deleted: %s", center_id)
+
+        return {"success": True, "message": "Evacuation center deleted successfully"}
+
+    except Exception as error:
+        logger.error("Error deleting evacuation center %s: %s", center_id, str(error))
+        return {"success": False, "message": "Failed to delete evacuation center"}
+
+
+def update_center_occupancy(center_id: int, new_occupancy: int) -> Dict[str, Any]:
+    """
+    Update current occupancy of an evacuation center.
+
+    Args:
+        center_id: Center ID
+        new_occupancy: New occupancy count
+
+    Returns:
+        Dictionary with update result
+    """
+    try:
+        updated_center = EvacuationCenter.update_occupancy(center_id, new_occupancy)
+
+        if not updated_center:
+            return {"success": False, "message": "Evacuation center not found"}
+
+        return {
+            "success": True,
+            "message": "Occupancy updated successfully",
+            "data": updated_center.to_schema(),
+        }
+
+    except ValueError as error:
+        return {"success": False, "message": str(error)}
+    except Exception as error:
+        logger.error(
+            "Error updating occupancy for center %s: %s", center_id, str(error)
+        )
+        return {"success": False, "message": "Failed to update occupancy"}
