@@ -8,6 +8,7 @@ import { CreateEventModal } from "@/components/features/events/CreateEventModal"
 import { DeleteEventDialog } from "@/components/features/events/DeleteEventDialog";
 import { SuccessToast } from "@/components/features/evacuation-center/SuccessToast";
 import { useEventStore } from "@/store/eventStore";
+import { EvacuationCenterService } from "@/services/evacuationCenterService";
 import { formatDate } from "@/utils/formatters";
 import type { Event, EventDetails } from "@/types/event";
 
@@ -30,12 +31,14 @@ export function CityAdminDashboard() {
     const [deletingEvent, setDeletingEvent] = useState<Event | null>(null);
     const [deleteLoading, setDeleteLoading] = useState(false);
     const [successToast, setSuccessToast] = useState({ isOpen: false, message: "" });
+    
+    // City-wide summary instead of single center
     const [selectedCenter, setSelectedCenter] = useState<SelectedCenter>({
-        name: "Bagong Silang Barangay Gym/Hall",
-        address: "Hinaplanon",
-        status: "active",
-        capacity: 500,
-        current_occupancy: 300,
+        name: "Iligan City",
+        address: "",
+        status: "inactive",
+        capacity: 0,
+        current_occupancy: 0,
     });
 
     // Use event store
@@ -61,7 +64,33 @@ export function CityAdminDashboard() {
 
     // Stats loading state
     const [isLoadingStats] = useState(false);
-    const [isLoadingCenter] = useState(false);
+    const [isLoadingCenter, setIsLoadingCenter] = useState(true);
+
+    // Fetch city-wide summary on mount
+    useEffect(() => {
+        const fetchCitySummary = async () => {
+            try {
+                setIsLoadingCenter(true);
+                const response = await EvacuationCenterService.getCitySummary();
+                
+                if (response.success && response.data) {
+                    setSelectedCenter({
+                        name: "Iligan City",
+                        address: "", // Blank as requested
+                        status: response.data.status,
+                        capacity: response.data.total_capacity,
+                        current_occupancy: response.data.total_current_occupancy,
+                    });
+                }
+            } catch (error) {
+                console.error("Failed to fetch city summary:", error);
+            } finally {
+                setIsLoadingCenter(false);
+            }
+        };
+
+        fetchCitySummary();
+    }, []);
 
     useEffect(() => {
         fetchEvents();
@@ -107,7 +136,6 @@ export function CityAdminDashboard() {
             setSuccessToast({ isOpen: true, message: "Event created successfully" });
         } catch (err: any) {
             console.error("Create event error:", err);
-            // Error is handled by the store
         }
     };
 
@@ -187,7 +215,6 @@ export function CityAdminDashboard() {
         const currentSortConfig = sortConfig;
 
         if (currentSortConfig?.key === column) {
-            // Cycle through: asc -> desc -> null (unsorted)
             if (currentSortConfig.direction === "asc") {
                 setSortConfig({ key: column, direction: "desc" });
             } else if (currentSortConfig.direction === "desc") {
@@ -213,7 +240,6 @@ export function CityAdminDashboard() {
         { label: "Total Unaccounted", value: "429", max: "1000", percentage: 43 },
     ];
 
-    // Format events for display (only formatting, no type transformation)
     const formattedEvents = useMemo(() => {
         return events.map(event => ({
             ...event,
@@ -230,25 +256,21 @@ export function CityAdminDashboard() {
             )
         );
 
-        // Only sort if sortConfig exists and has direction
         if (sortConfig?.direction) {
             filtered = [...filtered].sort((a: any, b: any) => {
                 const aValue = a[sortConfig.key];
                 const bValue = b[sortConfig.key];
 
-                // Handle null/undefined values
                 if (aValue == null && bValue == null) return 0;
                 if (aValue == null) return 1;
                 if (bValue == null) return -1;
 
-                // String comparison (case-insensitive for text)
                 if (typeof aValue === "string" && typeof bValue === "string") {
                     return sortConfig.direction === "asc"
                         ? aValue.toLowerCase().localeCompare(bValue.toLowerCase())
                         : bValue.toLowerCase().localeCompare(aValue.toLowerCase());
                 }
 
-                // Numeric comparison
                 if (aValue < bValue) return sortConfig.direction === "asc" ? -1 : 1;
                 if (aValue > bValue) return sortConfig.direction === "asc" ? 1 : -1;
                 return 0;
@@ -261,7 +283,6 @@ export function CityAdminDashboard() {
     const totalPages = pagination?.total_pages || 1;
     const paginatedData = processedData;
 
-    // Reset to page 1 when search query changes
     useEffect(() => {
         setCurrentPage(1);
     }, [searchQuery, setCurrentPage]);
@@ -300,21 +321,18 @@ export function CityAdminDashboard() {
                 onDelete={handleDeleteEvent}
             />
 
-            {/* Event Details Modal */}
             <EventDetailsModal
                 isOpen={isModalOpen}
                 onClose={() => setIsModalOpen(false)}
                 eventData={selectedEvent}
             />
 
-            {/* Create Event Modal */}
             <CreateEventModal
                 isOpen={isCreateModalOpen}
                 onClose={() => setIsCreateModalOpen(false)}
                 onSubmit={handleCreateEvent}
             />
 
-            {/* Edit Event Modal */}
             {editingEvent && (
                 <CreateEventModal
                     isOpen={isEditModalOpen}
@@ -327,7 +345,6 @@ export function CityAdminDashboard() {
                 />
             )}
 
-            {/* Delete Event Dialog */}
             <DeleteEventDialog
                 isOpen={isDeleteDialogOpen}
                 onClose={handleCancelDelete}
@@ -336,7 +353,6 @@ export function CityAdminDashboard() {
                 loading={deleteLoading}
             />
 
-            {/* Global Success Toast */}
             <SuccessToast
                 isOpen={successToast.isOpen}
                 message={successToast.message}

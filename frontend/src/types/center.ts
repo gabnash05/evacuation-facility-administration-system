@@ -31,6 +31,15 @@ export interface UpdateCenterData {
     photo?: File;
 }
 
+export interface CitySummary {
+    total_capacity: number;
+    total_current_occupancy: number;
+    usage_percentage: number;
+    status: "active" | "inactive";
+    active_centers_count: number;
+    total_centers_count: number;
+}
+
 export interface GetCentersParams extends SearchParams {
     status?: string;
 }
