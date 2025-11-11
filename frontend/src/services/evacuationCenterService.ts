@@ -15,9 +15,16 @@ export class EvacuationCenterService {
         }
     }
 
-    static async getCenterById(id: number): Promise<CentersResponse> {
+    // FIXED: getCenterById returns a single center, not paginated response
+    static async getCenterById(id: number): Promise<{
+        success: boolean;
+        data: EvacuationCenter;
+    }> {
         try {
-            const response = await api.get<CentersResponse>(`/evacuation_centers/${id}`, {
+            const response = await api.get<{
+                success: boolean;
+                data: EvacuationCenter;
+            }>(`/evacuation_centers/${id}`, {
                 withCredentials: true,
             });
             return response.data;

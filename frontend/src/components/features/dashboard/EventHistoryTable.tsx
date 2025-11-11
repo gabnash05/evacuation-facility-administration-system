@@ -1,8 +1,9 @@
 "use client";
 
-import { ChevronLeft, ChevronRight, Search } from "lucide-react";
+import { ChevronLeft, ChevronRight, Search, Plus } from "lucide-react";
 import { DataTable } from "@/components/common/DataTable";
 import { SearchBar } from "@/components/common/SearchBar";
+import { Button } from "@/components/ui/button";
 import type { Event } from "@/types/event";
 
 interface EventHistoryTableProps {
@@ -21,6 +22,7 @@ interface EventHistoryTableProps {
     onSort: (column: string) => void;
     sortColumn: string;
     sortDirection: "asc" | "desc";
+    onAddEvent?: () => void; // Optional prop for Add Event button
 }
 
 export function EventHistoryTable({
@@ -39,6 +41,7 @@ export function EventHistoryTable({
     onSort,
     sortColumn,
     sortDirection,
+    onAddEvent,
 }: EventHistoryTableProps) {
     return (
         <div className="p-0">
@@ -77,8 +80,22 @@ export function EventHistoryTable({
             {/* Table with Event History and Pagination */}
             <div className="border border-border">
                 <div className="p-4 border-b border-border flex items-center justify-between">
-                    <h3 className="font-semibold text-base text-foreground">Event History</h3>
-
+                    <div className="flex items-center gap-3">
+                        <h3 className="font-semibold text-base text-foreground">Event History</h3>
+                    </div>
+                    
+                <div className="flex items-center gap-3">
+                    {/* Add Event Button - Only shows if onAddEvent is provided */}
+                        {onAddEvent && (
+                            <Button
+                                onClick={onAddEvent}
+                                className="gap-2 h-8 px-3 text-sm"
+                                disabled={isLoadingEvents}
+                            >
+                                <Plus className="h-4 w-4" />
+                                Add Event
+                            </Button>
+                        )}
                     {/* Pagination */}
                     <div className="flex items-center gap-2">
                         <button
@@ -103,6 +120,7 @@ export function EventHistoryTable({
                             <ChevronRight className="h-4 w-4" />
                         </button>
                     </div>
+                </div>
                 </div>
 
                 {/* Table Content */}

@@ -4,6 +4,8 @@ import { MapPanel } from "@/components/features/dashboard/MapPanel";
 import { StatsRow } from "@/components/features/dashboard/StatsRow";
 import { EventHistoryTable } from "@/components/features/dashboard/EventHistoryTable";
 import { ErrorAlert } from "@/components/features/dashboard/ErrorAlert";
+import { CreateEventModal } from "@/components/features/events/CreateEventModal";
+import { SuccessToast } from "@/components/features/evacuation-center/SuccessToast";
 import { useEventStore } from "@/store/eventStore";
 import { formatDate } from "@/utils/formatters";
 import type { Event, EventDetails } from "@/types/event";
@@ -20,6 +22,10 @@ export function CityAdminDashboard() {
     const [isPanelVisible, setIsPanelVisible] = useState(true);
     const [selectedEvent, setSelectedEvent] = useState<EventDetails | null>(null);
     const [isModalOpen, setIsModalOpen] = useState(false);
+    const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+    const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+    const [editingEvent, setEditingEvent] = useState<Event | null>(null);
+    const [successToast, setSuccessToast] = useState({ isOpen: false, message: "" });
     const [selectedCenter, setSelectedCenter] = useState<SelectedCenter>({
         name: "Bagong Silang Barangay Gym/Hall",
         address: "Hinaplanon",
@@ -44,6 +50,8 @@ export function CityAdminDashboard() {
         setSortConfig,
         fetchEvents,
         getEventDetails,
+        createEvent,
+        updateEvent,
     } = useEventStore();
 
     // Stats loading state
@@ -75,6 +83,29 @@ export function CityAdminDashboard() {
         return "bg-green-500";
     };
 
+    const handleAddEvent = () => {
+        setIsCreateModalOpen(true);
+    };
+
+    const handleCreateEvent = async (eventData: any) => {
+        try {
+            await createEvent({
+                event_name: eventData.event_name,
+                event_type: eventData.event_type,
+                date_declared: eventData.date_declared,
+                end_date: eventData.end_date,
+                status: eventData.status,
+                center_ids: eventData.center_ids,
+            });
+
+            setIsCreateModalOpen(false);
+            setSuccessToast({ isOpen: true, message: "Event created successfully" });
+        } catch (err: any) {
+            console.error("Create event error:", err);
+            // Error is handled by the store
+        }
+    };
+
     const handleRowClick = async (event: Event) => {
         try {
             const eventDetails = await getEventDetails(event.event_id);
@@ -102,6 +133,10 @@ export function CityAdminDashboard() {
 
     const handleEntriesPerPageChange = (entries: number) => {
         setEntriesPerPage(entries);
+    };
+
+    const handleToastClose = () => {
+        setSuccessToast({ isOpen: false, message: "" });
     };
 
     const eventColumns = [
@@ -203,12 +238,28 @@ export function CityAdminDashboard() {
                 onSort={handleSort}
                 sortColumn={sortConfig?.key || ""}
                 sortDirection={sortConfig?.direction || "asc"}
+                onAddEvent={handleAddEvent}
             />
 
+            {/* Event Details Modal */}
             <EventDetailsModal
                 isOpen={isModalOpen}
                 onClose={() => setIsModalOpen(false)}
                 eventData={selectedEvent}
+            />
+
+            {/* Create Event Modal */}
+            <CreateEventModal
+                isOpen={isCreateModalOpen}
+                onClose={() => setIsCreateModalOpen(false)}
+                onSubmit={handleCreateEvent}
+            />
+
+            {/* Global Success Toast */}
+            <SuccessToast
+                isOpen={successToast.isOpen}
+                message={successToast.message}
+                onClose={handleToastClose}
             />
         </div>
     );
