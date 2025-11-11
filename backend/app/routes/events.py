@@ -29,6 +29,7 @@ def get_all_events() -> Tuple:
     Query Parameters:
         search (string) - Search in event name or type
         status (string) - Filter by status
+        center_id (integer) - Filter by evacuation center ID
         page (integer) - Page number (default: 1)
         limit (integer) - Items per page (default: 10)
         sortBy (string) - Field to sort by
@@ -43,6 +44,7 @@ def get_all_events() -> Tuple:
         # Extract query parameters
         search = request.args.get("search", type=str)
         status = request.args.get("status", type=str)
+        center_id = request.args.get("center_id", type=int)  # NEW
         page = request.args.get("page", 1, type=int)
         limit = request.args.get("limit", 10, type=int)
         sort_by = request.args.get("sortBy", type=str)
@@ -64,9 +66,10 @@ def get_all_events() -> Tuple:
             )
 
         logger.info(
-            "Fetching events - search: %s, status: %s, page: %s, limit: %s",
+            "Fetching events - search: %s, status: %s, center_id: %s, page: %s, limit: %s",
             search,
             status,
+            center_id,
             page,
             limit,
         )
@@ -75,6 +78,7 @@ def get_all_events() -> Tuple:
         result = get_events(
             search=search,
             status=status,
+            center_id=center_id,  # NEW
             page=page,
             limit=limit,
             sort_by=sort_by,
