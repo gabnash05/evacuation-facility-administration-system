@@ -60,74 +60,34 @@ class Event(db.Model):
         return cls._row_to_event(result)
 
     @classmethod
-    def get_all(
-        cls,
-        search: Optional[str] = None,
-        status: Optional[str] = None,
-        page: int = 1,
-        limit: int = 10,
-        sort_by: Optional[str] = None,
-        sort_order: Optional[str] = "asc",
-    ) -> Dict[str, Any]:
-        """Get all events with pagination, search, and sorting."""
-        # Base query
-        base_query = "FROM events WHERE 1=1"
-        count_query = "SELECT COUNT(*) as total_count FROM events WHERE 1=1"
-        params = {}
-
-        # Add search filter
-        if search:
-            base_query += " AND (LOWER(event_name) LIKE LOWER(:search) OR LOWER(event_type) LIKE LOWER(:search))"
-            count_query += " AND (LOWER(event_name) LIKE LOWER(:search) OR LOWER(event_type) LIKE LOWER(:search))"
-            params["search"] = f"%{search}%"
-
-        # Add status filter
-        if status:
-            base_query += " AND status = :status"
-            count_query += " AND status = :status"
-            params["status"] = status
-
-        # Get total count
-        count_result = db.session.execute(text(count_query), params).fetchone()
-        total_count = count_result[0] if count_result else 0
-
-        # Build main query
-        select_query = f"SELECT * {base_query}"
-
-        # Add sorting
-        if sort_by and sort_by in [
-            "event_name",
-            "event_type",
-            "date_declared",
-            "end_date",
-            "status",
-            "created_at",
-        ]:
-            order_direction = (
-                "DESC" if sort_order and sort_order.lower() == "desc" else "ASC"
+    def get_centers_by_event(cls, event_id: int) -> List[Dict[str, Any]]:
+        """Get all centers associated with an event."""
+        try:
+            result = db.session.execute(
+                text(
+                    """
+                    SELECT 
+                        ec.center_id, 
+                        ec.center_name, 
+                        ec.address, 
+                        ec.capacity, 
+                        ec.current_occupancy,
+                        CASE 
+                            WHEN ec.capacity > 0 THEN 
+                                ROUND((ec.current_occupancy * 100.0 / ec.capacity), 2)
+                            ELSE 0 
+                        END as usage_percentage,
+                        ec.status
+                    FROM event_centers ecj
+                    JOIN evacuation_centers ec ON ecj.center_id = ec.center_id
+                    WHERE ecj.event_id = :event_id
+                """
+                ),
+                {"event_id": event_id},
             )
-            select_query += f" ORDER BY {sort_by} {order_direction}"
-        else:
-            select_query += " ORDER BY date_declared DESC"
-
-        # Add pagination
-        offset = (page - 1) * limit
-        select_query += " LIMIT :limit OFFSET :offset"
-        params["limit"] = limit
-        params["offset"] = offset
-
-        # Execute query
-        results = db.session.execute(text(select_query), params).fetchall()
-
-        events = [cls._row_to_event(row) for row in results if cls._row_to_event(row)]
-
-        return {
-            "events": events,
-            "total_count": total_count,
-            "page": page,
-            "limit": limit,
-            "total_pages": (total_count + limit - 1) // limit,
-        }
+            return [dict(row._mapping) for row in result.fetchall()]
+        except Exception:
+            return []
 
     @classmethod
     def create(cls, data: Dict[str, Any]) -> "Event":
@@ -313,7 +273,18 @@ class EventCenter(db.Model):
             result = db.session.execute(
                 text(
                     """
-                    SELECT ec.center_id, ec.center_name, ec.address, ec.capacity, ec.current_occupancy, ec.status
+                    SELECT 
+                        ec.center_id, 
+                        ec.center_name, 
+                        ec.address, 
+                        ec.capacity, 
+                        ec.current_occupancy,
+                        CASE 
+                            WHEN ec.capacity > 0 THEN 
+                                ROUND((ec.current_occupancy * 100.0 / ec.capacity), 2)
+                            ELSE 0 
+                        END as usage_percentage,
+                        ec.status
                     FROM event_centers ecj
                     JOIN evacuation_centers ec ON ecj.center_id = ec.center_id
                     WHERE ecj.event_id = :event_id
