@@ -34,6 +34,7 @@ interface EventsTableProps {
     onEdit: (event: Event) => void;
     onDelete: (event: Event) => void;
     onRowClick: (event: Event) => void;
+    userRole?: string; // Add user role prop
 }
 
 // Helper function to format date for display
@@ -63,10 +64,12 @@ function ActionDropdown({
     event,
     onEdit,
     onDelete,
+    userRole, // Add user role prop
 }: {
     event: Event;
     onEdit: (event: Event) => void;
     onDelete: (event: Event) => void;
+    userRole?: string; // Add user role prop
 }) {
     const [isOpen, setIsOpen] = useState(false);
     const dropdownRef = useRef<HTMLDivElement>(null);
@@ -140,6 +143,9 @@ function ActionDropdown({
         onDelete(event);
     };
 
+    // Check if user can delete (only super_admin)
+    const canDelete = userRole === "super_admin";
+
     return (
         <div ref={dropdownRef} className="relative inline-block">
             <Button variant="ghost" size="icon" className="h-8 w-8" onClick={handleButtonClick}>
@@ -163,13 +169,15 @@ function ActionDropdown({
                             <SquarePen className="h-4 w-4" />
                             Edit
                         </button>
-                        <button
-                            className="w-full text-left px-3 py-2 text-sm hover:bg-destructive/10 hover:text-destructive flex items-center gap-2 rounded-sm text-destructive"
-                            onClick={handleDelete}
-                        >
-                            <Trash2 className="h-4 w-4" />
-                            Delete
-                        </button>
+                        {canDelete && ( // Only show delete button for super_admin
+                            <button
+                                className="w-full text-left px-3 py-2 text-sm hover:bg-destructive/10 hover:text-destructive flex items-center gap-2 rounded-sm text-destructive"
+                                onClick={handleDelete}
+                            >
+                                <Trash2 className="h-4 w-4" />
+                                Delete
+                            </button>
+                        )}
                     </div>
                 </div>
             )}
@@ -185,6 +193,7 @@ export function EventsTable({
     onEdit,
     onDelete,
     onRowClick,
+    userRole, // Add user role prop
 }: EventsTableProps) {
     const getSortIcon = (key: string) => {
         if (!sortConfig || sortConfig.key !== key) {
@@ -443,6 +452,7 @@ export function EventsTable({
                                             event={event}
                                             onEdit={onEdit}
                                             onDelete={onDelete}
+                                            userRole={userRole} // Pass user role to dropdown
                                         />
                                     </TableCell>
                                 </TableRow>

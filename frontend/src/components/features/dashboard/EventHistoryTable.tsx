@@ -27,6 +27,7 @@ interface EventHistoryTableProps {
     onAddEvent?: () => void;
     onEdit?: (event: Event) => void;
     onDelete?: (event: Event) => void;
+    userRole?: string;
 }
 
 export function EventHistoryTable({
@@ -46,6 +47,7 @@ export function EventHistoryTable({
     onAddEvent,
     onEdit,
     onDelete,
+    userRole
 }: EventHistoryTableProps) {
     return (
         <div className="p-0">
@@ -144,6 +146,7 @@ export function EventHistoryTable({
                                 onEdit={onEdit || (() => {})}
                                 onDelete={onDelete || (() => {})}
                                 onRowClick={onRowClick}
+                                userRole={userRole}
                             />
                             {paginatedData.length === 0 && (
                                 <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
