@@ -17,6 +17,7 @@ update_schema = EventUpdateSchema()
 def get_events(
     search: Optional[str] = None,
     status: Optional[str] = None,
+    center_id: Optional[int] = None,  # NEW
     page: int = 1,
     limit: int = 10,
     sort_by: Optional[str] = None,
@@ -28,6 +29,7 @@ def get_events(
     Args:
         search: Search term for event name or type
         status: Filter by status
+        center_id: Filter by evacuation center ID
         page: Page number for pagination
         limit: Number of items per page
         sort_by: Field to sort by
@@ -40,6 +42,7 @@ def get_events(
         result = Event.get_all(
             search=search,
             status=status,
+            center_id=center_id,  # NEW
             page=page,
             limit=limit,
             sort_by=sort_by,

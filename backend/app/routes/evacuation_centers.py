@@ -353,3 +353,49 @@ def delete_existing_center_route(center_id: int) -> Tuple:
             ),
             500,
         )
+
+@evacuation_center_bp.route("/evacuation_centers/summary", methods=["GET"])
+@jwt_required()
+def get_city_summary_route() -> Tuple:
+    """
+    Get aggregated summary of all evacuation centers in Iligan City.
+    
+    Returns:
+        Tuple containing:
+            - JSON response with summary data
+            - HTTP status code
+            
+    Response format:
+        {
+            "success": true,
+            "data": {
+                "total_capacity": 5000,
+                "total_current_occupancy": 2500,
+                "usage_percentage": 50,
+                "status": "active",
+                "active_centers_count": 12,
+                "total_centers_count": 15
+            }
+        }
+    """
+    try:
+        from app.services.evacuation_center_service import get_city_summary
+        
+        logger.info("Fetching Iligan City evacuation centers summary")
+        
+        result = get_city_summary()
+        
+        if not result["success"]:
+            return jsonify(result), 400
+        
+        return jsonify(result), 200
+        
+    except Exception as error:
+        logger.error("Error fetching city summary: %s", str(error))
+        return (
+            jsonify({
+                "success": False,
+                "message": "Internal server error while fetching city summary"
+            }),
+            500
+        )

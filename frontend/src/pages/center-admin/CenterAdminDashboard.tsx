@@ -1,5 +1,3 @@
-"use client";
-
 import { useState, useMemo, useEffect } from "react";
 import { EventDetailsModal } from "@/components/features/dashboard/EventDetailsModal";
 import { MapPanel } from "@/components/features/dashboard/MapPanel";
@@ -7,7 +5,8 @@ import { StatsRow } from "@/components/features/dashboard/StatsRow";
 import { EventHistoryTable } from "@/components/features/dashboard/EventHistoryTable";
 import { ErrorAlert } from "@/components/features/dashboard/ErrorAlert";
 import { useEventStore } from "@/store/eventStore";
-import { useUserStore } from "@/store/userStore";
+import { EvacuationCenterService } from "@/services/evacuationCenterService";
+import { useAuth } from "@/hooks/useAuth";
 import { formatDate } from "@/utils/formatters";
 import type { Event, EventDetails } from "@/types/event";
 
@@ -20,16 +19,12 @@ interface SelectedCenter {
 }
 
 export function CenterAdminDashboard() {
+    const { user } = useAuth();
     const [isPanelVisible, setIsPanelVisible] = useState(true);
     const [selectedEvent, setSelectedEvent] = useState<EventDetails | null>(null);
     const [isModalOpen, setIsModalOpen] = useState(false);
-    const [selectedCenter, setSelectedCenter] = useState<SelectedCenter>({
-        name: "Bagong Silang Barangay Gym/Hall",
-        address: "Hinaplanon",
-        status: "active",
-        capacity: 500,
-        current_occupancy: 300,
-    });
+    const [selectedCenter, setSelectedCenter] = useState<SelectedCenter | null>(null);
+    const [isLoadingCenter, setIsLoadingCenter] = useState(true);
 
     // Use event store
     const {
@@ -49,33 +44,47 @@ export function CenterAdminDashboard() {
         getEventDetails,
     } = useEventStore();
 
-    // Use user store to get center ID
-    const { currentUser, fetchCurrentUser } = useUserStore();
-    const centerId = currentUser?.center_id;
-
     // Stats loading state
     const [isLoadingStats] = useState(false);
-    const [isLoadingCenter] = useState(false);
-    const [isInitialized, setIsInitialized] = useState(false);
 
-    // Initialize current user and fetch events for the center
+    // Fetch the logged-in center admin's evacuation center
     useEffect(() => {
-        const initializeData = async () => {
-            if (!currentUser) {
-                await fetchCurrentUser();
+        const fetchCenterData = async () => {
+            if (!user?.center_id) {
+                setIsLoadingCenter(false);
+                return;
             }
-            setIsInitialized(true);
+
+            try {
+                setIsLoadingCenter(true);
+                const response = await EvacuationCenterService.getCenterById(user.center_id);
+                
+                if (response.success && response.data) {
+                    setSelectedCenter({
+                        name: response.data.center_name,
+                        address: response.data.address,
+                        status: response.data.status,
+                        capacity: response.data.capacity,
+                        current_occupancy: response.data.current_occupancy,
+                    });
+                }
+            } catch (error) {
+                console.error("Failed to fetch center data:", error);
+            } finally {
+                setIsLoadingCenter(false);
+            }
         };
 
-        initializeData();
-    }, [currentUser, fetchCurrentUser]);
+        fetchCenterData();
+    }, [user?.center_id]);
 
-    // Fetch events for the specific center when centerId is available
+    // Fetch events filtered by center_id when center data loads
     useEffect(() => {
-        if (isInitialized && centerId) {
-            fetchEvents(centerId); // Pass centerId to filter events
+        if (user?.center_id) {
+            // Pass center_id to fetch only related events
+            fetchEvents(user.center_id);
         }
-    }, [isInitialized, centerId, fetchEvents]);
+    }, [user?.center_id, fetchEvents]);
 
     const getCenterStatusStyles = (status: string) => {
         switch (status.toLowerCase()) {
@@ -112,7 +121,6 @@ export function CenterAdminDashboard() {
         const currentSortConfig = sortConfig;
 
         if (currentSortConfig?.key === column) {
-            // Cycle through: asc -> desc -> null (unsorted)
             if (currentSortConfig.direction === "asc") {
                 setSortConfig({ key: column, direction: "desc" });
             } else if (currentSortConfig.direction === "desc") {
@@ -142,10 +150,11 @@ export function CenterAdminDashboard() {
         { label: "Total Unaccounted", value: "429", max: "1000", percentage: 43 },
     ];
 
-    // Format events for display (only formatting, no type transformation)
+    // Format events for display
     const formattedEvents = useMemo(() => {
         return events.map(event => ({
             ...event,
+            status: event.status.charAt(0).toUpperCase() + event.status.slice(1),
             date_declared: formatDate(event.date_declared),
             end_date: event.end_date ? formatDate(event.end_date) : "NA",
         }));
@@ -158,25 +167,21 @@ export function CenterAdminDashboard() {
             )
         );
 
-        // Only sort if sortConfig exists and has direction
         if (sortConfig?.direction) {
             filtered = [...filtered].sort((a: any, b: any) => {
                 const aValue = a[sortConfig.key];
                 const bValue = b[sortConfig.key];
 
-                // Handle null/undefined values
                 if (aValue == null && bValue == null) return 0;
                 if (aValue == null) return 1;
                 if (bValue == null) return -1;
 
-                // String comparison (case-insensitive for text)
                 if (typeof aValue === "string" && typeof bValue === "string") {
                     return sortConfig.direction === "asc"
                         ? aValue.toLowerCase().localeCompare(bValue.toLowerCase())
                         : bValue.toLowerCase().localeCompare(aValue.toLowerCase());
                 }
 
-                // Numeric comparison
                 if (aValue < bValue) return sortConfig.direction === "asc" ? -1 : 1;
                 if (aValue > bValue) return sortConfig.direction === "asc" ? 1 : -1;
                 return 0;
@@ -189,34 +194,32 @@ export function CenterAdminDashboard() {
     const totalPages = pagination?.total_pages || 1;
     const paginatedData = processedData;
 
-    // Reset to page 1 when search query changes
     useEffect(() => {
         setCurrentPage(1);
     }, [searchQuery, setCurrentPage]);
-
-    // Show loading state while waiting for user data
-    if (!isInitialized || !centerId) {
-        return (
-            <div className="w-full min-w-0 bg-background flex flex-col relative p-6">
-                <div className="flex items-center justify-center p-8">
-                    <div className="text-muted-foreground">Loading dashboard...</div>
-                </div>
-            </div>
-        );
-    }
 
     return (
         <div className="w-full min-w-0 bg-background flex flex-col relative">
             <ErrorAlert error={error} />
 
-            <MapPanel
-                isPanelVisible={isPanelVisible}
-                setIsPanelVisible={setIsPanelVisible}
-                selectedCenter={selectedCenter}
-                isLoadingCenter={isLoadingCenter}
-                getCenterStatusStyles={getCenterStatusStyles}
-                getUsageColor={getUsageColor}
-            />
+            {selectedCenter ? (
+                <MapPanel
+                    isPanelVisible={isPanelVisible}
+                    setIsPanelVisible={setIsPanelVisible}
+                    selectedCenter={selectedCenter}
+                    isLoadingCenter={isLoadingCenter}
+                    getCenterStatusStyles={getCenterStatusStyles}
+                    getUsageColor={getUsageColor}
+                />
+            ) : (
+                <div className="relative w-full h-[43vh] border-b border-border flex items-center justify-center bg-muted/30 text-muted-foreground">
+                    {isLoadingCenter ? (
+                        <p>Loading center data...</p>
+                    ) : (
+                        <p>No center assigned to this account</p>
+                    )}
+                </div>
+            )}
 
             <StatsRow statsData={statsData} isLoadingStats={isLoadingStats} />
 

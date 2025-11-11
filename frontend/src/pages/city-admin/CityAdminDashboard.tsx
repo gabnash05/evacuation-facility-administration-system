@@ -4,7 +4,11 @@ import { MapPanel } from "@/components/features/dashboard/MapPanel";
 import { StatsRow } from "@/components/features/dashboard/StatsRow";
 import { EventHistoryTable } from "@/components/features/dashboard/EventHistoryTable";
 import { ErrorAlert } from "@/components/features/dashboard/ErrorAlert";
+import { CreateEventModal } from "@/components/features/events/CreateEventModal";
+import { DeleteEventDialog } from "@/components/features/events/DeleteEventDialog";
+import { SuccessToast } from "@/components/features/evacuation-center/SuccessToast";
 import { useEventStore } from "@/store/eventStore";
+import { EvacuationCenterService } from "@/services/evacuationCenterService";
 import { formatDate } from "@/utils/formatters";
 import type { Event, EventDetails } from "@/types/event";
 
@@ -20,12 +24,21 @@ export function CityAdminDashboard() {
     const [isPanelVisible, setIsPanelVisible] = useState(true);
     const [selectedEvent, setSelectedEvent] = useState<EventDetails | null>(null);
     const [isModalOpen, setIsModalOpen] = useState(false);
+    const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+    const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+    const [editingEvent, setEditingEvent] = useState<Event | null>(null);
+    const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+    const [deletingEvent, setDeletingEvent] = useState<Event | null>(null);
+    const [deleteLoading, setDeleteLoading] = useState(false);
+    const [successToast, setSuccessToast] = useState({ isOpen: false, message: "" });
+    
+    // City-wide summary instead of single center
     const [selectedCenter, setSelectedCenter] = useState<SelectedCenter>({
-        name: "Bagong Silang Barangay Gym/Hall",
-        address: "Hinaplanon",
-        status: "active",
-        capacity: 500,
-        current_occupancy: 300,
+        name: "Iligan City",
+        address: "",
+        status: "inactive",
+        capacity: 0,
+        current_occupancy: 0,
     });
 
     // Use event store
@@ -44,11 +57,40 @@ export function CityAdminDashboard() {
         setSortConfig,
         fetchEvents,
         getEventDetails,
+        createEvent,
+        updateEvent,
+        deleteEvent,
     } = useEventStore();
 
     // Stats loading state
     const [isLoadingStats] = useState(false);
-    const [isLoadingCenter] = useState(false);
+    const [isLoadingCenter, setIsLoadingCenter] = useState(true);
+
+    // Fetch city-wide summary on mount
+    useEffect(() => {
+        const fetchCitySummary = async () => {
+            try {
+                setIsLoadingCenter(true);
+                const response = await EvacuationCenterService.getCitySummary();
+                
+                if (response.success && response.data) {
+                    setSelectedCenter({
+                        name: "Iligan City",
+                        address: "", // Blank as requested
+                        status: response.data.status,
+                        capacity: response.data.total_capacity,
+                        current_occupancy: response.data.total_current_occupancy,
+                    });
+                }
+            } catch (error) {
+                console.error("Failed to fetch city summary:", error);
+            } finally {
+                setIsLoadingCenter(false);
+            }
+        };
+
+        fetchCitySummary();
+    }, []);
 
     useEffect(() => {
         fetchEvents();
@@ -75,6 +117,90 @@ export function CityAdminDashboard() {
         return "bg-green-500";
     };
 
+    const handleAddEvent = () => {
+        setIsCreateModalOpen(true);
+    };
+
+    const handleCreateEvent = async (eventData: any) => {
+        try {
+            await createEvent({
+                event_name: eventData.event_name,
+                event_type: eventData.event_type,
+                date_declared: eventData.date_declared,
+                end_date: eventData.end_date,
+                status: eventData.status,
+                center_ids: eventData.center_ids,
+            });
+
+            setIsCreateModalOpen(false);
+            setSuccessToast({ isOpen: true, message: "Event created successfully" });
+        } catch (err: any) {
+            console.error("Create event error:", err);
+        }
+    };
+
+    const handleEditEvent = (event: Event) => {
+        setEditingEvent(event);
+        setIsEditModalOpen(true);
+    };
+
+    const handleUpdateEvent = async (eventData: any) => {
+        if (!editingEvent) return;
+
+        if (
+            eventData.end_date &&
+            new Date(eventData.end_date) < new Date(eventData.date_declared)
+        ) {
+            console.error("End date cannot be earlier than the date declared.");
+            return;
+        }
+
+        try {
+            await updateEvent(editingEvent.event_id, {
+                event_name: eventData.event_name,
+                event_type: eventData.event_type,
+                date_declared: eventData.date_declared,
+                end_date: eventData.end_date,
+                status: eventData.status,
+                center_ids: eventData.center_ids,
+            });
+
+            setIsEditModalOpen(false);
+            setEditingEvent(null);
+            setSuccessToast({ isOpen: true, message: "Event updated successfully" });
+        } catch (err: any) {
+            console.error("Update event error:", err);
+        }
+    };
+
+    const handleDeleteEvent = (event: Event) => {
+        setDeletingEvent(event);
+        setIsDeleteDialogOpen(true);
+    };
+
+    const handleConfirmDelete = async () => {
+        if (!deletingEvent) return;
+
+        setDeleteLoading(true);
+        try {
+            await deleteEvent(deletingEvent.event_id);
+            setSuccessToast({ isOpen: true, message: "Event deleted successfully" });
+            setIsDeleteDialogOpen(false);
+            setDeletingEvent(null);
+        } catch (err: any) {
+            console.error("Delete event error:", err);
+            setSuccessToast({ isOpen: true, message: "Failed to delete event" });
+        } finally {
+            setDeleteLoading(false);
+        }
+    };
+
+    const handleCancelDelete = () => {
+        setIsDeleteDialogOpen(false);
+        setDeletingEvent(null);
+        setDeleteLoading(false);
+    };
+
     const handleRowClick = async (event: Event) => {
         try {
             const eventDetails = await getEventDetails(event.event_id);
@@ -89,7 +215,6 @@ export function CityAdminDashboard() {
         const currentSortConfig = sortConfig;
 
         if (currentSortConfig?.key === column) {
-            // Cycle through: asc -> desc -> null (unsorted)
             if (currentSortConfig.direction === "asc") {
                 setSortConfig({ key: column, direction: "desc" });
             } else if (currentSortConfig.direction === "desc") {
@@ -104,13 +229,9 @@ export function CityAdminDashboard() {
         setEntriesPerPage(entries);
     };
 
-    const eventColumns = [
-        { key: "event_name", label: "Event Name", className: "max-w-[150px] truncate" },
-        { key: "event_type", label: "Event Type", className: "max-w-[150px] truncate" },
-        { key: "date_declared", label: "Date Declared" },
-        { key: "end_date", label: "End Date" },
-        { key: "status", label: "Status" },
-    ];
+    const handleToastClose = () => {
+        setSuccessToast({ isOpen: false, message: "" });
+    };
 
     const statsData = [
         { label: "Total Checked In", value: "300", max: "1000", percentage: 30 },
@@ -119,7 +240,6 @@ export function CityAdminDashboard() {
         { label: "Total Unaccounted", value: "429", max: "1000", percentage: 43 },
     ];
 
-    // Format events for display (only formatting, no type transformation)
     const formattedEvents = useMemo(() => {
         return events.map(event => ({
             ...event,
@@ -136,25 +256,21 @@ export function CityAdminDashboard() {
             )
         );
 
-        // Only sort if sortConfig exists and has direction
         if (sortConfig?.direction) {
             filtered = [...filtered].sort((a: any, b: any) => {
                 const aValue = a[sortConfig.key];
                 const bValue = b[sortConfig.key];
 
-                // Handle null/undefined values
                 if (aValue == null && bValue == null) return 0;
                 if (aValue == null) return 1;
                 if (bValue == null) return -1;
 
-                // String comparison (case-insensitive for text)
                 if (typeof aValue === "string" && typeof bValue === "string") {
                     return sortConfig.direction === "asc"
                         ? aValue.toLowerCase().localeCompare(bValue.toLowerCase())
                         : bValue.toLowerCase().localeCompare(aValue.toLowerCase());
                 }
 
-                // Numeric comparison
                 if (aValue < bValue) return sortConfig.direction === "asc" ? -1 : 1;
                 if (aValue > bValue) return sortConfig.direction === "asc" ? 1 : -1;
                 return 0;
@@ -167,7 +283,6 @@ export function CityAdminDashboard() {
     const totalPages = pagination?.total_pages || 1;
     const paginatedData = processedData;
 
-    // Reset to page 1 when search query changes
     useEffect(() => {
         setCurrentPage(1);
     }, [searchQuery, setCurrentPage]);
@@ -188,7 +303,6 @@ export function CityAdminDashboard() {
             <StatsRow statsData={statsData} isLoadingStats={isLoadingStats} />
 
             <EventHistoryTable
-                eventColumns={eventColumns}
                 paginatedData={paginatedData}
                 processedData={processedData}
                 searchQuery={searchQuery}
@@ -201,14 +315,48 @@ export function CityAdminDashboard() {
                 isLoadingEvents={isLoadingEvents}
                 onRowClick={handleRowClick}
                 onSort={handleSort}
-                sortColumn={sortConfig?.key || ""}
-                sortDirection={sortConfig?.direction || "asc"}
+                sortConfig={sortConfig}
+                onAddEvent={handleAddEvent}
+                onEdit={handleEditEvent}
+                onDelete={handleDeleteEvent}
             />
 
             <EventDetailsModal
                 isOpen={isModalOpen}
                 onClose={() => setIsModalOpen(false)}
                 eventData={selectedEvent}
+            />
+
+            <CreateEventModal
+                isOpen={isCreateModalOpen}
+                onClose={() => setIsCreateModalOpen(false)}
+                onSubmit={handleCreateEvent}
+            />
+
+            {editingEvent && (
+                <CreateEventModal
+                    isOpen={isEditModalOpen}
+                    onClose={() => {
+                        setIsEditModalOpen(false);
+                        setEditingEvent(null);
+                    }}
+                    onSubmit={handleUpdateEvent}
+                    initialData={editingEvent}
+                />
+            )}
+
+            <DeleteEventDialog
+                isOpen={isDeleteDialogOpen}
+                onClose={handleCancelDelete}
+                onConfirm={handleConfirmDelete}
+                eventName={deletingEvent?.event_name || ""}
+                loading={deleteLoading}
+            />
+
+            <SuccessToast
+                isOpen={successToast.isOpen}
+                message={successToast.message}
+                onClose={handleToastClose}
             />
         </div>
     );

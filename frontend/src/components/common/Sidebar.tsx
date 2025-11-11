@@ -5,7 +5,7 @@ import {
     SidebarGroup,
     SidebarHeader,
 } from "@/components/ui/sidebar";
-import { LayoutDashboard, Building, Calendar, Users, LogOut, House } from "lucide-react";
+import { LayoutDashboard, Building, Users, LogOut, House } from "lucide-react";
 import efasLogo from "@/assets/logo/efas-logo.png";
 import { ModeToggle } from "./ModeToggle";
 import { Link, useLocation, useNavigate } from "react-router-dom";
@@ -46,12 +46,6 @@ export function AppSidebar({ role, roleLabel, userEmail }: AppSidebarProps) {
                         label: "Evacuation Centers",
                         href: "/city-admin/centers",
                         icon: <Building className="w-4 h-4" />,
-                    },
-                    {
-                        key: "events",
-                        label: "Events",
-                        href: "/city-admin/events",
-                        icon: <Calendar className="w-4 h-4" />,
                     },
                     {
                         key: "households",

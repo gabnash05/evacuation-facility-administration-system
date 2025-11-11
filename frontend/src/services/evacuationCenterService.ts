@@ -1,6 +1,7 @@
 import { api, handleApiError } from "./api";
-import type { CentersResponse, GetCentersParams, EvacuationCenter } from "@/types/center";
+import type { CentersResponse, GetCentersParams, EvacuationCenter, CitySummary } from "@/types/center";
 import type { CreateCenterFormData, UpdateCenterFormData } from "@/schemas/centers";
+
 
 export class EvacuationCenterService {
     static async getCenters(params: GetCentersParams = {}): Promise<CentersResponse> {
@@ -15,9 +16,16 @@ export class EvacuationCenterService {
         }
     }
 
-    static async getCenterById(id: number): Promise<CentersResponse> {
+    // FIXED: getCenterById returns a single center, not paginated response
+    static async getCenterById(id: number): Promise<{
+        success: boolean;
+        data: EvacuationCenter;
+    }> {
         try {
-            const response = await api.get<CentersResponse>(`/evacuation_centers/${id}`, {
+            const response = await api.get<{
+                success: boolean;
+                data: EvacuationCenter;
+            }>(`/evacuation_centers/${id}`, {
                 withCredentials: true,
             });
             return response.data;
@@ -117,4 +125,22 @@ export class EvacuationCenterService {
             throw new Error(handleApiError(error));
         }
     }
+
+    static async getCitySummary(): Promise<{
+        success: boolean;
+        data: CitySummary;
+    }> {
+        try {
+            const response = await api.get<{
+                success: boolean;
+                data: CitySummary;
+            }>("/evacuation_centers/summary", {
+                withCredentials: true,
+            });
+            return response.data;
+        } catch (error) {
+            throw new Error(handleApiError(error));
+        }
+    }
+
 }
