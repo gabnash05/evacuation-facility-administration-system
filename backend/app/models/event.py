@@ -64,27 +64,50 @@ class Event(db.Model):
         cls,
         search: Optional[str] = None,
         status: Optional[str] = None,
+        center_id: Optional[int] = None,  # NEW
         page: int = 1,
         limit: int = 10,
         sort_by: Optional[str] = None,
         sort_order: Optional[str] = "asc",
     ) -> Dict[str, Any]:
         """Get all events with pagination, search, and sorting."""
-        # Base query
-        base_query = "FROM events WHERE 1=1"
-        count_query = "SELECT COUNT(*) as total_count FROM events WHERE 1=1"
-        params = {}
+        # Base query - JOIN with event_centers if filtering by center_id
+        if center_id:
+            base_query = """
+                FROM events e
+                INNER JOIN event_centers ec ON e.event_id = ec.event_id
+                WHERE ec.center_id = :center_id
+            """
+            count_query = """
+                SELECT COUNT(DISTINCT e.event_id) as total_count
+                FROM events e
+                INNER JOIN event_centers ec ON e.event_id = ec.event_id
+                WHERE ec.center_id = :center_id
+            """
+            params = {"center_id": center_id}
+        else:
+            base_query = "FROM events WHERE 1=1"
+            count_query = "SELECT COUNT(*) as total_count FROM events WHERE 1=1"
+            params = {}
 
         # Add search filter
         if search:
-            base_query += " AND (LOWER(event_name) LIKE LOWER(:search) OR LOWER(event_type) LIKE LOWER(:search))"
-            count_query += " AND (LOWER(event_name) LIKE LOWER(:search) OR LOWER(event_type) LIKE LOWER(:search))"
+            if center_id:
+                base_query += " AND (LOWER(e.event_name) LIKE LOWER(:search) OR LOWER(e.event_type) LIKE LOWER(:search))"
+                count_query += " AND (LOWER(e.event_name) LIKE LOWER(:search) OR LOWER(e.event_type) LIKE LOWER(:search))"
+            else:
+                base_query += " AND (LOWER(event_name) LIKE LOWER(:search) OR LOWER(event_type) LIKE LOWER(:search))"
+                count_query += " AND (LOWER(event_name) LIKE LOWER(:search) OR LOWER(event_type) LIKE LOWER(:search))"
             params["search"] = f"%{search}%"
 
         # Add status filter
         if status:
-            base_query += " AND status = :status"
-            count_query += " AND status = :status"
+            if center_id:
+                base_query += " AND e.status = :status"
+                count_query += " AND e.status = :status"
+            else:
+                base_query += " AND status = :status"
+                count_query += " AND status = :status"
             params["status"] = status
 
         # Get total count
@@ -92,7 +115,10 @@ class Event(db.Model):
         total_count = count_result[0] if count_result else 0
 
         # Build main query
-        select_query = f"SELECT * {base_query}"
+        if center_id:
+            select_query = f"SELECT DISTINCT e.* {base_query}"
+        else:
+            select_query = f"SELECT * {base_query}"
 
         # Add sorting
         if sort_by and sort_by in [
@@ -106,9 +132,13 @@ class Event(db.Model):
             order_direction = (
                 "DESC" if sort_order and sort_order.lower() == "desc" else "ASC"
             )
-            select_query += f" ORDER BY {sort_by} {order_direction}"
+            # Use table alias if filtering by center_id
+            sort_field = f"e.{sort_by}" if center_id else sort_by
+            select_query += f" ORDER BY {sort_field} {order_direction}"
         else:
-            select_query += " ORDER BY date_declared DESC"
+            # Use table alias if filtering by center_id
+            date_field = "e.date_declared" if center_id else "date_declared"
+            select_query += f" ORDER BY {date_field} DESC"
 
         # Add pagination
         offset = (page - 1) * limit

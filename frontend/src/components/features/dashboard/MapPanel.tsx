@@ -27,11 +27,10 @@ export function MapPanel({
     getCenterStatusStyles,
     getUsageColor,
 }: MapPanelProps) {
-    const usagePercentage = Math.round(
-        (selectedCenter.current_occupancy / selectedCenter.capacity) * 100
-    );
+    const usagePercentage = selectedCenter.capacity > 0 
+        ? Math.round((selectedCenter.current_occupancy / selectedCenter.capacity) * 100)
+        : 0;
 
-    // Format status for display
     const formatStatus = (status: string) => {
         switch (status) {
             case "active":
@@ -74,36 +73,50 @@ export function MapPanel({
                                         {selectedCenter.name}
                                     </h2>
                                 </div>
+                                {/* Blank photo placeholder */}
                                 <div className="w-40 h-28 bg-muted rounded-lg" />
                             </div>
 
                             <div className="space-y-4">
-                                {/* Address Row */}
-                                <div className="flex items-center gap-3">
-                                    <div className="w-48 flex-none">
-                                        <p className="text-xs text-muted-foreground mb-1">
-                                            Address
-                                        </p>
-                                        <div className="border border-border rounded-lg px-3 py-2 bg-background flex items-center justify-between">
-                                            <p
-                                                className="text-sm font-medium truncate"
-                                                title={selectedCenter.address}
-                                            >
-                                                {selectedCenter.address}
+                                {/* Conditional Address Row - Only show if address exists */}
+                                {selectedCenter.address ? (
+                                    <div className="flex items-center gap-3">
+                                        <div className="w-48 flex-none">
+                                            <p className="text-xs text-muted-foreground mb-1">
+                                                Address
                                             </p>
-                                            <Map className="h-6 w-6 text-muted-foreground flex-shrink-0" />
+                                            <div className="border border-border rounded-lg px-3 py-2 bg-background flex items-center justify-between">
+                                                <p
+                                                    className="text-sm font-medium truncate"
+                                                    title={selectedCenter.address}
+                                                >
+                                                    {selectedCenter.address}
+                                                </p>
+                                                <Map className="h-6 w-6 text-muted-foreground flex-shrink-0" />
+                                            </div>
+                                        </div>
+                                        <div className="w-40 flex-none">
+                                            <p className="text-xs text-muted-foreground mb-1">Status</p>
+                                            <div
+                                                className={`rounded-lg px-3 py-2 text-sm font-medium h-auto w-full text-center border ${getCenterStatusStyles(selectedCenter.status)}`}
+                                            >
+                                                {formatStatus(selectedCenter.status)}
+                                            </div>
                                         </div>
                                     </div>
-                                    <div className="w-40 flex-none">
-                                        <p className="text-xs text-muted-foreground mb-1">Status</p>
-                                        {/* Replace Select with static display */}
-                                        <div
-                                            className={`rounded-lg px-3 py-2 text-sm font-medium h-auto w-full text-center border ${getCenterStatusStyles(selectedCenter.status)}`}
-                                        >
-                                            {formatStatus(selectedCenter.status)}
+                                ) : (
+                                    /* No Address - Just Status */
+                                    <div className="flex items-center gap-3">
+                                        <div className="w-40 flex-none">
+                                            <p className="text-xs text-muted-foreground mb-1">Status</p>
+                                            <div
+                                                className={`rounded-lg px-3 py-2 text-sm font-medium h-auto w-full text-center border ${getCenterStatusStyles(selectedCenter.status)}`}
+                                            >
+                                                {formatStatus(selectedCenter.status)}
+                                            </div>
                                         </div>
                                     </div>
-                                </div>
+                                )}
 
                                 {/* Capacity, Current, Usage, and Hide Button Row */}
                                 <div className="flex items-center gap-3">
@@ -113,7 +126,7 @@ export function MapPanel({
                                         </p>
                                         <div className="border border-border rounded-lg px-3 py-2 bg-background">
                                             <p className="text-sm font-medium">
-                                                {selectedCenter.capacity}
+                                                {selectedCenter.capacity.toLocaleString()}
                                             </p>
                                         </div>
                                     </div>
@@ -123,7 +136,7 @@ export function MapPanel({
                                         </p>
                                         <div className="border border-border rounded-lg px-3 py-2 bg-background">
                                             <p className="text-sm font-medium">
-                                                {selectedCenter.current_occupancy}
+                                                {selectedCenter.current_occupancy.toLocaleString()}
                                             </p>
                                         </div>
                                     </div>

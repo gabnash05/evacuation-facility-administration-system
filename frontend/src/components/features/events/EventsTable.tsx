@@ -21,17 +21,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { useState, useRef, useEffect } from "react";
-
-interface Event {
-    event_id: number;
-    event_name: string;
-    event_type: string;
-    date_declared: string;
-    end_date?: string | null;
-    status: "active" | "monitoring" | "resolved";
-    created_at: string;
-    updated_at?: string;
-}
+import type { Event } from "@/types/event"; // ✅ Import from your types
 
 interface EventsTableProps {
     data: Event[];
@@ -62,13 +52,10 @@ const formatDateForDisplay = (dateString: string): string => {
 };
 
 // Helper function to capitalize status for display
-const capitalizeStatus = (status: string): "Active" | "Monitoring" | "Resolved" => {
-    const statusMap: Record<string, "Active" | "Monitoring" | "Resolved"> = {
-        active: "Active",
-        monitoring: "Monitoring",
-        resolved: "Resolved",
-    };
-    return statusMap[status.toLowerCase()] || "Active";
+const capitalizeStatus = (status: string | undefined): string => {
+    if (!status) return "Active";
+    const normalized = status.toLowerCase();
+    return normalized.charAt(0).toUpperCase() + normalized.slice(1);
 };
 
 // Custom dropdown component for actions
@@ -215,7 +202,7 @@ export function EventsTable({
         }
     };
 
-    const getStatusColor = (status: string) => {
+    const getStatusColor = (status: string | undefined) => {
         const displayStatus = capitalizeStatus(status);
         switch (displayStatus) {
             case "Active":

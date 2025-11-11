@@ -394,3 +394,25 @@ def update_center_occupancy(center_id: int, new_occupancy: int) -> Dict[str, Any
             "Error updating occupancy for center %s: %s", center_id, str(error)
         )
         return {"success": False, "message": "Failed to update occupancy"}
+
+def get_city_summary() -> Dict[str, Any]:
+    """
+    Get aggregated summary of all evacuation centers in Iligan City.
+    
+    Returns:
+        Dictionary with summary data or error message
+    """
+    try:
+        summary = EvacuationCenter.get_city_summary()
+        
+        return {
+            "success": True,
+            "data": summary
+        }
+        
+    except Exception as error:
+        logger.error("Error getting city summary: %s", str(error))
+        return {
+            "success": False, 
+            "message": "Failed to get city summary"
+        }
