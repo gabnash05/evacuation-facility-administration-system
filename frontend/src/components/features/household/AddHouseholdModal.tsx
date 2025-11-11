@@ -1,4 +1,3 @@
-// AddHouseholdModal.tsx
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -43,9 +42,9 @@ interface AddHouseholdModalProps {
     defaultCenterId?: number;
 }
 
-export function AddHouseholdModal({ isOpen, onClose, onSuccess }: AddHouseholdModalProps) {
+export function AddHouseholdModal({ isOpen, onClose, onSuccess, defaultCenterId }: AddHouseholdModalProps) {
     const { createHouseholdWithIndividuals } = useHouseholdStore();
-    const { centers, fetchCenters, loading: centersLoading } = useEvacuationCenterStore();
+    const { centers, fetchAllCenters, loading: centersLoading } = useEvacuationCenterStore();
 
     const [householdName, setHouseholdName] = useState("");
     const [address, setAddress] = useState("");
@@ -66,10 +65,16 @@ export function AddHouseholdModal({ isOpen, onClose, onSuccess }: AddHouseholdMo
 
     useEffect(() => {
         if (isOpen) {
-            // Fetch centers using the store
-            fetchCenters();
+            // Only fetch all centers if a default isn't provided (i.e., for City Admin)
+            if (!defaultCenterId) {
+                fetchAllCenters();
+            }
+            // If a default center ID is provided (for Center Admins), set it.
+            if (defaultCenterId) {
+                setCenterId(String(defaultCenterId));
+            }
         }
-    }, [isOpen, fetchCenters]);
+    }, [isOpen, fetchAllCenters, defaultCenterId]);
 
     const resetForm = () => {
         setHouseholdName("");
@@ -90,13 +95,8 @@ export function AddHouseholdModal({ isOpen, onClose, onSuccess }: AddHouseholdMo
 
     const handleAddIndividual = (newIndividual: Omit<CreateIndividualData, "household_id">) => {
         if (newIndividual.relationship_to_head.toLowerCase().trim() === "head") {
-            const hasHead = individuals.some(
-                ind => ind.relationship_to_head.toLowerCase().trim() === "head"
-            );
-            if (hasHead) {
-                alert("Error: This household already has a head.");
-                return;
-            }
+            alert("Error: The primary household head is defined above. Additional members cannot be 'Head'.");
+            return;
         }
         setIndividuals(prev => [...prev, newIndividual]);
     };
@@ -106,7 +106,6 @@ export function AddHouseholdModal({ isOpen, onClose, onSuccess }: AddHouseholdMo
     };
 
     const handleSubmit = async () => {
-        // Validate household head fields
         if (!headFirstName || !headLastName) {
             setError("Household head first name and last name are required.");
             return;
@@ -117,7 +116,6 @@ export function AddHouseholdModal({ isOpen, onClose, onSuccess }: AddHouseholdMo
             return;
         }
 
-        // Validate household head date of birth
         const today = new Date();
         today.setHours(0, 0, 0, 0);
         if (headDob && headDob > today) {
@@ -125,7 +123,6 @@ export function AddHouseholdModal({ isOpen, onClose, onSuccess }: AddHouseholdMo
             return;
         }
 
-        // Validate other individuals' date of birth
         for (const ind of individuals) {
             if (ind.date_of_birth && new Date(ind.date_of_birth) > today) {
                 setError(`Error for ${ind.first_name}: Date of birth cannot be in the future.`);
@@ -137,7 +134,6 @@ export function AddHouseholdModal({ isOpen, onClose, onSuccess }: AddHouseholdMo
         setError(null);
 
         try {
-            // Create the household head as the first individual with "Head" relationship
             const allIndividuals = [
                 {
                     first_name: headFirstName,
@@ -186,7 +182,6 @@ export function AddHouseholdModal({ isOpen, onClose, onSuccess }: AddHouseholdMo
                             </div>
                         )}
 
-                        {/* Household Basic Information */}
                         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
                             <div className="space-y-2">
                                 <Label className="text-sm font-medium">Household Name *</Label>
@@ -211,7 +206,7 @@ export function AddHouseholdModal({ isOpen, onClose, onSuccess }: AddHouseholdMo
                                 <Select
                                     value={centerId}
                                     onValueChange={setCenterId}
-                                    disabled={centersLoading}
+                                    disabled={!!defaultCenterId || centersLoading}
                                 >
                                     <SelectTrigger className="w-full">
                                         <SelectValue
@@ -236,7 +231,6 @@ export function AddHouseholdModal({ isOpen, onClose, onSuccess }: AddHouseholdMo
                             </div>
                         </div>
 
-                        {/* Household Head Section */}
                         <div className="border-t pt-6 space-y-4">
                             <Label className="text-lg font-semibold">Household Head *</Label>
                             <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
@@ -302,7 +296,6 @@ export function AddHouseholdModal({ isOpen, onClose, onSuccess }: AddHouseholdMo
                             </div>
                         </div>
 
-                        {/* Additional Members Section */}
                         <div className="border-t pt-6 space-y-4">
                             <div className="flex items-center justify-between">
                                 <Label className="text-lg font-semibold">Additional Members</Label>
@@ -407,4 +400,4 @@ export function AddHouseholdModal({ isOpen, onClose, onSuccess }: AddHouseholdMo
             </Dialog>
         </>
     );
-}
+}   

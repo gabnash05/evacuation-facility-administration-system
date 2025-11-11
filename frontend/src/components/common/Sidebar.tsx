@@ -89,6 +89,11 @@ export function AppSidebar({ role, roleLabel, userEmail }: AppSidebarProps) {
                         href: "/volunteer/dashboard",
                         icon: <LayoutDashboard className="w-4 h-4" />,
                     },
+                    {   key: "households",
+                        label: "Households",
+                        href: "/volunteer/households",
+                        icon: <House className="w-4 h-4" />,
+                    },
                 ];
             default:
                 return [

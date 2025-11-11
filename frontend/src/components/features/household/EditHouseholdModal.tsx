@@ -1,4 +1,3 @@
-// EditHouseholdModal.tsx
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -42,6 +41,7 @@ interface EditHouseholdModalProps {
     isOpen: boolean;
     onClose: () => void;
     onSuccess: () => void;
+    isCenterAdminView?: boolean;
 }
 
 export function EditHouseholdModal({
@@ -49,20 +49,18 @@ export function EditHouseholdModal({
     isOpen,
     onClose,
     onSuccess,
+    isCenterAdminView = false,
 }: EditHouseholdModalProps) {
     const { updateHousehold, getHouseholdDetails, getHouseholdIndividuals } = useHouseholdStore();
-    const { centers, fetchCenters, loading: centersLoading } = useEvacuationCenterStore();
+    const { centers, fetchAllCenters, loading: centersLoading } = useEvacuationCenterStore();
 
     const [householdName, setHouseholdName] = useState("");
     const [address, setAddress] = useState("");
     const [centerId, setCenterId] = useState<string | undefined>(undefined);
-
-    // Household head fields
     const [headFirstName, setHeadFirstName] = useState("");
     const [headLastName, setHeadLastName] = useState("");
     const [headDob, setHeadDob] = useState<Date>();
     const [headGender, setHeadGender] = useState("Male");
-
     const [individuals, setIndividuals] = useState<Omit<CreateIndividualData, "household_id">[]>(
         []
     );
@@ -77,25 +75,20 @@ export function EditHouseholdModal({
                 setIsLoading(true);
                 setError(null);
                 try {
-                    // Fetch centers using the store
-                    await fetchCenters();
-
-                    // Fetch household details and individuals using the store
+                    // Only fetch the full list of centers if it's the City Admin view
+                    if (!isCenterAdminView) {
+                        await fetchAllCenters();
+                    }
                     const [household, individualsResult] = await Promise.all([
                         getHouseholdDetails(householdId),
                         getHouseholdIndividuals(householdId),
                     ]);
-
-                    // Set household data - use the actual field names from API
-                    setHouseholdName(household.household_name); // Use household.name instead of household.householdName
+                    setHouseholdName(household.household_name);
                     setAddress(household.address || "");
-                    setCenterId(String(household.center_id)); // Use household.center_id instead of household.centerId
-
-                    // Find and set household head data
+                    setCenterId(String(household.center_id));
                     const headIndividual = individualsResult.find(
-                        (ind: any) => ind.individual_id === household.household_head_id // Use household_head_id instead of householdHeadId
+                        (ind: any) => ind.individual_id === household.household_head_id
                     );
-
                     if (headIndividual) {
                         setHeadFirstName(headIndividual.first_name);
                         setHeadLastName(headIndividual.last_name);
@@ -104,12 +97,9 @@ export function EditHouseholdModal({
                             setHeadDob(new Date(headIndividual.date_of_birth));
                         }
                     }
-
-                    // Set other individuals (excluding head)
                     const otherIndividuals = individualsResult.filter(
-                        (ind: any) => ind.individual_id !== household.household_head_id // Use household_head_id instead of householdHeadId
+                        (ind: any) => ind.individual_id !== household.household_head_id
                     );
-
                     const formattedIndividuals = otherIndividuals.map((ind: any) => ({
                         individual_id: ind.individual_id,
                         first_name: ind.first_name,
@@ -118,7 +108,6 @@ export function EditHouseholdModal({
                         gender: ind.gender || undefined,
                         relationship_to_head: ind.relationship_to_head,
                     }));
-
                     setIndividuals(formattedIndividuals);
                 } catch (err: any) {
                     setError(err.message);
@@ -128,7 +117,7 @@ export function EditHouseholdModal({
             };
             fetchData();
         }
-    }, [isOpen, householdId, getHouseholdDetails, getHouseholdIndividuals, fetchCenters]);
+    }, [isOpen, householdId, getHouseholdDetails, getHouseholdIndividuals, fetchAllCenters, isCenterAdminView]);
 
     const resetForm = () => {
         setHouseholdName("");
@@ -149,13 +138,8 @@ export function EditHouseholdModal({
 
     const handleAddIndividual = (newIndividual: Omit<CreateIndividualData, "household_id">) => {
         if (newIndividual.relationship_to_head.toLowerCase().trim() === "head") {
-            const hasHead = individuals.some(
-                ind => ind.relationship_to_head.toLowerCase().trim() === "head"
-            );
-            if (hasHead) {
-                alert("Error: This household already has a head.");
-                return;
-            }
+            alert("Error: The primary household head is defined above. Use that section for the head.");
+            return;
         }
         setIndividuals(prev => [...prev, newIndividual]);
     };
@@ -165,36 +149,28 @@ export function EditHouseholdModal({
     };
 
     const handleSubmit = async () => {
-        // Validate household head fields
         if (!headFirstName || !headLastName) {
-            setError("Household head first name and last name are required.");
+            setError("Household head's first and last name are required.");
             return;
         }
-
         if (!householdName || !address || !centerId) {
             setError("Household Name, Address, and Evacuation Center are required.");
             return;
         }
-
-        // Validate household head date of birth
         const today = new Date();
         today.setHours(0, 0, 0, 0);
         if (headDob && headDob > today) {
-            setError("Household head date of birth cannot be in the future.");
+            setError("Head's date of birth cannot be in the future.");
             return;
         }
-
-        // Validate other individuals' date of birth
         for (const ind of individuals) {
             if (ind.date_of_birth && new Date(ind.date_of_birth) > today) {
                 setError(`Error for ${ind.first_name}: Date of birth cannot be in the future.`);
                 return;
             }
         }
-
         setIsSubmitting(true);
         setError(null);
-
         try {
             const updateData: UpdateHouseholdData = {
                 household_name: householdName,
@@ -211,9 +187,7 @@ export function EditHouseholdModal({
                     ...individuals,
                 ],
             };
-
             await updateHousehold(householdId!, updateData);
-
             onSuccess();
             handleClose();
         } catch (err: any) {
@@ -241,14 +215,12 @@ export function EditHouseholdModal({
                                 {error}
                             </div>
                         )}
-
                         {isLoading ? (
                             <div className="py-8 text-center text-muted-foreground">
                                 Loading household data...
                             </div>
                         ) : (
                             <>
-                                {/* Household Basic Information */}
                                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
                                     <div className="space-y-2">
                                         <Label className="text-sm font-medium">
@@ -277,7 +249,7 @@ export function EditHouseholdModal({
                                         <Select
                                             value={centerId}
                                             onValueChange={setCenterId}
-                                            disabled={centersLoading}
+                                            disabled={isCenterAdminView || centersLoading}
                                         >
                                             <SelectTrigger className="w-full">
                                                 <SelectValue
@@ -301,8 +273,6 @@ export function EditHouseholdModal({
                                         </Select>
                                     </div>
                                 </div>
-
-                                {/* Household Head Section */}
                                 <div className="border-t pt-6 space-y-4">
                                     <Label className="text-lg font-semibold">
                                         Household Head *
@@ -381,8 +351,6 @@ export function EditHouseholdModal({
                                         </div>
                                     </div>
                                 </div>
-
-                                {/* Additional Members Section */}
                                 <div className="border-t pt-6 space-y-4">
                                     <div className="flex items-center justify-between">
                                         <Label className="text-lg font-semibold">
@@ -397,72 +365,29 @@ export function EditHouseholdModal({
                                             Add Member
                                         </Button>
                                     </div>
-
                                     {individuals.length > 0 ? (
                                         <div className="border border-border rounded-lg overflow-hidden">
                                             <div className="overflow-x-auto">
                                                 <Table className="min-w-full">
                                                     <TableHeader>
                                                         <TableRow>
-                                                            <TableHead className="whitespace-nowrap">
-                                                                First Name
-                                                            </TableHead>
-                                                            <TableHead className="whitespace-nowrap">
-                                                                Last Name
-                                                            </TableHead>
-                                                            <TableHead className="whitespace-nowrap">
-                                                                Date of Birth
-                                                            </TableHead>
-                                                            <TableHead className="whitespace-nowrap">
-                                                                Gender
-                                                            </TableHead>
-                                                            <TableHead className="whitespace-nowrap">
-                                                                Relationship
-                                                            </TableHead>
-                                                            <TableHead className="whitespace-nowrap w-[80px]">
-                                                                Actions
-                                                            </TableHead>
+                                                            <TableHead>First Name</TableHead>
+                                                            <TableHead>Last Name</TableHead>
+                                                            <TableHead>Date of Birth</TableHead>
+                                                            <TableHead>Gender</TableHead>
+                                                            <TableHead>Relationship</TableHead>
+                                                            <TableHead>Actions</TableHead>
                                                         </TableRow>
                                                     </TableHeader>
                                                     <TableBody>
                                                         {individuals.map((ind, index) => (
                                                             <TableRow key={index}>
-                                                                <TableCell className="font-medium whitespace-nowrap">
-                                                                    {ind.first_name}
-                                                                </TableCell>
-                                                                <TableCell className="whitespace-nowrap">
-                                                                    {ind.last_name}
-                                                                </TableCell>
-                                                                <TableCell className="whitespace-nowrap">
-                                                                    {ind.date_of_birth
-                                                                        ? format(
-                                                                              new Date(
-                                                                                  ind.date_of_birth
-                                                                              ),
-                                                                              "PPP"
-                                                                          )
-                                                                        : "N/A"}
-                                                                </TableCell>
-                                                                <TableCell className="whitespace-nowrap">
-                                                                    {ind.gender || "N/A"}
-                                                                </TableCell>
-                                                                <TableCell className="whitespace-nowrap">
-                                                                    {ind.relationship_to_head}
-                                                                </TableCell>
-                                                                <TableCell>
-                                                                    <Button
-                                                                        variant="ghost"
-                                                                        size="icon"
-                                                                        onClick={() =>
-                                                                            handleRemoveIndividual(
-                                                                                index
-                                                                            )
-                                                                        }
-                                                                        className="h-8 w-8 text-destructive hover:text-destructive"
-                                                                    >
-                                                                        <Trash2 className="h-4 w-4" />
-                                                                    </Button>
-                                                                </TableCell>
+                                                                <TableCell>{ind.first_name}</TableCell>
+                                                                <TableCell>{ind.last_name}</TableCell>
+                                                                <TableCell>{ind.date_of_birth ? format(new Date(ind.date_of_birth), "PPP") : "N/A"}</TableCell>
+                                                                <TableCell>{ind.gender || "N/A"}</TableCell>
+                                                                <TableCell>{ind.relationship_to_head}</TableCell>
+                                                                <TableCell><Button variant="ghost" size="icon" onClick={() => handleRemoveIndividual(index)} className="h-8 w-8 text-destructive"><Trash2 className="h-4 w-4" /></Button></TableCell>
                                                             </TableRow>
                                                         ))}
                                                     </TableBody>
@@ -471,8 +396,7 @@ export function EditHouseholdModal({
                                         </div>
                                     ) : (
                                         <div className="text-center text-sm text-muted-foreground py-8 border-2 border-dashed border-border rounded-lg">
-                                            No additional members added yet. Click "Add Member" to
-                                            include other household members.
+                                            No additional members added yet.
                                         </div>
                                     )}
                                 </div>
