@@ -10,6 +10,7 @@ import { CenterAdminDashboard } from "@/pages/center-admin/CenterAdminDashboard"
 import { CenterAdminHouseholdsPage } from "./pages/center-admin/CenterAdminHouseholds";
 
 import { VolunteerDashboard } from "@/pages/volunteer/VolunteerDashboard";
+import { VolunteerHouseholdsPage } from "./pages/volunteer/VolunteerHouseholdsPage";
 
 import MainLayout from "@/layouts/MainLayout";
 import LoginPage from "@/pages/auth/LoginPage";
@@ -89,6 +90,10 @@ function App() {
                             <MainLayout>
                                 <Routes>
                                     <Route path="dashboard" element={<VolunteerDashboard />} />
+                                    <Route
+                                        path="households"
+                                        element={<VolunteerHouseholdsPage />}
+                                    />
                                     <Route path="*" element={<Navigate to="dashboard" replace />} />
                                 </Routes>
                             </MainLayout>

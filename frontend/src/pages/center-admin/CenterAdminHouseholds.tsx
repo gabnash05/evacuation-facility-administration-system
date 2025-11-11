@@ -35,19 +35,8 @@ export function CenterAdminHouseholdsPage() {
         message: "",
     });
 
-    // Get current user's center ID
-    const { currentUser, initializeCurrentUser } = useUserStore();
+    const { currentUser } = useUserStore();
     const centerId = currentUser?.center_id;
-
-    useEffect(() => {
-        initializeCurrentUser();
-    }, [initializeCurrentUser]);
-
-    useEffect(() => {
-        if (centerId) {
-            fetchHouseholds(centerId);
-        }
-    }, [centerId, fetchHouseholds, searchQuery, currentPage, entriesPerPage, sortConfig]);
 
     const debouncedFetchHouseholds = useMemo(
         () =>
@@ -61,21 +50,9 @@ export function CenterAdminHouseholdsPage() {
 
     useEffect(() => {
         if (centerId) {
-            if (searchQuery || entriesPerPage !== 10) {
-                debouncedFetchHouseholds();
-            } else {
-                fetchHouseholds(centerId);
-            }
+            debouncedFetchHouseholds();
         }
-    }, [
-        searchQuery,
-        currentPage,
-        entriesPerPage,
-        sortConfig,
-        fetchHouseholds,
-        debouncedFetchHouseholds,
-        centerId,
-    ]);
+    }, [searchQuery, currentPage, entriesPerPage, sortConfig, centerId, debouncedFetchHouseholds]);
 
     const handleSort = (key: string) => {
         if (!sortConfig || sortConfig.key !== key) {
@@ -113,10 +90,12 @@ export function CenterAdminHouseholdsPage() {
 
     const handleEntriesPerPageChange = (entries: number) => {
         setEntriesPerPage(entries);
+        setCurrentPage(1);
     };
 
     const handleSearchChange = (query: string) => {
         setSearchQuery(query);
+        setCurrentPage(1);
     };
 
     const handlePageChange = (page: number) => {
@@ -137,7 +116,6 @@ export function CenterAdminHouseholdsPage() {
         { key: "address", label: "Address", sortable: true },
     ];
 
-    // Transform household data for the table
     const tableData = households.map(household => ({
         household_id: household.household_id,
         householdName: household.household_name,
@@ -164,15 +142,12 @@ export function CenterAdminHouseholdsPage() {
     return (
         <div className="w-full min-w-0 bg-background flex flex-col relative p-6">
             <div className="space-y-6">
-                {/* Page Header */}
                 <div>
                     <h1 className="text-2xl font-bold tracking-tight">Household Management</h1>
                     <p className="text-muted-foreground">
                         View and manage household records for your center.
                     </p>
                 </div>
-
-                {/* Error Display */}
                 {error && (
                     <div className="bg-destructive/15 text-destructive p-4 rounded-md">
                         <div className="flex items-center gap-2">
@@ -180,15 +155,7 @@ export function CenterAdminHouseholdsPage() {
                         </div>
                     </div>
                 )}
-
-                {/* Main Table Card */}
                 <div className="border border-border rounded-lg">
-                    {/* Card Header */}
-                    <div className="bg-card border-b border-border p-4">
-                        <h3 className="font-semibold text-base text-foreground">Household List</h3>
-                    </div>
-
-                    {/* Controls Bar */}
                     <div className="bg-card border-b border-border p-4">
                         <HouseholdTableToolbar
                             searchQuery={searchQuery}
@@ -199,8 +166,6 @@ export function CenterAdminHouseholdsPage() {
                             loading={loading}
                         />
                     </div>
-
-                    {/* Table Section */}
                     <div className="border-b border-border">
                         {loading && households.length === 0 ? (
                             <div className="p-8 text-center">
@@ -218,8 +183,6 @@ export function CenterAdminHouseholdsPage() {
                             />
                         )}
                     </div>
-
-                    {/* Pagination Section */}
                     <div className="bg-card p-4">
                         <TablePagination
                             currentPage={currentPage}
@@ -232,8 +195,6 @@ export function CenterAdminHouseholdsPage() {
                     </div>
                 </div>
             </div>
-
-            {/* Add Household Modal */}
             <AddHouseholdModal
                 isOpen={isAddModalOpen}
                 onClose={() => setIsAddModalOpen(false)}
@@ -244,8 +205,6 @@ export function CenterAdminHouseholdsPage() {
                 }}
                 defaultCenterId={centerId}
             />
-
-            {/* Edit Household Modal */}
             <EditHouseholdModal
                 isOpen={isEditModalOpen}
                 householdId={selectedHouseholdId}
@@ -255,9 +214,8 @@ export function CenterAdminHouseholdsPage() {
                     showSuccessToast("Household updated successfully");
                     if (centerId) fetchHouseholds(centerId);
                 }}
+                isCenterAdminView={true}
             />
-
-            {/* Global Success Toast */}
             <SuccessToast
                 isOpen={successToast.isOpen}
                 message={successToast.message}
@@ -265,4 +223,4 @@ export function CenterAdminHouseholdsPage() {
             />
         </div>
     );
-}
+}   
