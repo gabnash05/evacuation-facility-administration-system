@@ -11,6 +11,8 @@ import { useEventStore } from "@/store/eventStore";
 import { EvacuationCenterService } from "@/services/evacuationCenterService";
 import { formatDate } from "@/utils/formatters";
 import type { Event, EventDetails } from "@/types/event";
+import { useUserStore } from "@/store/userStore";
+import { useAuthStore } from "@/store/authStore";
 
 interface SelectedCenter {
     name: string;
@@ -61,6 +63,10 @@ export function CityAdminDashboard() {
         updateEvent,
         deleteEvent,
     } = useEventStore();
+
+    // Get current user and role
+    const { user } = useAuthStore();
+    const userRole = user?.role;
 
     // Stats loading state
     const [isLoadingStats] = useState(false);
@@ -296,6 +302,7 @@ export function CityAdminDashboard() {
                 onAddEvent={handleAddEvent}
                 onEdit={handleEditEvent}
                 onDelete={handleDeleteEvent}
+                userRole={userRole}
             />
 
             <EventDetailsModal
