@@ -21,17 +21,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { useState, useRef, useEffect } from "react";
-
-interface Event {
-    event_id: number;
-    event_name: string;
-    event_type: string;
-    date_declared: string;
-    end_date?: string | null;
-    status: "active" | "monitoring" | "resolved";
-    created_at: string;
-    updated_at?: string;
-}
+import type { Event } from "@/types/event";
 
 interface EventsTableProps {
     data: Event[];
@@ -62,13 +52,10 @@ const formatDateForDisplay = (dateString: string): string => {
 };
 
 // Helper function to capitalize status for display
-const capitalizeStatus = (status: string): "Active" | "Monitoring" | "Resolved" => {
-    const statusMap: Record<string, "Active" | "Monitoring" | "Resolved"> = {
-        active: "Active",
-        monitoring: "Monitoring",
-        resolved: "Resolved",
-    };
-    return statusMap[status.toLowerCase()] || "Active";
+const capitalizeStatus = (status: string | undefined): string => {
+    if (!status) return "Active";
+    const normalized = status.toLowerCase();
+    return normalized.charAt(0).toUpperCase() + normalized.slice(1);
 };
 
 // Custom dropdown component for actions
@@ -215,7 +202,7 @@ export function EventsTable({
         }
     };
 
-    const getStatusColor = (status: string) => {
+    const getStatusColor = (status: string | undefined) => {
         const displayStatus = capitalizeStatus(status);
         switch (displayStatus) {
             case "Active":
@@ -229,12 +216,27 @@ export function EventsTable({
         }
     };
 
+    // Calculate usage percentage for an event
+    const calculateUsage = (event: Event): number => {
+        if (!event.capacity || event.capacity === 0) return 0;
+        return Math.round((event.max_occupancy / event.capacity) * 100);
+    };
+
+    // Get display percentage (capped at 100% for visual representation)
+    const getDisplayPercentage = (event: Event): number => {
+        const usagePercentage = calculateUsage(event);
+        return Math.min(usagePercentage, 100); // Cap at 100% for visual bar
+    };
+
     const columnWidths = {
-        event_name: "220px",
-        event_type: "180px",
-        date_declared: "140px",
-        end_date: "140px",
-        status: "120px",
+        event_name: "180px",
+        event_type: "150px",
+        date_declared: "120px",
+        end_date: "120px",
+        capacity: "100px",
+        max_occupancy: "120px",
+        usage_percentage: "140px",
+        status: "100px",
         actions: "100px",
     };
 
@@ -262,6 +264,24 @@ export function EventsTable({
             label: "End Date",
             sortable: true,
             width: columnWidths.end_date,
+        },
+        {
+            key: "capacity",
+            label: "Capacity",
+            sortable: true,
+            width: columnWidths.capacity,
+        },
+        {
+            key: "max_occupancy",
+            label: "Max Occupancy",
+            sortable: true,
+            width: columnWidths.max_occupancy,
+        },
+        {
+            key: "usage_percentage",
+            label: "Usage %",
+            sortable: true,
+            width: columnWidths.usage_percentage,
         },
         {
             key: "status",
@@ -323,68 +343,111 @@ export function EventsTable({
                             </TableCell>
                         </TableRow>
                     ) : (
-                        data.map((event, index) => (
-                            <TableRow
-                                key={event.event_id}
-                                className={cn(
-                                    "hover:bg-muted/50 transition-colors cursor-pointer",
-                                    index % 2 === 1 ? "bg-muted/50" : ""
-                                )}
-                                onClick={() => onRowClick(event)}
-                            >
-                                <TableCell
-                                    className="font-medium py-3 truncate align-middle text-left"
-                                    style={{ width: columnWidths.event_name }}
-                                    title={event.event_name}
+                        data.map((event, index) => {
+                            const usagePercentage = calculateUsage(event);
+                            const displayPercentage = getDisplayPercentage(event);
+
+                            return (
+                                <TableRow
+                                    key={event.event_id}
+                                    className={cn(
+                                        "hover:bg-muted/50 transition-colors cursor-pointer",
+                                        index % 2 === 1 ? "bg-muted/50" : ""
+                                    )}
+                                    onClick={() => onRowClick(event)}
                                 >
-                                    {event.event_name}
-                                </TableCell>
-                                <TableCell
-                                    className="py-3 truncate align-middle text-left"
-                                    style={{ width: columnWidths.event_type }}
-                                    title={event.event_type}
-                                >
-                                    {event.event_type}
-                                </TableCell>
-                                <TableCell
-                                    className="py-3 align-middle text-left"
-                                    style={{ width: columnWidths.date_declared }}
-                                >
-                                    {formatDateForDisplay(event.date_declared)}
-                                </TableCell>
-                                <TableCell
-                                    className="py-3 align-middle text-left"
-                                    style={{ width: columnWidths.end_date }}
-                                >
-                                    {event.end_date ? formatDateForDisplay(event.end_date) : "NA"}
-                                </TableCell>
-                                <TableCell
-                                    className="py-3 align-middle text-left"
-                                    style={{ width: columnWidths.status }}
-                                >
-                                    <Badge
-                                        variant="secondary"
-                                        className={cn(
-                                            getStatusColor(event.status),
-                                            "truncate max-w-full inline-block"
-                                        )}
+                                    <TableCell
+                                        className="font-medium py-3 truncate align-middle text-left"
+                                        style={{ width: columnWidths.event_name }}
+                                        title={event.event_name}
                                     >
-                                        {capitalizeStatus(event.status)}
-                                    </Badge>
-                                </TableCell>
-                                <TableCell
-                                    className="py-3 align-middle text-left"
-                                    style={{ width: columnWidths.actions }}
-                                    onClick={e => e.stopPropagation()}
-                                >
-                                    <ActionDropdown
-                                        event={event}
-                                        onEdit={onEdit}
-                                        onDelete={onDelete}
-                                    />
-                                </TableCell>
-                            </TableRow>
-                        ))
+                                        {event.event_name}
+                                    </TableCell>
+                                    <TableCell
+                                        className="py-3 truncate align-middle text-left"
+                                        style={{ width: columnWidths.event_type }}
+                                        title={event.event_type}
+                                    >
+                                        {event.event_type}
+                                    </TableCell>
+                                    <TableCell
+                                        className="py-3 align-middle text-left"
+                                        style={{ width: columnWidths.date_declared }}
+                                    >
+                                        {formatDateForDisplay(event.date_declared)}
+                                    </TableCell>
+                                    <TableCell
+                                        className="py-3 align-middle text-left"
+                                        style={{ width: columnWidths.end_date }}
+                                    >
+                                        {event.end_date ? formatDateForDisplay(event.end_date) : "NA"}
+                                    </TableCell>
+                                    {/* Capacity and Occupancy Columns */}
+                                    <TableCell
+                                        className="py-3 align-middle text-right"
+                                        style={{ width: columnWidths.capacity }}
+                                    >
+                                        {(event.capacity || 0).toLocaleString()}
+                                    </TableCell>
+                                    <TableCell
+                                        className="py-3 align-middle text-right"
+                                        style={{ width: columnWidths.max_occupancy }}
+                                    >
+                                        {(event.max_occupancy || 0).toLocaleString()}
+                                    </TableCell>
+                                    <TableCell
+                                        className="py-3 align-middle text-left"
+                                        style={{ width: columnWidths.usage_percentage }}
+                                    >
+                                        <div className="flex items-center gap-2">
+                                            <div className="w-16 bg-gray-300 dark:bg-secondary rounded-full h-2 flex-shrink-0 border border-gray-400 dark:border-border">
+                                                <div
+                                                    className={cn(
+                                                        "h-2 rounded-full",
+                                                        usagePercentage >= 100
+                                                            ? "bg-red-600" // Special color for overcapacity
+                                                            : usagePercentage >= 80
+                                                              ? "bg-red-500"
+                                                              : usagePercentage >= 60
+                                                                ? "bg-yellow-500"
+                                                                : "bg-green-500"
+                                                    )}
+                                                    style={{ width: `${displayPercentage}%` }}
+                                                />
+                                            </div>
+                                            <span className="text-sm font-medium whitespace-nowrap">
+                                                {usagePercentage}%
+                                            </span>
+                                        </div>
+                                    </TableCell>
+                                    <TableCell
+                                        className="py-3 align-middle text-left"
+                                        style={{ width: columnWidths.status }}
+                                    >
+                                        <Badge
+                                            variant="secondary"
+                                            className={cn(
+                                                getStatusColor(event.status),
+                                                "truncate max-w-full inline-block"
+                                            )}
+                                        >
+                                            {capitalizeStatus(event.status)}
+                                        </Badge>
+                                    </TableCell>
+                                    <TableCell
+                                        className="py-3 align-middle text-left"
+                                        style={{ width: columnWidths.actions }}
+                                        onClick={e => e.stopPropagation()}
+                                    >
+                                        <ActionDropdown
+                                            event={event}
+                                            onEdit={onEdit}
+                                            onDelete={onDelete}
+                                        />
+                                    </TableCell>
+                                </TableRow>
+                            );
+                        })
                     )}
                 </TableBody>
             </Table>

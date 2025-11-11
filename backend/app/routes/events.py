@@ -4,7 +4,7 @@ import logging
 from typing import Tuple
 
 from flask import Blueprint, jsonify, request
-from flask_jwt_extended import jwt_required
+from flask_jwt_extended import jwt_required, get_jwt
 
 from app.services.event_service import (
     create_event,
@@ -29,6 +29,7 @@ def get_all_events() -> Tuple:
     Query Parameters:
         search (string) - Search in event name or type
         status (string) - Filter by status
+        center_id (integer) - Filter by evacuation center ID
         page (integer) - Page number (default: 1)
         limit (integer) - Items per page (default: 10)
         sortBy (string) - Field to sort by
@@ -43,10 +44,26 @@ def get_all_events() -> Tuple:
         # Extract query parameters
         search = request.args.get("search", type=str)
         status = request.args.get("status", type=str)
+        center_id = request.args.get("center_id", type=int)
         page = request.args.get("page", 1, type=int)
         limit = request.args.get("limit", 10, type=int)
         sort_by = request.args.get("sortBy", type=str)
         sort_order = request.args.get("sortOrder", type=str)
+
+        # For center-specific roles, automatically filter by their center_id
+        # This ensures security - users can only see events for their assigned centers
+        current_user = get_jwt()
+        user_role = current_user.get('role')
+        user_center_id = current_user.get('center_id')
+        
+        # If user is center_admin or volunteer, restrict to their center
+        if user_role in ['center_admin', 'volunteer'] and user_center_id:
+            if center_id and center_id != user_center_id:
+                return jsonify({
+                    "success": False, 
+                    "message": "Access denied: Cannot view events for other centers"
+                }), 403
+            center_id = user_center_id  # Force filter by user's center
 
         # Validate pagination parameters
         if page < 1:
@@ -64,17 +81,20 @@ def get_all_events() -> Tuple:
             )
 
         logger.info(
-            "Fetching events - search: %s, status: %s, page: %s, limit: %s",
+            "Fetching events - search: %s, status: %s, center_id: %s, page: %s, limit: %s, user_role: %s",
             search,
             status,
+            center_id,
             page,
             limit,
+            user_role,
         )
 
         # Get events from service
         result = get_events(
             search=search,
             status=status,
+            center_id=center_id,
             page=page,
             limit=limit,
             sort_by=sort_by,
@@ -114,6 +134,28 @@ def get_event(event_id: int) -> Tuple:
             - HTTP status code
     """
     try:
+        # For center-specific roles, verify they have access to this event
+        from app.models.user import User
+        
+        jwt_claims = get_jwt()
+        user_id = jwt_claims.get('sub')
+        user = User.get_by_id(int(user_id)) if user_id else None
+        
+        user_role = user.role if user else None
+        user_center_id = user.center_id if user else None
+        
+        if user_role in ['center_admin', 'volunteer'] and user_center_id:
+            from app.models.event import EventCenter
+            # Check if event is associated with user's center
+            event_centers = EventCenter.get_centers_by_event(event_id)
+            user_has_access = any(center['center_id'] == user_center_id for center in event_centers)
+            
+            if not user_has_access:
+                return jsonify({
+                    "success": False, 
+                    "message": "Access denied: Cannot view events for other centers"
+                }), 403
+
         logger.info("Fetching event with ID: %s", event_id)
 
         result = get_event_by_id(event_id)
@@ -137,7 +179,7 @@ def get_event(event_id: int) -> Tuple:
 
 
 @event_bp.route("/events", methods=["POST"])
-# @jwt_required()
+@jwt_required()
 def create_new_event() -> Tuple:
     """
     Create a new event.
@@ -156,10 +198,33 @@ def create_new_event() -> Tuple:
             - HTTP status code
     """
     try:
+        # For center-specific roles, restrict which centers they can add
+        from app.models.user import User
+        
+        jwt_claims = get_jwt()
+        user_id = jwt_claims.get('sub')
+        user = User.get_by_id(int(user_id)) if user_id else None
+        
+        user_role = user.role if user else None
+        user_center_id = user.center_id if user else None
+        
         data = request.get_json()
 
         if not data:
             return jsonify({"success": False, "message": "No data provided"}), 400
+
+        # Center admins and volunteers can only create events for their own center
+        if user_role in ['center_admin', 'volunteer'] and user_center_id:
+            if 'center_ids' in data:
+                # Ensure they only include their own center
+                if data['center_ids'] != [user_center_id]:
+                    return jsonify({
+                        "success": False, 
+                        "message": "Access denied: Can only create events for your assigned center"
+                    }), 403
+            else:
+                # Auto-assign their center if not provided
+                data['center_ids'] = [user_center_id]
 
         logger.info("Creating new event: %s", data.get("event_name"))
 
