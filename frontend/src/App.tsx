@@ -3,7 +3,6 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-d
 
 import { CityAdminDashboard } from "./pages/city-admin/CityAdminDashboard";
 import { CityAdminCentersPage } from "@/pages/city-admin/CityAdminCentersPage";
-import { CityAdminEventsPage } from "./pages/city-admin/CityAdminEventsPage";
 import { CityAdminHouseholdsPage } from "./pages/city-admin/CityAdminHouseholdsPage";
 
 import { CenterAdminDashboard } from "@/pages/center-admin/CenterAdminDashboard";
@@ -40,7 +39,6 @@ function App() {
                                 <Routes>
                                     <Route path="dashboard" element={<CityAdminDashboard />} />
                                     <Route path="centers" element={<CityAdminCentersPage />} />
-                                    <Route path="events" element={<CityAdminEventsPage />} />
                                     <Route
                                         path="households"
                                         element={<CityAdminHouseholdsPage />}

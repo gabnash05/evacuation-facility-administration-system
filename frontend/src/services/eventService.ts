@@ -9,6 +9,7 @@ export class EventService {
                 params,
                 withCredentials: true,
             });
+            console.log("Get Events Response:", response);
             return response.data;
         } catch (error) {
             throw new Error(handleApiError(error));
