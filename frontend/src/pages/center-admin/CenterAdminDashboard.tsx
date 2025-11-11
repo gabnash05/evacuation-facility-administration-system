@@ -59,7 +59,6 @@ export function CenterAdminDashboard() {
                 setIsLoadingCenter(true);
                 const response = await EvacuationCenterService.getCenterById(user.center_id);
                 
-                // Backend returns: { success: true, data: { center_id, center_name, ... } }
                 if (response.success && response.data) {
                     setSelectedCenter({
                         name: response.data.center_name,
@@ -79,9 +78,13 @@ export function CenterAdminDashboard() {
         fetchCenterData();
     }, [user?.center_id]);
 
+    // Fetch events filtered by center_id when center data loads
     useEffect(() => {
-        fetchEvents();
-    }, [fetchEvents]);
+        if (user?.center_id) {
+            // Pass center_id to fetch only related events
+            fetchEvents(user.center_id);
+        }
+    }, [user?.center_id, fetchEvents]);
 
     const getCenterStatusStyles = (status: string) => {
         switch (status.toLowerCase()) {
@@ -118,7 +121,6 @@ export function CenterAdminDashboard() {
         const currentSortConfig = sortConfig;
 
         if (currentSortConfig?.key === column) {
-            // Cycle through: asc -> desc -> null (unsorted)
             if (currentSortConfig.direction === "asc") {
                 setSortConfig({ key: column, direction: "desc" });
             } else if (currentSortConfig.direction === "desc") {
@@ -148,7 +150,7 @@ export function CenterAdminDashboard() {
         { label: "Total Unaccounted", value: "429", max: "1000", percentage: 43 },
     ];
 
-    // Format events for display (only formatting, no type transformation)
+    // Format events for display
     const formattedEvents = useMemo(() => {
         return events.map(event => ({
             ...event,
@@ -165,25 +167,21 @@ export function CenterAdminDashboard() {
             )
         );
 
-        // Only sort if sortConfig exists and has direction
         if (sortConfig?.direction) {
             filtered = [...filtered].sort((a: any, b: any) => {
                 const aValue = a[sortConfig.key];
                 const bValue = b[sortConfig.key];
 
-                // Handle null/undefined values
                 if (aValue == null && bValue == null) return 0;
                 if (aValue == null) return 1;
                 if (bValue == null) return -1;
 
-                // String comparison (case-insensitive for text)
                 if (typeof aValue === "string" && typeof bValue === "string") {
                     return sortConfig.direction === "asc"
                         ? aValue.toLowerCase().localeCompare(bValue.toLowerCase())
                         : bValue.toLowerCase().localeCompare(aValue.toLowerCase());
                 }
 
-                // Numeric comparison
                 if (aValue < bValue) return sortConfig.direction === "asc" ? -1 : 1;
                 if (aValue > bValue) return sortConfig.direction === "asc" ? 1 : -1;
                 return 0;
@@ -196,7 +194,6 @@ export function CenterAdminDashboard() {
     const totalPages = pagination?.total_pages || 1;
     const paginatedData = processedData;
 
-    // Reset to page 1 when search query changes
     useEffect(() => {
         setCurrentPage(1);
     }, [searchQuery, setCurrentPage]);
@@ -205,7 +202,6 @@ export function CenterAdminDashboard() {
         <div className="w-full min-w-0 bg-background flex flex-col relative">
             <ErrorAlert error={error} />
 
-            {/* MapPanel with real center data */}
             {selectedCenter ? (
                 <MapPanel
                     isPanelVisible={isPanelVisible}
@@ -227,7 +223,6 @@ export function CenterAdminDashboard() {
 
             <StatsRow statsData={statsData} isLoadingStats={isLoadingStats} />
 
-            {/* EventHistoryTable WITHOUT onAddEvent prop (no Add Event button) */}
             <EventHistoryTable
                 eventColumns={eventColumns}
                 paginatedData={paginatedData}
@@ -244,10 +239,8 @@ export function CenterAdminDashboard() {
                 onSort={handleSort}
                 sortColumn={sortConfig?.key || ""}
                 sortDirection={sortConfig?.direction || "asc"}
-                // NO onAddEvent prop - Center Admins cannot create events
             />
 
-            {/* Event Details Modal */}
             <EventDetailsModal
                 isOpen={isModalOpen}
                 onClose={() => setIsModalOpen(false)}

@@ -53,4 +53,5 @@ export interface GetEventsParams {
     limit?: number;
     sortBy?: string;
     sortOrder?: string;
+    center_id?: number;
 }
