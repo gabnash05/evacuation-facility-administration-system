@@ -1,3 +1,5 @@
+// FILE NAME: src/pages/city-admin/households.tsx
+
 import { useEffect, useMemo, useState } from "react";
 import { HouseholdTable } from "@/components/features/household/HouseholdTable";
 import { HouseholdTableToolbar } from "@/components/features/household/HouseholdTableToolbar";
@@ -46,19 +48,8 @@ export function CityAdminHouseholdsPage() {
     );
 
     useEffect(() => {
-        if (searchQuery || entriesPerPage !== 10) {
-            debouncedFetchHouseholds();
-        } else {
-            fetchHouseholds();
-        }
-    }, [
-        searchQuery,
-        currentPage,
-        entriesPerPage,
-        sortConfig,
-        fetchHouseholds,
-        debouncedFetchHouseholds,
-    ]);
+        debouncedFetchHouseholds();
+    }, [searchQuery, currentPage, entriesPerPage, sortConfig, debouncedFetchHouseholds]);
 
     const handleSort = (key: string) => {
         if (!sortConfig || sortConfig.key !== key) {
@@ -96,10 +87,12 @@ export function CityAdminHouseholdsPage() {
 
     const handleEntriesPerPageChange = (entries: number) => {
         setEntriesPerPage(entries);
+        setCurrentPage(1);
     };
 
     const handleSearchChange = (query: string) => {
         setSearchQuery(query);
+        setCurrentPage(1);
     };
 
     const handlePageChange = (page: number) => {
@@ -121,7 +114,6 @@ export function CityAdminHouseholdsPage() {
         { key: "center", label: "Evacuation Center", sortable: true },
     ];
 
-    // Transform household data for the table
     const tableData = households.map(household => ({
         household_id: household.household_id,
         householdName: household.household_name,
@@ -135,13 +127,11 @@ export function CityAdminHouseholdsPage() {
     return (
         <div className="w-full min-w-0 bg-background flex flex-col relative p-6">
             <div className="space-y-6">
-                {/* Page Header */}
                 <div>
                     <h1 className="text-2xl font-bold tracking-tight">Household Management</h1>
                     <p className="text-muted-foreground">View and manage household records</p>
                 </div>
 
-                {/* Error Display */}
                 {error && (
                     <div className="bg-destructive/15 text-destructive p-4 rounded-md">
                         <div className="flex items-center gap-2">
@@ -150,14 +140,7 @@ export function CityAdminHouseholdsPage() {
                     </div>
                 )}
 
-                {/* Main Table Card */}
                 <div className="border border-border rounded-lg">
-                    {/* Card Header */}
-                    <div className="bg-card border-b border-border p-4">
-                        <h3 className="font-semibold text-base text-foreground">Household List</h3>
-                    </div>
-
-                    {/* Controls Bar */}
                     <div className="bg-card border-b border-border p-4">
                         <HouseholdTableToolbar
                             searchQuery={searchQuery}
@@ -168,8 +151,6 @@ export function CityAdminHouseholdsPage() {
                             loading={loading}
                         />
                     </div>
-
-                    {/* Table Section */}
                     <div className="border-b border-border">
                         {loading && households.length === 0 ? (
                             <div className="p-8 text-center">
@@ -188,8 +169,6 @@ export function CityAdminHouseholdsPage() {
                             />
                         )}
                     </div>
-
-                    {/* Pagination Section */}
                     <div className="bg-card p-4">
                         <TablePagination
                             currentPage={currentPage}
@@ -202,8 +181,6 @@ export function CityAdminHouseholdsPage() {
                     </div>
                 </div>
             </div>
-
-            {/* Add Household Modal */}
             <AddHouseholdModal
                 isOpen={isAddModalOpen}
                 onClose={() => setIsAddModalOpen(false)}
@@ -213,8 +190,6 @@ export function CityAdminHouseholdsPage() {
                     fetchHouseholds();
                 }}
             />
-
-            {/* Edit Household Modal */}
             <EditHouseholdModal
                 isOpen={isEditModalOpen}
                 householdId={selectedHouseholdId}
@@ -225,8 +200,6 @@ export function CityAdminHouseholdsPage() {
                     fetchHouseholds();
                 }}
             />
-
-            {/* Global Success Toast */}
             <SuccessToast
                 isOpen={successToast.isOpen}
                 message={successToast.message}

@@ -86,7 +86,7 @@ export function HouseholdTable({
     };
 
     // Check if user can delete (only super_admin)
-    const canDelete = userRole === "super_admin";
+    const canDelete = userRole === "super_admin" || userRole === "city_admin" || userRole === "center_admin";
 
     if (data.length === 0 && !loading) {
         return (

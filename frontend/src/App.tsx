@@ -9,11 +9,13 @@ import { CenterAdminDashboard } from "@/pages/center-admin/CenterAdminDashboard"
 import { CenterAdminHouseholdsPage } from "./pages/center-admin/CenterAdminHouseholds";
 
 import { VolunteerDashboard } from "@/pages/volunteer/VolunteerDashboard";
+import { VolunteerHouseholdsPage } from "./pages/volunteer/VolunteerHouseholdsPage";
 
 import MainLayout from "@/layouts/MainLayout";
 import LoginPage from "@/pages/auth/LoginPage";
 import ProtectedRoute from "@/components/features/auth/ProtectedRoute";
 import { CityAdminUserManagementPage } from "./pages/city-admin/CityAdminUserMangementPage";
+import { CenterAdminUserManagementPage } from "./pages/center-admin/CenterAdminUserManagementPage";
 
 // Mock page components
 const UnauthorizedPage = () => (
@@ -67,7 +69,7 @@ function App() {
                                     <Route path="dashboard" element={<CenterAdminDashboard />} />
                                     <Route path="households" element={<CenterAdminHouseholdsPage />} />
                                     <Route path="attendance" element={<div>Attendance Page</div>} /> {/* replace with actual page when available */}
-                                    <Route path="user-management" element={<div>User Management Page</div>} /> {/* replace with actual page when available */}
+                                    <Route path="user-management" element={<CenterAdminUserManagementPage />} /> {/* replace with actual page when available */}
                                     <Route path="aid-distribution" element={<div>Aid Distribution Page</div>} /> {/* replace with actual page when available */}
                                     <Route path="reports-and-analytics" element={<div>Reports and Analytics Page</div>} /> {/* replace with actual page when available */}
                                     <Route path="*" element={<Navigate to="dashboard" replace />} />
@@ -86,7 +88,7 @@ function App() {
                                     <Route path="dashboard" element={<VolunteerDashboard />} />
                                     <Route path="check-in" element={<div>Check-In Page</div>} /> {/* replace with actual page when available */}
                                     <Route path="transfer-individual" element={<div>Transfer Individual Page</div>} /> {/* replace with actual page when available */}
-                                    <Route path="households" element={<div>Households Page</div>} /> {/* replace with actual page when available */}
+                                    <Route path="households" element={<VolunteerHouseholdsPage />} />
                                     <Route path="aid-distribution" element={<div>Aid Distribution Page</div>} /> {/* replace with actual page when available */}
                                     <Route path="*" element={<Navigate to="dashboard" replace />} />
                                 </Routes>
