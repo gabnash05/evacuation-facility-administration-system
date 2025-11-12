@@ -28,9 +28,10 @@ interface UserTableProps {
     } | null;
     onSort: (key: string) => void;
     loading?: boolean;
+    userRole: string | undefined;
 }
 
-export function UserTable({ data, sortConfig, onSort, loading }: UserTableProps) {
+export function UserTable({ data, sortConfig, onSort, loading, userRole }: UserTableProps) {
     const { deleteUser, deactivateUser } = useUserStore();
 
     const getSortIcon = (key: string) => {
@@ -48,6 +49,9 @@ export function UserTable({ data, sortConfig, onSort, loading }: UserTableProps)
                 return <ChevronsUpDown className="h-4 w-4 text-muted-foreground" />;
         }
     };
+
+    // Check if user can delete (only super_admin)
+    const canDelete = userRole === "super_admin";
 
     const columnWidths = {
         email: "280px",
@@ -256,6 +260,7 @@ export function UserTable({ data, sortConfig, onSort, loading }: UserTableProps)
                                                 <Edit className="h-4 w-4 mr-2" />
                                                 Edit
                                             </DropdownMenuItem>
+                                            {/*
                                             <DropdownMenuItem
                                                 onClick={() =>
                                                     handleDeactivate(user.user_id, user.is_active)
@@ -264,13 +269,16 @@ export function UserTable({ data, sortConfig, onSort, loading }: UserTableProps)
                                                 <Users className="h-4 w-4 mr-2" />
                                                 {user.is_active ? "Deactivate" : "Activate"}
                                             </DropdownMenuItem>
-                                            <DropdownMenuItem
-                                                onClick={() => handleDelete(user.user_id)}
-                                                className="text-destructive focus:text-destructive"
-                                            >
-                                                <Trash2 className="h-4 w-4 mr-2" />
-                                                Delete
-                                            </DropdownMenuItem>
+                                            */}
+                                            {canDelete && ( // Only show delete button for super_admin
+                                                <DropdownMenuItem
+                                                    onClick={() => handleDelete(user.user_id)}
+                                                    className="text-destructive focus:text-destructive"
+                                                >
+                                                    <Trash2 className="h-4 w-4 mr-2" />
+                                                    Delete
+                                                </DropdownMenuItem>
+                                            )}
                                         </DropdownMenuContent>
                                     </DropdownMenu>
                                 </TableCell>

@@ -78,13 +78,18 @@ export function CenterAdminDashboard() {
         fetchCenterData();
     }, [user?.center_id]);
 
-    // Fetch events filtered by center_id when center data loads
     useEffect(() => {
         if (user?.center_id) {
-            // Pass center_id to fetch only related events
             fetchEvents(user.center_id);
         }
-    }, [user?.center_id, fetchEvents]);
+    }, [
+        user?.center_id, 
+        fetchEvents,
+        searchQuery,
+        currentPage, 
+        entriesPerPage, 
+        sortConfig
+    ]);
 
     const getCenterStatusStyles = (status: string) => {
         switch (status.toLowerCase()) {
@@ -120,28 +125,23 @@ export function CenterAdminDashboard() {
     const handleSort = (column: string): void => {
         const currentSortConfig = sortConfig;
 
+        let newDirection: "asc" | "desc" | null = "asc";
+        
         if (currentSortConfig?.key === column) {
             if (currentSortConfig.direction === "asc") {
-                setSortConfig({ key: column, direction: "desc" });
+                newDirection = "desc";
             } else if (currentSortConfig.direction === "desc") {
-                setSortConfig(null);
+                newDirection = null;
             }
-        } else {
-            setSortConfig({ key: column, direction: "asc" });
         }
+        
+        // Set the new sort config - this will trigger the useEffect to refetch
+        setSortConfig(newDirection ? { key: column, direction: newDirection } : null);
     };
 
     const handleEntriesPerPageChange = (entries: number) => {
         setEntriesPerPage(entries);
     };
-
-    const eventColumns = [
-        { key: "event_name", label: "Event Name", className: "max-w-[150px] truncate" },
-        { key: "event_type", label: "Event Type", className: "max-w-[150px] truncate" },
-        { key: "date_declared", label: "Date Declared" },
-        { key: "end_date", label: "End Date" },
-        { key: "status", label: "Status" },
-    ];
 
     const statsData = [
         { label: "Total Checked In", value: "300", max: "1000", percentage: 30 },
@@ -153,50 +153,20 @@ export function CenterAdminDashboard() {
     // Format events for display
     const formattedEvents = useMemo(() => {
         return events.map(event => ({
-            ...event,
-            status: event.status.charAt(0).toUpperCase() + event.status.slice(1),
-            date_declared: formatDate(event.date_declared),
-            end_date: event.end_date ? formatDate(event.end_date) : "NA",
-        }));
+                ...event,
+                status: event.status.charAt(0).toUpperCase() + event.status.slice(1),
+                date_declared: formatDate(event.date_declared),
+                end_date: event.end_date ? formatDate(event.end_date) : "NA",
+                capacity: event.capacity || 0,
+                max_occupancy: event.max_occupancy || 0,
+                usage_percentage: event.usage_percentage || 0,
+            }));
     }, [events]);
 
-    const processedData = useMemo(() => {
-        let filtered = formattedEvents.filter(event =>
-            Object.values(event).some(value =>
-                value?.toString().toLowerCase().includes(searchQuery.toLowerCase())
-            )
-        );
-
-        if (sortConfig?.direction) {
-            filtered = [...filtered].sort((a: any, b: any) => {
-                const aValue = a[sortConfig.key];
-                const bValue = b[sortConfig.key];
-
-                if (aValue == null && bValue == null) return 0;
-                if (aValue == null) return 1;
-                if (bValue == null) return -1;
-
-                if (typeof aValue === "string" && typeof bValue === "string") {
-                    return sortConfig.direction === "asc"
-                        ? aValue.toLowerCase().localeCompare(bValue.toLowerCase())
-                        : bValue.toLowerCase().localeCompare(aValue.toLowerCase());
-                }
-
-                if (aValue < bValue) return sortConfig.direction === "asc" ? -1 : 1;
-                if (aValue > bValue) return sortConfig.direction === "asc" ? 1 : -1;
-                return 0;
-            });
-        }
-
-        return filtered;
-    }, [formattedEvents, searchQuery, sortConfig]);
-
     const totalPages = pagination?.total_pages || 1;
+    
+    const processedData = formattedEvents;
     const paginatedData = processedData;
-
-    useEffect(() => {
-        setCurrentPage(1);
-    }, [searchQuery, setCurrentPage]);
 
     return (
         <div className="w-full min-w-0 bg-background flex flex-col relative">
@@ -224,7 +194,6 @@ export function CenterAdminDashboard() {
             <StatsRow statsData={statsData} isLoadingStats={isLoadingStats} />
 
             <EventHistoryTable
-                eventColumns={eventColumns}
                 paginatedData={paginatedData}
                 processedData={processedData}
                 searchQuery={searchQuery}
@@ -237,8 +206,7 @@ export function CenterAdminDashboard() {
                 isLoadingEvents={isLoadingEvents}
                 onRowClick={handleRowClick}
                 onSort={handleSort}
-                sortColumn={sortConfig?.key || ""}
-                sortDirection={sortConfig?.direction || "asc"}
+                sortConfig={sortConfig}
             />
 
             <EventDetailsModal

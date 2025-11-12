@@ -19,15 +19,15 @@ interface EventState {
         total_items: number;
         limit: number;
     } | null;
-    centerId: number | null; // NEW - for filtering by center
+    centerId: number | null;
 
     // Actions
     setSearchQuery: (query: string) => void;
     setCurrentPage: (page: number) => void;
     setEntriesPerPage: (entries: number) => void;
     setSortConfig: (config: { key: string; direction: "asc" | "desc" | null } | null) => void;
-    setCenterId: (centerId: number | null) => void; // NEW
-    fetchEvents: (centerId?: number) => Promise<void>; // UPDATED
+    setCenterId: (centerId: number | null) => void;
+    fetchEvents: (centerId?: number) => Promise<void>;
     createEvent: (eventData: any) => Promise<void>;
     updateEvent: (id: number, eventData: any) => Promise<void>;
     deleteEvent: (id: number) => Promise<void>;
@@ -44,7 +44,7 @@ const initialState = {
     entriesPerPage: 10,
     sortConfig: null,
     pagination: null,
-    centerId: null, // NEW
+    centerId: null,
 };
 
 export const useEventStore = create<EventState>((set, get) => ({
@@ -79,13 +79,21 @@ export const useEventStore = create<EventState>((set, get) => ({
         set({ loading: true, error: null });
 
         try {
+            console.log("Fetching events with sorting:", {
+                sortBy: sortConfig?.key,
+                sortOrder: sortConfig?.direction,
+                page: currentPage,
+                limit: entriesPerPage,
+                search: searchQuery,
+            });
+            
             const response = await EventService.getEvents({
                 search: searchQuery,
                 page: currentPage,
                 limit: entriesPerPage,
                 sortBy: sortConfig?.key,
                 sortOrder: sortConfig?.direction || undefined,
-                center_id: filterCenterId || undefined, // NEW
+                center_id: filterCenterId || undefined,
             });
 
             set({

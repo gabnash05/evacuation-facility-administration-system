@@ -314,7 +314,7 @@ class EvacuationCenter(db.Model):
     def update_occupancy(
         cls, center_id: int, new_occupancy: int
     ) -> Optional["EvacuationCenter"]:
-        """Update current occupancy of a center with validation."""
+        """Update current occupancy of a center with validation and update associated events."""
         center = cls.get_by_id(center_id)
         if not center:
             return None
@@ -322,7 +322,27 @@ class EvacuationCenter(db.Model):
         if new_occupancy < 0:
             raise ValueError("Occupancy cannot be negative")
 
-        return cls.update(center_id, {"current_occupancy": new_occupancy})
+        # Update the center occupancy
+        updated_center = cls.update(center_id, {"current_occupancy": new_occupancy})
+        
+        if updated_center:
+            # Update all associated active events
+            from .event import Event
+            events_result = db.session.execute(
+                text("""
+                    SELECT DISTINCT e.event_id 
+                    FROM events e
+                    JOIN event_centers ec ON e.event_id = ec.event_id
+                    WHERE ec.center_id = :center_id AND e.status = 'active'
+                """),
+                {"center_id": center_id}
+            ).fetchall()
+            
+            for row in events_result:
+                event_id = row[0]
+                Event.recalculate_event_capacity(event_id)
+        
+        return updated_center
     
     @classmethod
     def get_city_summary(cls) -> Dict[str, Any]:
@@ -383,7 +403,6 @@ class EvacuationCenter(db.Model):
             }
             
         except Exception as error:
-            logger.error("Error getting city summary: %s", str(error))
             return {
                 "total_capacity": 0,
                 "total_current_occupancy": 0,
