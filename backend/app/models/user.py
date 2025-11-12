@@ -236,6 +236,7 @@ class User(db.Model):
         limit: int = 10,
         sort_by: Optional[str] = None,
         sort_order: Optional[str] = "asc",
+        center_id: Optional[int] = None,
     ) -> Dict[str, Any]:
         """Get all users with pagination, search, and sorting."""
         # Base query with join to get center name
@@ -272,6 +273,12 @@ class User(db.Model):
             elif status == "inactive":
                 base_query += " AND u.is_active = FALSE"
                 count_query += " AND u.is_active = FALSE"
+
+        # Add center_id filter
+        if center_id is not None:
+            base_query += " AND u.center_id = :center_id"
+            count_query += " AND u.center_id = :center_id"
+            params["center_id"] = center_id
 
         # Get total count
         count_result = db.session.execute(text(count_query), params).fetchone()

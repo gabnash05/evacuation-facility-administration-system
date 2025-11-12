@@ -6,8 +6,8 @@ import { AddHouseholdModal } from "@/components/features/household/AddHouseholdM
 import { EditHouseholdModal } from "@/components/features/household/EditHouseholdModal";
 import { SuccessToast } from "@/components/common/SuccessToast";
 import { useHouseholdStore } from "@/store/householdStore";
-import { useUserStore } from "@/store/userStore";
 import { debounce } from "@/utils/helpers";
+import { useAuthStore } from "@/store/authStore";
 
 export function CenterAdminHouseholdsPage() {
     const {
@@ -35,8 +35,9 @@ export function CenterAdminHouseholdsPage() {
         message: "",
     });
 
-    const { currentUser } = useUserStore();
-    const centerId = currentUser?.center_id;
+    const { user } = useAuthStore();
+    const centerId = user?.center_id;
+    const userRole = user?.role;
 
     const debouncedFetchHouseholds = useMemo(
         () =>
@@ -180,6 +181,7 @@ export function CenterAdminHouseholdsPage() {
                                 onEdit={handleOpenEditModal}
                                 onDelete={handleDelete}
                                 loading={loading}
+                                userRole={userRole}
                             />
                         )}
                     </div>

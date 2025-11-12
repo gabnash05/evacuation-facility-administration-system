@@ -15,6 +15,7 @@ import MainLayout from "@/layouts/MainLayout";
 import LoginPage from "@/pages/auth/LoginPage";
 import ProtectedRoute from "@/components/features/auth/ProtectedRoute";
 import { CityAdminUserManagementPage } from "./pages/city-admin/CityAdminUserMangementPage";
+import { CenterAdminUserManagementPage } from "./pages/center-admin/CenterAdminUserManagementPage";
 
 // Mock page components
 const UnauthorizedPage = () => (
@@ -68,7 +69,7 @@ function App() {
                                     <Route path="dashboard" element={<CenterAdminDashboard />} />
                                     <Route path="households" element={<CenterAdminHouseholdsPage />} />
                                     <Route path="attendance" element={<div>Attendance Page</div>} /> {/* replace with actual page when available */}
-                                    <Route path="user-management" element={<div>User Management Page</div>} /> {/* replace with actual page when available */}
+                                    <Route path="user-management" element={<CenterAdminUserManagementPage />} /> {/* replace with actual page when available */}
                                     <Route path="aid-distribution" element={<div>Aid Distribution Page</div>} /> {/* replace with actual page when available */}
                                     <Route path="reports-and-analytics" element={<div>Reports and Analytics Page</div>} /> {/* replace with actual page when available */}
                                     <Route path="*" element={<Navigate to="dashboard" replace />} />

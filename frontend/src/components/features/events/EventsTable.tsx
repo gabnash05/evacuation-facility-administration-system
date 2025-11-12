@@ -143,6 +143,9 @@ function ActionDropdown({
         onDelete(event);
     };
 
+    // Check if user can edit (super_admin or city_admin)
+    const canEdit = userRole === "super_admin" || userRole === "city_admin";
+
     // Check if user can delete (only super_admin)
     const canDelete = userRole === "super_admin";
 
@@ -162,13 +165,15 @@ function ActionDropdown({
                             pointerEvents: "auto",
                         }}
                     >
-                        <button
-                            className="w-full text-left px-3 py-2 text-sm hover:bg-accent hover:text-accent-foreground flex items-center gap-2 rounded-sm"
-                            onClick={handleEdit}
-                        >
-                            <SquarePen className="h-4 w-4" />
-                            Edit
-                        </button>
+                        {canEdit && ( // Only show edit button for super_admin or city_admin
+                            <button
+                                className="w-full text-left px-3 py-2 text-sm hover:bg-accent hover:text-accent-foreground flex items-center gap-2 rounded-sm"
+                                onClick={handleEdit}
+                            >
+                                <SquarePen className="h-4 w-4" />
+                                Edit
+                            </button>
+                        )}
                         {canDelete && ( // Only show delete button for super_admin
                             <button
                                 className="w-full text-left px-3 py-2 text-sm hover:bg-destructive/10 hover:text-destructive flex items-center gap-2 rounded-sm text-destructive"

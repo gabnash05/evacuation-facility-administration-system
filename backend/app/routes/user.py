@@ -35,6 +35,7 @@ def get_all_users() -> Tuple:
         limit (integer) - Items per page (default: 10)
         sortBy (string) - Field to sort by
         sortOrder (string) - Sort direction (asc/desc)
+        center_id (string) - Filter by center ID
 
     Returns:
         Tuple containing:
@@ -50,6 +51,7 @@ def get_all_users() -> Tuple:
         limit = request.args.get("limit", 10, type=int)
         sort_by = request.args.get("sortBy", type=str)
         sort_order = request.args.get("sortOrder", type=str)
+        center_id = request.args.get("centerId", type=str)
 
         # Validate pagination parameters
         if page < 1:
@@ -84,6 +86,7 @@ def get_all_users() -> Tuple:
             limit=limit,
             sort_by=sort_by,
             sort_order=sort_order,
+            center_id=center_id,
         )
 
         if not result["success"]:

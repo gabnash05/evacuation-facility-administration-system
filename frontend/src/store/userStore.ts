@@ -21,6 +21,7 @@ interface UserState {
         total_items: number;
         limit: number;
     } | null;
+    centerFilter: number | null; // Add center filter
 
     // Actions
     setCurrentUser: (user: User) => void;
@@ -29,7 +30,8 @@ interface UserState {
     setCurrentPage: (page: number) => void;
     setEntriesPerPage: (entries: number) => void;
     setSortConfig: (config: { key: string; direction: "asc" | "desc" | null } | null) => void;
-    fetchUsers: () => Promise<void>;
+    setCenterFilter: (centerId: number | null) => void; // Add center filter action
+    fetchUsers: (centerId?: number | null) => Promise<void>; // Update to accept centerId
     initializeCurrentUser: () => Promise<void>;
     fetchCurrentUser: () => Promise<void>;
     createUser: (userData: CreateUserFormData) => Promise<void>;
@@ -49,6 +51,7 @@ const initialState = {
     entriesPerPage: 10,
     sortConfig: null,
     pagination: null,
+    centerFilter: null, // Add to initial state
 };
 
 export const useUserStore = create<UserState>((set, get) => ({
@@ -70,8 +73,15 @@ export const useUserStore = create<UserState>((set, get) => ({
         set({ sortConfig: config, currentPage: 1 });
     },
 
-    fetchUsers: async () => {
-        const { searchQuery, currentPage, entriesPerPage, sortConfig } = get();
+    setCenterFilter: (centerId: number | null) => {
+        set({ centerFilter: centerId, currentPage: 1 });
+    },
+
+    fetchUsers: async (centerId?: number | null) => {
+        const { searchQuery, currentPage, entriesPerPage, sortConfig, centerFilter } = get();
+        
+        // Use provided centerId or fall back to store's centerFilter
+        const targetCenterId = centerId !== undefined ? centerId : centerFilter;
 
         set({ loading: true, error: null });
 
@@ -82,6 +92,7 @@ export const useUserStore = create<UserState>((set, get) => ({
                 limit: entriesPerPage,
                 sortBy: sortConfig?.key,
                 sortOrder: sortConfig?.direction || undefined,
+                centerId: targetCenterId !== null ? targetCenterId : undefined, // Only include if not null
             };
 
             const response: UsersResponse = await UserService.getUsers(params);
