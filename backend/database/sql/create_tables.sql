@@ -28,10 +28,12 @@ CREATE TABLE IF NOT EXISTS events (
     date_declared TIMESTAMP NOT NULL,
     end_date TIMESTAMP NULL,
     status VARCHAR(20) NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'resolved', 'monitoring')),
+    capacity INTEGER NOT NULL DEFAULT 0 CHECK (capacity >= 0),
+    max_occupancy INTEGER NOT NULL DEFAULT 0 CHECK (max_occupancy >= 0),
+    usage_percentage DECIMAL(5,2) NOT NULL DEFAULT 0.00 CHECK (usage_percentage >= 0),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     CHECK (end_date IS NULL OR end_date >= date_declared)
-
 );
 
 -- ========================

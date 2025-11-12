@@ -7,6 +7,7 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { loginSchema } from "@/schemas/auth";
 import type { LoginFormData } from "@/schemas/auth";
+import { useAuthStore } from "@/store/authStore";
 
 export default function LoginPage() {
     const navigate = useNavigate();
@@ -48,10 +49,17 @@ export default function LoginPage() {
 
         try {
             // Use AuthService directly for login
-            const response = await login(formData);
+            await login(formData);
 
-            // Redirect based on the login response, not the user state
-            switch (response.role) {
+            // Get the user from the auth store after login
+            const { user } = useAuthStore.getState();
+            
+            if (!user) {
+                throw new Error("User data not available after login");
+            }
+
+            // Redirect based on the actual user role
+            switch (user.role) {
                 case "city_admin":
                 case "super_admin":
                     navigate("/city-admin/dashboard");
