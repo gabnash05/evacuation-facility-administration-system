@@ -1,12 +1,12 @@
 "use client";
 
-import { ChevronLeft, ChevronRight, Search } from "lucide-react";
-import { DataTable } from "@/components/common/DataTable";
+import { ChevronLeft, ChevronRight, Search, Plus } from "lucide-react";
+import { EventsTable } from "@/components/features/events/EventsTable";
 import { SearchBar } from "@/components/common/SearchBar";
+import { Button } from "@/components/ui/button";
 import type { Event } from "@/types/event";
 
 interface EventHistoryTableProps {
-    eventColumns: Array<{ key: string; label: string }>;
     paginatedData: Event[];
     processedData: Event[];
     searchQuery: string;
@@ -19,12 +19,18 @@ interface EventHistoryTableProps {
     isLoadingEvents: boolean;
     onRowClick: (row: Event) => void;
     onSort: (column: string) => void;
-    sortColumn: string;
-    sortDirection: "asc" | "desc";
+    sortConfig: {
+        key: string;
+        direction: "asc" | "desc" | null;
+    } | null;
+    // Actions (optional - if provided, shows action buttons)
+    onAddEvent?: () => void;
+    onEdit?: (event: Event) => void;
+    onDelete?: (event: Event) => void;
+    userRole?: string;
 }
 
 export function EventHistoryTable({
-    eventColumns,
     paginatedData,
     processedData,
     searchQuery,
@@ -37,8 +43,11 @@ export function EventHistoryTable({
     isLoadingEvents,
     onRowClick,
     onSort,
-    sortColumn,
-    sortDirection,
+    sortConfig,
+    onAddEvent,
+    onEdit,
+    onDelete,
+    userRole
 }: EventHistoryTableProps) {
     return (
         <div className="p-0">
@@ -77,31 +86,46 @@ export function EventHistoryTable({
             {/* Table with Event History and Pagination */}
             <div className="border border-border">
                 <div className="p-4 border-b border-border flex items-center justify-between">
-                    <h3 className="font-semibold text-base text-foreground">Event History</h3>
+                    <div className="flex items-center gap-3">
+                        <h3 className="font-semibold text-base text-foreground">Event History</h3>
+                    </div>
 
-                    {/* Pagination */}
-                    <div className="flex items-center gap-2">
-                        <button
-                            onClick={() => onPageChange(Math.max(1, currentPage - 1))}
-                            disabled={currentPage === 1 || isLoadingEvents}
-                            className="p-1 rounded border border-border hover:bg-muted disabled:opacity-50 disabled:cursor-not-allowed"
-                            aria-label="Previous page"
-                        >
-                            <ChevronLeft className="h-4 w-4" />
-                        </button>
+                    <div className="flex items-center gap-3">
+                        {/* Add Event Button - Only shows if onAddEvent is provided */}
+                        {onAddEvent && (
+                            <Button
+                                onClick={onAddEvent}
+                                className="gap-2 h-8 px-3 text-sm"
+                                disabled={isLoadingEvents}
+                            >
+                                <Plus className="h-4 w-4" />
+                                Add Event
+                            </Button>
+                        )}
+                        {/* Pagination */}
+                        <div className="flex items-center gap-2">
+                            <button
+                                onClick={() => onPageChange(Math.max(1, currentPage - 1))}
+                                disabled={currentPage === 1 || isLoadingEvents}
+                                className="p-1 rounded border border-border hover:bg-muted disabled:opacity-50 disabled:cursor-not-allowed"
+                                aria-label="Previous page"
+                            >
+                                <ChevronLeft className="h-4 w-4" />
+                            </button>
 
-                        <div className="px-3 py-1 text-sm rounded bg-primary text-primary-foreground">
-                            {currentPage}
+                            <div className="px-3 py-1 text-sm rounded bg-primary text-primary-foreground">
+                                {currentPage}
+                            </div>
+
+                            <button
+                                onClick={() => onPageChange(Math.min(totalPages, currentPage + 1))}
+                                disabled={currentPage === totalPages || isLoadingEvents}
+                                className="p-1 rounded border border-border hover:bg-muted disabled:opacity-50 disabled:cursor-not-allowed"
+                                aria-label="Next page"
+                            >
+                                <ChevronRight className="h-4 w-4" />
+                            </button>
                         </div>
-
-                        <button
-                            onClick={() => onPageChange(Math.min(totalPages, currentPage + 1))}
-                            disabled={currentPage === totalPages || isLoadingEvents}
-                            className="p-1 rounded border border-border hover:bg-muted disabled:opacity-50 disabled:cursor-not-allowed"
-                            aria-label="Next page"
-                        >
-                            <ChevronRight className="h-4 w-4" />
-                        </button>
                     </div>
                 </div>
 
@@ -113,14 +137,16 @@ export function EventHistoryTable({
                         </div>
                     ) : (
                         <>
-                            <DataTable
-                                columns={eventColumns}
+                            {/* Always use EventsTable */}
+                            <EventsTable
                                 data={paginatedData}
-                                onRowClick={onRowClick}
+                                sortConfig={sortConfig}
                                 onSort={onSort}
-                                sortColumn={sortColumn}
-                                sortDirection={sortDirection}
-                                showTitle={false}
+                                loading={isLoadingEvents}
+                                onEdit={onEdit || (() => {})}
+                                onDelete={onDelete || (() => {})}
+                                onRowClick={onRowClick}
+                                userRole={userRole}
                             />
                             {paginatedData.length === 0 && (
                                 <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">

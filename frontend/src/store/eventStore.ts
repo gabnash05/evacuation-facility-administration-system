@@ -1,4 +1,3 @@
-// store/eventStore.ts
 import { create } from "zustand";
 import { EventService } from "@/services/eventService";
 import type { Event, EventDetails } from "@/types/event";
@@ -20,13 +19,15 @@ interface EventState {
         total_items: number;
         limit: number;
     } | null;
+    centerId: number | null;
 
     // Actions
     setSearchQuery: (query: string) => void;
     setCurrentPage: (page: number) => void;
     setEntriesPerPage: (entries: number) => void;
     setSortConfig: (config: { key: string; direction: "asc" | "desc" | null } | null) => void;
-    fetchEvents: () => Promise<void>;
+    setCenterId: (centerId: number | null) => void;
+    fetchEvents: (centerId?: number) => Promise<void>;
     createEvent: (eventData: any) => Promise<void>;
     updateEvent: (id: number, eventData: any) => Promise<void>;
     deleteEvent: (id: number) => Promise<void>;
@@ -43,6 +44,7 @@ const initialState = {
     entriesPerPage: 10,
     sortConfig: null,
     pagination: null,
+    centerId: null,
 };
 
 export const useEventStore = create<EventState>((set, get) => ({
@@ -64,18 +66,34 @@ export const useEventStore = create<EventState>((set, get) => ({
         set({ sortConfig: config, currentPage: 1 });
     },
 
-    fetchEvents: async () => {
-        const { searchQuery, currentPage, entriesPerPage, sortConfig } = get();
+    setCenterId: (centerId: number | null) => {
+        set({ centerId, currentPage: 1 });
+    },
+
+    fetchEvents: async (overrideCenterId?: number) => {
+        const { searchQuery, currentPage, entriesPerPage, sortConfig, centerId } = get();
+        
+        // Use overrideCenterId if provided, otherwise use stored centerId
+        const filterCenterId = overrideCenterId !== undefined ? overrideCenterId : centerId;
 
         set({ loading: true, error: null });
 
         try {
+            console.log("Fetching events with sorting:", {
+                sortBy: sortConfig?.key,
+                sortOrder: sortConfig?.direction,
+                page: currentPage,
+                limit: entriesPerPage,
+                search: searchQuery,
+            });
+            
             const response = await EventService.getEvents({
                 search: searchQuery,
                 page: currentPage,
                 limit: entriesPerPage,
                 sortBy: sortConfig?.key,
                 sortOrder: sortConfig?.direction || undefined,
+                center_id: filterCenterId || undefined,
             });
 
             set({
@@ -104,14 +122,13 @@ export const useEventStore = create<EventState>((set, get) => ({
 
     updateEvent: async (id: number, eventData: any) => {
         try {
-            // Include center_ids in the update data
             const updateData = {
                 event_name: eventData.event_name,
                 event_type: eventData.event_type,
                 date_declared: eventData.date_declared,
                 end_date: eventData.end_date,
                 status: eventData.status,
-                center_ids: eventData.center_ids || [], // Include center_ids
+                center_ids: eventData.center_ids || [],
             };
 
             await EventService.updateEvent(id, updateData);
@@ -124,7 +141,7 @@ export const useEventStore = create<EventState>((set, get) => ({
     deleteEvent: async (id: number) => {
         try {
             await EventService.deleteEvent(id);
-            await get().fetchEvents(); // Refresh the list
+            await get().fetchEvents();
         } catch (error) {
             throw new Error(error instanceof Error ? error.message : "Failed to delete event");
         }

@@ -39,6 +39,7 @@ interface HouseholdTableProps {
     onEdit: (id: number) => void;
     onDelete: (id: number) => void;
     loading?: boolean;
+    userRole?: string;
 }
 
 export function HouseholdTable({
@@ -49,6 +50,7 @@ export function HouseholdTable({
     onEdit,
     onDelete,
     loading,
+    userRole,
 }: HouseholdTableProps) {
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
     const [householdToDelete, setHouseholdToDelete] = useState<{ id: number; name: string } | null>(
@@ -82,6 +84,9 @@ export function HouseholdTable({
         setDeleteDialogOpen(false);
         setHouseholdToDelete(null);
     };
+
+    // Check if user can delete (only super_admin)
+    const canDelete = userRole === "super_admin";
 
     if (data.length === 0 && !loading) {
         return (
@@ -162,13 +167,15 @@ export function HouseholdTable({
                                                     <Edit className="h-4 w-4" />
                                                     Edit
                                                 </DropdownMenuItem>
-                                                <DropdownMenuItem
-                                                    onClick={() => handleDeleteClick(row)}
-                                                    className="flex items-center gap-2 text-destructive focus:text-destructive"
-                                                >
-                                                    <Trash2 className="h-4 w-4" />
-                                                    Delete
-                                                </DropdownMenuItem>
+                                                {canDelete && ( // Only show delete button for super_admin
+                                                    <DropdownMenuItem
+                                                        onClick={() => handleDeleteClick(row)}
+                                                        className="flex items-center gap-2 text-destructive focus:text-destructive"
+                                                    >
+                                                        <Trash2 className="h-4 w-4" />
+                                                        Delete
+                                                    </DropdownMenuItem>
+                                                )}
                                             </DropdownMenuContent>
                                         </DropdownMenu>
                                     </TableCell>

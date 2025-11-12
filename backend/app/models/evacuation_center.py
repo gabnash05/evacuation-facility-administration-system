@@ -314,7 +314,7 @@ class EvacuationCenter(db.Model):
     def update_occupancy(
         cls, center_id: int, new_occupancy: int
     ) -> Optional["EvacuationCenter"]:
-        """Update current occupancy of a center with validation."""
+        """Update current occupancy of a center with validation and update associated events."""
         center = cls.get_by_id(center_id)
         if not center:
             return None
@@ -322,4 +322,94 @@ class EvacuationCenter(db.Model):
         if new_occupancy < 0:
             raise ValueError("Occupancy cannot be negative")
 
-        return cls.update(center_id, {"current_occupancy": new_occupancy})
+        # Update the center occupancy
+        updated_center = cls.update(center_id, {"current_occupancy": new_occupancy})
+        
+        if updated_center:
+            # Update all associated active events
+            from .event import Event
+            events_result = db.session.execute(
+                text("""
+                    SELECT DISTINCT e.event_id 
+                    FROM events e
+                    JOIN event_centers ec ON e.event_id = ec.event_id
+                    WHERE ec.center_id = :center_id AND e.status = 'active'
+                """),
+                {"center_id": center_id}
+            ).fetchall()
+            
+            for row in events_result:
+                event_id = row[0]
+                Event.recalculate_event_capacity(event_id)
+        
+        return updated_center
+    
+    @classmethod
+    def get_city_summary(cls) -> Dict[str, Any]:
+        """
+        Get aggregated summary of all evacuation centers in Iligan City.
+        
+        Returns:
+            Dictionary with:
+                - total_capacity: Sum of all active centers' capacity
+                - total_current_occupancy: Sum of all active centers' current_occupancy
+                - usage_percentage: Calculated percentage
+                - status: 'active' if any center is active, else 'inactive'
+                - active_centers_count: Number of active centers
+                - total_centers_count: Total number of centers
+        """
+        try:
+            # Query to get aggregated data for active centers
+            active_summary_query = text("""
+                SELECT 
+                    COUNT(*) as active_count,
+                    COALESCE(SUM(capacity), 0) as total_capacity,
+                    COALESCE(SUM(current_occupancy), 0) as total_occupancy
+                FROM evacuation_centers
+                WHERE status = 'active'
+            """)
+            
+            active_result = db.session.execute(active_summary_query).fetchone()
+            
+            # Query to get total count of all centers
+            total_count_query = text("""
+                SELECT COUNT(*) as total_count
+                FROM evacuation_centers
+            """)
+            
+            total_result = db.session.execute(total_count_query).fetchone()
+            
+            # Extract values
+            active_count = active_result[0] if active_result else 0
+            total_capacity = active_result[1] if active_result else 0
+            total_occupancy = active_result[2] if active_result else 0
+            total_centers = total_result[0] if total_result else 0
+            
+            # Calculate usage percentage
+            usage_percentage = 0
+            if total_capacity > 0:
+                usage_percentage = round((total_occupancy / total_capacity) * 100)
+            
+            # Determine overall status
+            overall_status = "active" if active_count > 0 else "inactive"
+            
+            return {
+                "total_capacity": total_capacity,
+                "total_current_occupancy": total_occupancy,
+                "usage_percentage": usage_percentage,
+                "status": overall_status,
+                "active_centers_count": active_count,
+                "total_centers_count": total_centers,
+            }
+            
+        except Exception as error:
+            return {
+                "total_capacity": 0,
+                "total_current_occupancy": 0,
+                "usage_percentage": 0,
+                "status": "inactive",
+                "active_centers_count": 0,
+                "total_centers_count": 0,
+            }
+        
+        

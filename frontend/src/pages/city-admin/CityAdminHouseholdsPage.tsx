@@ -9,6 +9,8 @@ import { EditHouseholdModal } from "@/components/features/household/EditHousehol
 import { SuccessToast } from "@/components/common/SuccessToast";
 import { useHouseholdStore } from "@/store/householdStore";
 import { debounce } from "@/utils/helpers";
+import { useAuth } from "@/hooks/useAuth";
+import { useAuthStore } from "@/store/authStore";
 
 export function CityAdminHouseholdsPage() {
     const {
@@ -27,6 +29,10 @@ export function CityAdminHouseholdsPage() {
         fetchHouseholds,
         deleteHousehold,
     } = useHouseholdStore();
+
+    // Get current user and role
+    const { user } = useAuthStore();
+    const userRole = user?.role;
 
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -159,6 +165,7 @@ export function CityAdminHouseholdsPage() {
                                 onEdit={handleOpenEditModal}
                                 onDelete={handleDelete}
                                 loading={loading}
+                                userRole={userRole}
                             />
                         )}
                     </div>
