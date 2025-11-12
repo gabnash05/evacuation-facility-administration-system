@@ -1,3 +1,5 @@
+// FILE NAME: src/components/features/household/AddIndividualModal.tsx
+
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -26,7 +28,6 @@ import type { CreateIndividualData } from "@/types/individual";
 interface AddIndividualModalProps {
     isOpen: boolean;
     onClose: () => void;
-    // Individual passed back should NOT include household_id; it will be attached later
     onAdd: (individual: Omit<CreateIndividualData, "household_id">) => void;
 }
 
@@ -38,11 +39,22 @@ export function AddIndividualModal({ isOpen, onClose, onAdd }: AddIndividualModa
     const [relationship, setRelationship] = useState("");
     const [error, setError] = useState<string | null>(null);
 
+    // --- NEW: Pre-defined list of relationship options ---
+    const relationshipOptions = [
+        "Spouse",
+        "Child",
+        "Parent",
+        "Sibling",
+        "Grandparent",
+        "Grandchild",
+        "Other",
+    ];
+
     const resetForm = () => {
         setFirstName("");
         setLastName("");
         setDob(undefined);
-        setGender("Female");
+        setGender("Male");
         setRelationship("");
         setError(null);
     };
@@ -149,13 +161,19 @@ export function AddIndividualModal({ isOpen, onClose, onAdd }: AddIndividualModa
                         </div>
                     </div>
                     <div className="space-y-2">
-                        <Label htmlFor="relationship">Relationship to Head *</Label>
-                        <Input
-                            id="relationship"
-                            value={relationship}
-                            onChange={e => setRelationship(e.target.value)}
-                            placeholder="e.g., Spouse, Child, Parent"
-                        />
+                        <Label>Relationship to Head *</Label>
+                        <Select value={relationship} onValueChange={setRelationship}>
+                            <SelectTrigger>
+                                <SelectValue placeholder="Select a relationship" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {relationshipOptions.map(option => (
+                                    <SelectItem key={option} value={option}>
+                                        {option}
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
                     </div>
                 </div>
                 <DialogFooter>

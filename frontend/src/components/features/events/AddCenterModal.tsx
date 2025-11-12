@@ -20,9 +20,15 @@ interface AddCenterModalProps {
     isOpen: boolean;
     onClose: () => void;
     onAddCenters: (centers: EvacuationCenter[]) => void;
+    existingCenters?: EvacuationCenter[]; // Add this prop
 }
 
-export function AddCenterModal({ isOpen, onClose, onAddCenters }: AddCenterModalProps) {
+export function AddCenterModal({ 
+    isOpen, 
+    onClose, 
+    onAddCenters, 
+    existingCenters = [] // Default to empty array
+}: AddCenterModalProps) {
     const [selectedCenterIds, setSelectedCenterIds] = useState<Set<number>>(new Set());
 
     const {
@@ -35,9 +41,14 @@ export function AddCenterModal({ isOpen, onClose, onAddCenters }: AddCenterModal
     useEffect(() => {
         if (isOpen) {
             fetchAllCenters();
-            console.log(availableCenters);
+            setSelectedCenterIds(new Set()); // Reset selection when modal opens
         }
     }, [isOpen, fetchAllCenters]);
+
+    // Filter out centers that are already added to the event
+    const filteredCenters = availableCenters.filter(center => 
+        !existingCenters.some(existing => existing.center_id === center.center_id)
+    );
 
     const handleToggleCenter = (centerId: number) => {
         setSelectedCenterIds(prev => {
@@ -52,7 +63,7 @@ export function AddCenterModal({ isOpen, onClose, onAddCenters }: AddCenterModal
     };
 
     const handleAddCenters = () => {
-        const selectedCenters = availableCenters.filter(center =>
+        const selectedCenters = filteredCenters.filter(center =>
             selectedCenterIds.has(center.center_id)
         );
         onAddCenters(selectedCenters);
@@ -112,14 +123,28 @@ export function AddCenterModal({ isOpen, onClose, onAddCenters }: AddCenterModal
                     </div>
                 )}
 
+                {/* Info about excluded centers */}
+                {existingCenters.length > 0 && (
+                    <div className="bg-muted border border-border text-muted-foreground px-4 py-3 rounded-md mt-4">
+                        <p className="text-sm">
+                            {existingCenters.length} center{existingCenters.length !== 1 ? 's' : ''} already added to this event are hidden
+                        </p>
+                    </div>
+                )}
+
                 <div className="mt-4 border border-border rounded-lg overflow-x-auto">
                     {isLoading ? (
                         <div className="flex items-center justify-center h-[400px] text-muted-foreground">
                             <p className="text-lg">Loading evacuation centers...</p>
                         </div>
-                    ) : availableCenters.length === 0 ? (
+                    ) : filteredCenters.length === 0 ? (
                         <div className="flex items-center justify-center h-[400px] text-muted-foreground">
-                            <p className="text-lg">No evacuation centers available</p>
+                            <p className="text-lg">
+                                {availableCenters.length === 0 
+                                    ? "No evacuation centers available" 
+                                    : "All available centers are already added to this event"
+                                }
+                            </p>
                         </div>
                     ) : (
                         <Table>
@@ -137,7 +162,7 @@ export function AddCenterModal({ isOpen, onClose, onAddCenters }: AddCenterModal
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
-                                {availableCenters.map((center, i) => {
+                                {filteredCenters.map((center, i) => {
                                     const isSelected = selectedCenterIds.has(center.center_id);
                                     const occupancyPercentage =
                                         center.capacity > 0
@@ -196,10 +221,16 @@ export function AddCenterModal({ isOpen, onClose, onAddCenters }: AddCenterModal
                 </div>
 
                 <div className="flex items-center justify-between mt-6">
-                    <p className="text-sm text-muted-foreground">
-                        {selectedCenterIds.size} center{selectedCenterIds.size !== 1 ? "s" : ""}{" "}
-                        selected
-                    </p>
+                    <div className="text-sm text-muted-foreground">
+                        <p>
+                            {selectedCenterIds.size} center{selectedCenterIds.size !== 1 ? "s" : ""} selected
+                        </p>
+                        {existingCenters.length > 0 && (
+                            <p>
+                                {filteredCenters.length} of {availableCenters.length} centers available
+                            </p>
+                        )}
+                    </div>
                     <Button
                         onClick={handleAddCenters}
                         className="gap-2 bg-green-600 hover:bg-green-700"

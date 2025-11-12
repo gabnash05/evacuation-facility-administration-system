@@ -8,6 +8,10 @@ from sqlalchemy import text
 from app.models import db
 from app.schemas.event import EventResponseSchema
 
+import logging
+
+logger = logging.getLogger(__name__)
+
 
 class Event(db.Model):
     """Event model for managing events."""
@@ -20,6 +24,9 @@ class Event(db.Model):
     date_declared = db.Column(db.DateTime, nullable=False)
     end_date = db.Column(db.DateTime, nullable=True)
     status = db.Column(db.String(20), nullable=False, default="active")
+    capacity = db.Column(db.Integer, nullable=False, default=0)
+    max_occupancy = db.Column(db.Integer, nullable=False, default=0)
+    usage_percentage = db.Column(db.Numeric(5, 2), nullable=False, default=0.00)
     created_at = db.Column(db.DateTime, default=db.func.now())
     updated_at = db.Column(db.DateTime, default=db.func.now(), onupdate=db.func.now())
 
@@ -47,68 +54,186 @@ class Event(db.Model):
         except AttributeError:
             row_dict = dict(row)
 
-        return cls(**row_dict)
+        # Extract the additional fields for capacity and occupancy
+        event_data = {k: v for k, v in row_dict.items() if hasattr(cls, k)}
+        
+        event = cls(**event_data)
+        
+        # Add the additional fields as attributes to the event object
+        # Keep existing aggregated fields for backward compatibility
+        if 'total_capacity' in row_dict:
+            event.total_capacity = row_dict.get('total_capacity', 0)
+        if 'total_occupancy' in row_dict:
+            event.total_occupancy = row_dict.get('total_occupancy', 0)
+        if 'overall_usage_percentage' in row_dict:
+            event.overall_usage_percentage = row_dict.get('overall_usage_percentage', 0)
+        
+        return event
 
     @classmethod
-    def get_by_id(cls, event_id: int) -> Optional["Event"]:
-        """Get event by ID using raw SQL."""
+    def update_event_occupancy(cls, event_id: int, new_occupancy: int) -> Optional["Event"]:
+        """Update event's max_occupancy if new_occupancy is higher and recalculate usage_percentage."""
+        event = cls.get_by_id(event_id)
+        if not event:
+            return None
+
+        # Only update if new occupancy is higher than current max_occupancy
+        if new_occupancy > event.max_occupancy:
+            # Calculate new usage percentage
+            new_usage_percentage = 0.00
+            if event.capacity > 0:
+                new_usage_percentage = round((new_occupancy * 100.0 / event.capacity), 2)
+            
+            # Update the event
+            return cls.update(event_id, {
+                "max_occupancy": new_occupancy,
+                "usage_percentage": new_usage_percentage
+            })
+        
+        logger.info(f"Max occupancy not updated for event {event_id}: current max_occupancy={event.max_occupancy}, new_occupancy={new_occupancy}")
+        
+        return event
+
+    @classmethod
+    def recalculate_event_capacity(cls, event_id: int) -> Optional["Event"]:
+        """Recalculate event capacity and occupancy based on associated centers."""
+        # Get sum of capacities and current occupancies from associated centers
         result = db.session.execute(
-            text("SELECT * FROM events WHERE event_id = :event_id"),
-            {"event_id": event_id},
+            text("""
+                SELECT 
+                    COALESCE(SUM(ec.capacity), 0) as total_capacity,
+                    COALESCE(SUM(ec.current_occupancy), 0) as current_occupancy
+                FROM event_centers evc
+                JOIN evacuation_centers ec ON evc.center_id = ec.center_id
+                WHERE evc.event_id = :event_id
+            """),
+            {"event_id": event_id}
         ).fetchone()
 
-        return cls._row_to_event(result)
+        if not result:
+            return None
+
+        total_capacity = result[0] or 0
+        current_occupancy = result[1] or 0
+        
+        # Get current event to check if we need to update max_occupancy
+        event = cls.get_by_id(event_id)
+        if not event:
+            return None
+
+        # Update capacity - always set to total
+        update_data = {"capacity": total_capacity}
+        
+        # Update max_occupancy - use the maximum between current max and new occupancy
+        # This ensures max_occupancy tracks the highest occupancy ever reached
+        new_max_occupancy = max(current_occupancy, event.max_occupancy)
+        update_data["max_occupancy"] = new_max_occupancy
+        
+        # Calculate usage percentage based on max_occupancy
+        if total_capacity > 0:
+            update_data["usage_percentage"] = round((new_max_occupancy * 100.0 / total_capacity), 2)
+        else:
+            update_data["usage_percentage"] = 0.00
+
+        logger.info(
+            f"Recalculating event {event_id}: capacity={total_capacity}, "
+            f"current_occupancy={current_occupancy}, max_occupancy={new_max_occupancy}, "
+            f"usage_percentage={update_data['usage_percentage']}"
+        )
+
+        return cls.update(event_id, update_data)
 
     @classmethod
     def get_all(
         cls,
         search: Optional[str] = None,
         status: Optional[str] = None,
+        center_id: Optional[int] = None,
         page: int = 1,
         limit: int = 10,
         sort_by: Optional[str] = None,
         sort_order: Optional[str] = "asc",
     ) -> Dict[str, Any]:
         """Get all events with pagination, search, and sorting."""
-        # Base query
-        base_query = "FROM events WHERE 1=1"
-        count_query = "SELECT COUNT(*) as total_count FROM events WHERE 1=1"
-        params = {}
+        # Updated base query to include center capacity and occupancy data
+        if center_id:
+            base_query = """
+                FROM events e
+                INNER JOIN event_centers ec ON e.event_id = ec.event_id
+                WHERE ec.center_id = :center_id
+            """
+            count_query = """
+                SELECT COUNT(DISTINCT e.event_id) as total_count
+                FROM events e
+                INNER JOIN event_centers ec ON e.event_id = ec.event_id
+                WHERE ec.center_id = :center_id
+            """
+            params = {"center_id": center_id}
+        else:
+            base_query = """
+                FROM events e
+                LEFT JOIN event_centers ec ON e.event_id = ec.event_id
+                LEFT JOIN evacuation_centers evc ON ec.center_id = evc.center_id
+                WHERE 1=1
+            """
+            count_query = "SELECT COUNT(DISTINCT e.event_id) as total_count FROM events e WHERE 1=1"
+            params = {}
 
         # Add search filter
         if search:
-            base_query += " AND (LOWER(event_name) LIKE LOWER(:search) OR LOWER(event_type) LIKE LOWER(:search))"
-            count_query += " AND (LOWER(event_name) LIKE LOWER(:search) OR LOWER(event_type) LIKE LOWER(:search))"
+            if center_id:
+                base_query += " AND (LOWER(e.event_name) LIKE LOWER(:search) OR LOWER(e.event_type) LIKE LOWER(:search))"
+                count_query += " AND (LOWER(e.event_name) LIKE LOWER(:search) OR LOWER(e.event_type) LIKE LOWER(:search))"
+            else:
+                base_query += " AND (LOWER(e.event_name) LIKE LOWER(:search) OR LOWER(e.event_type) LIKE LOWER(:search))"
+                count_query += " AND (LOWER(e.event_name) LIKE LOWER(:search) OR LOWER(e.event_type) LIKE LOWER(:search))"
             params["search"] = f"%{search}%"
 
         # Add status filter
         if status:
-            base_query += " AND status = :status"
-            count_query += " AND status = :status"
+            if center_id:
+                base_query += " AND e.status = :status"
+                count_query += " AND e.status = :status"
+            else:
+                base_query += " AND e.status = :status"
+                count_query += " AND e.status = :status"
             params["status"] = status
 
         # Get total count
         count_result = db.session.execute(text(count_query), params).fetchone()
         total_count = count_result[0] if count_result else 0
 
-        # Build main query
-        select_query = f"SELECT * {base_query}"
+        # Build main query - include aggregated capacity and occupancy data
+        if center_id:
+            select_query = f"SELECT DISTINCT e.* {base_query}"
+        else:
+            select_query = f"""
+                SELECT 
+                    e.*,
+                    COALESCE(SUM(evc.capacity), 0) as total_capacity,
+                    COALESCE(SUM(evc.current_occupancy), 0) as total_occupancy,
+                    CASE 
+                        WHEN COALESCE(SUM(evc.capacity), 0) > 0 THEN 
+                            ROUND((COALESCE(SUM(evc.current_occupancy), 0) * 100.0 / COALESCE(SUM(evc.capacity), 1)), 2)
+                        ELSE 0 
+                    END as overall_usage_percentage
+                {base_query}
+                GROUP BY e.event_id
+            """
 
         # Add sorting
         if sort_by and sort_by in [
-            "event_name",
-            "event_type",
-            "date_declared",
-            "end_date",
-            "status",
-            "created_at",
+            "event_name", "event_type", "date_declared", "end_date", 
+            "status", "created_at", "capacity", "max_occupancy", "usage_percentage"
         ]:
             order_direction = (
                 "DESC" if sort_order and sort_order.lower() == "desc" else "ASC"
             )
-            select_query += f" ORDER BY {sort_by} {order_direction}"
+            sort_field = f"e.{sort_by}" if center_id else sort_by
+            select_query += f" ORDER BY {sort_field} {order_direction}"
         else:
-            select_query += " ORDER BY date_declared DESC"
+            date_field = "e.date_declared" if center_id else "date_declared"
+            select_query += f" ORDER BY {date_field} DESC"
 
         # Add pagination
         offset = (page - 1) * limit
@@ -128,6 +253,16 @@ class Event(db.Model):
             "limit": limit,
             "total_pages": (total_count + limit - 1) // limit,
         }
+
+    @classmethod
+    def get_by_id(cls, event_id: int) -> Optional["Event"]:
+        """Get event by ID using raw SQL."""
+        result = db.session.execute(
+            text("SELECT * FROM events WHERE event_id = :event_id"),
+            {"event_id": event_id},
+        ).fetchone()
+
+        return cls._row_to_event(result)
 
     @classmethod
     def create(cls, data: Dict[str, Any]) -> "Event":
@@ -313,7 +448,18 @@ class EventCenter(db.Model):
             result = db.session.execute(
                 text(
                     """
-                    SELECT ec.center_id, ec.center_name, ec.address, ec.capacity, ec.current_occupancy, ec.status
+                    SELECT 
+                        ec.center_id, 
+                        ec.center_name, 
+                        ec.address, 
+                        ec.capacity, 
+                        ec.current_occupancy,
+                        CASE 
+                            WHEN ec.capacity > 0 THEN 
+                                ROUND((ec.current_occupancy * 100.0 / ec.capacity), 2)
+                            ELSE 0 
+                        END as usage_percentage,
+                        ec.status
                     FROM event_centers ecj
                     JOIN evacuation_centers ec ON ecj.center_id = ec.center_id
                     WHERE ecj.event_id = :event_id

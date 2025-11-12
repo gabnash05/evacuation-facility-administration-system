@@ -5,7 +5,7 @@ import {
     SidebarGroup,
     SidebarHeader,
 } from "@/components/ui/sidebar";
-import { LayoutDashboard, Building, Calendar, Users, LogOut, House } from "lucide-react";
+import { LayoutDashboard, Building, Users, LogOut, House, Package, BarChart3, ClipboardCheck, ArrowLeftRight, NotebookPen } from "lucide-react";
 import efasLogo from "@/assets/logo/efas-logo.png";
 import { ModeToggle } from "./ModeToggle";
 import { Link, useLocation, useNavigate } from "react-router-dom";
@@ -48,12 +48,6 @@ export function AppSidebar({ role, roleLabel, userEmail }: AppSidebarProps) {
                         icon: <Building className="w-4 h-4" />,
                     },
                     {
-                        key: "events",
-                        label: "Events",
-                        href: "/city-admin/events",
-                        icon: <Calendar className="w-4 h-4" />,
-                    },
-                    {
                         key: "households",
                         label: "Households",
                         href: "/city-admin/households",
@@ -64,6 +58,18 @@ export function AppSidebar({ role, roleLabel, userEmail }: AppSidebarProps) {
                         label: "User Management",
                         href: "/city-admin/user-management",
                         icon: <Users className="w-4 h-4" />,
+                    },
+                    {
+                        key: "aid-distribution",
+                        label: "Aid Distribution",
+                        href: "/city-admin/aid-distribution",
+                        icon: <Package className="w-4 h-4" />,
+                    },
+                    {
+                        key: "reports-and-analytics",
+                        label: "Reports and Analytics",
+                        href: "/city-admin/reports-and-analytics",
+                        icon: <BarChart3 className="w-4 h-4" />,
                     },
                 ];
             case "center_admin":
@@ -80,6 +86,30 @@ export function AppSidebar({ role, roleLabel, userEmail }: AppSidebarProps) {
                         href: "/center-admin/households",
                         icon: <House className="w-4 h-4" />,
                     },
+                    {
+                        key: "attendance",
+                        label: "Attendance",
+                        href: "/center-admin/attendance",
+                        icon: <ClipboardCheck className="w-4 h-4" />,
+                    },
+                    {
+                        key: "user-management",
+                        label: "User Management",
+                        href: "/center-admin/user-management",
+                        icon: <Users className="w-4 h-4" />,
+                    },
+                    {
+                        key: "aid-distribution",
+                        label: "Aid Distribution",
+                        href: "/center-admin/aid-distribution",
+                        icon: <Package className="w-4 h-4" />,
+                    },
+                    {
+                        key: "reports-and-analytics",
+                        label: "Reports and Analytics",
+                        href: "/center-admin/reports-and-analytics",
+                        icon: <BarChart3 className="w-4 h-4" />,
+                    },
                 ];
             case "volunteer":
                 return [
@@ -88,6 +118,30 @@ export function AppSidebar({ role, roleLabel, userEmail }: AppSidebarProps) {
                         label: "Dashboard",
                         href: "/volunteer/dashboard",
                         icon: <LayoutDashboard className="w-4 h-4" />,
+                    },
+                    {
+                        key: "check-in",
+                        label: "Check-in",
+                        href: "/volunteer/check-in",
+                        icon: <NotebookPen className="w-4 h-4" />,
+                    },
+                    {
+                        key: "transfer-individual",
+                        label: "Transfer Individual",
+                        href: "/volunteer/transfer-individual",
+                        icon: <ArrowLeftRight className="w-4 h-4" />,
+                    },
+                    {
+                        key: "households",
+                        label: "Households",
+                        href: "/volunteer/households",
+                        icon: <House className="w-4 h-4" />,
+                    },
+                    {
+                        key: "aid-distribution",
+                        label: "Aid Distribution",
+                        href: "/volunteer/aid-distribution",
+                        icon: <Package className="w-4 h-4" />,
                     },
                 ];
             default:

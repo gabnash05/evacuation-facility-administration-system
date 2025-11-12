@@ -17,14 +17,12 @@ import {
     SelectItem,
     SelectTrigger,
     SelectValue,
-    SelectGroup,
-    SelectLabel,
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { CalendarIcon, Plus, Trash2 } from "lucide-react";
+import { AlertCircle, CalendarIcon, Plus, Trash2 } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { AddCenterModal } from "@/components/features/events/AddCenterModal";
@@ -67,6 +65,7 @@ export function CreateEventModal({
     onSubmit,
     initialData,
 }: CreateEventModalProps) {
+    const [error, setError] = useState<string | null>(null);
     const [event_name, setEventName] = useState("");
     const [event_type, setEventType] = useState("");
     const [status, setStatus] = useState<string>("active");
@@ -110,7 +109,14 @@ export function CreateEventModal({
         loadEventData();
     }, [initialData, isOpen]);
 
-    const handleAddEvent = () => {
+    const handleAddEvent = async () => {
+        setError(null); // Clear previous errors
+        
+        if (!isFormValid) {
+            setError("Please fill in all required fields");
+            return;
+        }
+
         // Format dates as YYYY-MM-DD to avoid timezone issues
         const formatForBackend = (date: Date): string => {
             const year = date.getFullYear();
@@ -119,22 +125,29 @@ export function CreateEventModal({
             return `${year}-${month}-${day}`;
         };
 
-        const eventData = {
-            event_name: event_name,
-            event_type: event_type === "other" ? customEventType : event_type,
-            status: status.toLowerCase(),
-            date_declared: date_declared ? formatForBackend(date_declared) : "",
-            end_date: end_date === "N/A" ? null : end_date ? formatForBackend(end_date) : null,
-            center_ids: evacuation_centers.map(center => center.center_id),
-        };
+        try {
+            const eventData = {
+                event_name: event_name,
+                event_type: event_type === "other" ? customEventType : event_type,
+                status: status.toLowerCase(),
+                date_declared: date_declared ? formatForBackend(date_declared) : "",
+                end_date: end_date === "N/A" ? null : end_date ? formatForBackend(end_date) : null,
+                center_ids: evacuation_centers.map(center => center.center_id),
+            };
 
-        console.log("Sending dates:", {
-            date_declared: eventData.date_declared,
-            end_date: eventData.end_date,
-        });
-
-        onSubmit(eventData);
-        handleClose();
+            await onSubmit(eventData);
+            handleClose();
+        } catch (err: any) {
+            // Handle specific error types
+            if (err.message?.includes("already exists")) {
+                setError(`An event with the name "${event_name}" already exists.`);
+            } else if (err.message?.includes("Validation error")) {
+                setError(err.message);
+            } else {
+                setError("Failed to create event. Please try again.");
+            }
+            console.error("Create event error:", err);
+        }
     };
 
     const handleReset = () => {
@@ -203,6 +216,16 @@ export function CreateEventModal({
                             {initialData ? "Edit Event" : "Create Event"}
                         </DialogTitle>
                     </DialogHeader>
+
+                    {/* Error Display */}
+                    {error && (
+                        <div className="bg-destructive/15 text-destructive p-3 rounded-md">
+                            <div className="flex items-center gap-2">
+                                <AlertCircle className="h-4 w-4" />
+                                <span className="text-sm">{error}</span>
+                            </div>
+                        </div>
+                    )}
 
                     {/* Event Info Section */}
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
@@ -444,6 +467,7 @@ export function CreateEventModal({
                 isOpen={isAddCenterOpen}
                 onClose={() => setIsAddCenterOpen(false)}
                 onAddCenters={handleAddCenters}
+                existingCenters={evacuation_centers}
             />
         </>
     );
