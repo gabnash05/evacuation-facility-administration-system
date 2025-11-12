@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/select";
 import { useAuthStore } from "@/store/authStore";
 
-export function CityAdminUserManagementPage() {
+export function CenterAdminUserManagementPage() {
     const {
         users,
         loading,
@@ -33,15 +33,19 @@ export function CityAdminUserManagementPage() {
     // Get current user and role
     const { user } = useAuthStore();
     const userRole = user?.role;
+    const userCenterId = user?.center_id; // Get the center_id from current user
 
     // Local state for role filter
     const [roleFilter, setRoleFilter] = useState<string>("all");
     const [statusFilter, setStatusFilter] = useState<string>("all");
 
-    // Create debounced fetch function
-    const debouncedFetchUsers = useMemo(() => debounce(() => fetchUsers(), 500), [fetchUsers]);
+    // Create debounced fetch function that includes center_id
+    const debouncedFetchUsers = useMemo(() => 
+        debounce(() => fetchUsers(userCenterId), 500), 
+        [fetchUsers, userCenterId]
+    );
 
-    // Fetch users when dependencies change
+    // Fetch users when dependencies change - automatically filtered by user's center
     useEffect(() => {
         if (
             searchQuery ||
@@ -51,7 +55,8 @@ export function CityAdminUserManagementPage() {
         ) {
             debouncedFetchUsers();
         } else {
-            fetchUsers();
+            // Always fetch with the user's center_id
+            fetchUsers(userCenterId);
         }
     }, [
         searchQuery,
@@ -62,7 +67,16 @@ export function CityAdminUserManagementPage() {
         statusFilter,
         fetchUsers,
         debouncedFetchUsers,
+        userCenterId, // Add userCenterId to dependencies
     ]);
+
+    // Reset filters and fetch when userCenterId changes
+    useEffect(() => {
+        if (userCenterId) {
+            setCurrentPage(1);
+            fetchUsers(userCenterId);
+        }
+    }, [userCenterId, fetchUsers, setCurrentPage]);
 
     const handleSort = (key: string) => {
         if (!sortConfig || sortConfig.key !== key) {
@@ -88,6 +102,7 @@ export function CityAdminUserManagementPage() {
         console.log("Add User clicked");
         // Implementation for adding a new user
         // This would typically open a modal or navigate to a form
+        // Note: For center admin, new users should be assigned to their center by default
     };
 
     const handleEntriesPerPageChange = (entries: number) => {
@@ -112,19 +127,37 @@ export function CityAdminUserManagementPage() {
         setCurrentPage(1); // Reset to first page when filter changes
     };
 
+    // Filter available roles for center admin (can only create center_admin and volunteer)
+    const getAvailableRoles = () => {
+        if (userRole === "center_admin") {
+            return [
+                { value: "all", label: "All Roles" },
+                { value: "center_admin", label: "Center Admin" },
+                { value: "volunteer", label: "Volunteer" },
+            ];
+        }
+        return [
+            { value: "all", label: "All Roles" },
+            { value: "super_admin", label: "Super Admin" },
+            { value: "city_admin", label: "City Admin" },
+            { value: "center_admin", label: "Center Admin" },
+            { value: "volunteer", label: "Volunteer" },
+        ];
+    };
+
     // Build additional filters component
     const additionalFilters = (
         <>
             <Select value={roleFilter} onValueChange={handleRoleFilterChange} disabled={loading}>
-                <SelectTrigger className="w-32">
+                <SelectTrigger className="w-40">
                     <SelectValue placeholder="All Roles" />
                 </SelectTrigger>
                 <SelectContent>
-                    <SelectItem value="all">All Roles</SelectItem>
-                    <SelectItem value="super_admin">Super Admin</SelectItem>
-                    <SelectItem value="city_admin">City Admin</SelectItem>
-                    <SelectItem value="center_admin">Center Admin</SelectItem>
-                    <SelectItem value="volunteer">Volunteer</SelectItem>
+                    {getAvailableRoles().map(role => (
+                        <SelectItem key={role.value} value={role.value}>
+                            {role.label}
+                        </SelectItem>
+                    ))}
                 </SelectContent>
             </Select>
 
@@ -145,6 +178,9 @@ export function CityAdminUserManagementPage() {
         </>
     );
 
+    // Display current center information
+    const currentCenterInfo = user?.center_name ? `for ${user.center_name}` : '';
+
     return (
         <div className="w-full min-w-0 bg-background flex flex-col relative p-6">
             <div className="space-y-6">
@@ -152,7 +188,7 @@ export function CityAdminUserManagementPage() {
                 <div>
                     <h1 className="text-2xl font-bold tracking-tight">User Management</h1>
                     <p className="text-muted-foreground">
-                        Manage system users and their permissions
+                        Manage users for your evacuation center {currentCenterInfo}
                     </p>
                 </div>
 
@@ -169,7 +205,9 @@ export function CityAdminUserManagementPage() {
                 <div className="border border-border rounded-lg">
                     {/* Card Header */}
                     <div className="bg-card border-b border-border p-4">
-                        <h3 className="font-semibold text-base text-foreground">User List</h3>
+                        <h3 className="font-semibold text-base text-foreground">
+                            User List {currentCenterInfo}
+                        </h3>
                     </div>
 
                     {/* Controls Bar */}

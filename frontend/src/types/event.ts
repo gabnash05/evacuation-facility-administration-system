@@ -10,8 +10,14 @@ export interface Event {
     event_type: string;
     date_declared: string;
     end_date?: string | null;
-    status: string | EventStatus;
-    created_at: string;
+    status: string;
+    capacity: number;
+    max_occupancy: number;
+    usage_percentage: number;
+    total_capacity?: number;
+    total_occupancy?: number;
+    overall_usage_percentage?: number;
+    created_at?: string;
     updated_at?: string;
 }
 
@@ -53,4 +59,5 @@ export interface GetEventsParams {
     limit?: number;
     sortBy?: string;
     sortOrder?: string;
+    center_id?: number;
 }

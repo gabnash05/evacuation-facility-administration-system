@@ -37,8 +37,9 @@ export default function MainLayout({ children }: MainLayoutProps) {
 
     const getRoleLabel = () => {
         switch (user.role) {
-            case "city_admin":
             case "super_admin":
+                return "Super Admin";
+            case "city_admin":
                 return "City Admin";
             case "center_admin":
                 return "Center Administrator";
