@@ -11,6 +11,7 @@ import {
     SelectContent,
     SelectItem,
 } from "@/components/ui/select";
+import { useAuthStore } from "@/store/authStore";
 
 export function CityAdminUserManagementPage() {
     const {
@@ -27,8 +28,11 @@ export function CityAdminUserManagementPage() {
         setEntriesPerPage,
         setSortConfig,
         fetchUsers,
-        createUser,
     } = useUserStore();
+
+    // Get current user and role
+    const { user } = useAuthStore();
+    const userRole = user?.role;
 
     // Local state for role filter
     const [roleFilter, setRoleFilter] = useState<string>("all");
@@ -195,6 +199,7 @@ export function CityAdminUserManagementPage() {
                                 sortConfig={sortConfig}
                                 onSort={handleSort}
                                 loading={loading}
+                                userRole={userRole}
                             />
                         )}
                     </div>

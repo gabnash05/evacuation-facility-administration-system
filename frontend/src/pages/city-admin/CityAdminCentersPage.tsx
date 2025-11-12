@@ -9,6 +9,7 @@ import { EvacuationCenterDetailsModal } from "@/components/features/evacuation-c
 import { useEvacuationCenterStore } from "@/store/evacuationCenterStore";
 import { debounce } from "@/utils/helpers";
 import type { EvacuationCenter } from "@/types/center"; // NEW IMPORT
+import { useAuthStore } from "@/store/authStore";
 
 export function CityAdminCentersPage() {
     const {
@@ -26,6 +27,10 @@ export function CityAdminCentersPage() {
         setSortConfig,
         fetchCenters,
     } = useEvacuationCenterStore();
+
+    // Get current user and role
+    const { user } = useAuthStore();
+    const userRole = user?.role;
 
     const [isAddFormOpen, setIsAddFormOpen] = useState(false);
     const [successToast, setSuccessToast] = useState({
@@ -179,6 +184,7 @@ export function CityAdminCentersPage() {
                                 onShowSuccessToast={showSuccessToast}
                                 onRowClick={handleRowClick}
                                 onItemDeleted={handleItemDeleted}
+                                userRole={userRole}
                             />
                         )}
                     </div>

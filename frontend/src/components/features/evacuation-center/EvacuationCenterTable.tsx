@@ -31,6 +31,7 @@ interface EvacuationCenterTableProps {
     onShowSuccessToast?: (message: string) => void;
     onRowClick?: (center: EvacuationCenter) => void;
     onItemDeleted?: () => void;
+    userRole?: string; 
 }
 
 // Custom dropdown component with theme support and proper positioning
@@ -39,11 +40,13 @@ function ActionDropdown({
     centerName,
     onEdit,
     onDelete,
+    userRole,
 }: {
     centerId: number;
     centerName: string;
     onEdit: (id: number) => void;
     onDelete: (id: number, name: string) => void;
+    userRole?: string;
 }) {
     const [isOpen, setIsOpen] = useState(false);
     const dropdownRef = useRef<HTMLDivElement>(null);
@@ -117,6 +120,8 @@ function ActionDropdown({
         onDelete(centerId, centerName);
     };
 
+    const canDelete = userRole === "super_admin";
+
     return (
         <div ref={dropdownRef} className="relative inline-block">
             <Button variant="ghost" size="icon" className="h-8 w-8" onClick={handleButtonClick}>
@@ -140,13 +145,15 @@ function ActionDropdown({
                             <Edit className="h-4 w-4" />
                             Edit
                         </button>
-                        <button
-                            className="w-full text-left px-3 py-2 text-sm hover:bg-destructive/10 hover:text-destructive flex items-center gap-2 rounded-sm text-destructive"
-                            onClick={handleDelete}
-                        >
-                            <Trash2 className="h-4 w-4" />
-                            Delete
-                        </button>
+                        {canDelete && ( // ONLY SHOW DELETE BUTTON FOR SUPER_ADMIN
+                            <button
+                                className="w-full text-left px-3 py-2 text-sm hover:bg-destructive/10 hover:text-destructive flex items-center gap-2 rounded-sm text-destructive"
+                                onClick={handleDelete}
+                            >
+                                <Trash2 className="h-4 w-4" />
+                                Delete
+                            </button>
+                        )}
                     </div>
                 </div>
             )}
@@ -168,6 +175,7 @@ export function EvacuationCenterTable({
     onShowSuccessToast,
     onRowClick,
     onItemDeleted,
+    userRole,
 }: EvacuationCenterTableProps) {
     const { deleteCenter } = useEvacuationCenterStore();
     const [deleteDialog, setDeleteDialog] = useState<{
@@ -462,6 +470,7 @@ export function EvacuationCenterTable({
                                             centerName={center.center_name}
                                             onEdit={handleEditClick}
                                             onDelete={handleDeleteClick}
+                                            userRole={userRole}
                                         />
                                     </TableCell>
                                 </TableRow>

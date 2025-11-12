@@ -1,22 +1,12 @@
 "use client";
 
 import { ChevronLeft, ChevronRight, Search, Plus } from "lucide-react";
-import { DataTable } from "@/components/common/DataTable";
 import { EventsTable } from "@/components/features/events/EventsTable";
 import { SearchBar } from "@/components/common/SearchBar";
 import { Button } from "@/components/ui/button";
 import type { Event } from "@/types/event";
 
-interface Column {
-    key: string;
-    label: string;
-    className?: string;
-}
-
 interface EventHistoryTableProps {
-    // Optional: For backwards compatibility with DataTable
-    eventColumns?: Column[];
-    
     paginatedData: Event[];
     processedData: Event[];
     searchQuery: string;
@@ -29,25 +19,18 @@ interface EventHistoryTableProps {
     isLoadingEvents: boolean;
     onRowClick: (row: Event) => void;
     onSort: (column: string) => void;
-    
-    // For DataTable mode (backwards compatibility)
-    sortColumn?: string;
-    sortDirection?: "asc" | "desc";
-    
-    // For EventsTable mode (new)
-    sortConfig?: {
+    sortConfig: {
         key: string;
         direction: "asc" | "desc" | null;
     } | null;
-    
-    // Actions (optional - if provided, uses EventsTable with actions)
+    // Actions (optional - if provided, shows action buttons)
     onAddEvent?: () => void;
     onEdit?: (event: Event) => void;
     onDelete?: (event: Event) => void;
+    userRole?: string;
 }
 
 export function EventHistoryTable({
-    eventColumns,
     paginatedData,
     processedData,
     searchQuery,
@@ -60,17 +43,12 @@ export function EventHistoryTable({
     isLoadingEvents,
     onRowClick,
     onSort,
-    sortColumn,
-    sortDirection,
     sortConfig,
     onAddEvent,
     onEdit,
     onDelete,
+    userRole
 }: EventHistoryTableProps) {
-    // Determine which table mode to use
-    const hasActions = onEdit !== undefined || onDelete !== undefined;
-    const useEventsTable = hasActions || sortConfig !== undefined;
-
     return (
         <div className="p-0">
             {/* Controls Bar */}
@@ -159,29 +137,17 @@ export function EventHistoryTable({
                         </div>
                     ) : (
                         <>
-                            {useEventsTable ? (
-                                // Use EventsTable (with actions)
-                                <EventsTable
-                                    data={paginatedData}
-                                    sortConfig={sortConfig || null}
-                                    onSort={onSort}
-                                    loading={isLoadingEvents}
-                                    onEdit={onEdit || (() => {})}
-                                    onDelete={onDelete || (() => {})}
-                                    onRowClick={onRowClick}
-                                />
-                            ) : (
-                                // Use DataTable (backwards compatible, no actions)
-                                <DataTable
-                                    columns={eventColumns || []}
-                                    data={paginatedData}
-                                    onRowClick={onRowClick}
-                                    onSort={onSort}
-                                    sortColumn={sortColumn || ""}
-                                    sortDirection={sortDirection || "asc"}
-                                    showTitle={false}
-                                />
-                            )}
+                            {/* Always use EventsTable */}
+                            <EventsTable
+                                data={paginatedData}
+                                sortConfig={sortConfig}
+                                onSort={onSort}
+                                loading={isLoadingEvents}
+                                onEdit={onEdit || (() => {})}
+                                onDelete={onDelete || (() => {})}
+                                onRowClick={onRowClick}
+                                userRole={userRole}
+                            />
                             {paginatedData.length === 0 && (
                                 <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
                                     <Search className="h-12 w-12 mb-4 opacity-50" />

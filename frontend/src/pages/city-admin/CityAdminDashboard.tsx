@@ -11,6 +11,8 @@ import { useEventStore } from "@/store/eventStore";
 import { EvacuationCenterService } from "@/services/evacuationCenterService";
 import { formatDate } from "@/utils/formatters";
 import type { Event, EventDetails } from "@/types/event";
+import { useUserStore } from "@/store/userStore";
+import { useAuthStore } from "@/store/authStore";
 
 interface SelectedCenter {
     name: string;
@@ -62,6 +64,10 @@ export function CityAdminDashboard() {
         deleteEvent,
     } = useEventStore();
 
+    // Get current user and role
+    const { user } = useAuthStore();
+    const userRole = user?.role;
+
     // Stats loading state
     const [isLoadingStats] = useState(false);
     const [isLoadingCenter, setIsLoadingCenter] = useState(true);
@@ -76,7 +82,7 @@ export function CityAdminDashboard() {
                 if (response.success && response.data) {
                     setSelectedCenter({
                         name: "Iligan City",
-                        address: "", // Blank as requested
+                        address: "", 
                         status: response.data.status,
                         capacity: response.data.total_capacity,
                         current_occupancy: response.data.total_current_occupancy,
@@ -94,7 +100,11 @@ export function CityAdminDashboard() {
 
     useEffect(() => {
         fetchEvents();
-    }, [fetchEvents]);
+    }, [fetchEvents,
+        searchQuery,
+        currentPage, 
+        entriesPerPage, 
+        sortConfig]);
 
     const getCenterStatusStyles = (status: string) => {
         switch (status.toLowerCase()) {
@@ -135,7 +145,7 @@ export function CityAdminDashboard() {
             setIsCreateModalOpen(false);
             setSuccessToast({ isOpen: true, message: "Event created successfully" });
         } catch (err: any) {
-            console.error("Create event error:", err);
+            throw err;
         }
     };
 
@@ -214,15 +224,18 @@ export function CityAdminDashboard() {
     const handleSort = (column: string): void => {
         const currentSortConfig = sortConfig;
 
+        let newDirection: "asc" | "desc" | null = "asc";
+        
         if (currentSortConfig?.key === column) {
             if (currentSortConfig.direction === "asc") {
-                setSortConfig({ key: column, direction: "desc" });
+                newDirection = "desc";
             } else if (currentSortConfig.direction === "desc") {
-                setSortConfig(null);
+                newDirection = null;
             }
-        } else {
-            setSortConfig({ key: column, direction: "asc" });
         }
+        
+        // Set the new sort config - this will trigger the useEffect to refetch
+        setSortConfig(newDirection ? { key: column, direction: newDirection } : null);
     };
 
     const handleEntriesPerPageChange = (entries: number) => {
@@ -246,46 +259,16 @@ export function CityAdminDashboard() {
             status: event.status.charAt(0).toUpperCase() + event.status.slice(1),
             date_declared: formatDate(event.date_declared),
             end_date: event.end_date ? formatDate(event.end_date) : "NA",
+            capacity: event.capacity || 0,
+            max_occupancy: event.max_occupancy || 0,
+            usage_percentage: event.overall_usage_percentage || 0,
         }));
     }, [events]);
 
-    const processedData = useMemo(() => {
-        let filtered = formattedEvents.filter(event =>
-            Object.values(event).some(value =>
-                value?.toString().toLowerCase().includes(searchQuery.toLowerCase())
-            )
-        );
-
-        if (sortConfig?.direction) {
-            filtered = [...filtered].sort((a: any, b: any) => {
-                const aValue = a[sortConfig.key];
-                const bValue = b[sortConfig.key];
-
-                if (aValue == null && bValue == null) return 0;
-                if (aValue == null) return 1;
-                if (bValue == null) return -1;
-
-                if (typeof aValue === "string" && typeof bValue === "string") {
-                    return sortConfig.direction === "asc"
-                        ? aValue.toLowerCase().localeCompare(bValue.toLowerCase())
-                        : bValue.toLowerCase().localeCompare(aValue.toLowerCase());
-                }
-
-                if (aValue < bValue) return sortConfig.direction === "asc" ? -1 : 1;
-                if (aValue > bValue) return sortConfig.direction === "asc" ? 1 : -1;
-                return 0;
-            });
-        }
-
-        return filtered;
-    }, [formattedEvents, searchQuery, sortConfig]);
-
     const totalPages = pagination?.total_pages || 1;
-    const paginatedData = processedData;
 
-    useEffect(() => {
-        setCurrentPage(1);
-    }, [searchQuery, setCurrentPage]);
+    const processedData = formattedEvents;
+    const paginatedData = processedData;
 
     return (
         <div className="w-full min-w-0 bg-background flex flex-col relative">
@@ -319,6 +302,7 @@ export function CityAdminDashboard() {
                 onAddEvent={handleAddEvent}
                 onEdit={handleEditEvent}
                 onDelete={handleDeleteEvent}
+                userRole={userRole}
             />
 
             <EventDetailsModal

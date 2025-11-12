@@ -314,8 +314,30 @@ def update_center(
                 ),
             )
 
-        # Update center
-        updated_center = EvacuationCenter.update(center_id, valid_data)
+        # Check if we're updating occupancy - if so, use the specialized method
+        if "current_occupancy" in valid_data or "capacity" in valid_data:
+            new_occupancy = valid_data["current_occupancy"]
+            logger.info(
+                "🔧 [Backend Service] Occupancy update detected, using update_occupancy method for center %s to %s",
+                center_id, new_occupancy
+            )
+            
+            # Use the specialized occupancy update method which also updates events
+            updated_center = EvacuationCenter.update_occupancy(center_id, new_occupancy)
+            
+            if not updated_center:
+                return {"success": False, "message": "Failed to update evacuation center occupancy"}
+                
+            # If there are other fields to update besides occupancy, update them separately
+            other_fields = {k: v for k, v in valid_data.items() if k != "current_occupancy"}
+            if other_fields:
+                logger.info(
+                    "🔧 [Backend Service] Also updating other fields: %s", list(other_fields.keys())
+                )
+                updated_center = EvacuationCenter.update(center_id, other_fields)
+        else:
+            # Regular update without occupancy change
+            updated_center = EvacuationCenter.update(center_id, valid_data)
 
         if not updated_center:
             return {"success": False, "message": "Failed to update evacuation center"}
@@ -327,6 +349,13 @@ def update_center(
             "message": "Evacuation center updated successfully",
             "data": updated_center.to_schema(),
         }
+
+    except ValueError as error:
+        # Handle occupancy validation errors
+        return {"success": False, "message": str(error)}
+    except Exception as error:
+        logger.error("Error updating evacuation center %s: %s", center_id, str(error))
+        return {"success": False, "message": "Failed to update evacuation center"}
 
     except Exception as error:
         logger.error("Error updating evacuation center %s: %s", center_id, str(error))
