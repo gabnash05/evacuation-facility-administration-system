@@ -257,6 +257,7 @@ def get_users(
     limit: int = 10,
     sort_by: Optional[str] = None,
     sort_order: Optional[str] = "asc",
+    center_id: Optional[int] = None,
 ) -> Dict[str, Any]:
     """
     Get all users with filtering, pagination, and sorting.
@@ -269,6 +270,7 @@ def get_users(
         limit: Number of items per page
         sort_by: Field to sort by
         sort_order: Sort direction (asc/desc)
+        center_id: Filter by center ID
 
     Returns:
         Dictionary with users and pagination info
@@ -282,6 +284,7 @@ def get_users(
             limit=limit,
             sort_by=sort_by,
             sort_order=sort_order,
+            center_id=center_id,
         )
 
         users_data = [user.to_schema() for user in result["users"]]
