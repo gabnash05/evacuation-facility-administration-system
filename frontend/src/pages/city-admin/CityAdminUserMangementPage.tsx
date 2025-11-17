@@ -1,3 +1,5 @@
+// frontend/src/pages/CityAdminUserManagementPage.tsx
+
 import { useEffect, useMemo, useState } from "react";
 import { UserTable } from "@/components/features/user-management/UserTable";
 import { TableToolbar } from "@/components/common/Toolbar";
@@ -12,6 +14,8 @@ import {
     SelectItem,
 } from "@/components/ui/select";
 import { useAuthStore } from "@/store/authStore";
+import { AddUserModal } from "@/components/features/user-management/AddUserModal";
+import type { User } from "@/types/user";
 
 export function CityAdminUserManagementPage() {
     const {
@@ -30,18 +34,16 @@ export function CityAdminUserManagementPage() {
         fetchUsers,
     } = useUserStore();
 
-    // Get current user and role
     const { user } = useAuthStore();
     const userRole = user?.role;
 
-    // Local state for role filter
+    const [isModalOpen, setIsModalOpen] = useState(false);
+
     const [roleFilter, setRoleFilter] = useState<string>("all");
     const [statusFilter, setStatusFilter] = useState<string>("all");
 
-    // Create debounced fetch function
     const debouncedFetchUsers = useMemo(() => debounce(() => fetchUsers(), 500), [fetchUsers]);
 
-    // Fetch users when dependencies change
     useEffect(() => {
         if (
             searchQuery ||
@@ -85,9 +87,12 @@ export function CityAdminUserManagementPage() {
     };
 
     const handleAddUser = () => {
-        console.log("Add User clicked");
-        // Implementation for adding a new user
-        // This would typically open a modal or navigate to a form
+        setIsModalOpen(true);
+    };
+    
+    // Kept for prop-drilling consistency, but not used for "Add"
+    const handleEditUser = (userToEdit: User) => {
+        console.log("Edit functionality to be implemented for:", userToEdit);
     };
 
     const handleEntriesPerPageChange = (entries: number) => {
@@ -104,15 +109,14 @@ export function CityAdminUserManagementPage() {
 
     const handleRoleFilterChange = (role: string) => {
         setRoleFilter(role);
-        setCurrentPage(1); // Reset to first page when filter changes
+        setCurrentPage(1);
     };
 
     const handleStatusFilterChange = (status: string) => {
         setStatusFilter(status);
-        setCurrentPage(1); // Reset to first page when filter changes
+        setCurrentPage(1);
     };
 
-    // Build additional filters component
     const additionalFilters = (
         <>
             <Select value={roleFilter} onValueChange={handleRoleFilterChange} disabled={loading}>
@@ -147,8 +151,13 @@ export function CityAdminUserManagementPage() {
 
     return (
         <div className="w-full min-w-0 bg-background flex flex-col relative p-6">
+            <AddUserModal
+                isOpen={isModalOpen}
+                onClose={() => setIsModalOpen(false)}
+                currentUserRole={userRole}
+            />
+
             <div className="space-y-6">
-                {/* Page Header */}
                 <div>
                     <h1 className="text-2xl font-bold tracking-tight">User Management</h1>
                     <p className="text-muted-foreground">
@@ -156,7 +165,6 @@ export function CityAdminUserManagementPage() {
                     </p>
                 </div>
 
-                {/* Error Display */}
                 {error && (
                     <div className="bg-destructive/15 text-destructive p-4 rounded-md">
                         <div className="flex items-center gap-2">
@@ -165,14 +173,11 @@ export function CityAdminUserManagementPage() {
                     </div>
                 )}
 
-                {/* Main Table Card */}
                 <div className="border border-border rounded-lg">
-                    {/* Card Header */}
                     <div className="bg-card border-b border-border p-4">
                         <h3 className="font-semibold text-base text-foreground">User List</h3>
                     </div>
 
-                    {/* Controls Bar */}
                     <div className="bg-card border-b border-border p-4">
                         <TableToolbar
                             searchQuery={searchQuery}
@@ -187,7 +192,6 @@ export function CityAdminUserManagementPage() {
                         />
                     </div>
 
-                    {/* Table Section */}
                     <div className="border-b border-border">
                         {loading ? (
                             <div className="p-8 text-center">
@@ -204,7 +208,6 @@ export function CityAdminUserManagementPage() {
                         )}
                     </div>
 
-                    {/* Pagination Section */}
                     <div className="bg-card p-4">
                         <TablePagination
                             currentPage={currentPage}
