@@ -145,11 +145,19 @@ export const useUserStore = create<UserState>((set, get) => ({
     },
 
     createUser: async (userData: CreateUserFormData) => {
+        set({ loading: true, error: null });
         try {
-            await UserService.createUser(userData);
-            await get().fetchUsers(); // Refresh the list
+            const response = await UserService.createUser(userData);
+            if (!response.success) {
+                throw new Error(response.message || "Failed to create user.");
+            }
+            // Refresh the user list to show the new user
+            get().fetchUsers();
         } catch (error) {
-            throw new Error(error instanceof Error ? error.message : "Failed to create user");
+            const errorMessage = error instanceof Error ? error.message : "An unknown error occurred";
+            set({ error: errorMessage, loading: false });
+            // Re-throw the error so the form can catch it if needed
+            throw error;
         }
     },
 
