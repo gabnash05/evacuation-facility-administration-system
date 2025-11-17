@@ -71,6 +71,12 @@ export function AppSidebar({ role, roleLabel, userEmail }: AppSidebarProps) {
                         href: "/city-admin/reports-and-analytics",
                         icon: <BarChart3 className="w-4 h-4" />,
                     },
+                    {
+                        key: "attendance",
+                        label: "Attendance",
+                        href: "/city-admin/attendance",
+                        icon: <ClipboardCheck className="w-4 h-4" />,
+                    }
                 ];
             case "center_admin":
                 return [
