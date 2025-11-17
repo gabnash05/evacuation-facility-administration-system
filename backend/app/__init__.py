@@ -49,12 +49,14 @@ def create_app(config_class=Config):
     from app.routes.evacuation_centers import evacuation_center_bp
     from app.routes.events import event_bp
     from app.routes.households import households_bp
+    from app.routes.individuals import individuals_bp
     from app.routes.user import user_bp
 
     app.register_blueprint(auth_bp, url_prefix="/api")
     app.register_blueprint(households_bp, url_prefix="/api")
     app.register_blueprint(event_bp, url_prefix="/api")
     app.register_blueprint(evacuation_center_bp, url_prefix="/api")
+    app.register_blueprint(individuals_bp, url_prefix="/api")
     app.register_blueprint(user_bp, url_prefix="/api")
 
 

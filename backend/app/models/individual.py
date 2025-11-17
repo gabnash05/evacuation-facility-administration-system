@@ -50,6 +50,7 @@ class Individual(db.Model):
             "relationship_to_head": data.get("relationship_to_head"),
         }
         result = db.session.execute(sql, params).fetchone()
+        db.session.commit()
         return result._asdict() if result else None
 
     @classmethod
@@ -67,11 +68,20 @@ class Individual(db.Model):
         """
         )
         params = {**data, "individual_id": individual_id}
-        db.session.execute(sql, params)
+        result = db.session.execute(sql, params)
+        db.session.commit()
+        # Try to return the updated row
+        updated = db.session.execute(
+            text("SELECT * FROM individuals WHERE individual_id = :id"),
+            {"id": individual_id},
+        ).fetchone()
+        return updated._asdict() if updated else None
 
     @classmethod
     def delete_by_ids(cls, ids: list):
         if not ids:
             return
-        sql = text("DELETE FROM individuals WHERE individual_id = ANY(:ids)")
-        db.session.execute(sql, {"ids": ids})
+        sql = text("DELETE FROM individuals WHERE individual_id = ANY(:ids) RETURNING individual_id")
+        result = db.session.execute(sql, {"ids": ids}).fetchall()
+        db.session.commit()
+        return [row[0] for row in result] if result else []

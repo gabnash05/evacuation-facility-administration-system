@@ -4,6 +4,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-d
 import { CityAdminDashboard } from "./pages/city-admin/CityAdminDashboard";
 import { CityAdminCentersPage } from "@/pages/city-admin/CityAdminCentersPage";
 import { CityAdminHouseholdsPage } from "./pages/city-admin/CityAdminHouseholdsPage";
+import { CityAdminAttendancePage } from "./pages/city-admin/CityAdminAttendancePage";
 
 import { CenterAdminDashboard } from "@/pages/center-admin/CenterAdminDashboard";
 import { CenterAdminHouseholdsPage } from "./pages/center-admin/CenterAdminHouseholds";
@@ -43,6 +44,7 @@ function App() {
                                     <Route path="centers" element={<CityAdminCentersPage />} />
                                     <Route path="households" element={<CityAdminHouseholdsPage />} />
                                     <Route path="user-management" element={<CityAdminUserManagementPage />} />
+                                    <Route path="attendance" element={<CityAdminAttendancePage />} />
                                     <Route path="aid-distribution" element={<div>Aid Distribution Page</div>} /> {/* replace with actual page when available */}
                                     <Route path="reports-and-analytics" element={<div>Reports and Analytics Page</div>} /> {/* replace with actual page when available */}
                                     <Route path="*" element={<Navigate to="dashboard" replace />} />
