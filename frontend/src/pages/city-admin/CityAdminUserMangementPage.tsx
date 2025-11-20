@@ -1,5 +1,3 @@
-// frontend/src/pages/CityAdminUserManagementPage.tsx
-
 import { useEffect, useMemo, useState } from "react";
 import { UserTable } from "@/components/features/user-management/UserTable";
 import { TableToolbar } from "@/components/common/Toolbar";
@@ -14,7 +12,8 @@ import {
     SelectItem,
 } from "@/components/ui/select";
 import { useAuthStore } from "@/store/authStore";
-import { AddUserModal } from "@/components/features/user-management/AddUserModal";
+import { AddEditUserModal } from "@/components/features/user-management/AddEditUserModal";
+import { DeleteConfirmationModal } from "@/components/features/user-management/DeleteConfirmationModal";
 import type { User } from "@/types/user";
 
 export function CityAdminUserManagementPage() {
@@ -37,7 +36,9 @@ export function CityAdminUserManagementPage() {
     const { user } = useAuthStore();
     const userRole = user?.role;
 
-    const [isModalOpen, setIsModalOpen] = useState(false);
+    const [isAddEditModalOpen, setIsAddEditModalOpen] = useState(false);
+    const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+    const [selectedUser, setSelectedUser] = useState<User | null>(null);
 
     const [roleFilter, setRoleFilter] = useState<string>("all");
     const [statusFilter, setStatusFilter] = useState<string>("all");
@@ -85,14 +86,31 @@ export function CityAdminUserManagementPage() {
                 break;
         }
     };
-
+    
     const handleAddUser = () => {
-        setIsModalOpen(true);
+        setSelectedUser(null);
+        setIsAddEditModalOpen(true);
+    };
+
+    const handleEditUser = (userToEdit: User) => {
+        setSelectedUser(userToEdit);
+        setIsAddEditModalOpen(true);
     };
     
-    // Kept for prop-drilling consistency, but not used for "Add"
-    const handleEditUser = (userToEdit: User) => {
-        console.log("Edit functionality to be implemented for:", userToEdit);
+    const handleDeleteUser = (userToDelete: User) => {
+        setSelectedUser(userToDelete);
+        setIsDeleteModalOpen(true);
+    };
+
+    const handleConfirmDelete = () => {
+        if (selectedUser) {
+            console.log("--- (Placeholder) DELETING USER ---");
+            console.log("User to delete:", selectedUser);
+            alert(`(Placeholder) Pretending to delete user: ${selectedUser.email}`);
+            
+            setIsDeleteModalOpen(false);
+            setSelectedUser(null);
+        }
     };
 
     const handleEntriesPerPageChange = (entries: number) => {
@@ -151,10 +169,18 @@ export function CityAdminUserManagementPage() {
 
     return (
         <div className="w-full min-w-0 bg-background flex flex-col relative p-6">
-            <AddUserModal
-                isOpen={isModalOpen}
-                onClose={() => setIsModalOpen(false)}
+            <AddEditUserModal
+                isOpen={isAddEditModalOpen}
+                onClose={() => setIsAddEditModalOpen(false)}
                 currentUserRole={userRole}
+                userToEdit={selectedUser}
+            />
+            <DeleteConfirmationModal
+                isOpen={isDeleteModalOpen}
+                onClose={() => setIsDeleteModalOpen(false)}
+                onConfirm={handleConfirmDelete}
+                title="Delete User"
+                description={`Are you sure you want to permanently delete the user "${selectedUser?.email}"? This action cannot be undone.`}
             />
 
             <div className="space-y-6">
@@ -202,6 +228,8 @@ export function CityAdminUserManagementPage() {
                                 data={users}
                                 sortConfig={sortConfig}
                                 onSort={handleSort}
+                                onEdit={handleEditUser}
+                                onDelete={handleDeleteUser}
                                 loading={loading}
                                 userRole={userRole}
                             />
