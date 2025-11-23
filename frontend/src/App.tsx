@@ -10,6 +10,7 @@ import { CenterAdminHouseholdsPage } from "./pages/center-admin/CenterAdminHouse
 
 import { VolunteerDashboard } from "@/pages/volunteer/VolunteerDashboard";
 import { VolunteerHouseholdsPage } from "./pages/volunteer/VolunteerHouseholdsPage";
+import { VolunteerTransferIndividualPage } from "./pages/volunteer/VolunteerTransferIndividualPage";
 
 import MainLayout from "@/layouts/MainLayout";
 import LoginPage from "@/pages/auth/LoginPage";
@@ -87,7 +88,7 @@ function App() {
                                 <Routes>
                                     <Route path="dashboard" element={<VolunteerDashboard />} />
                                     <Route path="check-in" element={<div>Check-In Page</div>} /> {/* replace with actual page when available */}
-                                    <Route path="transfer-individual" element={<div>Transfer Individual Page</div>} /> {/* replace with actual page when available */}
+                                    <Route path="transfer-individual" element={<VolunteerTransferIndividualPage/>} /> 
                                     <Route path="households" element={<VolunteerHouseholdsPage />} />
                                     <Route path="aid-distribution" element={<div>Aid Distribution Page</div>} /> {/* replace with actual page when available */}
                                     <Route path="*" element={<Navigate to="dashboard" replace />} />
