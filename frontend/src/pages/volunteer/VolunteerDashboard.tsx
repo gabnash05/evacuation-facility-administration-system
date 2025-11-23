@@ -2,12 +2,7 @@
 
 import { useState, useMemo, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import {
-    UserRoundCheck,
-    Ambulance,
-    HousePlus,
-    HandHeart,
-} from "lucide-react";
+import { UserRoundCheck, Ambulance, HousePlus, HandHeart } from "lucide-react";
 import { EventsTable } from "@/components/features/events/EventsTable";
 import { useEventStore } from "@/store/eventStore";
 import { formatDate } from "@/utils/formatters";
@@ -52,7 +47,7 @@ export function VolunteerDashboard() {
         const currentSortConfig = sortConfig;
 
         let newDirection: "asc" | "desc" | null = "asc";
-        
+
         if (currentSortConfig?.key === column) {
             if (currentSortConfig.direction === "asc") {
                 newDirection = "desc";
@@ -60,7 +55,7 @@ export function VolunteerDashboard() {
                 newDirection = null;
             }
         }
-        
+
         setSortConfig(newDirection ? { key: column, direction: newDirection } : null);
     };
 
@@ -129,29 +124,29 @@ export function VolunteerDashboard() {
 
                 <div className="flex justify-center gap-6 mb-12">
                     {[
-                        { 
-                            label: "Check-in Evacuee", 
-                            color: "bg-blue-500", 
+                        {
+                            label: "Check-in Evacuee",
+                            color: "bg-blue-500",
                             icon: UserRoundCheck,
-                            onClick: handleCheckInClick 
+                            onClick: handleCheckInClick,
                         },
-                        { 
-                            label: "Transfer Individual", 
-                            color: "bg-red-500", 
+                        {
+                            label: "Transfer Individual",
+                            color: "bg-red-500",
                             icon: Ambulance,
-                            onClick: handleTransferClick 
+                            onClick: handleTransferClick,
                         },
-                        { 
-                            label: "Register Household", 
-                            color: "bg-orange-500", 
+                        {
+                            label: "Register Household",
+                            color: "bg-orange-500",
                             icon: HousePlus,
-                            onClick: handleHouseholdClick 
+                            onClick: handleHouseholdClick,
                         },
-                        { 
-                            label: "Distribute Relief", 
-                            color: "bg-green-500", 
+                        {
+                            label: "Distribute Relief",
+                            color: "bg-green-500",
                             icon: HandHeart,
-                            onClick: handleReliefClick 
+                            onClick: handleReliefClick,
                         },
                     ].map((action, i) => (
                         <div key={i} className="flex flex-col items-center gap-2">

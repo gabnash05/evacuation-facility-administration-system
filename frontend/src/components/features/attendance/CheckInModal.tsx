@@ -1,3 +1,4 @@
+// components/attendance/CheckInModal.tsx
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -17,11 +18,12 @@ import {
     SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { User, Home, Calendar, X } from "lucide-react";
 import { useAttendanceStore } from "@/store/attendanceRecordsStore";
 import { useEvacuationCenterStore } from "@/store/evacuationCenterStore";
 import { useEventStore } from "@/store/eventStore";
-import { useHouseholdStore } from "@/store/householdStore";
 import { useIndividualStore } from "@/store/individualStore";
+import { IndividualSearchTable } from "./IndividualSearchTable";
 import type { CreateAttendanceData } from "@/types/attendance";
 import type { Individual } from "@/types/individual";
 
@@ -33,19 +35,21 @@ interface CheckInModalProps {
 }
 
 export function CheckInModal({ isOpen, onClose, onSuccess, defaultCenterId }: CheckInModalProps) {
-    const { checkInIndividual } = useAttendanceStore();
+    const { checkInMultipleIndividuals } = useAttendanceStore();
     const { centers, fetchAllCenters, loading: centersLoading } = useEvacuationCenterStore();
     const { events, fetchEvents, loading: eventsLoading } = useEventStore();
-    const { households, fetchHouseholds, loading: householdsLoading } = useHouseholdStore();
-    const { individuals, fetchIndividuals, loading: individualsLoading } = useIndividualStore();
+    const { clearSearch } = useIndividualStore();
 
-    const [individualId, setIndividualId] = useState<string>("");
+    const [selectedIndividuals, setSelectedIndividuals] = useState<Individual[]>([]);
     const [centerId, setCenterId] = useState<string>("");
     const [eventId, setEventId] = useState<string>("");
-    const [householdId, setHouseholdId] = useState<string>("");
     const [notes, setNotes] = useState("");
     const [error, setError] = useState<string | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
+
+    const safeCenters = centers || [];
+    const safeEvents = events || [];
+    const filteredEvents = safeEvents.filter(event => event?.status === "active");
 
     useEffect(() => {
         if (isOpen) {
@@ -53,22 +57,24 @@ export function CheckInModal({ isOpen, onClose, onSuccess, defaultCenterId }: Ch
                 fetchAllCenters();
             }
             fetchEvents();
-            fetchHouseholds();
-            fetchIndividuals();
-            
+
             if (defaultCenterId) {
                 setCenterId(String(defaultCenterId));
             }
+        } else {
+            // Clear search and selections when modal closes
+            clearSearch();
+            setSelectedIndividuals([]);
         }
-    }, [isOpen, fetchAllCenters, fetchEvents, fetchHouseholds, fetchIndividuals, defaultCenterId]);
+    }, [isOpen, fetchAllCenters, fetchEvents, defaultCenterId, clearSearch]);
 
     const resetForm = () => {
-        setIndividualId("");
+        setSelectedIndividuals([]);
         setCenterId("");
         setEventId("");
-        setHouseholdId("");
         setNotes("");
         setError(null);
+        clearSearch();
     };
 
     const handleClose = () => {
@@ -77,8 +83,17 @@ export function CheckInModal({ isOpen, onClose, onSuccess, defaultCenterId }: Ch
     };
 
     const handleSubmit = async () => {
-        if (!individualId || !centerId || !eventId || !householdId) {
-            setError("All fields are required.");
+        if (selectedIndividuals.length === 0 || !centerId || !eventId) {
+            setError("At least one individual, Evacuation Center, and Event are required.");
+            return;
+        }
+
+        // Check if all selected individuals have household_id
+        const individualsWithoutHousehold = selectedIndividuals.filter(
+            individual => !individual.household_id
+        );
+        if (individualsWithoutHousehold.length > 0) {
+            setError("Some selected individuals do not belong to a household.");
             return;
         }
 
@@ -86,15 +101,15 @@ export function CheckInModal({ isOpen, onClose, onSuccess, defaultCenterId }: Ch
         setError(null);
 
         try {
-            const checkInData: CreateAttendanceData = {
-                individual_id: Number(individualId),
+            const checkInData: CreateAttendanceData[] = selectedIndividuals.map(individual => ({
+                individual_id: individual.individual_id,
                 center_id: Number(centerId),
                 event_id: Number(eventId),
-                household_id: Number(householdId),
+                household_id: individual.household_id!,
                 notes: notes || undefined,
-            };
+            }));
 
-            await checkInIndividual(checkInData);
+            await checkInMultipleIndividuals(checkInData);
             onSuccess();
             handleClose();
         } catch (err: any) {
@@ -104,12 +119,32 @@ export function CheckInModal({ isOpen, onClose, onSuccess, defaultCenterId }: Ch
         }
     };
 
+    const handleIndividualSelect = (individual: Individual) => {
+        // Check if individual is already selected
+        if (!selectedIndividuals.find(ind => ind.individual_id === individual.individual_id)) {
+            setSelectedIndividuals(prev => [...prev, individual]);
+        }
+    };
+
+    const handleRemoveIndividual = (individualId: number) => {
+        setSelectedIndividuals(prev => prev.filter(ind => ind.individual_id !== individualId));
+    };
+
+    const handleClearAllIndividuals = () => {
+        setSelectedIndividuals([]);
+    };
+
+    const handleCenterChange = (value: string) => {
+        setCenterId(value);
+    };
+
     return (
         <Dialog open={isOpen} onOpenChange={handleClose}>
-            <DialogContent className="!max-w-[600px] w-[95vw] max-h-[90vh] overflow-y-auto">
+            <DialogContent className="!max-w-[800px] w-[95vw] max-h-[90vh] overflow-y-auto">
                 <DialogHeader>
-                    <DialogTitle className="text-lg font-semibold">
-                        Check In Individual
+                    <DialogTitle className="text-lg font-semibold flex items-center gap-2">
+                        <User className="h-5 w-5" />
+                        Check In Individuals
                     </DialogTitle>
                 </DialogHeader>
                 <div className="space-y-6 py-4">
@@ -119,41 +154,81 @@ export function CheckInModal({ isOpen, onClose, onSuccess, defaultCenterId }: Ch
                         </div>
                     )}
 
-                    <div className="grid grid-cols-1 gap-4">
-                        <div className="space-y-2">
-                            <Label className="text-sm font-medium">Individual *</Label>
-                            <Select
-                                value={individualId}
-                                onValueChange={setIndividualId}
-                                disabled={individualsLoading}
-                            >
-                                <SelectTrigger className="w-full">
-                                    <SelectValue
-                                        placeholder={
-                                            individualsLoading
-                                                ? "Loading individuals..."
-                                                : "Select an individual"
-                                        }
-                                    />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    {individuals.map((individual: Individual) => (
-                                        <SelectItem
-                                            key={individual.individual_id}
-                                            value={String(individual.individual_id)}
+                    {/* Selected Individuals Display */}
+                    {selectedIndividuals.length > 0 && (
+                        <div className="space-y-3 border-b pb-6">
+                            <div className="flex justify-between items-center">
+                                <Label className="text-base font-semibold">
+                                    Selected Individuals ({selectedIndividuals.length})
+                                </Label>
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={handleClearAllIndividuals}
+                                    className="text-destructive hover:text-destructive"
+                                >
+                                    <X className="h-4 w-4 mr-1" />
+                                    Clear All
+                                </Button>
+                            </div>
+                            <div className="space-y-2 max-h-40 overflow-y-auto">
+                                {selectedIndividuals.map(individual => (
+                                    <div
+                                        key={individual.individual_id}
+                                        className="flex justify-between items-center p-3 bg-muted/30 rounded-lg border"
+                                    >
+                                        <div className="flex-1">
+                                            <div className="font-medium">
+                                                {individual.first_name} {individual.last_name}
+                                            </div>
+                                            <div className="text-sm text-muted-foreground">
+                                                ID: {individual.individual_id} •
+                                                {individual.gender && ` ${individual.gender} •`}
+                                                {individual.date_of_birth &&
+                                                    ` DOB: ${new Date(individual.date_of_birth).toLocaleDateString()}`}
+                                            </div>
+                                            <div className="flex items-center gap-1 mt-1 text-sm">
+                                                <Home className="h-3 w-3" />
+                                                Household ID: {individual.household_id}
+                                            </div>
+                                        </div>
+                                        <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            onClick={() => handleRemoveIndividual(individual.individual_id)}
+                                            className="text-destructive hover:text-destructive"
                                         >
-                                            {individual.first_name} {individual.last_name}
-                                        </SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
+                                            <X className="h-4 w-4" />
+                                        </Button>
+                                    </div>
+                                ))}
+                            </div>
                         </div>
+                    )}
 
+                    {/* Individual Search and Selection */}
+                    <div className="space-y-4 border-b pb-6">
+                        <Label className="text-base font-semibold flex items-center gap-2">
+                            <User className="h-4 w-4" />
+                            Search and Select Individuals *
+                        </Label>
+
+                        <IndividualSearchTable
+                            onSelectIndividual={handleIndividualSelect}
+                            selectedIndividuals={selectedIndividuals}
+                        />
+                    </div>
+
+                    {/* Secondary Fields */}
+                    <div className="space-y-4">
                         <div className="space-y-2">
-                            <Label className="text-sm font-medium">Evacuation Center *</Label>
+                            <Label className="text-sm font-medium flex items-center gap-2">
+                                <Home className="h-4 w-4" />
+                                Evacuation Center *
+                            </Label>
                             <Select
                                 value={centerId}
-                                onValueChange={setCenterId}
+                                onValueChange={handleCenterChange}
                                 disabled={!!defaultCenterId || centersLoading}
                             >
                                 <SelectTrigger className="w-full">
@@ -166,7 +241,7 @@ export function CheckInModal({ isOpen, onClose, onSuccess, defaultCenterId }: Ch
                                     />
                                 </SelectTrigger>
                                 <SelectContent>
-                                    {centers.map(center => (
+                                    {safeCenters.map(center => (
                                         <SelectItem
                                             key={center.center_id}
                                             value={String(center.center_id)}
@@ -179,7 +254,10 @@ export function CheckInModal({ isOpen, onClose, onSuccess, defaultCenterId }: Ch
                         </div>
 
                         <div className="space-y-2">
-                            <Label className="text-sm font-medium">Event *</Label>
+                            <Label className="text-sm font-medium flex items-center gap-2">
+                                <Calendar className="h-4 w-4" />
+                                Event *
+                            </Label>
                             <Select
                                 value={eventId}
                                 onValueChange={setEventId}
@@ -190,58 +268,44 @@ export function CheckInModal({ isOpen, onClose, onSuccess, defaultCenterId }: Ch
                                         placeholder={
                                             eventsLoading
                                                 ? "Loading events..."
-                                                : "Select an event"
+                                                : filteredEvents.length === 0
+                                                  ? "No active events available"
+                                                  : "Select an event"
                                         }
                                     />
                                 </SelectTrigger>
                                 <SelectContent>
-                                    {events.map(event => (
+                                    {filteredEvents.map(event => (
                                         <SelectItem
                                             key={event.event_id}
                                             value={String(event.event_id)}
                                         >
-                                            {event.event_name}
+                                            <div className="flex flex-col">
+                                                <span>{event.event_name}</span>
+                                                <span className="text-xs text-muted-foreground">
+                                                    {event.event_type} •{" "}
+                                                    {new Date(
+                                                        event.date_declared
+                                                    ).toLocaleDateString()}
+                                                </span>
+                                            </div>
                                         </SelectItem>
                                     ))}
                                 </SelectContent>
                             </Select>
-                        </div>
-
-                        <div className="space-y-2">
-                            <Label className="text-sm font-medium">Household *</Label>
-                            <Select
-                                value={householdId}
-                                onValueChange={setHouseholdId}
-                                disabled={householdsLoading}
-                            >
-                                <SelectTrigger className="w-full">
-                                    <SelectValue
-                                        placeholder={
-                                            householdsLoading
-                                                ? "Loading households..."
-                                                : "Select a household"
-                                        }
-                                    />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    {households.map(household => (
-                                        <SelectItem
-                                            key={household.household_id}
-                                            value={String(household.household_id)}
-                                        >
-                                            {household.household_name}
-                                        </SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
+                            {filteredEvents.length === 0 && !eventsLoading && (
+                                <p className="text-sm text-muted-foreground">
+                                    No active events available. Please create an event first.
+                                </p>
+                            )}
                         </div>
 
                         <div className="space-y-2">
                             <Label className="text-sm font-medium">Notes</Label>
                             <Textarea
                                 value={notes}
-                                onChange={(e: any) => setNotes(e.target.value)}
-                                placeholder="Additional notes (optional)"
+                                onChange={e => setNotes(e.target.value)}
+                                placeholder="Additional notes (optional) - will apply to all selected individuals"
                                 className="w-full min-h-[80px]"
                             />
                         </div>
@@ -253,10 +317,19 @@ export function CheckInModal({ isOpen, onClose, onSuccess, defaultCenterId }: Ch
                     </DialogClose>
                     <Button
                         onClick={handleSubmit}
-                        disabled={isSubmitting || centersLoading || eventsLoading || householdsLoading || individualsLoading}
+                        disabled={
+                            isSubmitting ||
+                            selectedIndividuals.length === 0 ||
+                            !centerId ||
+                            !eventId ||
+                            centersLoading ||
+                            eventsLoading
+                        }
                         className="bg-blue-600 hover:bg-blue-700 px-6"
                     >
-                        {isSubmitting ? "Checking In..." : "Check In"}
+                        {isSubmitting 
+                            ? `Checking In ${selectedIndividuals.length} Individual${selectedIndividuals.length !== 1 ? 's' : ''}...` 
+                            : `Check In ${selectedIndividuals.length} Individual${selectedIndividuals.length !== 1 ? 's' : ''}`}
                     </Button>
                 </DialogFooter>
             </DialogContent>

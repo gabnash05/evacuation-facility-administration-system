@@ -1,5 +1,13 @@
 import { useState } from "react";
-import { ChevronUp, ChevronDown, ChevronsUpDown, MoreVertical, LogOut, Move, Trash2 } from "lucide-react";
+import {
+    ChevronUp,
+    ChevronDown,
+    ChevronsUpDown,
+    MoreVertical,
+    LogOut,
+    Move,
+    Trash2,
+} from "lucide-react";
 import {
     Table,
     TableBody,
@@ -93,7 +101,8 @@ export function AttendanceTable({
     };
 
     // Check if user can perform actions (adjust based on your role requirements)
-    const canManage = userRole === "super_admin" || userRole === "city_admin" || userRole === "center_admin";
+    const canManage =
+        userRole === "super_admin" || userRole === "city_admin" || userRole === "center_admin";
 
     if (data.length === 0 && !loading) {
         return (
@@ -168,7 +177,7 @@ export function AttendanceTable({
                                         <TableCell key={header.key} className="py-3">
                                             {header.key === "status" ? (
                                                 <span className={getStatusBadge(row.status)}>
-                                                    {row.status.replace('_', ' ').toUpperCase()}
+                                                    {row.status.replace("_", " ").toUpperCase()}
                                                 </span>
                                             ) : (
                                                 row[header.key as keyof AttendanceRecord]

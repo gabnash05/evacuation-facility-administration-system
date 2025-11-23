@@ -48,9 +48,16 @@ export function EventDetailsModal({ isOpen, onClose, eventData }: EventDetailsMo
         eventData.end_date && eventData.end_date !== "NA" ? formatDate(eventData.end_date) : "N/A";
 
     // Calculate totals from evacuation centers
-    const totalCapacity = eventData.evacuation_centers.reduce((sum, center) => sum + center.capacity, 0);
-    const currentOccupancy = eventData.evacuation_centers.reduce((sum, center) => sum + center.current_occupancy, 0);
-    const usagePercentage = totalCapacity > 0 ? Math.round((currentOccupancy / totalCapacity) * 100) : 0;
+    const totalCapacity = eventData.evacuation_centers.reduce(
+        (sum, center) => sum + center.capacity,
+        0
+    );
+    const currentOccupancy = eventData.evacuation_centers.reduce(
+        (sum, center) => sum + center.current_occupancy,
+        0
+    );
+    const usagePercentage =
+        totalCapacity > 0 ? Math.round((currentOccupancy / totalCapacity) * 100) : 0;
 
     return (
         <Dialog open={isOpen} onOpenChange={onClose}>
@@ -103,9 +110,7 @@ export function EventDetailsModal({ isOpen, onClose, eventData }: EventDetailsMo
                     <div>
                         <label className="text-xs text-muted-foreground">Total Capacity</label>
                         <div className="border border-border rounded-lg px-3 py-2 mt-1 bg-background">
-                            <p className="text-sm font-medium">
-                                {totalCapacity.toLocaleString()}
-                            </p>
+                            <p className="text-sm font-medium">{totalCapacity.toLocaleString()}</p>
                         </div>
                     </div>
                     <div>
@@ -118,10 +123,10 @@ export function EventDetailsModal({ isOpen, onClose, eventData }: EventDetailsMo
                     </div>
                     <div>
                         <label className="text-xs text-muted-foreground">Usage Percentage</label>
-                        <div className={`rounded-lg px-3 py-2 mt-1 text-center ${getOccupancyColor(usagePercentage)}`}>
-                            <p className="text-sm font-medium">
-                                {usagePercentage}%
-                            </p>
+                        <div
+                            className={`rounded-lg px-3 py-2 mt-1 text-center ${getOccupancyColor(usagePercentage)}`}
+                        >
+                            <p className="text-sm font-medium">{usagePercentage}%</p>
                         </div>
                     </div>
                 </div>
@@ -144,10 +149,13 @@ export function EventDetailsModal({ isOpen, onClose, eventData }: EventDetailsMo
                             </TableHeader>
                             <TableBody>
                                 {eventData.evacuation_centers.map((center, i) => {
-                                    const centerUsagePercentage = center.capacity > 0 
-                                        ? Math.round((center.current_occupancy / center.capacity) * 100)
-                                        : 0;
-                                    
+                                    const centerUsagePercentage =
+                                        center.capacity > 0
+                                            ? Math.round(
+                                                  (center.current_occupancy / center.capacity) * 100
+                                              )
+                                            : 0;
+
                                     return (
                                         <TableRow key={i}>
                                             <TableCell
@@ -162,13 +170,20 @@ export function EventDetailsModal({ isOpen, onClose, eventData }: EventDetailsMo
                                             >
                                                 {center.address}
                                             </TableCell>
-                                            <TableCell>{center.capacity.toLocaleString()}</TableCell>
-                                            <TableCell>{center.current_occupancy.toLocaleString()}</TableCell>
+                                            <TableCell>
+                                                {center.capacity.toLocaleString()}
+                                            </TableCell>
+                                            <TableCell>
+                                                {center.current_occupancy.toLocaleString()}
+                                            </TableCell>
                                             <TableCell>
                                                 <span
                                                     className={`px-3 py-1 rounded text-xs font-medium inline-block ${getOccupancyColor(centerUsagePercentage)}`}
                                                 >
-                                                    {formatCapacity(center.current_occupancy, center.capacity)}
+                                                    {formatCapacity(
+                                                        center.current_occupancy,
+                                                        center.capacity
+                                                    )}
                                                 </span>
                                             </TableCell>
                                         </TableRow>

@@ -1,7 +1,7 @@
 import { create } from "zustand";
 import { AttendanceRecordsService } from "@/services/attendanceRecordsService";
-import type { 
-    AttendanceRecord, 
+import type {
+    AttendanceRecord,
     AttendanceRecordsResponse,
     CurrentAttendeesResponse,
     EventAttendanceResponse,
@@ -13,7 +13,7 @@ import type {
     GetTransferRecordsParams,
     CreateAttendanceData,
     CheckOutData,
-    TransferData
+    TransferData,
 } from "@/types/attendance";
 
 interface AttendanceState {
@@ -22,11 +22,11 @@ interface AttendanceState {
     currentAttendees: AttendanceRecord[];
     eventAttendance: AttendanceRecord[];
     transferRecords: AttendanceRecord[];
-    
+
     // UI state
     loading: boolean;
     error: string | null;
-    
+
     // Filter and pagination state
     searchQuery: string;
     currentPage: number;
@@ -35,7 +35,7 @@ interface AttendanceState {
         key: string;
         direction: "asc" | "desc" | null;
     } | null;
-    
+
     // Filter state
     centerId: number | null;
     individualId: number | null;
@@ -43,7 +43,7 @@ interface AttendanceState {
     householdId: number | null;
     status: string | null;
     date: string | null;
-    
+
     // Pagination
     pagination: {
         current_page: number;
@@ -68,7 +68,7 @@ interface AttendanceState {
         status?: string | null;
         date?: string | null;
     }) => void;
-    
+
     // Data fetching actions
     fetchAttendanceRecords: (params?: GetAttendanceParams) => Promise<void>;
     fetchCurrentAttendees: (params?: GetCurrentAttendeesParams) => Promise<void>;
@@ -76,13 +76,14 @@ interface AttendanceState {
     fetchTransferRecords: (params?: GetTransferRecordsParams) => Promise<void>;
     fetchAttendanceSummary: (centerId: number, eventId?: number) => Promise<void>;
     fetchIndividualAttendanceHistory: (individualId: number) => Promise<AttendanceRecord[]>;
-    
+
     // CRUD actions
     checkInIndividual: (data: CreateAttendanceData) => Promise<void>;
+    checkInMultipleIndividuals: (data: CreateAttendanceData[]) => Promise<void>;
     checkOutIndividual: (recordId: number, data?: CheckOutData) => Promise<void>;
     transferIndividual: (recordId: number, data: TransferData) => Promise<void>;
     deleteAttendanceRecord: (recordId: number) => Promise<void>;
-    
+
     // Utility actions
     recalculateCenterOccupancy: (centerId: number) => Promise<void>;
     recalculateAllCenterOccupancies: () => Promise<void>;
@@ -126,48 +127,49 @@ export const useAttendanceStore = create<AttendanceState>((set, get) => ({
         set({ entriesPerPage: entries, currentPage: 1 });
     },
 
-    setSortConfig: (config) => {
+    setSortConfig: config => {
         set({ sortConfig: config, currentPage: 1 });
     },
 
-    setFilters: (filters) => {
-        set({ 
-            ...filters, 
-            currentPage: 1 
+    setFilters: filters => {
+        set({
+            ...filters,
+            currentPage: 1,
         });
     },
 
     fetchAttendanceRecords: async (params: GetAttendanceParams = {}) => {
-        const { 
-            searchQuery, 
-            currentPage, 
-            entriesPerPage, 
+        const {
+            searchQuery,
+            currentPage,
+            entriesPerPage,
             sortConfig,
             centerId,
             individualId,
             eventId,
             householdId,
             status,
-            date
+            date,
         } = get();
 
         set({ loading: true, error: null });
 
         try {
-            const response: AttendanceRecordsResponse = await AttendanceRecordsService.getAttendanceRecords({
-                ...params,
-                search: searchQuery,
-                page: currentPage,
-                limit: entriesPerPage,
-                sortBy: sortConfig?.key,
-                sortOrder: sortConfig?.direction || undefined,
-                center_id: centerId || undefined,
-                individual_id: individualId || undefined,
-                event_id: eventId || undefined,
-                household_id: householdId || undefined,
-                status: status as any || undefined,
-                date: date || undefined,
-            });
+            const response: AttendanceRecordsResponse =
+                await AttendanceRecordsService.getAttendanceRecords({
+                    ...params,
+                    search: searchQuery,
+                    page: currentPage,
+                    limit: entriesPerPage,
+                    sortBy: sortConfig?.key,
+                    sortOrder: sortConfig?.direction || undefined,
+                    center_id: centerId || undefined,
+                    individual_id: individualId || undefined,
+                    event_id: eventId || undefined,
+                    household_id: householdId || undefined,
+                    status: (status as any) || undefined,
+                    date: date || undefined,
+                });
 
             set({
                 attendanceRecords: response.data.results,
@@ -176,7 +178,8 @@ export const useAttendanceStore = create<AttendanceState>((set, get) => ({
             });
         } catch (error) {
             set({
-                error: error instanceof Error ? error.message : "Failed to fetch attendance records",
+                error:
+                    error instanceof Error ? error.message : "Failed to fetch attendance records",
                 loading: false,
                 attendanceRecords: [],
                 pagination: null,
@@ -185,21 +188,18 @@ export const useAttendanceStore = create<AttendanceState>((set, get) => ({
     },
 
     fetchCurrentAttendees: async (params: GetCurrentAttendeesParams = {}) => {
-        const { 
-            currentPage, 
-            entriesPerPage,
-            centerId 
-        } = get();
+        const { currentPage, entriesPerPage, centerId } = get();
 
         set({ loading: true, error: null });
 
         try {
-            const response: CurrentAttendeesResponse = await AttendanceRecordsService.getCurrentAttendees({
-                ...params,
-                page: currentPage,
-                limit: entriesPerPage,
-                center_id: centerId || undefined,
-            });
+            const response: CurrentAttendeesResponse =
+                await AttendanceRecordsService.getCurrentAttendees({
+                    ...params,
+                    page: currentPage,
+                    limit: entriesPerPage,
+                    center_id: centerId || undefined,
+                });
 
             set({
                 currentAttendees: response.data.results,
@@ -217,21 +217,18 @@ export const useAttendanceStore = create<AttendanceState>((set, get) => ({
     },
 
     fetchEventAttendance: async (eventId: number, params: GetEventAttendanceParams = {}) => {
-        const { 
-            currentPage, 
-            entriesPerPage,
-            centerId 
-        } = get();
+        const { currentPage, entriesPerPage, centerId } = get();
 
         set({ loading: true, error: null });
 
         try {
-            const response: EventAttendanceResponse = await AttendanceRecordsService.getEventAttendance(eventId, {
-                ...params,
-                page: currentPage,
-                limit: entriesPerPage,
-                center_id: centerId || undefined,
-            });
+            const response: EventAttendanceResponse =
+                await AttendanceRecordsService.getEventAttendance(eventId, {
+                    ...params,
+                    page: currentPage,
+                    limit: entriesPerPage,
+                    center_id: centerId || undefined,
+                });
 
             set({
                 eventAttendance: response.data.results,
@@ -249,21 +246,18 @@ export const useAttendanceStore = create<AttendanceState>((set, get) => ({
     },
 
     fetchTransferRecords: async (params: GetTransferRecordsParams = {}) => {
-        const { 
-            currentPage, 
-            entriesPerPage,
-            centerId 
-        } = get();
+        const { currentPage, entriesPerPage, centerId } = get();
 
         set({ loading: true, error: null });
 
         try {
-            const response: TransferRecordsResponse = await AttendanceRecordsService.getTransferRecords({
-                ...params,
-                page: currentPage,
-                limit: entriesPerPage,
-                center_id: centerId || undefined,
-            });
+            const response: TransferRecordsResponse =
+                await AttendanceRecordsService.getTransferRecords({
+                    ...params,
+                    page: currentPage,
+                    limit: entriesPerPage,
+                    center_id: centerId || undefined,
+                });
 
             set({
                 transferRecords: response.data.results,
@@ -285,14 +279,15 @@ export const useAttendanceStore = create<AttendanceState>((set, get) => ({
 
         try {
             const response = await AttendanceRecordsService.getAttendanceSummary(centerId, eventId);
-            
+
             set({
                 attendanceSummary: response.data,
                 loading: false,
             });
         } catch (error) {
             set({
-                error: error instanceof Error ? error.message : "Failed to fetch attendance summary",
+                error:
+                    error instanceof Error ? error.message : "Failed to fetch attendance summary",
                 loading: false,
                 attendanceSummary: null,
             });
@@ -303,14 +298,18 @@ export const useAttendanceStore = create<AttendanceState>((set, get) => ({
         set({ loading: true, error: null });
 
         try {
-            const response = await AttendanceRecordsService.getIndividualAttendanceHistory(individualId);
+            const response =
+                await AttendanceRecordsService.getIndividualAttendanceHistory(individualId);
             set({ loading: false });
             return response.data ?? [];
         } catch (error) {
-            const errorMessage = error instanceof Error ? error.message : "Failed to fetch individual attendance history";
-            set({ 
-                error: errorMessage, 
-                loading: false 
+            const errorMessage =
+                error instanceof Error
+                    ? error.message
+                    : "Failed to fetch individual attendance history";
+            set({
+                error: errorMessage,
+                loading: false,
             });
             throw new Error(errorMessage);
         }
@@ -319,7 +318,7 @@ export const useAttendanceStore = create<AttendanceState>((set, get) => ({
     checkInIndividual: async (data: CreateAttendanceData) => {
         try {
             await AttendanceRecordsService.checkInIndividual(data);
-            
+
             // Refresh relevant data based on current view
             const state = get();
             if (state.centerId) {
@@ -327,14 +326,33 @@ export const useAttendanceStore = create<AttendanceState>((set, get) => ({
                 await get().fetchAttendanceSummary(state.centerId);
             }
         } catch (error) {
-            throw new Error(error instanceof Error ? error.message : "Failed to check in individual");
+            throw new Error(
+                error instanceof Error ? error.message : "Failed to check in individual"
+            );
+        }
+    },
+
+    checkInMultipleIndividuals: async (data: CreateAttendanceData[]) => {
+        try {
+            await AttendanceRecordsService.checkInMultipleIndividuals(data);
+
+            // Refresh relevant data based on current view
+            const state = get();
+            if (state.centerId) {
+                await get().fetchCurrentAttendees();
+                await get().fetchAttendanceSummary(state.centerId);
+            }
+        } catch (error) {
+            throw new Error(
+                error instanceof Error ? error.message : "Failed to check in individuals"
+            );
         }
     },
 
     checkOutIndividual: async (recordId: number, data: CheckOutData = {}) => {
         try {
             await AttendanceRecordsService.checkOutIndividual(recordId, data);
-            
+
             // Refresh relevant data
             const state = get();
             if (state.centerId) {
@@ -343,14 +361,16 @@ export const useAttendanceStore = create<AttendanceState>((set, get) => ({
             }
             await get().fetchAttendanceRecords();
         } catch (error) {
-            throw new Error(error instanceof Error ? error.message : "Failed to check out individual");
+            throw new Error(
+                error instanceof Error ? error.message : "Failed to check out individual"
+            );
         }
     },
 
     transferIndividual: async (recordId: number, data: TransferData) => {
         try {
             await AttendanceRecordsService.transferIndividual(recordId, data);
-            
+
             // Refresh relevant data
             const state = get();
             if (state.centerId) {
@@ -360,7 +380,9 @@ export const useAttendanceStore = create<AttendanceState>((set, get) => ({
             await get().fetchTransferRecords();
             await get().fetchAttendanceRecords();
         } catch (error) {
-            throw new Error(error instanceof Error ? error.message : "Failed to transfer individual");
+            throw new Error(
+                error instanceof Error ? error.message : "Failed to transfer individual"
+            );
         }
     },
 
@@ -379,30 +401,36 @@ export const useAttendanceStore = create<AttendanceState>((set, get) => ({
 
             await get().fetchAttendanceRecords(); // Refresh the list
         } catch (error) {
-            throw new Error(error instanceof Error ? error.message : "Failed to delete attendance record");
+            throw new Error(
+                error instanceof Error ? error.message : "Failed to delete attendance record"
+            );
         }
     },
 
     recalculateCenterOccupancy: async (centerId: number) => {
         try {
             await AttendanceRecordsService.recalculateCenterOccupancy(centerId);
-            
+
             // Refresh current attendees and summary for the center
             await get().fetchCurrentAttendees({ center_id: centerId });
             await get().fetchAttendanceSummary(centerId);
         } catch (error) {
-            throw new Error(error instanceof Error ? error.message : "Failed to recalculate occupancy");
+            throw new Error(
+                error instanceof Error ? error.message : "Failed to recalculate occupancy"
+            );
         }
     },
 
     recalculateAllCenterOccupancies: async () => {
         try {
             await AttendanceRecordsService.recalculateAllCenterOccupancies();
-            
+
             // Refresh all current attendees
             await get().fetchCurrentAttendees();
         } catch (error) {
-            throw new Error(error instanceof Error ? error.message : "Failed to recalculate all occupancies");
+            throw new Error(
+                error instanceof Error ? error.message : "Failed to recalculate all occupancies"
+            );
         }
     },
 

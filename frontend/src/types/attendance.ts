@@ -5,19 +5,18 @@ export type AttendanceStatus = "checked_in" | "checked_out" | "transferred";
 export interface AttendanceRecord {
     record_id: number;
     individual_id: number;
+    individual_name?: string;
     center_id: number;
+    center_name?: string;
     event_id: number;
+    event_name?: string;
     household_id: number;
-    status: AttendanceStatus;
+    household_name?: string;
+    status: string;
     check_in_time: string | null;
     check_out_time: string | null;
-    transfer_from_center_id: number | null;
-    transfer_to_center_id: number | null;
     transfer_time: string | null;
-    recorded_by_user_id: number;
-    notes: string | null;
-    created_at: string;
-    updated_at: string;
+    notes: string | undefined;
 }
 
 export interface CreateAttendanceData {

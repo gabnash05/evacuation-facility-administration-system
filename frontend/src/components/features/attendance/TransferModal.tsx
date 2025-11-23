@@ -89,9 +89,7 @@ export function TransferModal({ isOpen, onClose, onSuccess, recordId }: Transfer
         <Dialog open={isOpen} onOpenChange={handleClose}>
             <DialogContent className="!max-w-[500px] w-[95vw] max-h-[90vh] overflow-y-auto">
                 <DialogHeader>
-                    <DialogTitle className="text-lg font-semibold">
-                        Transfer Individual
-                    </DialogTitle>
+                    <DialogTitle className="text-lg font-semibold">Transfer Individual</DialogTitle>
                 </DialogHeader>
                 <div className="space-y-6 py-4">
                     {error && (

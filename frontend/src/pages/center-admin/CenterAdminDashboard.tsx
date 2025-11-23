@@ -58,7 +58,7 @@ export function CenterAdminDashboard() {
             try {
                 setIsLoadingCenter(true);
                 const response = await EvacuationCenterService.getCenterById(user.center_id);
-                
+
                 if (response.success && response.data) {
                     setSelectedCenter({
                         name: response.data.center_name,
@@ -82,14 +82,7 @@ export function CenterAdminDashboard() {
         if (user?.center_id) {
             fetchEvents(user.center_id);
         }
-    }, [
-        user?.center_id, 
-        fetchEvents,
-        searchQuery,
-        currentPage, 
-        entriesPerPage, 
-        sortConfig
-    ]);
+    }, [user?.center_id, fetchEvents, searchQuery, currentPage, entriesPerPage, sortConfig]);
 
     const getCenterStatusStyles = (status: string) => {
         switch (status.toLowerCase()) {
@@ -126,7 +119,7 @@ export function CenterAdminDashboard() {
         const currentSortConfig = sortConfig;
 
         let newDirection: "asc" | "desc" | null = "asc";
-        
+
         if (currentSortConfig?.key === column) {
             if (currentSortConfig.direction === "asc") {
                 newDirection = "desc";
@@ -134,7 +127,7 @@ export function CenterAdminDashboard() {
                 newDirection = null;
             }
         }
-        
+
         // Set the new sort config - this will trigger the useEffect to refetch
         setSortConfig(newDirection ? { key: column, direction: newDirection } : null);
     };
@@ -153,18 +146,18 @@ export function CenterAdminDashboard() {
     // Format events for display
     const formattedEvents = useMemo(() => {
         return events.map(event => ({
-                ...event,
-                status: event.status.charAt(0).toUpperCase() + event.status.slice(1),
-                date_declared: formatDate(event.date_declared),
-                end_date: event.end_date ? formatDate(event.end_date) : "NA",
-                capacity: event.capacity || 0,
-                max_occupancy: event.max_occupancy || 0,
-                usage_percentage: event.usage_percentage || 0,
-            }));
+            ...event,
+            status: event.status.charAt(0).toUpperCase() + event.status.slice(1),
+            date_declared: formatDate(event.date_declared),
+            end_date: event.end_date ? formatDate(event.end_date) : "NA",
+            capacity: event.capacity || 0,
+            max_occupancy: event.max_occupancy || 0,
+            usage_percentage: event.usage_percentage || 0,
+        }));
     }, [events]);
 
     const totalPages = pagination?.total_pages || 1;
-    
+
     const processedData = formattedEvents;
     const paginatedData = processedData;
 

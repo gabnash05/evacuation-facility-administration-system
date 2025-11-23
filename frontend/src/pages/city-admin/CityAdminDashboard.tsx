@@ -33,7 +33,7 @@ export function CityAdminDashboard() {
     const [deletingEvent, setDeletingEvent] = useState<Event | null>(null);
     const [deleteLoading, setDeleteLoading] = useState(false);
     const [successToast, setSuccessToast] = useState({ isOpen: false, message: "" });
-    
+
     // City-wide summary instead of single center
     const [selectedCenter, setSelectedCenter] = useState<SelectedCenter>({
         name: "Iligan City",
@@ -78,11 +78,11 @@ export function CityAdminDashboard() {
             try {
                 setIsLoadingCenter(true);
                 const response = await EvacuationCenterService.getCitySummary();
-                
+
                 if (response.success && response.data) {
                     setSelectedCenter({
                         name: "Iligan City",
-                        address: "", 
+                        address: "",
                         status: response.data.status,
                         capacity: response.data.total_capacity,
                         current_occupancy: response.data.total_current_occupancy,
@@ -100,11 +100,7 @@ export function CityAdminDashboard() {
 
     useEffect(() => {
         fetchEvents();
-    }, [fetchEvents,
-        searchQuery,
-        currentPage, 
-        entriesPerPage, 
-        sortConfig]);
+    }, [fetchEvents, searchQuery, currentPage, entriesPerPage, sortConfig]);
 
     const getCenterStatusStyles = (status: string) => {
         switch (status.toLowerCase()) {
@@ -225,7 +221,7 @@ export function CityAdminDashboard() {
         const currentSortConfig = sortConfig;
 
         let newDirection: "asc" | "desc" | null = "asc";
-        
+
         if (currentSortConfig?.key === column) {
             if (currentSortConfig.direction === "asc") {
                 newDirection = "desc";
@@ -233,7 +229,7 @@ export function CityAdminDashboard() {
                 newDirection = null;
             }
         }
-        
+
         // Set the new sort config - this will trigger the useEffect to refetch
         setSortConfig(newDirection ? { key: column, direction: newDirection } : null);
     };

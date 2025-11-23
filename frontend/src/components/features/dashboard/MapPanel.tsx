@@ -27,9 +27,10 @@ export function MapPanel({
     getCenterStatusStyles,
     getUsageColor,
 }: MapPanelProps) {
-    const usagePercentage = selectedCenter.capacity > 0 
-        ? Math.round((selectedCenter.current_occupancy / selectedCenter.capacity) * 100)
-        : 0;
+    const usagePercentage =
+        selectedCenter.capacity > 0
+            ? Math.round((selectedCenter.current_occupancy / selectedCenter.capacity) * 100)
+            : 0;
 
     const formatStatus = (status: string) => {
         switch (status) {
@@ -96,7 +97,9 @@ export function MapPanel({
                                             </div>
                                         </div>
                                         <div className="w-40 flex-none">
-                                            <p className="text-xs text-muted-foreground mb-1">Status</p>
+                                            <p className="text-xs text-muted-foreground mb-1">
+                                                Status
+                                            </p>
                                             <div
                                                 className={`rounded-lg px-3 py-2 text-sm font-medium h-auto w-full text-center border ${getCenterStatusStyles(selectedCenter.status)}`}
                                             >
@@ -108,7 +111,9 @@ export function MapPanel({
                                     /* No Address - Just Status */
                                     <div className="flex items-center gap-3">
                                         <div className="w-40 flex-none">
-                                            <p className="text-xs text-muted-foreground mb-1">Status</p>
+                                            <p className="text-xs text-muted-foreground mb-1">
+                                                Status
+                                            </p>
                                             <div
                                                 className={`rounded-lg px-3 py-2 text-sm font-medium h-auto w-full text-center border ${getCenterStatusStyles(selectedCenter.status)}`}
                                             >

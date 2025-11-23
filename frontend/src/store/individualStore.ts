@@ -1,14 +1,17 @@
+// store/individualStore.ts
 import { create } from "zustand";
 import { IndividualService } from "@/services/individualService";
-import type { Individual, IndividualsResponse } from "@/types/individual";
+import type { Individual, IndividualsResponse, IndividualResponse } from "@/types/individual";
 
 interface IndividualState {
     individuals: Individual[];
+    paginatedIndividuals: Individual[];
     loading: boolean;
     error: string | null;
     searchQuery: string;
     currentPage: number;
     entriesPerPage: number;
+    totalRecords: number;
     pagination: {
         current_page: number;
         total_pages: number;
@@ -21,6 +24,15 @@ interface IndividualState {
     setCurrentPage: (p: number) => void;
     setEntriesPerPage: (n: number) => void;
     fetchIndividuals: (opts?: { search?: string; page?: number; limit?: number }) => Promise<void>;
+    searchIndividuals: (params: {
+        search?: string;
+        page?: number;
+        limit?: number;
+        sort_by?: string;
+        sort_order?: string;
+        household_id?: number;
+    }) => Promise<{ success: boolean; data: Individual[]; pagination: any }>;
+    clearSearch: () => void;
     addIndividual: (data: any) => Promise<void>;
     updateIndividual: (id: number, data: any) => Promise<void>;
     deleteIndividuals: (ids: number[]) => Promise<void>;
@@ -30,11 +42,13 @@ interface IndividualState {
 
 const initialState = {
     individuals: [] as Individual[],
+    paginatedIndividuals: [] as Individual[],
     loading: false,
     error: null as string | null,
     searchQuery: "",
     currentPage: 1,
     entriesPerPage: 10,
+    totalRecords: 0,
     pagination: null as IndividualState["pagination"],
 };
 
@@ -56,11 +70,20 @@ export const useIndividualStore = create<IndividualState>((set, get) => ({
                 search,
                 page,
                 limit,
-            } as any);
+            });
+
+            if (!response.success) {
+                throw new Error(response.message);
+            }
+
+            const individualsData = response.data?.results || [];
+            const paginationData = response.data?.pagination;
 
             set({
-                individuals: response.data.results,
-                pagination: response.data.pagination,
+                individuals: individualsData,
+                paginatedIndividuals: individualsData,
+                totalRecords: paginationData?.total_items || 0,
+                pagination: paginationData,
                 loading: false,
             });
         } catch (err) {
@@ -68,14 +91,74 @@ export const useIndividualStore = create<IndividualState>((set, get) => ({
                 error: err instanceof Error ? err.message : "Failed to fetch individuals",
                 loading: false,
                 individuals: [],
+                paginatedIndividuals: [],
+                totalRecords: 0,
                 pagination: null,
             });
         }
     },
 
+    searchIndividuals: async (params = {}) => {
+        set({ loading: true, error: null });
+        try {
+            const response: IndividualsResponse = await IndividualService.getIndividuals({
+                search: params.search || "",
+                page: params.page || 1,
+                limit: params.limit || 10,
+                sortBy: params.sort_by,
+                sortOrder: params.sort_order,
+                household_id: params.household_id,
+            });
+
+            if (!response.success) {
+                throw new Error(response.message);
+            }
+
+            const individualsData = response.data?.results || [];
+            const paginationData = response.data?.pagination;
+            
+            set({
+                paginatedIndividuals: individualsData,
+                totalRecords: paginationData?.total_items || individualsData.length,
+                currentPage: paginationData?.current_page || 1,
+                searchQuery: params.search || "",
+                pagination: paginationData,
+                loading: false,
+            });
+
+            return { 
+                success: true, 
+                data: individualsData, 
+                pagination: paginationData 
+            };
+        } catch (err) {
+            const errorMessage = err instanceof Error ? err.message : "Failed to search individuals";
+            set({
+                error: errorMessage,
+                loading: false,
+                paginatedIndividuals: [],
+                totalRecords: 0,
+            });
+            return { success: false, data: [], pagination: null };
+        }
+    },
+
+    clearSearch: () => {
+        set({
+            paginatedIndividuals: [],
+            searchQuery: "",
+            currentPage: 1,
+            totalRecords: 0,
+            error: null,
+        });
+    },
+
     addIndividual: async (data: any) => {
         try {
-            await IndividualService.createIndividual(data);
+            const response: IndividualResponse = await IndividualService.createIndividual(data);
+            if (!response.success) {
+                throw new Error(response.message);
+            }
             await get().fetchIndividuals();
         } catch (err) {
             throw new Error(err instanceof Error ? err.message : "Failed to add individual");
@@ -84,7 +167,10 @@ export const useIndividualStore = create<IndividualState>((set, get) => ({
 
     updateIndividual: async (id: number, data: any) => {
         try {
-            await IndividualService.updateIndividual(id, data);
+            const response: IndividualResponse = await IndividualService.updateIndividual(id, data);
+            if (!response.success) {
+                throw new Error(response.message);
+            }
             await get().fetchIndividuals();
         } catch (err) {
             throw new Error(err instanceof Error ? err.message : "Failed to update individual");
@@ -93,7 +179,10 @@ export const useIndividualStore = create<IndividualState>((set, get) => ({
 
     deleteIndividuals: async (ids: number[]) => {
         try {
-            await IndividualService.deleteIndividuals(ids);
+            const response = await IndividualService.deleteIndividuals(ids);
+            if (!response.success) {
+                throw new Error(response.message);
+            }
             // after deletion, refresh list. Adjust pagination if needed
             const { individuals, currentPage } = get();
             if (individuals.length === ids.length && currentPage > 1) {
@@ -109,10 +198,21 @@ export const useIndividualStore = create<IndividualState>((set, get) => ({
         set({ loading: true, error: null });
         try {
             const response = await IndividualService.getByHousehold(household_id);
-            // response.data expected to be array
-            set({ individuals: response.data, loading: false, pagination: null });
+            if (!response.success) {
+                throw new Error(response.message);
+            }
+            const data = response.data || [];
+            set({ 
+                individuals: data, 
+                paginatedIndividuals: data,
+                loading: false, 
+                pagination: null 
+            });
         } catch (err) {
-            set({ error: err instanceof Error ? err.message : "Failed to fetch household individuals", loading: false });
+            set({ 
+                error: err instanceof Error ? err.message : "Failed to fetch household individuals", 
+                loading: false 
+            });
         }
     },
 

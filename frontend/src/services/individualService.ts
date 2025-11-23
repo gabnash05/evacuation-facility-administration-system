@@ -9,6 +9,7 @@ export class IndividualService {
                 params,
                 withCredentials: true,
             });
+            console.log("Response Data:", response.data);
             return response.data;
         } catch (error) {
             throw new Error(handleApiError(error));
@@ -37,7 +38,10 @@ export class IndividualService {
         }
     }
 
-    static async updateIndividual(id: number, data: UpdateIndividualData): Promise<IndividualResponse> {
+    static async updateIndividual(
+        id: number,
+        data: UpdateIndividualData
+    ): Promise<IndividualResponse> {
         try {
             const response = await api.put<IndividualResponse>(`/individuals/${id}`, data, {
                 withCredentials: true,
@@ -48,7 +52,9 @@ export class IndividualService {
         }
     }
 
-    static async deleteIndividuals(ids: number[]): Promise<{ success: boolean; message?: string; data?: { deleted_ids: number[] } }> {
+    static async deleteIndividuals(
+        ids: number[]
+    ): Promise<{ success: boolean; message?: string; data?: { deleted_ids: number[] } }> {
         try {
             const response = await api.delete("/individuals", {
                 withCredentials: true,
@@ -60,7 +66,7 @@ export class IndividualService {
         }
     }
 
-    static async getByHousehold(household_id: number): Promise<{ success: boolean; data: any }> {
+    static async getByHousehold(household_id: number): Promise<{ success: boolean; data: any, message: string }> {
         try {
             const response = await api.get(`/households/${household_id}/individuals`, {
                 withCredentials: true,
