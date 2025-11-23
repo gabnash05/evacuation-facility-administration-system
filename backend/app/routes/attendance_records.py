@@ -26,10 +26,10 @@ from app.services.attendance_records_service import (
 # Configure logger for this module
 logger = logging.getLogger(__name__)
 
-attendance_bp = Blueprint("attendance_bp", __name__)
+attendance_record_bp = Blueprint("attendance_record_bp", __name__)
 
 
-@attendance_bp.route("/attendance", methods=["GET"])
+@attendance_record_bp.route("/attendance", methods=["GET"])
 @jwt_required()
 def get_attendance_records_route() -> Tuple:
     """
@@ -42,10 +42,11 @@ def get_attendance_records_route() -> Tuple:
         household_id (integer) - Filter by household ID
         status (string) - Filter by status (checked_in, checked_out, transferred)
         date (string) - Filter by date (YYYY-MM-DD)
+        search (string) - Search query for individuals
         page (integer) - Page number (default: 1)
         limit (integer) - Items per page (default: 10)
-        sort_by (string) - Field to sort by
-        sort_order (string) - Sort direction (asc/desc)
+        sortBy (string) - Field to sort by (camelCase)
+        sortOrder (string) - Sort direction (asc/desc)
 
     Returns:
         Tuple containing:
@@ -53,17 +54,18 @@ def get_attendance_records_route() -> Tuple:
             - HTTP status code
     """
     try:
-        # Extract query parameters
-        center_id = request.args.get("center_id", type=int)
-        individual_id = request.args.get("individual_id", type=int)
-        event_id = request.args.get("event_id", type=int)
-        household_id = request.args.get("household_id", type=int)
+        # Extract query parameters - support both snake_case and camelCase
+        center_id = request.args.get("center_id", type=int) or request.args.get("centerId", type=int)
+        individual_id = request.args.get("individual_id", type=int) or request.args.get("individualId", type=int)
+        event_id = request.args.get("event_id", type=int) or request.args.get("eventId", type=int)
+        household_id = request.args.get("household_id", type=int) or request.args.get("householdId", type=int)
         status = request.args.get("status", type=str)
         date = request.args.get("date", type=str)
+        search = request.args.get("search", type=str)
         page = request.args.get("page", 1, type=int)
         limit = request.args.get("limit", 10, type=int)
-        sort_by = request.args.get("sort_by", type=str)
-        sort_order = request.args.get("sort_order", "desc", type=str)
+        sort_by = request.args.get("sort_by", type=str) or request.args.get("sortBy", type=str)
+        sort_order = request.args.get("sort_order", type=str) or request.args.get("sortOrder", "desc", type=str)
 
         # Validate pagination parameters
         if page < 1:
@@ -81,12 +83,15 @@ def get_attendance_records_route() -> Tuple:
             )
 
         logger.info(
-            "Fetching attendance records - center_id: %s, event_id: %s, status: %s, page: %s, limit: %s",
+            "Fetching attendance records - search: %s, center_id: %s, event_id: %s, status: %s, page: %s, limit: %s, sort_by: %s, sort_order: %s",
+            search,
             center_id,
             event_id,
             status,
             page,
             limit,
+            sort_by,
+            sort_order,
         )
 
         # Get attendance records from service
@@ -97,6 +102,7 @@ def get_attendance_records_route() -> Tuple:
             household_id=household_id,
             status=status,
             date=date,
+            search=search,  # Pass search parameter
             page=page,
             limit=limit,
             sort_by=sort_by,
@@ -121,7 +127,7 @@ def get_attendance_records_route() -> Tuple:
         )
 
 
-@attendance_bp.route("/attendance/current", methods=["GET"])
+@attendance_record_bp.route("/attendance/current", methods=["GET"])
 @jwt_required()
 def get_current_attendees_route() -> Tuple:
     """
@@ -203,7 +209,7 @@ def get_current_attendees_route() -> Tuple:
         )
 
 
-@attendance_bp.route("/attendance/event/<int:event_id>", methods=["GET"])
+@attendance_record_bp.route("/attendance/event/<int:event_id>", methods=["GET"])
 @jwt_required()
 def get_event_attendance_route(event_id: int) -> Tuple:
     """
@@ -276,7 +282,7 @@ def get_event_attendance_route(event_id: int) -> Tuple:
         )
 
 
-@attendance_bp.route("/attendance/transfers", methods=["GET"])
+@attendance_record_bp.route("/attendance/transfers", methods=["GET"])
 @jwt_required()
 def get_transfer_records_route() -> Tuple:
     """
@@ -345,7 +351,7 @@ def get_transfer_records_route() -> Tuple:
         )
 
 
-@attendance_bp.route("/attendance/check-in", methods=["POST"])
+@attendance_record_bp.route("/attendance/check-in", methods=["POST"])
 @jwt_required()
 def check_in_individual_route() -> Tuple:
     """
@@ -413,7 +419,216 @@ def check_in_individual_route() -> Tuple:
         )
 
 
-@attendance_bp.route("/attendance/<int:record_id>/check-out", methods=["PUT"])
+@attendance_record_bp.route("/attendance/check-in/batch", methods=["POST"])
+@jwt_required()
+def check_in_multiple_individuals_route() -> Tuple:
+    """
+    Check in multiple individuals to an evacuation center in a single operation.
+
+    Request Body (JSON array):
+        [
+            {
+                "individual_id": integer,      # Individual ID
+                "center_id": integer,          # Center ID
+                "event_id": integer,           # Event ID
+                "household_id": integer,       # Household ID
+                "recorded_by_user_id": integer, # User ID (optional, defaults to current user)
+                "check_in_time": string,       # Check-in time (ISO format, optional)
+                "notes": string                # Additional notes (optional)
+            },
+            ...
+        ]
+
+    Returns:
+        Tuple containing:
+            - JSON response with check-in results
+            - HTTP status code
+    """
+    try:
+        data = request.get_json()
+
+        if not data or not isinstance(data, list):
+            return jsonify({
+                "success": False, 
+                "message": "Request body must be a JSON array of individual check-in data"
+            }), 400
+
+        if len(data) == 0:
+            return jsonify({
+                "success": False, 
+                "message": "No individuals provided for check-in"
+            }), 400
+
+        # Validate maximum batch size
+        if len(data) > 50:
+            return jsonify({
+                "success": False, 
+                "message": "Maximum batch size is 50 individuals per request"
+            }), 400
+
+        # Get current user ID from JWT token
+        current_user_id = get_jwt_identity()
+        
+        # Validate and prepare check-in data
+        validated_data = []
+        required_fields = ["individual_id", "center_id", "event_id", "household_id"]
+        
+        for i, item in enumerate(data):
+            if not isinstance(item, dict):
+                return jsonify({
+                    "success": False, 
+                    "message": f"Item at index {i} must be a JSON object"
+                }), 400
+
+            # Check required fields
+            for field in required_fields:
+                if field not in item:
+                    return jsonify({
+                        "success": False, 
+                        "message": f"Missing required field '{field}' for individual at index {i}"
+                    }), 400
+
+            # Set default recorded_by_user_id if not provided
+            if "recorded_by_user_id" not in item:
+                item["recorded_by_user_id"] = current_user_id
+
+            validated_data.append(item)
+
+        logger.info(
+            "Batch checking in %s individuals to center %s for event %s", 
+            len(validated_data),
+            validated_data[0].get("center_id"),  # All should have same center/event in typical use
+            validated_data[0].get("event_id")
+        )
+
+        # Process batch check-in
+        results = []
+        errors = []
+        
+        for i, check_in_data in enumerate(validated_data):
+            try:
+                result = check_in_individual(
+                    individual_id=check_in_data["individual_id"],
+                    center_id=check_in_data["center_id"],
+                    event_id=check_in_data["event_id"],
+                    household_id=check_in_data["household_id"],
+                    recorded_by_user_id=check_in_data["recorded_by_user_id"],
+                    check_in_time=check_in_data.get("check_in_time"),
+                    notes=check_in_data.get("notes")
+                )
+                
+                if result["success"]:
+                    results.append(result["data"])
+                else:
+                    errors.append({
+                        "index": i,
+                        "individual_id": check_in_data["individual_id"],
+                        "error": result["message"]
+                    })
+                    
+            except Exception as error:
+                errors.append({
+                    "index": i,
+                    "individual_id": check_in_data["individual_id"],
+                    "error": str(error)
+                })
+
+        # Determine overall success with descriptive messages
+        if errors:
+            if len(errors) == len(validated_data):
+                # All failed - provide detailed analysis
+                error_types = {}
+                for error in errors:
+                    error_msg = error["error"]
+                    if error_msg not in error_types:
+                        error_types[error_msg] = 0
+                    error_types[error_msg] += 1
+                
+                # Create descriptive message based on error patterns
+                if len(error_types) == 1:
+                    # All same error
+                    common_error = list(error_types.keys())[0]
+                    message = f"All check-ins failed: {common_error}"
+                else:
+                    # Multiple types of errors
+                    common_errors = list(error_types.items())[:3]  # Show top 3
+                    error_summary = ", ".join([f"{count}× {error}" for error, count in common_errors])
+                    if len(error_types) > 3:
+                        error_summary += f" and {len(error_types) - 3} more error types"
+                    message = f"All check-ins failed with various errors: {error_summary}"
+                
+                return jsonify({
+                    "success": False,
+                    "message": message,
+                    "data": {
+                        "successful_checkins": [],
+                        "failed_checkins": errors,
+                        "error_summary": {
+                            "total_failed": len(errors),
+                            "error_types": error_types
+                        }
+                    }
+                }), 400
+            else:
+                # Partial success
+                success_count = len(results)
+                total_count = len(validated_data)
+                failed_count = len(errors)
+                
+                # Analyze error patterns for partial failures
+                error_types = {}
+                for error in errors:
+                    error_msg = error["error"]
+                    if error_msg not in error_types:
+                        error_types[error_msg] = 0
+                    error_types[error_msg] += 1
+                
+                if len(error_types) == 1:
+                    common_error = list(error_types.keys())[0]
+                    message = f"Successfully checked in {success_count} out of {total_count} individuals. {failed_count} failed due to: {common_error}"
+                else:
+                    common_errors = list(error_types.items())[:2]  # Show top 2
+                    error_summary = ", ".join([f"{count}× {error}" for error, count in common_errors])
+                    if len(error_types) > 2:
+                        error_summary += f" and {len(error_types) - 2} more error types"
+                    message = f"Successfully checked in {success_count} out of {total_count} individuals. {failed_count} failed with various errors: {error_summary}"
+                
+                return jsonify({
+                    "success": True,
+                    "message": message,
+                    "data": {
+                        "successful_checkins": results,
+                        "failed_checkins": errors,
+                        "error_summary": {
+                            "total_successful": success_count,
+                            "total_failed": failed_count,
+                            "error_types": error_types
+                        }
+                    }
+                }), 207  # Multi-Status
+
+        # All successful
+        return jsonify({
+            "success": True,
+            "message": f"Successfully checked in {len(results)} individual{'s' if len(results) != 1 else ''}",
+            "data": {
+                "successful_checkins": results,
+                "failed_checkins": []
+            }
+        }), 201
+
+    except Exception as error:
+        logger.error("Error in batch check-in: %s", str(error))
+        return (
+            jsonify({
+                "success": False,
+                "message": f"Internal server error while processing batch check-in: {str(error)}",
+            }),
+            500,
+        )
+    
+    
+@attendance_record_bp.route("/attendance/<int:record_id>/check-out", methods=["PUT"])
 @jwt_required()
 def check_out_individual_route(record_id: int) -> Tuple:
     """
@@ -460,7 +675,7 @@ def check_out_individual_route(record_id: int) -> Tuple:
         )
 
 
-@attendance_bp.route("/attendance/<int:record_id>/transfer", methods=["PUT"])
+@attendance_record_bp.route("/attendance/<int:record_id>/transfer", methods=["PUT"])
 @jwt_required()
 def transfer_individual_route(record_id: int) -> Tuple:
     """
@@ -523,7 +738,7 @@ def transfer_individual_route(record_id: int) -> Tuple:
         )
 
 
-@attendance_bp.route("/attendance/<int:record_id>", methods=["GET"])
+@attendance_record_bp.route("/attendance/<int:record_id>", methods=["GET"])
 @jwt_required()
 def get_attendance_record_route(record_id: int) -> Tuple:
     """
@@ -560,7 +775,7 @@ def get_attendance_record_route(record_id: int) -> Tuple:
         )
 
 
-@attendance_bp.route("/attendance/summary/center/<int:center_id>", methods=["GET"])
+@attendance_record_bp.route("/attendance/summary/center/<int:center_id>", methods=["GET"])
 @jwt_required()
 def get_attendance_summary_route(center_id: int) -> Tuple:
     """
@@ -602,7 +817,7 @@ def get_attendance_summary_route(center_id: int) -> Tuple:
         )
 
 
-@attendance_bp.route("/attendance/history/individual/<int:individual_id>", methods=["GET"])
+@attendance_record_bp.route("/attendance/history/individual/<int:individual_id>", methods=["GET"])
 @jwt_required()
 def get_individual_attendance_history_route(individual_id: int) -> Tuple:
     """
@@ -639,7 +854,7 @@ def get_individual_attendance_history_route(individual_id: int) -> Tuple:
         )
 
 
-@attendance_bp.route("/attendance/recalculate/center/<int:center_id>", methods=["POST"])
+@attendance_record_bp.route("/attendance/recalculate/center/<int:center_id>", methods=["POST"])
 @jwt_required()
 def recalculate_center_occupancy_route(center_id: int) -> Tuple:
     """
@@ -676,7 +891,7 @@ def recalculate_center_occupancy_route(center_id: int) -> Tuple:
         )
 
 
-@attendance_bp.route("/attendance/recalculate/all", methods=["POST"])
+@attendance_record_bp.route("/attendance/recalculate/all", methods=["POST"])
 @jwt_required()
 def recalculate_all_center_occupancies_route() -> Tuple:
     """
@@ -710,7 +925,7 @@ def recalculate_all_center_occupancies_route() -> Tuple:
         )
 
 
-@attendance_bp.route("/attendance/<int:record_id>", methods=["DELETE"])
+@attendance_record_bp.route("/attendance/<int:record_id>", methods=["DELETE"])
 @jwt_required()
 def delete_attendance_record_route(record_id: int) -> Tuple:
     """

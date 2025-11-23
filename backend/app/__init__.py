@@ -41,8 +41,8 @@ def create_app(config_class=Config):
         methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
         allow_headers=["Content-Type", "Authorization"],
         supports_credentials=True,
-        expose_headers=["Set-Cookie"],
-        allow_credentials=True)
+        expose_headers=["Set-Cookie"]
+        )
 
     # Register API blueprints FIRST (before catch-all route)
     from app.routes.auth import auth_bp
@@ -51,6 +51,7 @@ def create_app(config_class=Config):
     from app.routes.households import households_bp
     from app.routes.individuals import individuals_bp
     from app.routes.user import user_bp
+    from app.routes.attendance_records import attendance_record_bp
 
     app.register_blueprint(auth_bp, url_prefix="/api")
     app.register_blueprint(households_bp, url_prefix="/api")
@@ -58,7 +59,7 @@ def create_app(config_class=Config):
     app.register_blueprint(evacuation_center_bp, url_prefix="/api")
     app.register_blueprint(individuals_bp, url_prefix="/api")
     app.register_blueprint(user_bp, url_prefix="/api")
-
+    app.register_blueprint(attendance_record_bp, url_prefix="/api")
 
     @app.route("/", defaults={"path": ""})
     @app.route("/<path:path>")

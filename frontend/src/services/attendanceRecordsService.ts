@@ -15,23 +15,28 @@ import type {
     GetTransferRecordsParams,
     CreateAttendanceData,
     CheckOutData,
-    TransferData
+    TransferData,
 } from "@/types/attendance";
 
 export class AttendanceRecordsService {
-    static async getAttendanceRecords(params: GetAttendanceParams = {}): Promise<AttendanceRecordsResponse> {
+    static async getAttendanceRecords(
+        params: GetAttendanceParams = {}
+    ): Promise<AttendanceRecordsResponse> {
         try {
             const response = await api.get<AttendanceRecordsResponse>("/attendance", {
                 params,
                 withCredentials: true,
             });
+
             return response.data;
         } catch (error) {
             throw new Error(handleApiError(error));
         }
     }
 
-    static async getCurrentAttendees(params: GetCurrentAttendeesParams = {}): Promise<CurrentAttendeesResponse> {
+    static async getCurrentAttendees(
+        params: GetCurrentAttendeesParams = {}
+    ): Promise<CurrentAttendeesResponse> {
         try {
             const response = await api.get<CurrentAttendeesResponse>("/attendance/current", {
                 params,
@@ -43,19 +48,27 @@ export class AttendanceRecordsService {
         }
     }
 
-    static async getEventAttendance(eventId: number, params: GetEventAttendanceParams = {}): Promise<EventAttendanceResponse> {
+    static async getEventAttendance(
+        eventId: number,
+        params: GetEventAttendanceParams = {}
+    ): Promise<EventAttendanceResponse> {
         try {
-            const response = await api.get<EventAttendanceResponse>(`/attendance/event/${eventId}`, {
-                params,
-                withCredentials: true,
-            });
+            const response = await api.get<EventAttendanceResponse>(
+                `/attendance/event/${eventId}`,
+                {
+                    params,
+                    withCredentials: true,
+                }
+            );
             return response.data;
         } catch (error) {
             throw new Error(handleApiError(error));
         }
     }
 
-    static async getTransferRecords(params: GetTransferRecordsParams = {}): Promise<TransferRecordsResponse> {
+    static async getTransferRecords(
+        params: GetTransferRecordsParams = {}
+    ): Promise<TransferRecordsResponse> {
         try {
             const response = await api.get<TransferRecordsResponse>("/attendance/transfers", {
                 params,
@@ -86,7 +99,29 @@ export class AttendanceRecordsService {
         }
     }
 
-    static async checkOutIndividual(recordId: number, data: CheckOutData = {}): Promise<{
+    static async checkInMultipleIndividuals(data: CreateAttendanceData[]): Promise<{
+        success: boolean;
+        data: AttendanceRecord[];
+        message: string;
+    }> {
+        try {
+            const response = await api.post<{
+                success: boolean;
+                data: AttendanceRecord[];
+                message: string;
+            }>("/attendance/check-in/batch", data, {
+                withCredentials: true,
+            });
+            return response.data;
+        } catch (error) {
+            throw new Error(handleApiError(error));
+        }
+    }
+
+    static async checkOutIndividual(
+        recordId: number,
+        data: CheckOutData = {}
+    ): Promise<{
         success: boolean;
         data: AttendanceRecord;
         message: string;
@@ -105,7 +140,10 @@ export class AttendanceRecordsService {
         }
     }
 
-    static async transferIndividual(recordId: number, data: TransferData): Promise<{
+    static async transferIndividual(
+        recordId: number,
+        data: TransferData
+    ): Promise<{
         success: boolean;
         data: AttendanceRecord;
         message: string;
@@ -141,35 +179,52 @@ export class AttendanceRecordsService {
         }
     }
 
-    static async getAttendanceSummary(centerId: number, eventId?: number): Promise<AttendanceSummaryResponse> {
+    static async getAttendanceSummary(
+        centerId: number,
+        eventId?: number
+    ): Promise<AttendanceSummaryResponse> {
         try {
             const params = eventId ? { event_id: eventId } : {};
-            const response = await api.get<AttendanceSummaryResponse>(`/attendance/summary/center/${centerId}`, {
-                params,
-                withCredentials: true,
-            });
+            const response = await api.get<AttendanceSummaryResponse>(
+                `/attendance/summary/center/${centerId}`,
+                {
+                    params,
+                    withCredentials: true,
+                }
+            );
             return response.data;
         } catch (error) {
             throw new Error(handleApiError(error));
         }
     }
 
-    static async getIndividualAttendanceHistory(individualId: number): Promise<IndividualAttendanceHistoryResponse> {
+    static async getIndividualAttendanceHistory(
+        individualId: number
+    ): Promise<IndividualAttendanceHistoryResponse> {
         try {
-            const response = await api.get<IndividualAttendanceHistoryResponse>(`/attendance/history/individual/${individualId}`, {
-                withCredentials: true,
-            });
+            const response = await api.get<IndividualAttendanceHistoryResponse>(
+                `/attendance/history/individual/${individualId}`,
+                {
+                    withCredentials: true,
+                }
+            );
             return response.data;
         } catch (error) {
             throw new Error(handleApiError(error));
         }
     }
 
-    static async recalculateCenterOccupancy(centerId: number): Promise<OccupancyRecalculationResponse> {
+    static async recalculateCenterOccupancy(
+        centerId: number
+    ): Promise<OccupancyRecalculationResponse> {
         try {
-            const response = await api.post<OccupancyRecalculationResponse>(`/attendance/recalculate/center/${centerId}`, {}, {
-                withCredentials: true,
-            });
+            const response = await api.post<OccupancyRecalculationResponse>(
+                `/attendance/recalculate/center/${centerId}`,
+                {},
+                {
+                    withCredentials: true,
+                }
+            );
             return response.data;
         } catch (error) {
             throw new Error(handleApiError(error));
@@ -178,9 +233,13 @@ export class AttendanceRecordsService {
 
     static async recalculateAllCenterOccupancies(): Promise<AllOccupanciesRecalculationResponse> {
         try {
-            const response = await api.post<AllOccupanciesRecalculationResponse>("/attendance/recalculate/all", {}, {
-                withCredentials: true,
-            });
+            const response = await api.post<AllOccupanciesRecalculationResponse>(
+                "/attendance/recalculate/all",
+                {},
+                {
+                    withCredentials: true,
+                }
+            );
             return response.data;
         } catch (error) {
             throw new Error(handleApiError(error));

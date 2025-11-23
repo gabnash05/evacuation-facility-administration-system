@@ -5,7 +5,18 @@ import {
     SidebarGroup,
     SidebarHeader,
 } from "@/components/ui/sidebar";
-import { LayoutDashboard, Building, Users, LogOut, House, Package, BarChart3, ClipboardCheck, ArrowLeftRight, NotebookPen } from "lucide-react";
+import {
+    LayoutDashboard,
+    Building,
+    Users,
+    LogOut,
+    House,
+    Package,
+    BarChart3,
+    ClipboardCheck,
+    ArrowLeftRight,
+    NotebookPen,
+} from "lucide-react";
 import efasLogo from "@/assets/logo/efas-logo.png";
 import { ModeToggle } from "./ModeToggle";
 import { Link, useLocation, useNavigate } from "react-router-dom";
@@ -76,7 +87,7 @@ export function AppSidebar({ role, roleLabel, userEmail }: AppSidebarProps) {
                         label: "Attendance",
                         href: "/city-admin/attendance",
                         icon: <ClipboardCheck className="w-4 h-4" />,
-                    }
+                    },
                 ];
             case "center_admin":
                 return [

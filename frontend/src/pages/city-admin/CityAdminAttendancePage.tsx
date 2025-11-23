@@ -61,10 +61,10 @@ export function CityAdminAttendancePage() {
                 setSortConfig({ key, direction: "desc" });
                 break;
             case "desc":
-                setSortConfig({ key, direction: null });
+                setSortConfig(null);
                 break;
             case null:
-            default:
+                // Shouldn't happen, but handle it
                 setSortConfig({ key, direction: "asc" });
                 break;
         }
@@ -124,14 +124,20 @@ export function CityAdminAttendancePage() {
 
     const tableData = attendanceRecords.map(record => ({
         record_id: record.record_id,
-        individual_name: `ID: ${record.individual_id}`, // You might want to fetch actual individual names
-        center_name: `Center ${record.center_id}`, // You might want to fetch actual center names
-        event_name: `Event ${record.event_id}`, // You might want to fetch actual event names
-        household_name: `Household ${record.household_id}`, // You might want to fetch actual household names
+        individual_name: record.individual_name || "N/A",
+        center_name: record.center_name || `Center ${record.center_id}`,
+        event_name: record.event_name || `Event ${record.event_id}`,
+        household_name: record.household_name || `Household ${record.household_id}`,
         status: record.status,
-        check_in_time: record.check_in_time ? new Date(record.check_in_time).toLocaleString() : "N/A",
-        check_out_time: record.check_out_time ? new Date(record.check_out_time).toLocaleString() : "N/A",
-        transfer_time: record.transfer_time ? new Date(record.transfer_time).toLocaleString() : "N/A",
+        check_in_time: record.check_in_time
+            ? new Date(record.check_in_time).toLocaleString()
+            : "N/A",
+        check_out_time: record.check_out_time
+            ? new Date(record.check_out_time).toLocaleString()
+            : "N/A",
+        transfer_time: record.transfer_time
+            ? new Date(record.transfer_time).toLocaleString()
+            : "N/A",
         notes: record.notes,
     }));
 
@@ -165,7 +171,9 @@ export function CityAdminAttendancePage() {
                     <div className="border-b border-border">
                         {loading && attendanceRecords.length === 0 ? (
                             <div className="p-8 text-center">
-                                <div className="text-muted-foreground">Loading attendance records...</div>
+                                <div className="text-muted-foreground">
+                                    Loading attendance records...
+                                </div>
                             </div>
                         ) : (
                             <AttendanceTable

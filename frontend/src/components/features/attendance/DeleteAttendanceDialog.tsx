@@ -50,7 +50,9 @@ export function DeleteAttendanceDialog({
                 <div className="py-4">
                     <p className="text-sm text-muted-foreground">
                         Are you sure you want to delete the attendance record for{" "}
-                        <strong className="font-semibold text-foreground">"{individualName}"</strong>
+                        <strong className="font-semibold text-foreground">
+                            "{individualName}"
+                        </strong>
                         ? This will permanently remove this attendance record from the system.
                     </p>
                 </div>

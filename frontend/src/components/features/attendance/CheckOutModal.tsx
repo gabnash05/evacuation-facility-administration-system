@@ -84,7 +84,8 @@ export function CheckOutModal({ isOpen, onClose, onSuccess, recordId }: CheckOut
 
                     <div className="space-y-4">
                         <p className="text-sm text-muted-foreground">
-                            Are you sure you want to check out this individual? This will mark their attendance as completed.
+                            Are you sure you want to check out this individual? This will mark their
+                            attendance as completed.
                         </p>
 
                         <div className="space-y-2">
