@@ -1,7 +1,11 @@
 import { api, handleApiError } from "./api";
-import type { CentersResponse, GetCentersParams, EvacuationCenter, CitySummary } from "@/types/center";
+import type {
+    CentersResponse,
+    GetCentersParams,
+    EvacuationCenter,
+    CitySummary,
+} from "@/types/center";
 import type { CreateCenterFormData, UpdateCenterFormData } from "@/schemas/centers";
-
 
 export class EvacuationCenterService {
     static async getCenters(params: GetCentersParams = {}): Promise<CentersResponse> {
@@ -142,5 +146,4 @@ export class EvacuationCenterService {
             throw new Error(handleApiError(error));
         }
     }
-
 }

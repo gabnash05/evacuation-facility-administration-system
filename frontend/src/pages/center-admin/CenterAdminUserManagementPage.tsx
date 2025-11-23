@@ -40,8 +40,8 @@ export function CenterAdminUserManagementPage() {
     const [statusFilter, setStatusFilter] = useState<string>("all");
 
     // Create debounced fetch function that includes center_id
-    const debouncedFetchUsers = useMemo(() => 
-        debounce(() => fetchUsers(userCenterId), 500), 
+    const debouncedFetchUsers = useMemo(
+        () => debounce(() => fetchUsers(userCenterId), 500),
         [fetchUsers, userCenterId]
     );
 
@@ -179,7 +179,7 @@ export function CenterAdminUserManagementPage() {
     );
 
     // Display current center information
-    const currentCenterInfo = user?.center_name ? `for ${user.center_name}` : '';
+    const currentCenterInfo = user?.center_name ? `for ${user.center_name}` : "";
 
     return (
         <div className="w-full min-w-0 bg-background flex flex-col relative p-6">
