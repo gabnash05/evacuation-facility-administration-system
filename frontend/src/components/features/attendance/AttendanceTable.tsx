@@ -1,5 +1,13 @@
 import { useState } from "react";
-import { ChevronUp, ChevronDown, ChevronsUpDown, MoreVertical, Edit, Trash2 } from "lucide-react";
+import {
+    ChevronUp,
+    ChevronDown,
+    ChevronsUpDown,
+    MoreVertical,
+    LogOut,
+    Move,
+    Trash2,
+} from "lucide-react";
 import {
     Table,
     TableBody,
@@ -15,15 +23,20 @@ import {
     DropdownMenuItem,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { DeleteHouseholdDialog } from "./DeleteHouseholdDialog"; // Import the dialog
+import { DeleteAttendanceDialog } from "./DeleteAttendanceDialog";
 import { cn } from "@/lib/utils";
 
-export interface Household {
-    household_id: number;
-    householdName: string;
-    householdHead: string;
-    address: string;
-    center?: string;
+export interface AttendanceRecord {
+    record_id: number;
+    individual_name: string;
+    center_name: string;
+    event_name: string;
+    household_name: string;
+    status: string;
+    check_in_time: string;
+    check_out_time: string;
+    transfer_time: string;
+    notes?: string;
 }
 
 export type SortConfig = {
@@ -31,29 +44,31 @@ export type SortConfig = {
     direction: "asc" | "desc" | null;
 } | null;
 
-interface HouseholdTableProps {
-    data: Household[];
+interface AttendanceTableProps {
+    data: AttendanceRecord[];
     headers: { key: string; label: string; sortable: boolean }[];
     sortConfig: SortConfig;
     onSort: (key: string) => void;
-    onEdit: (id: number) => void;
+    onCheckOut: (id: number) => void;
+    onTransfer: (id: number) => void;
     onDelete: (id: number) => void;
     loading?: boolean;
     userRole?: string;
 }
 
-export function HouseholdTable({
+export function AttendanceTable({
     data,
     headers,
     sortConfig,
     onSort,
-    onEdit,
+    onCheckOut,
+    onTransfer,
     onDelete,
     loading,
     userRole,
-}: HouseholdTableProps) {
+}: AttendanceTableProps) {
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-    const [householdToDelete, setHouseholdToDelete] = useState<{ id: number; name: string } | null>(
+    const [recordToDelete, setRecordToDelete] = useState<{ id: number; individual: string } | null>(
         null
     );
 
@@ -64,38 +79,52 @@ export function HouseholdTable({
         return <ChevronDown className="h-4 w-4" />;
     };
 
-    const handleDeleteClick = (household: Household) => {
-        setHouseholdToDelete({
-            id: household.household_id,
-            name: household.householdName,
+    const handleDeleteClick = (record: AttendanceRecord) => {
+        setRecordToDelete({
+            id: record.record_id,
+            individual: record.individual_name,
         });
         setDeleteDialogOpen(true);
     };
 
     const handleConfirmDelete = async () => {
-        if (householdToDelete) {
-            await onDelete(householdToDelete.id);
+        if (recordToDelete) {
+            await onDelete(recordToDelete.id);
             setDeleteDialogOpen(false);
-            setHouseholdToDelete(null);
+            setRecordToDelete(null);
         }
     };
 
     const handleCloseDialog = () => {
         setDeleteDialogOpen(false);
-        setHouseholdToDelete(null);
+        setRecordToDelete(null);
     };
 
-    // Check if user can delete (only super_admin)
-    const canDelete =
+    // Check if user can perform actions (adjust based on your role requirements)
+    const canManage =
         userRole === "super_admin" || userRole === "city_admin" || userRole === "center_admin";
 
     if (data.length === 0 && !loading) {
         return (
             <div className="p-8 text-center">
-                <div className="text-muted-foreground">No households found.</div>
+                <div className="text-muted-foreground">No attendance records found.</div>
             </div>
         );
     }
+
+    const getStatusBadge = (status: string) => {
+        const baseClasses = "px-2 py-1 rounded-full text-xs font-medium";
+        switch (status) {
+            case "checked_in":
+                return `${baseClasses} bg-green-100 text-green-800`;
+            case "checked_out":
+                return `${baseClasses} bg-blue-100 text-blue-800`;
+            case "transferred":
+                return `${baseClasses} bg-orange-100 text-orange-800`;
+            default:
+                return `${baseClasses} bg-gray-100 text-gray-800`;
+        }
+    };
 
     return (
         <>
@@ -131,14 +160,14 @@ export function HouseholdTable({
                                     className="h-32 text-center"
                                 >
                                     <div className="text-muted-foreground">
-                                        Loading households...
+                                        Loading attendance records...
                                     </div>
                                 </TableCell>
                             </TableRow>
                         ) : (
                             data.map((row, index) => (
                                 <TableRow
-                                    key={row.household_id}
+                                    key={row.record_id}
                                     className={cn(
                                         "hover:bg-muted/50",
                                         index % 2 === 1 && "bg-muted/30"
@@ -146,7 +175,13 @@ export function HouseholdTable({
                                 >
                                     {headers.map(header => (
                                         <TableCell key={header.key} className="py-3">
-                                            {row[header.key as keyof Household]}
+                                            {header.key === "status" ? (
+                                                <span className={getStatusBadge(row.status)}>
+                                                    {row.status.replace("_", " ").toUpperCase()}
+                                                </span>
+                                            ) : (
+                                                row[header.key as keyof AttendanceRecord]
+                                            )}
                                         </TableCell>
                                     ))}
                                     <TableCell className="text-right">
@@ -161,14 +196,25 @@ export function HouseholdTable({
                                                 </Button>
                                             </DropdownMenuTrigger>
                                             <DropdownMenuContent align="end">
-                                                <DropdownMenuItem
-                                                    onClick={() => onEdit(row.household_id)}
-                                                    className="flex items-center gap-2"
-                                                >
-                                                    <Edit className="h-4 w-4" />
-                                                    Edit
-                                                </DropdownMenuItem>
-                                                {canDelete && ( // Only show delete button for super_admin
+                                                {row.status === "checked_in" && (
+                                                    <DropdownMenuItem
+                                                        onClick={() => onCheckOut(row.record_id)}
+                                                        className="flex items-center gap-2"
+                                                    >
+                                                        <LogOut className="h-4 w-4" />
+                                                        Check Out
+                                                    </DropdownMenuItem>
+                                                )}
+                                                {row.status === "checked_in" && (
+                                                    <DropdownMenuItem
+                                                        onClick={() => onTransfer(row.record_id)}
+                                                        className="flex items-center gap-2"
+                                                    >
+                                                        <Move className="h-4 w-4" />
+                                                        Transfer
+                                                    </DropdownMenuItem>
+                                                )}
+                                                {canManage && (
                                                     <DropdownMenuItem
                                                         onClick={() => handleDeleteClick(row)}
                                                         className="flex items-center gap-2 text-destructive focus:text-destructive"
@@ -188,15 +234,15 @@ export function HouseholdTable({
             </div>
 
             {/* Delete Confirmation Dialog */}
-            <DeleteHouseholdDialog
+            <DeleteAttendanceDialog
                 isOpen={deleteDialogOpen}
                 onClose={handleCloseDialog}
                 onConfirm={handleConfirmDelete}
-                householdName={householdToDelete?.name || ""}
+                individualName={recordToDelete?.individual || ""}
                 loading={loading}
             />
         </>
     );
 }
 
-export default HouseholdTable;
+export default AttendanceTable;

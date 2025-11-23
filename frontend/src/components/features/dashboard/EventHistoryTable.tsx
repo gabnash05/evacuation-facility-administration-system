@@ -47,7 +47,7 @@ export function EventHistoryTable({
     onAddEvent,
     onEdit,
     onDelete,
-    userRole
+    userRole,
 }: EventHistoryTableProps) {
     return (
         <div className="p-0">

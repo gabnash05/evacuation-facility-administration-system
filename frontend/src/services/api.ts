@@ -8,7 +8,7 @@ export const api = axios.create({
     baseURL: API_BASE_URL,
     headers: {
         "Content-Type": "application/json",
-        "Accept": "application/json",
+        Accept: "application/json",
     },
     timeout: 10000,
     withCredentials: true,
@@ -16,17 +16,17 @@ export const api = axios.create({
 
 // Add request interceptor to ensure Authorization header is set for all requests
 api.interceptors.request.use(
-    (config) => {
+    config => {
         // Try to get token from cookie
-        const cookies = document.cookie.split(';');
-        const tokenCookie = cookies.find(cookie => cookie.trim().startsWith('access_token='));
+        const cookies = document.cookie.split(";");
+        const tokenCookie = cookies.find(cookie => cookie.trim().startsWith("access_token="));
         if (tokenCookie) {
-            const token = tokenCookie.split('=')[1];
+            const token = tokenCookie.split("=")[1];
             config.headers.Authorization = `Bearer ${token}`;
         }
         return config;
     },
-    (error) => {
+    error => {
         return Promise.reject(error);
     }
 );
