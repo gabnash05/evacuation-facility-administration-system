@@ -15,6 +15,7 @@ import { useAuthStore } from "@/store/authStore";
 import { AddEditUserModal } from "@/components/features/user-management/AddEditUserModal";
 import { DeleteConfirmationModal } from "@/components/features/user-management/DeleteConfirmationModal";
 import type { User } from "@/types/user";
+import { DeactivateConfirmationModal } from "@/components/features/user-management/DeactivateConfirmationModal";
 
 export function CityAdminUserManagementPage() {
     const {
@@ -31,6 +32,9 @@ export function CityAdminUserManagementPage() {
         setEntriesPerPage,
         setSortConfig,
         fetchUsers,
+        deleteUser,
+        deactivateUser,
+        reactivateUser,
     } = useUserStore();
 
     const { user } = useAuthStore();
@@ -38,7 +42,9 @@ export function CityAdminUserManagementPage() {
 
     const [isAddEditModalOpen, setIsAddEditModalOpen] = useState(false);
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+    const [isDeactivateModalOpen, setIsDeactivateModalOpen] = useState(false);
     const [selectedUser, setSelectedUser] = useState<User | null>(null);
+    
 
     const [roleFilter, setRoleFilter] = useState<string>("all");
     const [statusFilter, setStatusFilter] = useState<string>("all");
@@ -103,14 +109,43 @@ export function CityAdminUserManagementPage() {
     };
 
     const handleConfirmDelete = () => {
-        if (selectedUser) {
-            console.log("--- (Placeholder) DELETING USER ---");
-            console.log("User to delete:", selectedUser);
-            alert(`(Placeholder) Pretending to delete user: ${selectedUser.email}`);
-            
-            setIsDeleteModalOpen(false);
-            setSelectedUser(null);
-        }
+        if (!selectedUser) return;
+        (async () => {
+            try {
+                await deleteUser(selectedUser.user_id);
+                setIsDeleteModalOpen(false);
+                setSelectedUser(null);
+            } catch (err) {
+                // store.error will be set by the action; keep modal open for retry
+                setIsDeleteModalOpen(false);
+                setSelectedUser(null);
+                alert(err instanceof Error ? err.message : "Failed to delete user");
+            }
+        })();
+    };
+
+    const handleDeactivate = (userToToggle: User) => {
+        setSelectedUser(userToToggle);
+        setIsDeactivateModalOpen(true);
+    };
+
+    const handleConfirmDeactivate = () => {
+        if (!selectedUser) return;
+        (async () => {
+            try {
+                if (selectedUser.is_active) {
+                    await deactivateUser(selectedUser.user_id);
+                } else {
+                    await reactivateUser(selectedUser.user_id);
+                }
+                setIsDeactivateModalOpen(false);
+                setSelectedUser(null);
+            } catch (err) {
+                setIsDeactivateModalOpen(false);
+                setSelectedUser(null);
+                alert(err instanceof Error ? err.message : "Failed to change user status");
+            }
+        })();
     };
 
     const handleEntriesPerPageChange = (entries: number) => {
@@ -182,6 +217,13 @@ export function CityAdminUserManagementPage() {
                 title="Delete User"
                 description={`Are you sure you want to permanently delete the user "${selectedUser?.email}"? This action cannot be undone.`}
             />
+            <DeactivateConfirmationModal
+                isOpen={isDeactivateModalOpen}
+                onClose={() => setIsDeactivateModalOpen(false)}
+                onConfirm={handleConfirmDeactivate}
+                title={selectedUser?.is_active ? "Deactivate User" : "Reactivate User"}
+                description={selectedUser?.is_active ? `Are you sure you want to deactivate ${selectedUser?.email}?` : `Are you sure you want to reactivate ${selectedUser?.email}?`}
+            />
 
             <div className="space-y-6">
                 <div>
@@ -230,6 +272,7 @@ export function CityAdminUserManagementPage() {
                                 onSort={handleSort}
                                 onEdit={handleEditUser}
                                 onDelete={handleDeleteUser}
+                                onDeactivate={handleDeactivate}
                                 loading={loading}
                                 userRole={userRole}
                             />

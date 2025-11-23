@@ -18,7 +18,6 @@ import {
 import { cn } from "@/lib/utils";
 import { Edit, Trash2, Users, Building } from "lucide-react";
 import type { User } from "@/types/user";
-import { useUserStore } from "@/store/userStore";
 
 interface UserTableProps {
     data: User[];
@@ -29,13 +28,12 @@ interface UserTableProps {
     onSort: (key: string) => void;
     onEdit: (user: User) => void;
     onDelete: (user: User) => void;
+    onDeactivate?: (user: User) => void;
     loading?: boolean;
     userRole: string | undefined;
 }
 
-export function UserTable({ data, sortConfig, onSort, onEdit, onDelete, loading, userRole }: UserTableProps) {
-    const { deactivateUser } = useUserStore();
-
+export function UserTable({ data, sortConfig, onSort, onEdit, onDelete, onDeactivate, loading, userRole }: UserTableProps) {
     const getSortIcon = (key: string) => {
         if (!sortConfig || sortConfig.key !== key) {
             return <ChevronsUpDown className="h-4 w-4 text-muted-foreground" />;
@@ -111,15 +109,8 @@ export function UserTable({ data, sortConfig, onSort, onEdit, onDelete, loading,
         }
     };
 
-    const handleDeactivate = async (id: number, isActive: boolean) => {
-        const action = isActive ? "deactivate" : "activate";
-        if (confirm(`Are you sure you want to ${action} this user?`)) {
-            try {
-                console.log(`(Placeholder) ${action} user with ID:`, id);
-            } catch (error) {
-                console.error(`Failed to ${action} user:`, error);
-            }
-        }
+    const handleDeactivate = (user: User) => {
+        if (onDeactivate) onDeactivate(user);
     };
 
     return (
@@ -241,7 +232,7 @@ export function UserTable({ data, sortConfig, onSort, onEdit, onDelete, loading,
                                                 <Edit className="h-4 w-4 mr-2" />
                                                 Edit
                                             </DropdownMenuItem>
-                                            <DropdownMenuItem onClick={() => handleDeactivate(user.user_id, user.is_active)}>
+                                            <DropdownMenuItem onClick={() => handleDeactivate(user)}>
                                                 <Users className="h-4 w-4 mr-2" />
                                                 {user.is_active ? "Deactivate" : "Activate"}
                                             </DropdownMenuItem>

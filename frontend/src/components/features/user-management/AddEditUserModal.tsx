@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useEvacuationCenterStore } from "@/store/evacuationCenterStore";
 import type { User, UserRole } from "@/types/user";
+import { useUserStore } from "@/store/userStore";
 
 const baseSchema = z.object({
     email: z.string().email({ message: "Please enter a valid email address." }),
@@ -36,9 +37,10 @@ interface AddEditUserModalProps {
     onClose: () => void;
     userToEdit?: User | null; 
     currentUserRole?: UserRole;
+    onSuccess?: (message: string) => void;
 }
 
-export function AddEditUserModal({ isOpen, onClose, userToEdit, currentUserRole }: AddEditUserModalProps) {
+export function AddEditUserModal({ isOpen, onClose, userToEdit, currentUserRole, onSuccess }: AddEditUserModalProps) {
     const { centers, fetchAllCenters } = useEvacuationCenterStore();
     const isEditMode = !!userToEdit;
 
@@ -89,19 +91,41 @@ export function AddEditUserModal({ isOpen, onClose, userToEdit, currentUserRole 
         }
     }, [isOpen, isEditMode, userToEdit, reset, availableRoles]);
 
-    const onSubmit = (data: UserFormData) => {
-        // --- THIS IS A PLACEHOLDER ---
-        if (isEditMode) {
-            console.log("--- EDITING USER ---");
-            console.log("User ID:", userToEdit?.user_id);
-            console.log("Submitted Data:", data);
-            alert(`(Placeholder) Pretending to update user: ${data.email}`);
+    const { createUser, updateUser } = useUserStore();
+    const [submitError, setSubmitError] = useState<string | null>(null);
+
+    const onSubmit = async (data: UserFormData) => {
+        setSubmitError(null);
+        // build payload with center_id normalized (string -> number | undefined)
+        const payload: any = {
+            email: data.email,
+            role: data.role,
+        };
+
+        if (data.center_id && data.center_id !== "") {
+            const n = Number(data.center_id);
+            payload.center_id = Number.isFinite(n) ? n : data.center_id;
         } else {
-            console.log("--- ADDING NEW USER ---");
-            console.log("Submitted Data:", data);
-            alert(`(Placeholder) Pretending to create user: ${data.email}`);
+            payload.center_id = undefined;
         }
-        onClose(); 
+
+        if (data.password && data.password !== "") {
+            payload.password = data.password;
+        }
+
+        try {
+            if (isEditMode && userToEdit) {
+                await updateUser(userToEdit.user_id, payload);
+                if (onSuccess) onSuccess("User updated successfully");
+            } else {
+                await createUser(payload);
+                if (onSuccess) onSuccess("User created successfully");
+            }
+            onClose();
+        } catch (err) {
+            const msg = err instanceof Error ? err.message : "Failed to save user";
+            setSubmitError(msg);
+        }
     };
 
     const isCenterRequired = useMemo(() => ["center_admin", "volunteer"].includes(selectedRole), [selectedRole]);
@@ -116,6 +140,11 @@ export function AddEditUserModal({ isOpen, onClose, userToEdit, currentUserRole 
                     </DialogDescription>
                 </DialogHeader>
                 <form onSubmit={handleSubmit(onSubmit)} className="grid gap-4 py-4">
+                    {submitError && (
+                        <div className="bg-destructive/10 text-destructive p-2 rounded">
+                            <span className="text-sm">{submitError}</span>
+                        </div>
+                    )}
                     <div className="grid grid-cols-4 items-center gap-4">
                         <Label htmlFor="email" className="text-right">Email</Label>
                         <div className="col-span-3">

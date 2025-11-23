@@ -12,7 +12,8 @@ from app.services.user_service import (
     get_user_by_id,
     get_users,
     update_user,
-    deactivate_user,
+    deactivate_user_service,
+    reactivate_user_service,
 )
 
 # Configure logger for this module
@@ -291,7 +292,7 @@ def deactivate_existing_user(user_id: int) -> Tuple:
     try:
         logger.info("Deactivating user with ID: %s", user_id)
 
-        result = deactivate_user(user_id)
+        result = deactivate_user_service(user_id)
 
         if not result["success"]:
             return jsonify(result), 400
@@ -305,6 +306,41 @@ def deactivate_existing_user(user_id: int) -> Tuple:
                 {
                     "success": False,
                     "message": "Internal server error while deactivating user",
+                }
+            ),
+            500,
+        )
+
+
+@user_bp.route("/users/<int:user_id>/reactivate", methods=["PATCH"])
+@jwt_required()
+def reactivate_existing_user(user_id: int) -> Tuple:
+    """
+    Reactivate a user.
+
+    Args:
+        user_id: User ID
+
+    Returns:
+        Tuple containing JSON response and HTTP status code
+    """
+    try:
+        logger.info("Reactivating user with ID: %s", user_id)
+
+        result = reactivate_user_service(user_id)
+
+        if not result["success"]:
+            return jsonify(result), 400
+
+        return jsonify(result), 200
+
+    except Exception as error:
+        logger.error("Error reactivating user %s: %s", user_id, str(error))
+        return (
+            jsonify(
+                {
+                    "success": False,
+                    "message": "Internal server error while reactivating user",
                 }
             ),
             500,
