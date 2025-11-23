@@ -38,6 +38,7 @@ interface UserState {
     updateUser: (id: number, updates: UpdateUserFormData) => Promise<void>;
     deleteUser: (id: number) => Promise<void>;
     deactivateUser: (id: number) => Promise<void>;
+    reactivateUser: (id: number) => Promise<void>;
     resetState: () => void;
 }
 
@@ -149,42 +150,89 @@ export const useUserStore = create<UserState>((set, get) => ({
         try {
             const response = await UserService.createUser(userData);
             if (!response.success) {
-                throw new Error(response.message || "Failed to create user.");
+                const message = response.message || "Failed to create user.";
+                set({ error: message, loading: false });
+                throw new Error(message);
             }
             // Refresh the user list to show the new user
-            get().fetchUsers();
+            await get().fetchUsers();
+            set({ loading: false });
         } catch (error) {
             const errorMessage = error instanceof Error ? error.message : "An unknown error occurred";
             set({ error: errorMessage, loading: false });
-            // Re-throw the error so the form can catch it if needed
             throw error;
         }
     },
 
     updateUser: async (id: number, updates: UpdateUserFormData) => {
+        set({ loading: true, error: null });
         try {
-            await UserService.updateUser(id, updates);
+            const response = await UserService.updateUser(id, updates);
+            if (!response.success) {
+                const message = response.message || "Failed to update user.";
+                set({ error: message, loading: false });
+                throw new Error(message);
+            }
             await get().fetchUsers(); // Refresh the list
+            set({ loading: false });
         } catch (error) {
-            throw new Error(error instanceof Error ? error.message : "Failed to update user");
+            const errorMessage = error instanceof Error ? error.message : "Failed to update user";
+            set({ error: errorMessage, loading: false });
+            throw error;
         }
     },
 
     deleteUser: async (id: number) => {
+        set({ loading: true, error: null });
         try {
-            await UserService.deleteUser(id);
+            const response = await UserService.deleteUser(id);
+            if (!response.success) {
+                const message = response.message || "Failed to delete user.";
+                set({ error: message, loading: false });
+                throw new Error(message);
+            }
             await get().fetchUsers(); // Refresh the list
+            set({ loading: false });
         } catch (error) {
-            throw new Error(error instanceof Error ? error.message : "Failed to delete user");
+            const errorMessage = error instanceof Error ? error.message : "Failed to delete user";
+            set({ error: errorMessage, loading: false });
+            throw error;
         }
     },
 
     deactivateUser: async (id: number) => {
+        set({ loading: true, error: null });
         try {
-            await UserService.deleteUser(id);
-            await get().fetchUsers(); // Refresh the list
+            const response = await UserService.deactivateUser(id);
+            if (!response.success) {
+                const message = response.message || "Failed to deactivate user.";
+                set({ error: message, loading: false });
+                throw new Error(message);
+            }
+            await get().fetchUsers();
+            set({ loading: false });
         } catch (error) {
-            throw new Error(error instanceof Error ? error.message : "Failed to deactivate user");
+            const errorMessage = error instanceof Error ? error.message : "Failed to deactivate user";
+            set({ error: errorMessage, loading: false });
+            throw error;
+        }
+    },
+
+    reactivateUser: async (id: number) => {
+        set({ loading: true, error: null });
+        try {
+            const response = await UserService.reactivateUser(id);
+            if (!response.success) {
+                const message = response.message || "Failed to reactivate user.";
+                set({ error: message, loading: false });
+                throw new Error(message);
+            }
+            await get().fetchUsers();
+            set({ loading: false });
+        } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : "Failed to reactivate user";
+            set({ error: errorMessage, loading: false });
+            throw error;
         }
     },
 
