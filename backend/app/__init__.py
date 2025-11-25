@@ -36,13 +36,14 @@ def create_app(config_class=Config):
     jwt.init_app(app)
     
     # Configure CORS for all environments
-    CORS(app, 
+    CORS(
+        app,
         origins=app.config.get("CORS_ORIGINS", ["http://localhost:5173", "http://localhost:5000", "http://127.0.0.1:5000"]),
-        methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+        methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
         allow_headers=["Content-Type", "Authorization"],
         supports_credentials=True,
-        expose_headers=["Set-Cookie"]
-        )
+        expose_headers=["Set-Cookie"],
+    )
 
     # Register API blueprints FIRST (before catch-all route)
     from app.routes.auth import auth_bp

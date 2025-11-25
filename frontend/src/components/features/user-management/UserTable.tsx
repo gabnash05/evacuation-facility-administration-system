@@ -18,7 +18,6 @@ import {
 import { cn } from "@/lib/utils";
 import { Edit, Trash2, Users, Building } from "lucide-react";
 import type { User } from "@/types/user";
-import { useUserStore } from "@/store/userStore";
 
 interface UserTableProps {
     data: User[];
@@ -27,13 +26,14 @@ interface UserTableProps {
         direction: "asc" | "desc" | null;
     } | null;
     onSort: (key: string) => void;
+    onEdit: (user: User) => void;
+    onDelete: (user: User) => void;
+    onDeactivate?: (user: User) => void;
     loading?: boolean;
     userRole: string | undefined;
 }
 
-export function UserTable({ data, sortConfig, onSort, loading, userRole }: UserTableProps) {
-    const { deleteUser, deactivateUser } = useUserStore();
-
+export function UserTable({ data, sortConfig, onSort, onEdit, onDelete, onDeactivate, loading, userRole }: UserTableProps) {
     const getSortIcon = (key: string) => {
         if (!sortConfig || sortConfig.key !== key) {
             return <ChevronsUpDown className="h-4 w-4 text-muted-foreground" />;
@@ -50,7 +50,6 @@ export function UserTable({ data, sortConfig, onSort, loading, userRole }: UserT
         }
     };
 
-    // Check if user can delete (only super_admin)
     const canDelete = userRole === "super_admin";
 
     const columnWidths = {
@@ -95,14 +94,6 @@ export function UserTable({ data, sortConfig, onSort, loading, userRole }: UserT
             : "bg-gray-100 text-gray-700 border-gray-100 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-800";
     };
 
-    const formatDate = (dateString: string) => {
-        return new Date(dateString).toLocaleDateString("en-US", {
-            year: "numeric",
-            month: "short",
-            day: "numeric",
-        });
-    };
-
     const getRoleIcon = (role: string) => {
         switch (role.toLowerCase()) {
             case "super_admin":
@@ -118,25 +109,8 @@ export function UserTable({ data, sortConfig, onSort, loading, userRole }: UserT
         }
     };
 
-    const handleDelete = async (id: number) => {
-        if (confirm("Are you sure you want to delete this user? This action cannot be undone.")) {
-            try {
-                await deleteUser(id);
-            } catch (error) {
-                console.error("Failed to delete user:", error);
-            }
-        }
-    };
-
-    const handleDeactivate = async (id: number, isActive: boolean) => {
-        const action = isActive ? "deactivate" : "activate";
-        if (confirm(`Are you sure you want to ${action} this user?`)) {
-            try {
-                await deactivateUser(id);
-            } catch (error) {
-                console.error(`Failed to ${action} user:`, error);
-            }
-        }
+    const handleDeactivate = (user: User) => {
+        if (onDeactivate) onDeactivate(user);
     };
 
     return (
@@ -254,25 +228,17 @@ export function UserTable({ data, sortConfig, onSort, loading, userRole }: UserT
                                             </Button>
                                         </DropdownMenuTrigger>
                                         <DropdownMenuContent align="end">
-                                            <DropdownMenuItem
-                                                onClick={() => console.log(`Edit ${user.user_id}`)}
-                                            >
+                                            <DropdownMenuItem onClick={() => onEdit(user)}>
                                                 <Edit className="h-4 w-4 mr-2" />
                                                 Edit
                                             </DropdownMenuItem>
-                                            {/*
-                                            <DropdownMenuItem
-                                                onClick={() =>
-                                                    handleDeactivate(user.user_id, user.is_active)
-                                                }
-                                            >
+                                            <DropdownMenuItem onClick={() => handleDeactivate(user)}>
                                                 <Users className="h-4 w-4 mr-2" />
                                                 {user.is_active ? "Deactivate" : "Activate"}
                                             </DropdownMenuItem>
-                                            */}
-                                            {canDelete && ( // Only show delete button for super_admin
+                                            {canDelete && (
                                                 <DropdownMenuItem
-                                                    onClick={() => handleDelete(user.user_id)}
+                                                    onClick={() => onDelete(user)}
                                                     className="text-destructive focus:text-destructive"
                                                 >
                                                     <Trash2 className="h-4 w-4 mr-2" />

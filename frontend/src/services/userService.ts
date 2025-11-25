@@ -84,4 +84,13 @@ export class UserService {
             throw new Error(handleApiError(error));
         }
     }
+
+    static async reactivateUser(id: number): Promise<UsersResponse> {
+        try {
+            const response = await api.patch<UsersResponse>(`/users/${id}/reactivate`, {}, { withCredentials: true });
+            return response.data;
+        } catch (error) {
+            throw new Error(handleApiError(error));
+        }
+    }
 }
