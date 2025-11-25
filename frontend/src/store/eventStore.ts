@@ -72,21 +72,13 @@ export const useEventStore = create<EventState>((set, get) => ({
 
     fetchEvents: async (overrideCenterId?: number) => {
         const { searchQuery, currentPage, entriesPerPage, sortConfig, centerId } = get();
-        
+
         // Use overrideCenterId if provided, otherwise use stored centerId
         const filterCenterId = overrideCenterId !== undefined ? overrideCenterId : centerId;
 
         set({ loading: true, error: null });
 
         try {
-            console.log("Fetching events with sorting:", {
-                sortBy: sortConfig?.key,
-                sortOrder: sortConfig?.direction,
-                page: currentPage,
-                limit: entriesPerPage,
-                search: searchQuery,
-            });
-            
             const response = await EventService.getEvents({
                 search: searchQuery,
                 page: currentPage,

@@ -80,7 +80,7 @@ export const useUserStore = create<UserState>((set, get) => ({
 
     fetchUsers: async (centerId?: number | null) => {
         const { searchQuery, currentPage, entriesPerPage, sortConfig, centerFilter } = get();
-        
+
         // Use provided centerId or fall back to store's centerFilter
         const targetCenterId = centerId !== undefined ? centerId : centerFilter;
 
@@ -132,7 +132,7 @@ export const useUserStore = create<UserState>((set, get) => ({
         set({ loading: true, error: null });
         try {
             const response = await UserService.getCurrentUser();
-            console.log(response);  
+            console.log(response);
             set({
                 currentUser: response.data,
                 loading: false,
