@@ -404,7 +404,7 @@ def update_user(user_id: int, update_data: Dict[str, Any]) -> Dict[str, Any]:
                 return {"success": False, "message": "Email already registered"}
 
         # Update user
-        updated_user = User.update(user_id, valid_data)
+        updated_user = User.update_user(user_id, valid_data)
 
         if not updated_user:
             return {"success": False, "message": "Failed to update user"}
@@ -470,7 +470,7 @@ def deactivate_user_service(user_id: int) -> Dict[str, Any]:
             return {"success": False, "message": "User not found"}
 
         # Deactivate user
-        updated_user = User.update(user_id, {"is_active": False})
+        updated_user = User.update_user(user_id, {"is_active": False})
 
         if not updated_user:
             return {"success": False, "message": "Failed to deactivate user"}
@@ -486,3 +486,38 @@ def deactivate_user_service(user_id: int) -> Dict[str, Any]:
     except Exception as error:
         logger.error("Error deactivating user %s: %s", user_id, str(error))
         return {"success": False, "message": "Failed to deactivate user"}
+
+
+def reactivate_user_service(user_id: int) -> Dict[str, Any]:
+    """
+    Reactivate a user (for user management routes).
+
+    Args:
+        user_id: User ID
+
+    Returns:
+        Dictionary with reactivation result
+    """
+    try:
+        # Check if user exists
+        existing_user = User.get_by_id(user_id)
+        if not existing_user:
+            return {"success": False, "message": "User not found"}
+
+        # Reactivate user
+        updated_user = User.update_user(user_id, {"is_active": True})
+
+        if not updated_user:
+            return {"success": False, "message": "Failed to reactivate user"}
+
+        logger.info("User reactivated: %s", user_id)
+
+        return {
+            "success": True,
+            "message": "User reactivated successfully",
+            "data": updated_user.to_schema(),
+        }
+
+    except Exception as error:
+        logger.error("Error reactivating user %s: %s", user_id, str(error))
+        return {"success": False, "message": "Failed to reactivate user"}
