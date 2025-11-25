@@ -117,7 +117,14 @@ export function EditHouseholdModal({
             };
             fetchData();
         }
-    }, [isOpen, householdId, getHouseholdDetails, getHouseholdIndividuals, fetchAllCenters, isCenterAdminView]);
+    }, [
+        isOpen,
+        householdId,
+        getHouseholdDetails,
+        getHouseholdIndividuals,
+        fetchAllCenters,
+        isCenterAdminView,
+    ]);
 
     const resetForm = () => {
         setHouseholdName("");
@@ -138,7 +145,9 @@ export function EditHouseholdModal({
 
     const handleAddIndividual = (newIndividual: Omit<CreateIndividualData, "household_id">) => {
         if (newIndividual.relationship_to_head.toLowerCase().trim() === "head") {
-            alert("Error: The primary household head is defined above. Use that section for the head.");
+            alert(
+                "Error: The primary household head is defined above. Use that section for the head."
+            );
             return;
         }
         setIndividuals(prev => [...prev, newIndividual]);
@@ -382,12 +391,42 @@ export function EditHouseholdModal({
                                                     <TableBody>
                                                         {individuals.map((ind, index) => (
                                                             <TableRow key={index}>
-                                                                <TableCell>{ind.first_name}</TableCell>
-                                                                <TableCell>{ind.last_name}</TableCell>
-                                                                <TableCell>{ind.date_of_birth ? format(new Date(ind.date_of_birth), "PPP") : "N/A"}</TableCell>
-                                                                <TableCell>{ind.gender || "N/A"}</TableCell>
-                                                                <TableCell>{ind.relationship_to_head}</TableCell>
-                                                                <TableCell><Button variant="ghost" size="icon" onClick={() => handleRemoveIndividual(index)} className="h-8 w-8 text-destructive"><Trash2 className="h-4 w-4" /></Button></TableCell>
+                                                                <TableCell>
+                                                                    {ind.first_name}
+                                                                </TableCell>
+                                                                <TableCell>
+                                                                    {ind.last_name}
+                                                                </TableCell>
+                                                                <TableCell>
+                                                                    {ind.date_of_birth
+                                                                        ? format(
+                                                                              new Date(
+                                                                                  ind.date_of_birth
+                                                                              ),
+                                                                              "PPP"
+                                                                          )
+                                                                        : "N/A"}
+                                                                </TableCell>
+                                                                <TableCell>
+                                                                    {ind.gender || "N/A"}
+                                                                </TableCell>
+                                                                <TableCell>
+                                                                    {ind.relationship_to_head}
+                                                                </TableCell>
+                                                                <TableCell>
+                                                                    <Button
+                                                                        variant="ghost"
+                                                                        size="icon"
+                                                                        onClick={() =>
+                                                                            handleRemoveIndividual(
+                                                                                index
+                                                                            )
+                                                                        }
+                                                                        className="h-8 w-8 text-destructive"
+                                                                    >
+                                                                        <Trash2 className="h-4 w-4" />
+                                                                    </Button>
+                                                                </TableCell>
                                                             </TableRow>
                                                         ))}
                                                     </TableBody>
