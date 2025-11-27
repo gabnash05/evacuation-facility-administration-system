@@ -137,9 +137,9 @@ export function AppSidebar({ role, roleLabel, userEmail }: AppSidebarProps) {
                         icon: <LayoutDashboard className="w-4 h-4" />,
                     },
                     {
-                        key: "check-in",
-                        label: "Check-in",
-                        href: "/volunteer/check-in",
+                        key: "attendance",
+                        label: "Attendance",
+                        href: "/volunteer/attendance",
                         icon: <NotebookPen className="w-4 h-4" />,
                     },
                     {

@@ -12,6 +12,7 @@ import { CenterAdminAttendancePage } from "./pages/center-admin/CenterAdminAtten
 
 import { VolunteerDashboard } from "@/pages/volunteer/VolunteerDashboard";
 import { VolunteerHouseholdsPage } from "./pages/volunteer/VolunteerHouseholdsPage";
+import { VolunteerAttendancePage } from "./pages/volunteer/VolunteerAttendancePage";
 
 import MainLayout from "@/layouts/MainLayout";
 import LoginPage from "@/pages/auth/LoginPage";
@@ -124,12 +125,14 @@ function App() {
                         <ProtectedRoute requiredRole={["volunteer"]}>
                             <MainLayout>
                                 <Routes>
-                                    <Route path="dashboard" element={<VolunteerDashboard />} />
+                                    <Route 
+                                        path="dashboard" 
+                                        element={<VolunteerDashboard />} 
+                                    />
                                     <Route
-                                        path="check-in"
-                                        element={<div>Check-In Page</div>}
-                                    />{" "}
-                                    {/* replace with actual page when available */}
+                                        path="attendance"
+                                        element={<VolunteerAttendancePage />}
+                                    />
                                     <Route
                                         path="transfer-individual"
                                         element={<div>Transfer Individual Page</div>}
