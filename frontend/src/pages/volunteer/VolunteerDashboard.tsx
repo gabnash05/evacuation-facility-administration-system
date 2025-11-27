@@ -83,8 +83,8 @@ export function VolunteerDashboard() {
     };
 
     // Handle button clicks
-    const handleCheckInClick = () => {
-        navigate("/volunteer/check-in");
+    const handleAttendanceClick = () => {
+        navigate("/volunteer/attendance");
     };
 
     const handleTransferClick = () => {
@@ -125,10 +125,10 @@ export function VolunteerDashboard() {
                 <div className="flex justify-center gap-6 mb-12">
                     {[
                         {
-                            label: "Check-in Evacuee",
+                            label: "Attendance",
                             color: "bg-blue-500",
                             icon: UserRoundCheck,
-                            onClick: handleCheckInClick,
+                            onClick: handleAttendanceClick,
                         },
                         {
                             label: "Transfer Individual",

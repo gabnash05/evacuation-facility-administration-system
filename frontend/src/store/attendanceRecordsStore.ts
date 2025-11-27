@@ -200,8 +200,6 @@ export const useAttendanceStore = create<AttendanceState>((set, get) => ({
                     limit: entriesPerPage,
                     center_id: centerId || undefined,
                 });
-            
-            console.log(response)
 
             set({
                 currentAttendees: response.data.results,
