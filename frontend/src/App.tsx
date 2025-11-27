@@ -8,6 +8,7 @@ import { CityAdminAttendancePage } from "./pages/city-admin/CityAdminAttendanceP
 
 import { CenterAdminDashboard } from "@/pages/center-admin/CenterAdminDashboard";
 import { CenterAdminHouseholdsPage } from "./pages/center-admin/CenterAdminHouseholds";
+import { CenterAdminAttendancePage } from "./pages/center-admin/CenterAdminAttendancePage";
 
 import { VolunteerDashboard } from "@/pages/volunteer/VolunteerDashboard";
 import { VolunteerHouseholdsPage } from "./pages/volunteer/VolunteerHouseholdsPage";
@@ -85,13 +86,16 @@ function App() {
                         >
                             <MainLayout>
                                 <Routes>
-                                    <Route path="dashboard" element={<CenterAdminDashboard />} />
+                                    <Route 
+                                        path="dashboard" 
+                                        element={<CenterAdminDashboard />} />
                                     <Route
                                         path="households"
                                         element={<CenterAdminHouseholdsPage />}
                                     />
-                                    <Route path="attendance" element={<div>Attendance Page</div>} />{" "}
-                                    {/* replace with actual page when available */}
+                                    <Route 
+                                        path="attendance" 
+                                        element={<CenterAdminAttendancePage/>} />
                                     <Route
                                         path="user-management"
                                         element={<CenterAdminUserManagementPage />}

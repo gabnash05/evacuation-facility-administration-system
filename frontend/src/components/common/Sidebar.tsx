@@ -65,6 +65,12 @@ export function AppSidebar({ role, roleLabel, userEmail }: AppSidebarProps) {
                         icon: <House className="w-4 h-4" />,
                     },
                     {
+                        key: "attendance",
+                        label: "Attendance",
+                        href: "/city-admin/attendance",
+                        icon: <ClipboardCheck className="w-4 h-4" />,
+                    },
+                    {
                         key: "user-management",
                         label: "User Management",
                         href: "/city-admin/user-management",
@@ -81,12 +87,6 @@ export function AppSidebar({ role, roleLabel, userEmail }: AppSidebarProps) {
                         label: "Reports and Analytics",
                         href: "/city-admin/reports-and-analytics",
                         icon: <BarChart3 className="w-4 h-4" />,
-                    },
-                    {
-                        key: "attendance",
-                        label: "Attendance",
-                        href: "/city-admin/attendance",
-                        icon: <ClipboardCheck className="w-4 h-4" />,
                     },
                 ];
             case "center_admin":

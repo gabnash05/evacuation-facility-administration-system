@@ -474,29 +474,59 @@ def transfer_individual(
         return {"success": False, "message": "Failed to transfer individual"}
 
 
-def get_current_evacuees_by_center(center_id: int) -> Dict[str, Any]:
+def get_current_evacuees_by_center(
+    center_id: int,
+    search: Optional[str] = None,
+    page: int = 1,
+    limit: int = 10,
+    sort_by: Optional[str] = None,
+    sort_order: Optional[str] = "desc"
+) -> Dict[str, Any]:
     """
     Get all currently checked-in individuals at a center.
 
     Args:
         center_id: Center ID
+        search: Search term for filtering
+        page: Page number for pagination
+        limit: Number of records per page
+        sort_by: Field to sort by
+        sort_order: Sort order (asc/desc)
 
     Returns:
         Dictionary with current evacuees
     """
     try:
-        records = AttendanceRecord.get_current_evacuees_by_center(center_id)
-        records_data = [record.to_dict() for record in records]
+        result = AttendanceRecord.get_current_evacuees_by_center(
+            center_id=center_id,
+            search=search,
+            page=page,
+            limit=limit,
+            sort_by=sort_by,
+            sort_order=sort_order
+        )
 
         return {
             "success": True,
-            "data": records_data,
+            "data": result["records"],
+            "total_count": result["total_count"],
+            "page": result["page"],
+            "limit": result["limit"],
+            "total_pages": result["total_pages"]
         }
 
     except Exception as error:
         logger.error("Error fetching current evacuees for center %s: %s", center_id, str(error))
-        return {"success": False, "message": "Failed to fetch current evacuees"}
-
+        return {
+            "success": False, 
+            "message": "Failed to fetch current evacuees",
+            "data": [],
+            "total_count": 0,
+            "page": page,
+            "limit": limit,
+            "total_pages": 0
+        }
+    
 
 def get_attendance_summary_by_center(center_id: int, event_id: Optional[int] = None) -> Dict[str, Any]:
     """
