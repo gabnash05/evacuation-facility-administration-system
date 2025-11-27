@@ -42,7 +42,12 @@ interface AddHouseholdModalProps {
     defaultCenterId?: number;
 }
 
-export function AddHouseholdModal({ isOpen, onClose, onSuccess, defaultCenterId }: AddHouseholdModalProps) {
+export function AddHouseholdModal({
+    isOpen,
+    onClose,
+    onSuccess,
+    defaultCenterId,
+}: AddHouseholdModalProps) {
     const { createHouseholdWithIndividuals } = useHouseholdStore();
     const { centers, fetchAllCenters, loading: centersLoading } = useEvacuationCenterStore();
 
@@ -95,7 +100,9 @@ export function AddHouseholdModal({ isOpen, onClose, onSuccess, defaultCenterId 
 
     const handleAddIndividual = (newIndividual: Omit<CreateIndividualData, "household_id">) => {
         if (newIndividual.relationship_to_head.toLowerCase().trim() === "head") {
-            alert("Error: The primary household head is defined above. Additional members cannot be 'Head'.");
+            alert(
+                "Error: The primary household head is defined above. Additional members cannot be 'Head'."
+            );
             return;
         }
         setIndividuals(prev => [...prev, newIndividual]);
@@ -400,4 +407,4 @@ export function AddHouseholdModal({ isOpen, onClose, onSuccess, defaultCenterId 
             </Dialog>
         </>
     );
-}   
+}

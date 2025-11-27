@@ -23,11 +23,11 @@ interface AddCenterModalProps {
     existingCenters?: EvacuationCenter[]; // Add this prop
 }
 
-export function AddCenterModal({ 
-    isOpen, 
-    onClose, 
-    onAddCenters, 
-    existingCenters = [] // Default to empty array
+export function AddCenterModal({
+    isOpen,
+    onClose,
+    onAddCenters,
+    existingCenters = [], // Default to empty array
 }: AddCenterModalProps) {
     const [selectedCenterIds, setSelectedCenterIds] = useState<Set<number>>(new Set());
 
@@ -46,8 +46,8 @@ export function AddCenterModal({
     }, [isOpen, fetchAllCenters]);
 
     // Filter out centers that are already added to the event
-    const filteredCenters = availableCenters.filter(center => 
-        !existingCenters.some(existing => existing.center_id === center.center_id)
+    const filteredCenters = availableCenters.filter(
+        center => !existingCenters.some(existing => existing.center_id === center.center_id)
     );
 
     const handleToggleCenter = (centerId: number) => {
@@ -127,7 +127,8 @@ export function AddCenterModal({
                 {existingCenters.length > 0 && (
                     <div className="bg-muted border border-border text-muted-foreground px-4 py-3 rounded-md mt-4">
                         <p className="text-sm">
-                            {existingCenters.length} center{existingCenters.length !== 1 ? 's' : ''} already added to this event are hidden
+                            {existingCenters.length} center{existingCenters.length !== 1 ? "s" : ""}{" "}
+                            already added to this event are hidden
                         </p>
                     </div>
                 )}
@@ -140,10 +141,9 @@ export function AddCenterModal({
                     ) : filteredCenters.length === 0 ? (
                         <div className="flex items-center justify-center h-[400px] text-muted-foreground">
                             <p className="text-lg">
-                                {availableCenters.length === 0 
-                                    ? "No evacuation centers available" 
-                                    : "All available centers are already added to this event"
-                                }
+                                {availableCenters.length === 0
+                                    ? "No evacuation centers available"
+                                    : "All available centers are already added to this event"}
                             </p>
                         </div>
                     ) : (
@@ -223,11 +223,13 @@ export function AddCenterModal({
                 <div className="flex items-center justify-between mt-6">
                     <div className="text-sm text-muted-foreground">
                         <p>
-                            {selectedCenterIds.size} center{selectedCenterIds.size !== 1 ? "s" : ""} selected
+                            {selectedCenterIds.size} center{selectedCenterIds.size !== 1 ? "s" : ""}{" "}
+                            selected
                         </p>
                         {existingCenters.length > 0 && (
                             <p>
-                                {filteredCenters.length} of {availableCenters.length} centers available
+                                {filteredCenters.length} of {availableCenters.length} centers
+                                available
                             </p>
                         )}
                     </div>

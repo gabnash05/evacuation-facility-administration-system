@@ -53,7 +53,7 @@ export default function LoginPage() {
 
             // Get the user from the auth store after login
             const { user } = useAuthStore.getState();
-            
+
             if (!user) {
                 throw new Error("User data not available after login");
             }
