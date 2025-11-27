@@ -14,10 +14,12 @@ import {
     TableHeader,
     TableRow,
 } from "@/components/ui/table";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
 import type { EvacuationCenter } from "@/types/center";
 import type { Event } from "@/types/event";
 import { eventService } from "@/services/eventService";
+import { useAttendanceStore } from "@/store/attendanceRecordsStore";
 
 interface EvacuationCenterDetailsModalProps {
     isOpen: boolean;
@@ -56,36 +58,61 @@ export function EvacuationCenterDetailsModal({
     center,
 }: EvacuationCenterDetailsModalProps) {
     const [events, setEvents] = useState<Event[]>([]);
-    const [loading, setLoading] = useState(false);
+    const [eventsLoading, setEventsLoading] = useState(false);
+    const [attendanceLoading, setAttendanceLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [sortConfig, setSortConfig] = useState<{
         key: string;
         direction: "asc" | "desc" | null;
     } | null>(null);
+    const [activeTab, setActiveTab] = useState("details");
 
-    // Fetch events associated with this center using the event_centers junction table
+    // Get attendance store functions
+    const { currentAttendees, fetchCurrentAttendees, setFilters } = useAttendanceStore();
+
+    // FIX: Add back the events data fetching
     useEffect(() => {
         const fetchCenterEvents = async () => {
             if (!center || !isOpen) return;
 
-            setLoading(true);
+            setEventsLoading(true);
             setError(null);
 
             try {
-                // Use the new endpoint to directly get events for this center
-                // You'll need to add this method to your eventService
                 const response = await eventService.getEventsByCenterId(center.center_id);
                 setEvents(response.data);
             } catch (err) {
                 console.error("Error fetching center events:", err);
                 setError("Failed to load event history");
             } finally {
-                setLoading(false);
+                setEventsLoading(false);
             }
         };
 
         fetchCenterEvents();
     }, [center, isOpen]);
+
+    // Fetch current attendees when attendance tab is active
+    useEffect(() => {
+        const fetchAttendees = async () => {
+            if (!center || !isOpen || activeTab !== "attendance") return;
+
+            setAttendanceLoading(true);
+            setError(null);
+
+            try {
+                setFilters({ centerId: center.center_id });
+                await fetchCurrentAttendees({ center_id: center.center_id });
+            } catch (err) {
+                console.error("Error fetching current attendees:", err);
+                setError("Failed to load attendance data");
+            } finally {
+                setAttendanceLoading(false);
+            }
+        };
+
+        fetchAttendees();
+    }, [center, isOpen, activeTab, fetchCurrentAttendees, setFilters]);
 
     const handleSort = (key: string) => {
         if (!sortConfig || sortConfig.key !== key) {
@@ -177,324 +204,464 @@ export function EvacuationCenterDetailsModal({
 
     if (!center) return null;
 
-    return (
-        <Dialog open={isOpen} onOpenChange={onClose}>
-            <DialogContent
-                className="max-w-[85vw] min-w-[85vw] max-h-[90vh] min-h-[85vh] overflow-y-auto"
-                onOpenAutoFocus={e => {
-                    e.preventDefault(); // Prevent any auto-focus
-                }}
-            >
-                <DialogHeader>
-                    <DialogTitle className="text-xl font-semibold">
-                        Evacuation Center Details
-                    </DialogTitle>
-                </DialogHeader>
-
-                {/* Center Details Section */}
-                <div className="space-y-6">
-                    {/* Header and Basic Center Details */}
-                    <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
-                        {/* Left Side - Photo */}
-                        <div className="xl:col-span-1 space-y-3">
-                            <Label className="text-sm font-medium">
-                                Photo of Evacuation Center
-                            </Label>
-                            <div className="border border-border rounded-lg bg-muted/50 h-80 flex items-center justify-center">
-                                {center.photo_data ? (
-                                    <img
-                                        src={`data:image/jpeg;base64,${center.photo_data}`}
-                                        alt={center.center_name}
-                                        className="w-full h-full object-cover rounded-lg"
-                                    />
-                                ) : (
-                                    <div className="text-muted-foreground text-center p-4">
-                                        <div className="mb-2">
-                                            <svg
-                                                className="mx-auto h-16 w-16"
-                                                fill="none"
-                                                stroke="currentColor"
-                                                viewBox="0 0 24 24"
-                                            >
-                                                <path
-                                                    strokeLinecap="round"
-                                                    strokeLinejoin="round"
-                                                    strokeWidth={1.5}
-                                                    d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
-                                                />
-                                            </svg>
-                                        </div>
-                                        <p className="text-sm">No photo available</p>
-                                    </div>
-                                )}
+    // Center Details Content
+    const centerDetailsContent = (
+        <div className="space-y-6">
+            {/* Header and Basic Center Details */}
+            <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
+                {/* Left Side - Photo */}
+                <div className="xl:col-span-1 space-y-3">
+                    <Label className="text-sm font-medium">Photo of Evacuation Center</Label>
+                    <div className="border border-border rounded-lg bg-muted/50 h-80 flex items-center justify-center">
+                        {center.photo_data ? (
+                            <img
+                                src={`data:image/jpeg;base64,${center.photo_data}`}
+                                alt={center.center_name}
+                                className="w-full h-full object-cover rounded-lg"
+                            />
+                        ) : (
+                            <div className="text-muted-foreground text-center p-4">
+                                <div className="mb-2">
+                                    <svg
+                                        className="mx-auto h-16 w-16"
+                                        fill="none"
+                                        stroke="currentColor"
+                                        viewBox="0 0 24 24"
+                                    >
+                                        <path
+                                            strokeLinecap="round"
+                                            strokeLinejoin="round"
+                                            strokeWidth={1.5}
+                                            d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
+                                        />
+                                    </svg>
+                                </div>
+                                <p className="text-sm">No photo available</p>
                             </div>
+                        )}
+                    </div>
+                </div>
+
+                {/* Right Side - Center Information */}
+                <div className="xl:col-span-2 space-y-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div className="space-y-2">
+                            <Label htmlFor="center_name" className="text-sm font-medium">
+                                Center Name
+                            </Label>
+                            <Input
+                                id="center_name"
+                                value={center.center_name}
+                                readOnly
+                                className="bg-muted/50 h-11 text-base"
+                            />
                         </div>
 
-                        {/* Right Side - Center Information */}
-                        <div className="xl:col-span-2 space-y-6">
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                <div className="space-y-2">
-                                    <Label htmlFor="center_name" className="text-sm font-medium">
-                                        Center Name
-                                    </Label>
-                                    <Input
-                                        id="center_name"
-                                        value={center.center_name}
-                                        readOnly
-                                        className="bg-muted/50 h-11 text-base"
-                                    />
-                                </div>
-
-                                <div className="space-y-2">
-                                    <Label htmlFor="address" className="text-sm font-medium">
-                                        Address
-                                    </Label>
-                                    <Input
-                                        id="address"
-                                        value={center.address}
-                                        readOnly
-                                        className="bg-muted/50 h-11 text-base"
-                                    />
-                                </div>
-                            </div>
-
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                <div className="space-y-2">
-                                    <Label htmlFor="status" className="text-sm font-medium">
-                                        Status
-                                    </Label>
-                                    <div>
-                                        <Badge
-                                            variant="secondary"
-                                            className={cn(
-                                                getCenterStatusColor(center.status),
-                                                "text-sm font-medium px-3 py-1.5"
-                                            )}
-                                        >
-                                            {center.status.charAt(0).toUpperCase() +
-                                                center.status.slice(1).toLowerCase()}
-                                        </Badge>
-                                    </div>
-                                </div>
-
-                                <div className="space-y-2">
-                                    <Label className="text-sm font-medium">Usage Percentage</Label>
-                                    <div className="flex items-center gap-4">
-                                        <div className="w-full bg-gray-200 rounded-full h-3 dark:bg-gray-700 flex-1">
-                                            <div
-                                                className={cn(
-                                                    "h-3 rounded-full",
-                                                    center.capacity > 0
-                                                        ? Math.round(
-                                                              (center.current_occupancy /
-                                                                  center.capacity) *
-                                                                  100
-                                                          ) >= 80
-                                                            ? "bg-red-600"
-                                                            : Math.round(
-                                                                    (center.current_occupancy /
-                                                                        center.capacity) *
-                                                                        100
-                                                                ) >= 60
-                                                              ? "bg-yellow-500"
-                                                              : "bg-green-500"
-                                                        : "bg-gray-400"
-                                                )}
-                                                style={{
-                                                    width:
-                                                        center.capacity > 0
-                                                            ? `${Math.min(Math.round((center.current_occupancy / center.capacity) * 100), 100)}%`
-                                                            : "0%",
-                                                }}
-                                            />
-                                        </div>
-                                        <span className="text-sm font-medium whitespace-nowrap min-w-[60px]">
-                                            {center.capacity > 0
-                                                ? `${Math.round((center.current_occupancy / center.capacity) * 100)}%`
-                                                : "0%"}
-                                        </span>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                <div className="space-y-2">
-                                    <Label htmlFor="capacity" className="text-sm font-medium">
-                                        Capacity
-                                    </Label>
-                                    <Input
-                                        id="capacity"
-                                        value={center.capacity.toLocaleString()}
-                                        readOnly
-                                        className="bg-muted/50 h-11 text-base font-medium"
-                                    />
-                                </div>
-
-                                <div className="space-y-2">
-                                    <Label
-                                        htmlFor="current_occupancy"
-                                        className="text-sm font-medium"
-                                    >
-                                        Current Occupancy
-                                    </Label>
-                                    <Input
-                                        id="current_occupancy"
-                                        value={center.current_occupancy.toLocaleString()}
-                                        readOnly
-                                        className="bg-muted/50 h-11 text-base font-medium"
-                                    />
-                                </div>
-                            </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="address" className="text-sm font-medium">
+                                Address
+                            </Label>
+                            <Input
+                                id="address"
+                                value={center.address}
+                                readOnly
+                                className="bg-muted/50 h-11 text-base"
+                            />
                         </div>
                     </div>
 
-                    {/* Event History Table */}
-                    <div className="border-t pt-6">
-                        <div className="flex items-center justify-between mb-4">
-                            <h3 className="text-lg font-semibold">Event History</h3>
-                            <div className="flex items-center gap-4">
-                                {loading && (
-                                    <Badge
-                                        variant="secondary"
-                                        className="bg-blue-100 text-blue-700"
-                                    >
-                                        Loading events...
-                                    </Badge>
-                                )}
-                                {!loading && (
-                                    <div className="text-sm text-muted-foreground">
-                                        {sortedEvents.length} event
-                                        {sortedEvents.length !== 1 ? "s" : ""} associated with this
-                                        center
-                                    </div>
-                                )}
-                            </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div className="space-y-2">
+                            <Label htmlFor="capacity" className="text-sm font-medium">
+                                Capacity
+                            </Label>
+                            <Input
+                                id="capacity"
+                                value={center.capacity.toLocaleString()}
+                                readOnly
+                                className="bg-muted/50 h-11 text-base font-medium"
+                            />
                         </div>
 
-                        {error && (
-                            <div className="bg-destructive/15 text-destructive p-3 rounded-md mb-4">
-                                <div className="flex items-center gap-2">
-                                    <span className="text-sm">{error}</span>
-                                </div>
-                            </div>
-                        )}
+                        <div className="space-y-2">
+                            <Label htmlFor="current_occupancy" className="text-sm font-medium">
+                                Current Occupancy
+                            </Label>
+                            <Input
+                                id="current_occupancy"
+                                value={center.current_occupancy.toLocaleString()}
+                                readOnly
+                                className="bg-muted/50 h-11 text-base font-medium"
+                            />
+                        </div>
+                    </div>
 
-                        <div className="border border-border rounded-lg overflow-hidden">
-                            <Table>
-                                <TableHeader>
-                                    <TableRow className="hover:bg-transparent">
-                                        <TableHead
-                                            className="cursor-pointer hover:bg-muted font-semibold min-w-[250px]"
-                                            onClick={() => handleSort("event_name")}
-                                        >
-                                            <div className="flex items-center justify-between">
-                                                Event Name
-                                                {getSortIcon("event_name")}
-                                            </div>
-                                        </TableHead>
-                                        <TableHead
-                                            className="cursor-pointer hover:bg-muted font-semibold min-w-[180px]"
-                                            onClick={() => handleSort("event_type")}
-                                        >
-                                            <div className="flex items-center justify-between">
-                                                Event Type
-                                                {getSortIcon("event_type")}
-                                            </div>
-                                        </TableHead>
-                                        <TableHead
-                                            className="cursor-pointer hover:bg-muted font-semibold min-w-[160px]"
-                                            onClick={() => handleSort("date_declared")}
-                                        >
-                                            <div className="flex items-center justify-between">
-                                                Date Declared
-                                                {getSortIcon("date_declared")}
-                                            </div>
-                                        </TableHead>
-                                        <TableHead
-                                            className="cursor-pointer hover:bg-muted font-semibold min-w-[160px]"
-                                            onClick={() => handleSort("end_date")}
-                                        >
-                                            <div className="flex items-center justify-between">
-                                                End Date
-                                                {getSortIcon("end_date")}
-                                            </div>
-                                        </TableHead>
-                                        <TableHead
-                                            className="cursor-pointer hover:bg-muted font-semibold min-w-[140px]"
-                                            onClick={() => handleSort("status")}
-                                        >
-                                            <div className="flex items-center justify-between">
-                                                Status
-                                                {getSortIcon("status")}
-                                            </div>
-                                        </TableHead>
-                                    </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                    {loading ? (
-                                        <TableRow>
-                                            <TableCell colSpan={5} className="text-center py-8">
-                                                <div className="flex flex-col items-center justify-center space-y-2">
-                                                    <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
-                                                    <div className="text-muted-foreground">
-                                                        Loading event history...
-                                                    </div>
-                                                </div>
-                                            </TableCell>
-                                        </TableRow>
-                                    ) : sortedEvents.length === 0 ? (
-                                        <TableRow>
-                                            <TableCell
-                                                colSpan={5}
-                                                className="text-center py-8 text-muted-foreground"
-                                            >
-                                                <div className="flex flex-col items-center justify-center space-y-2">
-                                                    <div>
-                                                        No events associated with this center.
-                                                    </div>
-                                                </div>
-                                            </TableCell>
-                                        </TableRow>
-                                    ) : (
-                                        sortedEvents.map((event, index) => (
-                                            <TableRow
-                                                key={event.event_id}
-                                                className={cn(
-                                                    "hover:bg-muted/50 transition-colors",
-                                                    index % 2 === 1 ? "bg-muted/50" : ""
-                                                )}
-                                            >
-                                                <TableCell className="font-medium min-w-[250px]">
-                                                    {event.event_name}
-                                                </TableCell>
-                                                <TableCell className="min-w-[180px]">
-                                                    {event.event_type}
-                                                </TableCell>
-                                                <TableCell className="min-w-[160px]">
-                                                    {formatDateForDisplay(event.date_declared)}
-                                                </TableCell>
-                                                <TableCell className="min-w-[160px]">
-                                                    {event.end_date
-                                                        ? formatDateForDisplay(event.end_date)
-                                                        : "NA"}
-                                                </TableCell>
-                                                <TableCell className="min-w-[140px]">
-                                                    <Badge
-                                                        variant="secondary"
-                                                        className={cn(
-                                                            getStatusColor(event.status),
-                                                            "truncate max-w-full inline-block text-sm font-medium px-2.5 py-1"
-                                                        )}
-                                                    >
-                                                        {capitalizeStatus(event.status)}
-                                                    </Badge>
-                                                </TableCell>
-                                            </TableRow>
-                                        ))
+                    {/* Status and Usage Percentage moved to bottom */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div className="space-y-2">
+                            <Label htmlFor="status" className="text-sm font-medium">
+                                Status
+                            </Label>
+                            <div>
+                                <Badge
+                                    variant="secondary"
+                                    className={cn(
+                                        getCenterStatusColor(center.status),
+                                        "text-sm font-medium px-3 py-1.5"
                                     )}
-                                </TableBody>
-                            </Table>
+                                >
+                                    {center.status.charAt(0).toUpperCase() +
+                                        center.status.slice(1).toLowerCase()}
+                                </Badge>
+                            </div>
                         </div>
+
+                        <div className="space-y-2">
+                            <Label className="text-sm font-medium">Usage Percentage</Label>
+                            <div className="flex items-center gap-4">
+                                <div className="w-full bg-gray-200 rounded-full h-3 dark:bg-gray-700 flex-1">
+                                    <div
+                                        className={cn(
+                                            "h-3 rounded-full",
+                                            center.capacity > 0
+                                                ? Math.round(
+                                                    (center.current_occupancy / center.capacity) *
+                                                        100
+                                                ) >= 80
+                                                    ? "bg-red-600"
+                                                    : Math.round(
+                                                            (center.current_occupancy /
+                                                                center.capacity) *
+                                                                100
+                                                        ) >= 60
+                                                    ? "bg-yellow-500"
+                                                    : "bg-green-500"
+                                                : "bg-gray-400"
+                                        )}
+                                        style={{
+                                            width:
+                                                center.capacity > 0
+                                                    ? `${Math.min(Math.round((center.current_occupancy / center.capacity) * 100), 100)}%`
+                                                    : "0%",
+                                        }}
+                                    />
+                                </div>
+                                <span className="text-sm font-medium whitespace-nowrap min-w-[60px]">
+                                    {center.capacity > 0
+                                        ? `${Math.round((center.current_occupancy / center.capacity) * 100)}%`
+                                        : "0%"}
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+
+    // Events Content
+    const eventsContent = (
+        <div className="space-y-4">
+            <div className="flex items-center justify-between">
+                <h3 className="text-lg font-semibold">Event History</h3>
+                <div className="flex items-center gap-4">
+                    {eventsLoading && (
+                        <Badge variant="secondary" className="bg-blue-100 text-blue-700">
+                            Loading events...
+                        </Badge>
+                    )}
+                    {!eventsLoading && (
+                        <div className="text-sm text-muted-foreground">
+                            {events.length} event{events.length !== 1 ? "s" : ""} associated with this center
+                        </div>
+                    )}
+                </div>
+            </div>
+
+            {error && (
+                <div className="bg-destructive/15 text-destructive p-3 rounded-md">
+                    <div className="flex items-center gap-2">
+                        <span className="text-sm">{error}</span>
+                    </div>
+                </div>
+            )}
+
+            <div className="border border-border rounded-lg overflow-hidden">
+                <Table>
+                    <TableHeader>
+                        <TableRow className="hover:bg-transparent">
+                            <TableHead
+                                className="cursor-pointer hover:bg-muted font-semibold min-w-[250px]"
+                                onClick={() => handleSort("event_name")}
+                            >
+                                <div className="flex items-center justify-between">
+                                    Event Name
+                                    {getSortIcon("event_name")}
+                                </div>
+                            </TableHead>
+                            <TableHead
+                                className="cursor-pointer hover:bg-muted font-semibold min-w-[180px]"
+                                onClick={() => handleSort("event_type")}
+                            >
+                                <div className="flex items-center justify-between">
+                                    Event Type
+                                    {getSortIcon("event_type")}
+                                </div>
+                            </TableHead>
+                            <TableHead
+                                className="cursor-pointer hover:bg-muted font-semibold min-w-[160px]"
+                                onClick={() => handleSort("date_declared")}
+                            >
+                                <div className="flex items-center justify-between">
+                                    Date Declared
+                                    {getSortIcon("date_declared")}
+                                </div>
+                            </TableHead>
+                            <TableHead
+                                className="cursor-pointer hover:bg-muted font-semibold min-w-[160px]"
+                                onClick={() => handleSort("end_date")}
+                            >
+                                <div className="flex items-center justify-between">
+                                    End Date
+                                    {getSortIcon("end_date")}
+                                </div>
+                            </TableHead>
+                            <TableHead
+                                className="cursor-pointer hover:bg-muted font-semibold min-w-[140px]"
+                                onClick={() => handleSort("status")}
+                            >
+                                <div className="flex items-center justify-between">
+                                    Status
+                                    {getSortIcon("status")}
+                                </div>
+                            </TableHead>
+                        </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                        {eventsLoading ? (
+                            <TableRow>
+                                <TableCell colSpan={5} className="text-center py-8">
+                                    <div className="flex flex-col items-center justify-center space-y-2">
+                                        <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
+                                        <div className="text-muted-foreground">
+                                            Loading event history...
+                                        </div>
+                                    </div>
+                                </TableCell>
+                            </TableRow>
+                        ) : sortedEvents.length === 0 ? (
+                            <TableRow>
+                                <TableCell
+                                    colSpan={5}
+                                    className="text-center py-8 text-muted-foreground"
+                                >
+                                    <div className="flex flex-col items-center justify-center space-y-2">
+                                        <div>No events associated with this center.</div>
+                                    </div>
+                                </TableCell>
+                            </TableRow>
+                        ) : (
+                            sortedEvents.map((event, index) => (
+                                <TableRow
+                                    key={event.event_id}
+                                    className={cn(
+                                        "hover:bg-muted/50 transition-colors",
+                                        index % 2 === 1 ? "bg-muted/50" : ""
+                                    )}
+                                >
+                                    <TableCell className="font-medium min-w-[250px]">
+                                        {event.event_name}
+                                    </TableCell>
+                                    <TableCell className="min-w-[180px]">
+                                        {event.event_type}
+                                    </TableCell>
+                                    <TableCell className="min-w-[160px]">
+                                        {formatDateForDisplay(event.date_declared)}
+                                    </TableCell>
+                                    <TableCell className="min-w-[160px]">
+                                        {event.end_date
+                                            ? formatDateForDisplay(event.end_date)
+                                            : "NA"}
+                                    </TableCell>
+                                    <TableCell className="min-w-[140px]">
+                                        <Badge
+                                            variant="secondary"
+                                            className={cn(
+                                                getStatusColor(event.status),
+                                                "truncate max-w-full inline-block text-sm font-medium px-2.5 py-1"
+                                            )}
+                                        >
+                                            {capitalizeStatus(event.status)}
+                                        </Badge>
+                                    </TableCell>
+                                </TableRow>
+                            ))
+                        )}
+                    </TableBody>
+                </Table>
+            </div>
+        </div>
+    );
+
+    // Attendance Content
+    const attendanceContent = (
+        <div className="space-y-4">
+            <div className="flex items-center justify-between">
+                <h3 className="text-lg font-semibold">Current Attendees</h3>
+                <div className="flex items-center gap-4">
+                    {attendanceLoading && (
+                        <Badge variant="secondary" className="bg-blue-100 text-blue-700">
+                            Loading attendees...
+                        </Badge>
+                    )}
+                    {!attendanceLoading && (
+                        <div className="text-sm text-muted-foreground">
+                            {currentAttendees.length} individual{currentAttendees.length !== 1 ? "s" : ""} currently at this center
+                        </div>
+                    )}
+                </div>
+            </div>
+
+            {error && (
+                <div className="bg-destructive/15 text-destructive p-3 rounded-md">
+                    <div className="flex items-center gap-2">
+                        <span className="text-sm">{error}</span>
+                    </div>
+                </div>
+            )}
+
+            <div className="border border-border rounded-lg overflow-hidden">
+                <Table>
+                    <TableHeader>
+                        <TableRow className="hover:bg-transparent">
+                            <TableHead className="font-semibold min-w-[120px]">
+                                First Name
+                            </TableHead>
+                            <TableHead className="font-semibold min-w-[120px]">
+                                Last Name
+                            </TableHead>
+                            <TableHead className="font-semibold min-w-[120px]">
+                                Household
+                            </TableHead>
+                            <TableHead className="font-semibold min-w-[120px]">
+                                Date of Birth
+                            </TableHead>
+                            <TableHead className="font-semibold min-w-[100px]">
+                                Gender
+                            </TableHead>
+                        </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                        {attendanceLoading ? (
+                            <TableRow>
+                                <TableCell colSpan={5} className="text-center py-8">
+                                    <div className="flex flex-col items-center justify-center space-y-2">
+                                        <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
+                                        <div className="text-muted-foreground">
+                                            Loading attendance data...
+                                        </div>
+                                    </div>
+                                </TableCell>
+                            </TableRow>
+                        ) : currentAttendees.length === 0 ? (
+                            <TableRow>
+                                <TableCell
+                                    colSpan={5}
+                                    className="text-center py-8 text-muted-foreground"
+                                >
+                                    <div className="flex flex-col items-center justify-center space-y-2">
+                                        <div>No individuals currently at this center.</div>
+                                    </div>
+                                </TableCell>
+                            </TableRow>
+                        ) : (
+                            currentAttendees.map((attendee, index) => {
+                                // Parse individual_name to get first and last name
+                                const individualName = attendee.individual_name || '';
+                                const nameParts = individualName.split(' ');
+                                const firstName = nameParts[0] || 'N/A';
+                                const lastName = nameParts.slice(1).join(' ') || 'N/A';
+
+                                return (
+                                    <TableRow
+                                        key={attendee.record_id}
+                                        className={cn(
+                                            "hover:bg-muted/50 transition-colors",
+                                            index % 2 === 1 ? "bg-muted/50" : ""
+                                        )}
+                                    >
+                                        <TableCell className="min-w-[120px]">
+                                            {firstName}
+                                        </TableCell>
+                                        <TableCell className="min-w-[120px]">
+                                            {lastName}
+                                        </TableCell>
+                                        <TableCell className="min-w-[120px]">
+                                            {attendee.household_name || "N/A"}
+                                        </TableCell>
+                                        <TableCell className="min-w-[120px]">
+                                            {/* Date of Birth is not available in AttendanceRecord - showing check-in time instead */}
+                                            {attendee.check_in_time 
+                                                ? formatDateForDisplay(attendee.check_in_time)
+                                                : "N/A"}
+                                        </TableCell>
+                                        <TableCell className="min-w-[100px]">
+                                            {attendee.gender || "N/A"}
+                                        </TableCell>
+                                    </TableRow>
+                                );
+                            })
+                        )}
+                    </TableBody>
+                </Table>
+            </div>
+        </div>
+    );
+
+    return (
+        <Dialog open={isOpen} onOpenChange={onClose}>
+            <DialogContent
+                className="max-w-[85vw] min-w-[85vw] max-h-[90vh] min-h-[85vh] p-0"
+                onOpenAutoFocus={e => {
+                    e.preventDefault();
+                }}
+            >
+                <div className="flex flex-col h-full">
+                    {/* Fixed Header */}
+                    <div className="p-6 pb-4 flex-shrink-0">
+                        <DialogHeader>
+                            <DialogTitle className="text-xl font-semibold">
+                                Evacuation Center Details
+                            </DialogTitle>
+                        </DialogHeader>
+                    </div>
+
+                    {/* Fixed Tabs */}
+                    <div className="px-6 flex-shrink-0">
+                        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+                            <TabsList className="grid w-full grid-cols-3 justify-start">
+                                <TabsTrigger value="details">Center Details</TabsTrigger>
+                                <TabsTrigger value="events">Events</TabsTrigger>
+                                <TabsTrigger value="attendance">Attendance</TabsTrigger>
+                            </TabsList>
+                        </Tabs>
+                    </div>
+
+                    {/* Scrollable Content */}
+                    <div className="flex-1 overflow-y-auto px-6 pb-6">
+                        <Tabs value={activeTab} className="w-full h-full">
+                            <TabsContent value="details" className="h-full m-0 pt-4">
+                                {centerDetailsContent}
+                            </TabsContent>
+
+                            <TabsContent value="events" className="h-full m-0 pt-4">
+                                {eventsContent}
+                            </TabsContent>
+
+                            <TabsContent value="attendance" className="h-full m-0 pt-4">
+                                {attendanceContent}
+                            </TabsContent>
+                        </Tabs>
                     </div>
                 </div>
             </DialogContent>

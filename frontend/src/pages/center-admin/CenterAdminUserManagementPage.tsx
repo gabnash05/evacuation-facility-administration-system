@@ -12,6 +12,10 @@ import {
     SelectItem,
 } from "@/components/ui/select";
 import { useAuthStore } from "@/store/authStore";
+import { AddEditUserModal } from "@/components/features/user-management/AddEditUserModal";
+import { DeleteConfirmationModal } from "@/components/features/user-management/DeleteConfirmationModal";
+import type { User } from "@/types/user";
+import { DeactivateConfirmationModal } from "@/components/features/user-management/DeactivateConfirmationModal";
 
 export function CenterAdminUserManagementPage() {
     const {
@@ -27,7 +31,11 @@ export function CenterAdminUserManagementPage() {
         setCurrentPage,
         setEntriesPerPage,
         setSortConfig,
+        setCenterFilter,
         fetchUsers,
+        deleteUser,
+        deactivateUser,
+        reactivateUser,
     } = useUserStore();
 
     // Get current user and role
@@ -35,7 +43,11 @@ export function CenterAdminUserManagementPage() {
     const userRole = user?.role;
     const userCenterId = user?.center_id; // Get the center_id from current user
 
-    // Local state for role filter
+    const [isAddEditModalOpen, setIsAddEditModalOpen] = useState(false);
+    const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+    const [isDeactivateModalOpen, setIsDeactivateModalOpen] = useState(false);
+    const [selectedUser, setSelectedUser] = useState<User | null>(null);
+    
     const [roleFilter, setRoleFilter] = useState<string>("all");
     const [statusFilter, setStatusFilter] = useState<string>("all");
 
@@ -67,7 +79,7 @@ export function CenterAdminUserManagementPage() {
         statusFilter,
         fetchUsers,
         debouncedFetchUsers,
-        userCenterId, // Add userCenterId to dependencies
+        userCenterId,
     ]);
 
     // Reset filters and fetch when userCenterId changes
@@ -77,6 +89,13 @@ export function CenterAdminUserManagementPage() {
             fetchUsers(userCenterId);
         }
     }, [userCenterId, fetchUsers, setCurrentPage]);
+
+    // Set center filter based on current user's center_id on initial load
+    useEffect(() => {
+        if (userCenterId) {
+            setCenterFilter(userCenterId);
+        }
+    }, [userCenterId, setCenterFilter]);
 
     const handleSort = (key: string) => {
         if (!sortConfig || sortConfig.key !== key) {
@@ -97,12 +116,59 @@ export function CenterAdminUserManagementPage() {
                 break;
         }
     };
-
+    
     const handleAddUser = () => {
-        console.log("Add User clicked");
-        // Implementation for adding a new user
-        // This would typically open a modal or navigate to a form
-        // Note: For center admin, new users should be assigned to their center by default
+        setSelectedUser(null);
+        setIsAddEditModalOpen(true);
+    };
+
+    const handleEditUser = (userToEdit: User) => {
+        setSelectedUser(userToEdit);
+        setIsAddEditModalOpen(true);
+    };
+    
+    const handleDeleteUser = (userToDelete: User) => {
+        setSelectedUser(userToDelete);
+        setIsDeleteModalOpen(true);
+    };
+
+    const handleConfirmDelete = () => {
+        if (!selectedUser) return;
+        (async () => {
+            try {
+                await deleteUser(selectedUser.user_id);
+                setIsDeleteModalOpen(false);
+                setSelectedUser(null);
+            } catch (err) {
+                setIsDeleteModalOpen(false);
+                setSelectedUser(null);
+                alert(err instanceof Error ? err.message : "Failed to delete user");
+            }
+        })();
+    };
+
+    const handleDeactivate = (userToToggle: User) => {
+        setSelectedUser(userToToggle);
+        setIsDeactivateModalOpen(true);
+    };
+
+    const handleConfirmDeactivate = () => {
+        if (!selectedUser) return;
+        (async () => {
+            try {
+                if (selectedUser.is_active) {
+                    await deactivateUser(selectedUser.user_id);
+                } else {
+                    await reactivateUser(selectedUser.user_id);
+                }
+                setIsDeactivateModalOpen(false);
+                setSelectedUser(null);
+            } catch (err) {
+                setIsDeactivateModalOpen(false);
+                setSelectedUser(null);
+                alert(err instanceof Error ? err.message : "Failed to change user status");
+            }
+        })();
     };
 
     const handleEntriesPerPageChange = (entries: number) => {
@@ -119,12 +185,12 @@ export function CenterAdminUserManagementPage() {
 
     const handleRoleFilterChange = (role: string) => {
         setRoleFilter(role);
-        setCurrentPage(1); // Reset to first page when filter changes
+        setCurrentPage(1);
     };
 
     const handleStatusFilterChange = (status: string) => {
         setStatusFilter(status);
-        setCurrentPage(1); // Reset to first page when filter changes
+        setCurrentPage(1);
     };
 
     // Filter available roles for center admin (can only create center_admin and volunteer)
@@ -145,7 +211,6 @@ export function CenterAdminUserManagementPage() {
         ];
     };
 
-    // Build additional filters component
     const additionalFilters = (
         <>
             <Select value={roleFilter} onValueChange={handleRoleFilterChange} disabled={loading}>
@@ -183,6 +248,27 @@ export function CenterAdminUserManagementPage() {
 
     return (
         <div className="w-full min-w-0 bg-background flex flex-col relative p-6">
+            <AddEditUserModal
+                isOpen={isAddEditModalOpen}
+                onClose={() => setIsAddEditModalOpen(false)}
+                currentUserRole={userRole}
+                userToEdit={selectedUser}
+            />
+            <DeleteConfirmationModal
+                isOpen={isDeleteModalOpen}
+                onClose={() => setIsDeleteModalOpen(false)}
+                onConfirm={handleConfirmDelete}
+                title="Delete User"
+                description={`Are you sure you want to permanently delete the user "${selectedUser?.email}"? This action cannot be undone.`}
+            />
+            <DeactivateConfirmationModal
+                isOpen={isDeactivateModalOpen}
+                onClose={() => setIsDeactivateModalOpen(false)}
+                onConfirm={handleConfirmDeactivate}
+                title={selectedUser?.is_active ? "Deactivate User" : "Reactivate User"}
+                description={selectedUser?.is_active ? `Are you sure you want to deactivate ${selectedUser?.email}?` : `Are you sure you want to reactivate ${selectedUser?.email}?`}
+            />
+
             <div className="space-y-6">
                 {/* Page Header */}
                 <div>
@@ -203,13 +289,6 @@ export function CenterAdminUserManagementPage() {
 
                 {/* Main Table Card */}
                 <div className="border border-border rounded-lg">
-                    {/* Card Header */}
-                    <div className="bg-card border-b border-border p-4">
-                        <h3 className="font-semibold text-base text-foreground">
-                            User List {currentCenterInfo}
-                        </h3>
-                    </div>
-
                     {/* Controls Bar */}
                     <div className="bg-card border-b border-border p-4">
                         <TableToolbar
@@ -221,7 +300,6 @@ export function CenterAdminUserManagementPage() {
                             loading={loading}
                             searchPlaceholder="Search by email..."
                             addButtonText="Add User"
-                            additionalFilters={additionalFilters}
                         />
                     </div>
 
@@ -236,6 +314,9 @@ export function CenterAdminUserManagementPage() {
                                 data={users}
                                 sortConfig={sortConfig}
                                 onSort={handleSort}
+                                onEdit={handleEditUser}
+                                onDelete={handleDeleteUser}
+                                onDeactivate={handleDeactivate}
                                 loading={loading}
                                 userRole={userRole}
                             />
