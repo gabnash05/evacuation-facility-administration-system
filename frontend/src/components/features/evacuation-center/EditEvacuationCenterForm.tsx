@@ -16,7 +16,6 @@ interface CenterFormData {
     center_name: string;
     address: string;
     capacity: number;
-    current_occupancy: number;
     status: "active" | "inactive" | "closed";
 }
 
@@ -163,7 +162,6 @@ export function EditEvacuationCenterForm({
         center_name: "",
         address: "",
         capacity: 0,
-        current_occupancy: 0,
         status: "active",
     });
     const [photo, setPhoto] = useState<File | undefined>(undefined);
@@ -185,7 +183,6 @@ export function EditEvacuationCenterForm({
                 center_name: center.center_name,
                 address: center.address,
                 capacity: center.capacity,
-                current_occupancy: center.current_occupancy,
                 status: center.status,
             });
             setRemoveExistingPhoto(false);
@@ -199,7 +196,6 @@ export function EditEvacuationCenterForm({
                 center_name: "",
                 address: "",
                 capacity: 0,
-                current_occupancy: 0,
                 status: "active",
             });
             setPhoto(undefined);
@@ -383,38 +379,20 @@ export function EditEvacuationCenterForm({
                                 className="w-full h-9"
                             />
                         </div>
-                        {/* Capacity & Current Occupancy in one row */}
-                        <div className="grid grid-cols-2 gap-3">
-                            {" "}
-                            {/* Two columns layout */}
-                            <div className="space-y-1.5">
-                                <Label htmlFor="capacity" className="text-sm font-medium">
-                                    Capacity
-                                </Label>
-                                <NumberInputWithChevrons
-                                    id="capacity"
-                                    value={formData.capacity}
-                                    onChange={value => handleInputChange("capacity", value)}
-                                    min={1}
-                                    max={10000}
-                                    placeholder="Capacity"
-                                    required
-                                />
-                            </div>
-                            <div className="space-y-1.5">
-                                <Label htmlFor="current_occupancy" className="text-sm font-medium">
-                                    Occupancy
-                                </Label>
-                                <NumberInputWithChevrons
-                                    id="current_occupancy"
-                                    value={formData.current_occupancy}
-                                    onChange={value =>
-                                        handleInputChange("current_occupancy", value)
-                                    }
-                                    min={0}
-                                    placeholder="Occupancy"
-                                />
-                            </div>
+                        {/* Capacity only - removed occupancy field */}
+                        <div className="space-y-1.5">
+                            <Label htmlFor="capacity" className="text-sm font-medium">
+                                Capacity
+                            </Label>
+                            <NumberInputWithChevrons
+                                id="capacity"
+                                value={formData.capacity}
+                                onChange={value => handleInputChange("capacity", value)}
+                                min={1}
+                                max={10000}
+                                placeholder="Capacity"
+                                required
+                            />
                         </div>
                         {/* Status */}
                         <div className="space-y-1.5">

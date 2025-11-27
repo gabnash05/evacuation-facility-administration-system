@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useEvacuationCenterStore } from "@/store/evacuationCenterStore";
 import type { User, UserRole } from "@/types/user";
 import { useUserStore } from "@/store/userStore";
+import { useAuthStore } from "@/store/authStore"; // ADD THIS IMPORT
 
 const baseSchema = z.object({
     email: z.string().email({ message: "Please enter a valid email address." }),
@@ -42,7 +43,12 @@ interface AddEditUserModalProps {
 
 export function AddEditUserModal({ isOpen, onClose, userToEdit, currentUserRole, onSuccess }: AddEditUserModalProps) {
     const { centers, fetchAllCenters } = useEvacuationCenterStore();
+    const { user: currentUser } = useAuthStore(); // ADD THIS
     const isEditMode = !!userToEdit;
+
+    // Check if current user is center admin
+    const isCenterAdmin = currentUserRole === "center_admin";
+    const userCenterId = currentUser?.center_id;
 
     const availableRoles = useMemo(() => {
         if (currentUserRole === "super_admin") {
@@ -60,12 +66,15 @@ export function AddEditUserModal({ isOpen, onClose, userToEdit, currentUserRole,
         control,
         reset,
         watch,
+        setValue,
         formState: { errors, isSubmitting },
     } = useForm<UserFormData>({
         resolver: zodResolver(getFormSchema(isEditMode)),
     });
 
     const selectedRole = watch("role");
+    const isCenterRequired = useMemo(() => ["center_admin", "volunteer"].includes(selectedRole), [selectedRole]);
+    const isCenterFieldLocked = isCenterAdmin && userCenterId; // Center field is locked for center admins
 
     useEffect(() => {
         fetchAllCenters();
@@ -81,15 +90,25 @@ export function AddEditUserModal({ isOpen, onClose, userToEdit, currentUserRole,
                     password: "", 
                 });
             } else {
+                // For center admin creating new user, auto-set their center
+                const defaultCenterId = isCenterAdmin && userCenterId ? String(userCenterId) : undefined;
+                
                 reset({
                     email: "",
                     password: "",
                     role: availableRoles.length > 0 ? availableRoles[0].value as UserFormData["role"] : "volunteer",
-                    center_id: undefined,
+                    center_id: defaultCenterId,
                 });
             }
         }
-    }, [isOpen, isEditMode, userToEdit, reset, availableRoles]);
+    }, [isOpen, isEditMode, userToEdit, reset, availableRoles, isCenterAdmin, userCenterId]);
+
+    // Auto-set center when role changes for center admin
+    useEffect(() => {
+        if (isCenterAdmin && userCenterId && isCenterRequired) {
+            setValue("center_id", String(userCenterId));
+        }
+    }, [selectedRole, isCenterAdmin, userCenterId, setValue, isCenterRequired]);
 
     const { createUser, updateUser } = useUserStore();
     const [submitError, setSubmitError] = useState<string | null>(null);
@@ -102,7 +121,10 @@ export function AddEditUserModal({ isOpen, onClose, userToEdit, currentUserRole,
             role: data.role,
         };
 
-        if (data.center_id && data.center_id !== "") {
+        // For center admin, always use their center_id
+        if (isCenterAdmin && userCenterId) {
+            payload.center_id = userCenterId;
+        } else if (data.center_id && data.center_id !== "") {
             const n = Number(data.center_id);
             payload.center_id = Number.isFinite(n) ? n : data.center_id;
         } else {
@@ -128,8 +150,6 @@ export function AddEditUserModal({ isOpen, onClose, userToEdit, currentUserRole,
         }
     };
 
-    const isCenterRequired = useMemo(() => ["center_admin", "volunteer"].includes(selectedRole), [selectedRole]);
-
     return (
         <Dialog open={isOpen} onOpenChange={onClose}>
             <DialogContent className="sm:max-w-[425px]">
@@ -137,6 +157,11 @@ export function AddEditUserModal({ isOpen, onClose, userToEdit, currentUserRole,
                     <DialogTitle>{isEditMode ? "Edit User" : "Add New User"}</DialogTitle>
                     <DialogDescription>
                         {isEditMode ? `Update the details for ${userToEdit?.email}.` : "Fill in the details to create a new user account."}
+                        {isCenterFieldLocked && !isEditMode && (
+                            <div className="mt-2 text-sm text-blue-600">
+                                Users will be automatically assigned to your evacuation center.
+                            </div>
+                        )}
                     </DialogDescription>
                 </DialogHeader>
                 <form onSubmit={handleSubmit(onSubmit)} className="grid gap-4 py-4">
@@ -182,16 +207,24 @@ export function AddEditUserModal({ isOpen, onClose, userToEdit, currentUserRole,
                         <div className="grid grid-cols-4 items-center gap-4">
                             <Label htmlFor="center_id" className="text-right">Center</Label>
                             <div className="col-span-3">
-                                <Controller name="center_id" control={control} render={({ field }) => (
-                                    <Select onValueChange={field.onChange} value={field.value} disabled={centers.length === 0}>
-                                        <SelectTrigger><SelectValue placeholder="Assign a center" /></SelectTrigger>
-                                        <SelectContent>
-                                            {centers.map(center => (
-                                                <SelectItem key={center.center_id} value={String(center.center_id)}>{center.center_name}</SelectItem>
-                                            ))}
-                                        </SelectContent>
-                                    </Select>
-                                )} />
+                                {isCenterFieldLocked ? (
+                                    // Display only mode for center admin
+                                    <div className="flex items-center h-10 px-3 py-2 text-sm border border-input rounded-md bg-muted">
+                                        {centers.find(center => center.center_id === userCenterId)?.center_name || "Your Center"}
+                                    </div>
+                                ) : (
+                                    // Select mode for other roles
+                                    <Controller name="center_id" control={control} render={({ field }) => (
+                                        <Select onValueChange={field.onChange} value={field.value} disabled={centers.length === 0}>
+                                            <SelectTrigger><SelectValue placeholder="Assign a center" /></SelectTrigger>
+                                            <SelectContent>
+                                                {centers.map(center => (
+                                                    <SelectItem key={center.center_id} value={String(center.center_id)}>{center.center_name}</SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
+                                    )} />
+                                )}
                                 {errors.center_id && <p className="text-destructive text-sm mt-1">{errors.center_id.message}</p>}
                             </div>
                         </div>
