@@ -243,10 +243,6 @@ export function CityAdminUserManagementPage() {
 
                 <div className="border border-border rounded-lg">
                     <div className="bg-card border-b border-border p-4">
-                        <h3 className="font-semibold text-base text-foreground">User List</h3>
-                    </div>
-
-                    <div className="bg-card border-b border-border p-4">
                         <TableToolbar
                             searchQuery={searchQuery}
                             onSearchChange={handleSearchChange}
@@ -256,7 +252,6 @@ export function CityAdminUserManagementPage() {
                             loading={loading}
                             searchPlaceholder="Search by email..."
                             addButtonText="Add User"
-                            additionalFilters={additionalFilters}
                         />
                     </div>
 
