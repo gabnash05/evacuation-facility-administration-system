@@ -3,6 +3,9 @@
 from typing import Any, Dict, List, Optional, Tuple
 from sqlalchemy import text
 from app.models import db
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class AttendanceRecord(db.Model):
@@ -137,6 +140,7 @@ class AttendanceRecord(db.Model):
                 OR CAST(ar.individual_id AS TEXT) = :search_exact
                 OR CONCAT(i.first_name, ' ', i.last_name) ILIKE :search
                 OR ar.status ILIKE :search
+                OR ec.center_name ILIKE :search
                 OR h.household_name ILIKE :search
                 OR e.event_name ILIKE :search
             )"""
@@ -285,6 +289,10 @@ class AttendanceRecord(db.Model):
         try:
             result = db.session.execute(query, params).fetchone()
             db.session.commit()
+            
+            if data.get("status") == "checked_in" and "event_id" in data:
+                cls._update_event_occupancy(data["event_id"])
+                
             return cls._row_to_record(result)
         except Exception as e:
             db.session.rollback()
@@ -300,6 +308,11 @@ class AttendanceRecord(db.Model):
         cls, record_id: int, update_data: Dict[str, Any]
     ) -> Optional["AttendanceRecord"]:
         """Update attendance record using raw SQL."""
+
+        current_record = cls.get_by_id(record_id)
+        if not current_record:
+            return None
+        
         # Build dynamic UPDATE query
         set_clauses = []
         params = {"record_id": record_id}
@@ -327,7 +340,16 @@ class AttendanceRecord(db.Model):
         result = db.session.execute(query, params).fetchone()
         db.session.commit()
 
-        return cls._row_to_record(result)
+        updated_record = cls._row_to_record(result)
+    
+        # Update event occupancy if status changed to/from checked_in
+        if updated_record and "status" in update_data:
+            try:
+                cls._update_event_occupancy(current_record.event_id)
+            except Exception as e:
+                logger.warning(f"Failed to update event occupancy for event {current_record.event_id}: {str(e)}")
+        
+        return updated_record
 
 
     @classmethod
@@ -440,6 +462,11 @@ class AttendanceRecord(db.Model):
         }
 
         record = cls.create(data)
+
+        try:
+            cls._update_event_occupancy(event_id)
+        except Exception as e:
+            logger.warning(f"Failed to update event occupancy for event {event_id}: {str(e)}")
         
         # Return dict format that service expects
         return {
@@ -458,13 +485,26 @@ class AttendanceRecord(db.Model):
         notes: Optional[str] = None
     ) -> Optional["AttendanceRecord"]:
         """Check out an individual from a center."""
+        record = cls.get_by_id(record_id)
+        if not record:
+            return None
+    
         update_data = {
             "status": "checked_out",
             "check_out_time": check_out_time,
             "notes": notes
         }
 
-        return cls.update(record_id, update_data)
+        updated_record = cls.update(record_id, update_data)
+    
+        # Update event occupancy after successful check-out
+        if updated_record:
+            try:
+                cls._update_event_occupancy(record.event_id)
+            except Exception as e:
+                logger.warning(f"Failed to update event occupancy for event {record.event_id}: {str(e)}")
+        
+        return updated_record
 
 
     @classmethod
@@ -530,24 +570,139 @@ class AttendanceRecord(db.Model):
 
         check_in_record = cls.create(check_in_data)
 
+        try:
+            # Update events associated with the old center
+            cls._update_associated_events_occupancy(current_record.center_id)
+            # Update events associated with the new center  
+            cls._update_associated_events_occupancy(transfer_to_center_id)
+        except Exception as e:
+            logger.warning(f"Failed to update event occupancies during transfer: {str(e)}")
+
         return transfer_record
 
 
     @classmethod
-    def get_current_evacuees_by_center(cls, center_id: int) -> List["AttendanceRecord"]:
-        """Get all currently checked-in individuals at a center."""
-        results = db.session.execute(
-            text("""
-                SELECT * FROM attendance_records 
-                WHERE center_id = :center_id 
-                AND status = 'checked_in' 
-                AND check_out_time IS NULL
-                ORDER BY check_in_time DESC
-            """),
-            {"center_id": center_id}
-        ).fetchall()
+    def get_current_evacuees_by_center(
+        cls, 
+        center_id: int,
+        search: Optional[str] = None,
+        page: int = 1,
+        limit: int = 10,
+        sort_by: Optional[str] = None,
+        sort_order: Optional[str] = "desc"
+    ) -> Dict[str, Any]:
+        """Get all currently checked-in individuals at a center with pagination and search."""
+        
+        # Base query with joins to get related names
+        base_query = """
+            FROM attendance_records ar
+            LEFT JOIN individuals i ON ar.individual_id = i.individual_id
+            LEFT JOIN evacuation_centers ec ON ar.center_id = ec.center_id
+            LEFT JOIN events e ON ar.event_id = e.event_id
+            LEFT JOIN households h ON ar.household_id = h.household_id
+            WHERE ar.center_id = :center_id 
+            AND ar.status = 'checked_in' 
+            AND ar.check_out_time IS NULL
+        """
+        
+        params = {"center_id": center_id}
 
-        return [cls._row_to_record(row) for row in results if cls._row_to_record(row)]
+        # Add search functionality
+        if search:
+            base_query += """ AND (
+                i.first_name ILIKE :search 
+                OR i.last_name ILIKE :search 
+                OR CAST(ar.individual_id AS TEXT) = :search_exact
+                OR CONCAT(i.first_name, ' ', i.last_name) ILIKE :search
+                OR h.household_name ILIKE :search
+                OR e.event_name ILIKE :search
+            )"""
+            params["search"] = f"%{search}%"
+            params["search_exact"] = search
+
+        # Build count_query AFTER all filters have been added to base_query
+        count_query = f"SELECT COUNT(*) as total_count {base_query}"
+        
+        # Build select_query AFTER all filters have been added to base_query
+        select_query = f"""
+            SELECT 
+                ar.record_id,
+                CONCAT(i.first_name, ' ', i.last_name) as individual_name,
+                i.gender,
+                ec.center_name,
+                e.event_name,
+                h.household_name,
+                ar.status,
+                ar.check_in_time,
+                ar.check_out_time,
+                ar.transfer_time,
+                ar.notes
+            {base_query}
+        """
+
+        # Get total count
+        count_result = db.session.execute(text(count_query), params).fetchone()
+        total_count = count_result[0] if count_result else 0
+
+        # Add sorting
+        if sort_by:
+            # Map frontend sort keys to database columns
+            sort_mapping = {
+                "individual_name": "individual_name",
+                "center_name": "ec.center_name", 
+                "event_name": "e.event_name",
+                "household_name": "h.household_name",
+                "status": "ar.status",
+                "check_in_time": "ar.check_in_time",
+                "check_out_time": "ar.check_out_time",
+                "transfer_time": "ar.transfer_time",
+                "checkInTime": "ar.check_in_time",
+                "checkOutTime": "ar.check_out_time", 
+                "transferTime": "ar.transfer_time"
+            }
+            
+            if sort_by in sort_mapping:
+                order_direction = "DESC" if sort_order and sort_order.lower() == "desc" else "ASC"
+                select_query += f" ORDER BY {sort_mapping[sort_by]} {order_direction}"
+            else:
+                select_query += " ORDER BY ar.check_in_time DESC"
+        else:
+            select_query += " ORDER BY ar.check_in_time DESC"
+        
+        # Add pagination
+        offset = (page - 1) * limit
+        select_query += " LIMIT :limit OFFSET :offset"
+        params["limit"] = limit
+        params["offset"] = offset
+
+        # Execute query
+        results = db.session.execute(text(select_query), params).fetchall()
+
+        # Convert results to dictionary format for frontend
+        records = []
+        for row in results:
+            record = {
+                "record_id": row.record_id,
+                "individual_name": row.individual_name or "Unknown",
+                "gender": row.gender or "Unknown",
+                "center_name": row.center_name or "Unknown Center",
+                "event_name": row.event_name or "Unknown Event", 
+                "household_name": row.household_name or "Unknown Household",
+                "status": row.status,
+                "check_in_time": row.check_in_time.isoformat() if row.check_in_time else "",
+                "check_out_time": row.check_out_time.isoformat() if row.check_out_time else "",
+                "transfer_time": row.transfer_time.isoformat() if row.transfer_time else "",
+                "notes": row.notes or ""
+            }
+            records.append(record)
+
+        return {
+            "records": records,
+            "total_count": total_count,
+            "page": page,
+            "limit": limit,
+            "total_pages": (total_count + limit - 1) // limit,
+        }
 
 
     @classmethod
@@ -818,3 +973,49 @@ class AttendanceRecord(db.Model):
             "limit": limit,
             "total_pages": (total_count + limit - 1) // limit,
         }
+    
+
+    @classmethod
+    def _update_event_occupancy(cls, event_id: int) -> None:
+        """Update event's max_occupancy based on current attendance records."""
+        from .event import Event
+        
+        # Calculate current occupancy for this event
+        current_occupancy_query = text("""
+            SELECT COUNT(*) as current_occupancy
+            FROM attendance_records 
+            WHERE event_id = :event_id 
+            AND status = 'checked_in' 
+            AND check_out_time IS NULL
+        """)
+        
+        current_occupancy_result = db.session.execute(
+            current_occupancy_query, 
+            {"event_id": event_id}
+        ).fetchone()
+        
+        current_occupancy = current_occupancy_result[0] if current_occupancy_result else 0
+        
+        # Update event occupancy using the existing Event method
+        Event.update_event_occupancy(event_id, current_occupancy)
+
+    @classmethod
+    def _update_associated_events_occupancy(cls, center_id: int) -> None:
+        """Update occupancy for all events associated with a center."""
+        # Get all active events associated with this center
+        events_query = text("""
+            SELECT DISTINCT e.event_id 
+            FROM events e
+            JOIN event_centers ec ON e.event_id = ec.event_id
+            WHERE ec.center_id = :center_id AND e.status = 'active'
+        """)
+        
+        events_result = db.session.execute(
+            events_query,
+            {"center_id": center_id}
+        ).fetchall()
+        
+        # Update occupancy for each event
+        for row in events_result:
+            event_id = row[0]
+            cls._update_event_occupancy(event_id)

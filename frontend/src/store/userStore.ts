@@ -154,8 +154,10 @@ export const useUserStore = create<UserState>((set, get) => ({
                 set({ error: message, loading: false });
                 throw new Error(message);
             }
-            // Refresh the user list to show the new user
-            await get().fetchUsers();
+            // Refresh the user list with current center filter
+            const { centerFilter } = get();
+            console.log(centerFilter)
+            await get().fetchUsers(centerFilter);
             set({ loading: false });
         } catch (error) {
             const errorMessage = error instanceof Error ? error.message : "An unknown error occurred";
@@ -173,7 +175,9 @@ export const useUserStore = create<UserState>((set, get) => ({
                 set({ error: message, loading: false });
                 throw new Error(message);
             }
-            await get().fetchUsers(); // Refresh the list
+            // Refresh the user list with current center filter
+            const { centerFilter } = get();
+            await get().fetchUsers(centerFilter);
             set({ loading: false });
         } catch (error) {
             const errorMessage = error instanceof Error ? error.message : "Failed to update user";
@@ -191,7 +195,9 @@ export const useUserStore = create<UserState>((set, get) => ({
                 set({ error: message, loading: false });
                 throw new Error(message);
             }
-            await get().fetchUsers(); // Refresh the list
+            // Refresh the user list with current center filter
+            const { centerFilter } = get();
+            await get().fetchUsers(centerFilter);
             set({ loading: false });
         } catch (error) {
             const errorMessage = error instanceof Error ? error.message : "Failed to delete user";
@@ -209,7 +215,9 @@ export const useUserStore = create<UserState>((set, get) => ({
                 set({ error: message, loading: false });
                 throw new Error(message);
             }
-            await get().fetchUsers();
+            // Refresh the user list with current center filter
+            const { centerFilter } = get();
+            await get().fetchUsers(centerFilter);
             set({ loading: false });
         } catch (error) {
             const errorMessage = error instanceof Error ? error.message : "Failed to deactivate user";
@@ -227,7 +235,9 @@ export const useUserStore = create<UserState>((set, get) => ({
                 set({ error: message, loading: false });
                 throw new Error(message);
             }
-            await get().fetchUsers();
+            // Refresh the user list with current center filter
+            const { centerFilter } = get();
+            await get().fetchUsers(centerFilter);
             set({ loading: false });
         } catch (error) {
             const errorMessage = error instanceof Error ? error.message : "Failed to reactivate user";

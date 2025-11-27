@@ -6,6 +6,7 @@ export interface AttendanceRecord {
     record_id: number;
     individual_id: number;
     individual_name?: string;
+    gender?: string;
     center_id: number;
     center_name?: string;
     event_id: number;
