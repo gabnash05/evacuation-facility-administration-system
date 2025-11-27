@@ -6,10 +6,10 @@ import { HouseholdTableToolbar } from "@/components/features/household/Household
 import { TablePagination } from "@/components/common/TablePagination";
 import { AddHouseholdModal } from "@/components/features/household/AddHouseholdModal";
 import { EditHouseholdModal } from "@/components/features/household/EditHouseholdModal";
+import { HouseholdDetailsModal } from "@/components/features/household/HouseholdDetailsModal";
 import { SuccessToast } from "@/components/common/SuccessToast";
 import { useHouseholdStore } from "@/store/householdStore";
 import { debounce } from "@/utils/helpers";
-import { useAuth } from "@/hooks/useAuth";
 import { useAuthStore } from "@/store/authStore";
 
 export function CityAdminHouseholdsPage() {
@@ -41,6 +41,8 @@ export function CityAdminHouseholdsPage() {
         isOpen: false,
         message: "",
     });
+    const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
+    const [selectedHouseholdForDetails, setSelectedHouseholdForDetails] = useState<number | null>(null);
 
     const debouncedFetchHouseholds = useMemo(
         () => debounce(() => fetchHouseholds(), 500),
@@ -107,6 +109,11 @@ export function CityAdminHouseholdsPage() {
         setSuccessToast({ isOpen: true, message });
     };
 
+    const handleViewDetails = (id: number) => {
+        setSelectedHouseholdForDetails(id);
+        setIsDetailsModalOpen(true);
+    };
+
     const headers = [
         { key: "householdName", label: "Household Name", sortable: true },
         { key: "householdHead", label: "Household Head", sortable: true },
@@ -164,6 +171,7 @@ export function CityAdminHouseholdsPage() {
                                 onSort={handleSort}
                                 onEdit={handleOpenEditModal}
                                 onDelete={handleDelete}
+                                onRowClick={handleViewDetails}
                                 loading={loading}
                                 userRole={userRole}
                             />
@@ -199,6 +207,11 @@ export function CityAdminHouseholdsPage() {
                     showSuccessToast("Household updated successfully");
                     fetchHouseholds();
                 }}
+            />
+            <HouseholdDetailsModal
+                householdId={selectedHouseholdForDetails}
+                isOpen={isDetailsModalOpen}
+                onClose={() => setIsDetailsModalOpen(false)}
             />
             <SuccessToast
                 isOpen={successToast.isOpen}

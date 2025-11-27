@@ -4,15 +4,17 @@ import { HouseholdTableToolbar } from "@/components/features/household/Household
 import { TablePagination } from "@/components/common/TablePagination";
 import { AddHouseholdModal } from "@/components/features/household/AddHouseholdModal";
 import { EditHouseholdModal } from "@/components/features/household/EditHouseholdModal";
+import { HouseholdDetailsModal } from "@/components/features/household/HouseholdDetailsModal";
 import { SuccessToast } from "@/components/common/SuccessToast";
 import { useHouseholdStore } from "@/store/householdStore";
 import { useUserStore } from "@/store/userStore";
 import { debounce } from "@/utils/helpers";
+import { useAuthStore } from "@/store/authStore";
 
 export function VolunteerHouseholdsPage() {
     const {
         households,
-        loading: householdsLoading,
+        loading,
         error,
         searchQuery,
         currentPage,
@@ -26,12 +28,21 @@ export function VolunteerHouseholdsPage() {
         fetchHouseholds,
         deleteHousehold,
     } = useHouseholdStore();
+
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [selectedHouseholdId, setSelectedHouseholdId] = useState<number | null>(null);
-    const [successToast, setSuccessToast] = useState({ isOpen: false, message: "" });
-    const { currentUser, loading: userLoading, initializeCurrentUser } = useUserStore();
-    const centerId = currentUser?.center_id;
+    const [successToast, setSuccessToast] = useState({
+        isOpen: false,
+        message: "",
+    });
+    const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
+    const [selectedHouseholdForDetails, setSelectedHouseholdForDetails] = useState<number | null>(null);
+
+    const { user } = useAuthStore();
+    const centerId = user?.center_id;
+    const userRole = user?.role;
+    const { initializeCurrentUser } = useUserStore();
 
     useEffect(() => {
         initializeCurrentUser();
@@ -58,6 +69,7 @@ export function VolunteerHouseholdsPage() {
             setSortConfig({ key, direction: "asc" });
             return;
         }
+
         switch (sortConfig.direction) {
             case "asc":
                 setSortConfig({ key, direction: "desc" });
@@ -65,16 +77,23 @@ export function VolunteerHouseholdsPage() {
             case "desc":
                 setSortConfig({ key, direction: null });
                 break;
+            case null:
             default:
                 setSortConfig({ key, direction: "asc" });
                 break;
         }
     };
 
+    const handleViewDetails = (id: number) => {
+        setSelectedHouseholdForDetails(id);
+        setIsDetailsModalOpen(true);
+    };
+
     const handleOpenEditModal = (id: number) => {
         setSelectedHouseholdId(id);
         setIsEditModalOpen(true);
     };
+
     const handleDelete = async (id: number) => {
         try {
             await deleteHousehold(id);
@@ -83,17 +102,25 @@ export function VolunteerHouseholdsPage() {
             console.error("Error deleting household:", error);
         }
     };
+
     const handleEntriesPerPageChange = (entries: number) => {
         setEntriesPerPage(entries);
         setCurrentPage(1);
     };
+
     const handleSearchChange = (query: string) => {
         setSearchQuery(query);
         setCurrentPage(1);
     };
+
     const handlePageChange = (page: number) => {
         setCurrentPage(page);
     };
+
+    const handleToastClose = () => {
+        setSuccessToast({ isOpen: false, message: "" });
+    };
+
     const showSuccessToast = (message: string) => {
         setSuccessToast({ isOpen: true, message });
     };
@@ -103,28 +130,25 @@ export function VolunteerHouseholdsPage() {
         { key: "householdHead", label: "Household Head", sortable: true },
         { key: "address", label: "Address", sortable: true },
     ];
-    const tableData = households.map(h => ({
-        household_id: h.household_id,
-        householdName: h.household_name,
-        householdHead: h.household_head
-            ? `${h.household_head.first_name} ${h.household_head.last_name}`
-            : "N/A",
-        address: h.address || "N/A",
+
+    const tableData = households.map(household => ({
+        household_id: household.household_id,
+        householdName: household.household_name,
+        householdHead: household.household_head
+            ? `${household.household_head.first_name} ${household.household_head.last_name}`
+            : "No head assigned",
+        address: household.address || "No address",
     }));
 
-    if (userLoading) {
-        return (
-            <div className="p-6 text-center text-muted-foreground">Loading user information...</div>
-        );
-    }
     if (!centerId) {
         return (
             <div className="p-6">
                 <div className="bg-destructive/15 text-destructive p-4 rounded-md">
-                    <span className="text-sm font-medium">
-                        Error: You are not assigned to an evacuation center. Please contact an
-                        administrator.
-                    </span>
+                    <div className="flex items-center gap-2">
+                        <span className="text-sm font-medium">
+                            Error: No evacuation center assigned to your account.
+                        </span>
+                    </div>
                 </div>
             </div>
         );
@@ -134,26 +158,34 @@ export function VolunteerHouseholdsPage() {
         <div className="w-full min-w-0 bg-background flex flex-col relative p-6">
             <div className="space-y-6">
                 <div>
-                    <h1 className="text-2xl font-bold">Household Management</h1>
-                    <p className="text-muted-foreground">Manage records for your center.</p>
+                    <h1 className="text-2xl font-bold tracking-tight">Household Management</h1>
+                    <p className="text-muted-foreground">
+                        View and manage household records for your center.
+                    </p>
                 </div>
                 {error && (
-                    <div className="bg-destructive/15 text-destructive p-4 rounded-md">{error}</div>
+                    <div className="bg-destructive/15 text-destructive p-4 rounded-md">
+                        <div className="flex items-center gap-2">
+                            <span className="text-sm font-medium">Error: {error}</span>
+                        </div>
+                    </div>
                 )}
-                <div className="border rounded-lg">
-                    <div className="p-4 bg-card border-b">
+                <div className="border border-border rounded-lg">
+                    <div className="bg-card border-b border-border p-4">
                         <HouseholdTableToolbar
                             searchQuery={searchQuery}
                             onSearchChange={handleSearchChange}
                             onAddHousehold={() => setIsAddModalOpen(true)}
                             entriesPerPage={entriesPerPage}
                             onEntriesPerPageChange={handleEntriesPerPageChange}
-                            loading={householdsLoading}
+                            loading={loading}
                         />
                     </div>
-                    <div className="border-b">
-                        {householdsLoading && households.length === 0 ? (
-                            <div className="p-8 text-center text-muted-foreground">Loading...</div>
+                    <div className="border-b border-border">
+                        {loading && households.length === 0 ? (
+                            <div className="p-8 text-center">
+                                <div className="text-muted-foreground">Loading households...</div>
+                            </div>
                         ) : (
                             <HouseholdTable
                                 headers={headers}
@@ -162,17 +194,19 @@ export function VolunteerHouseholdsPage() {
                                 onSort={handleSort}
                                 onEdit={handleOpenEditModal}
                                 onDelete={handleDelete}
-                                loading={householdsLoading}
+                                onRowClick={handleViewDetails}
+                                loading={loading}
+                                userRole={userRole}
                             />
                         )}
                     </div>
-                    <div className="p-4 bg-card">
+                    <div className="bg-card p-4">
                         <TablePagination
                             currentPage={currentPage}
                             entriesPerPage={entriesPerPage}
                             totalEntries={pagination?.total_items || 0}
                             onPageChange={handlePageChange}
-                            loading={householdsLoading}
+                            loading={loading}
                             entriesLabel="households"
                         />
                     </div>
@@ -183,7 +217,7 @@ export function VolunteerHouseholdsPage() {
                 onClose={() => setIsAddModalOpen(false)}
                 onSuccess={() => {
                     setIsAddModalOpen(false);
-                    showSuccessToast("Household created");
+                    showSuccessToast("Household created successfully");
                     if (centerId) fetchHouseholds(centerId);
                 }}
                 defaultCenterId={centerId}
@@ -194,15 +228,20 @@ export function VolunteerHouseholdsPage() {
                 onClose={() => setIsEditModalOpen(false)}
                 onSuccess={() => {
                     setIsEditModalOpen(false);
-                    showSuccessToast("Household updated");
+                    showSuccessToast("Household updated successfully");
                     if (centerId) fetchHouseholds(centerId);
                 }}
                 isCenterAdminView={true}
             />
+            <HouseholdDetailsModal
+                householdId={selectedHouseholdForDetails}
+                isOpen={isDetailsModalOpen}
+                onClose={() => setIsDetailsModalOpen(false)}
+            />
             <SuccessToast
                 isOpen={successToast.isOpen}
                 message={successToast.message}
-                onClose={() => setSuccessToast({ isOpen: false, message: "" })}
+                onClose={handleToastClose}
             />
         </div>
     );

@@ -8,9 +8,11 @@ import { CityAdminAttendancePage } from "./pages/city-admin/CityAdminAttendanceP
 
 import { CenterAdminDashboard } from "@/pages/center-admin/CenterAdminDashboard";
 import { CenterAdminHouseholdsPage } from "./pages/center-admin/CenterAdminHouseholds";
+import { CenterAdminAttendancePage } from "./pages/center-admin/CenterAdminAttendancePage";
 
 import { VolunteerDashboard } from "@/pages/volunteer/VolunteerDashboard";
 import { VolunteerHouseholdsPage } from "./pages/volunteer/VolunteerHouseholdsPage";
+import { VolunteerAttendancePage } from "./pages/volunteer/VolunteerAttendancePage";
 import { VolunteerTransferIndividualPage } from "./pages/volunteer/VolunteerTransferIndividualPage";
 
 import MainLayout from "@/layouts/MainLayout";
@@ -86,13 +88,16 @@ function App() {
                         >
                             <MainLayout>
                                 <Routes>
-                                    <Route path="dashboard" element={<CenterAdminDashboard />} />
+                                    <Route 
+                                        path="dashboard" 
+                                        element={<CenterAdminDashboard />} />
                                     <Route
                                         path="households"
                                         element={<CenterAdminHouseholdsPage />}
                                     />
-                                    <Route path="attendance" element={<div>Attendance Page</div>} />{" "}
-                                    {/* replace with actual page when available */}
+                                    <Route 
+                                        path="attendance" 
+                                        element={<CenterAdminAttendancePage/>} />
                                     <Route
                                         path="user-management"
                                         element={<CenterAdminUserManagementPage />}
@@ -121,12 +126,14 @@ function App() {
                         <ProtectedRoute requiredRole={["volunteer"]}>
                             <MainLayout>
                                 <Routes>
-                                    <Route path="dashboard" element={<VolunteerDashboard />} />
+                                    <Route 
+                                        path="dashboard" 
+                                        element={<VolunteerDashboard />} 
+                                    />
                                     <Route
-                                        path="check-in"
-                                        element={<div>Check-In Page</div>}
-                                    />{" "}
-                                    {/* replace with actual page when available */}
+                                        path="attendance"
+                                        element={<VolunteerAttendancePage />}
+                                    />
                                     <Route
                                         path="transfer-individual"
                                         element={<div>Transfer Individual Page</div>}
