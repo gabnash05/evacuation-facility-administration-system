@@ -136,7 +136,7 @@ function App() {
                                     />
                                     <Route
                                         path="transfer-individual"
-                                        element={<div>Transfer Individual Page</div>}
+                                        element={<VolunteerTransferIndividualPage/>}
                                     />{" "}
                                     {/* replace with actual page when available */}
                                     <Route
