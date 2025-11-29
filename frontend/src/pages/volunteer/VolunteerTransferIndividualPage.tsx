@@ -1,10 +1,11 @@
 import { useState, useEffect, useCallback } from "react";
-import { Search } from "lucide-react";
+import { Search, ArrowRightLeft } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { TransferIndividualsTable } from "@/components/features/transfer/TransferIndividualsTable";
 import { TransferDestinationTabs } from "@/components/features/transfer/TransferDestinationTabs";
 import { TransferReasonSelect } from "@/components/features/transfer/TransferReasonSelect";
+import { TransferIndividualModal } from "@/components/features/transfer/TransferIndividualModal";
 import { SuccessToast } from "@/components/common/SuccessToast";
 import { TransferService } from "@/services/transferService";
 import { validateTransferForm } from "@/schemas/transfer";
@@ -23,6 +24,9 @@ export function VolunteerTransferIndividualPage() {
     const [error, setError] = useState<string | null>(null);
     const [sortColumn, setSortColumn] = useState<string>("");
     const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
+    
+    // Modal state
+    const [isTransferModalOpen, setIsTransferModalOpen] = useState(false);
 
     // Debounce search query - waits 500ms after user stops typing
     useEffect(() => {
@@ -176,6 +180,27 @@ export function VolunteerTransferIndividualPage() {
         setTransferReason("");
         setError(null);
     };
+    
+    const handleModalSuccess = () => {
+        setSuccessToast({
+            isOpen: true,
+            message: "Individual transferred successfully!",
+        });
+        // Refresh the list
+        const fetchIndividuals = async () => {
+            try {
+                const response = await TransferService.getIndividualsForTransfer({
+                    search: debouncedSearch,
+                });
+                if (response.data) {
+                    setIndividuals(response.data.results);
+                }
+            } catch (err) {
+                console.error("Failed to refresh individuals:", err);
+            }
+        };
+        fetchIndividuals();
+    };
 
     const isFormValid =
         selectedIndividuals.length > 0 &&
@@ -197,12 +222,23 @@ export function VolunteerTransferIndividualPage() {
     return (
         <div className="w-full min-w-0 bg-background flex flex-col relative p-6">
             <div className="space-y-6">
-                {/* Page Header */}
-                <div>
-                    <h1 className="text-2xl font-bold tracking-tight">Transfer Individual</h1>
-                    <p className="text-muted-foreground">
-                        Select individuals to transfer to another location
-                    </p>
+                {/* Page Header with Test Button */}
+                <div className="flex items-center justify-between">
+                    <div>
+                        <h1 className="text-2xl font-bold tracking-tight">Transfer Individual</h1>
+                        <p className="text-muted-foreground">
+                            Select individuals to transfer to another location
+                        </p>
+                    </div>
+                    
+                    {/* Temporary Test Button for Modal */}
+                    <Button
+                        onClick={() => setIsTransferModalOpen(true)}
+                        className="gap-2 bg-blue-600 hover:bg-blue-700"
+                    >
+                        <ArrowRightLeft className="h-4 w-4" />
+                        Open Transfer Modal (Test)
+                    </Button>
                 </div>
 
                 {/* Error Display */}
@@ -291,6 +327,13 @@ export function VolunteerTransferIndividualPage() {
                 isOpen={successToast.isOpen}
                 message={successToast.message}
                 onClose={() => setSuccessToast({ isOpen: false, message: "" })}
+            />
+
+            {/* Transfer Individual Modal - THIS IS THE FIX! */}
+            <TransferIndividualModal
+                isOpen={isTransferModalOpen}
+                onClose={() => setIsTransferModalOpen(false)}
+                onSuccess={handleModalSuccess}
             />
         </div>
     );
