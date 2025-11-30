@@ -13,7 +13,6 @@ import { CenterAdminAttendancePage } from "./pages/center-admin/CenterAdminAtten
 import { VolunteerDashboard } from "@/pages/volunteer/VolunteerDashboard";
 import { VolunteerHouseholdsPage } from "./pages/volunteer/VolunteerHouseholdsPage";
 import { VolunteerAttendancePage } from "./pages/volunteer/VolunteerAttendancePage";
-import { VolunteerTransferIndividualPage } from "./pages/volunteer/VolunteerTransferIndividualPage";
 
 import MainLayout from "@/layouts/MainLayout";
 import LoginPage from "@/pages/auth/LoginPage";
@@ -134,11 +133,6 @@ function App() {
                                         path="attendance"
                                         element={<VolunteerAttendancePage />}
                                     />
-                                    <Route
-                                        path="transfer-individual"
-                                        element={<VolunteerTransferIndividualPage/>}
-                                    />{" "}
-                                    {/* replace with actual page when available */}
                                     <Route
                                         path="households"
                                         element={<VolunteerHouseholdsPage />}
