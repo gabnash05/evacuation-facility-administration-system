@@ -88,3 +88,12 @@ export type AttendanceSummaryResponse = ApiResponse<AttendanceSummary>;
 export type IndividualAttendanceHistoryResponse = ApiResponse<AttendanceRecord[]>;
 export type OccupancyRecalculationResponse = ApiResponse<{ new_occupancy: number }>;
 export type AllOccupanciesRecalculationResponse = ApiResponse<OccupancyRecalculationResult[]>;
+
+export type TransferReason =
+    | "medical_emergency"
+    | "family_request"
+    | "center_capacity"
+    | "relocation"
+    | "safety_concerns"
+    | "special_needs"
+    | "other";
