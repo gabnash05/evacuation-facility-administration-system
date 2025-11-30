@@ -1,3 +1,5 @@
+// components/features/transfer/EvacuationCentersList.tsx
+import { useState } from "react";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
     Table,
@@ -24,7 +26,7 @@ const mockCenters = [
     },
     {
         center_id: 3,
-        center_name: "Iligan City National High School",
+        center_name: "Iligan City National High School - Annex",
         capacity: 1000,
         current_occupancy: 50,
     },
@@ -32,12 +34,16 @@ const mockCenters = [
 
 interface EvacuationCentersListProps {
     selectedCenterId: number | null;
-    onCenterSelect: (centerId: number) => void;
+    onCenterSelect: (centerId: number | null) => void;
+    searchQuery?: string;
+    onSearchChange?: (query: string) => void;
 }
 
 export function EvacuationCentersList({
     selectedCenterId,
     onCenterSelect,
+    searchQuery = "",
+    onSearchChange,
 }: EvacuationCentersListProps) {
     const getCapacityColor = (occupancy: number, capacity: number) => {
         const percentage = (occupancy / capacity) * 100;
@@ -51,6 +57,13 @@ export function EvacuationCentersList({
         return Math.round((occupancy / capacity) * 100);
     };
 
+    // Filter centers based on search query
+    const filteredCenters = mockCenters.filter(center => {
+        if (!searchQuery) return true;
+        const searchLower = searchQuery.toLowerCase();
+        return center.center_name.toLowerCase().includes(searchLower);
+    });
+
     return (
         <div className="border rounded-lg">
             <div className="overflow-x-auto">
@@ -63,7 +76,16 @@ export function EvacuationCentersList({
                         </TableRow>
                     </TableHeader>
                     <TableBody>
-                        {mockCenters.map((center, index) => {
+                        {filteredCenters.length === 0 ? (
+                            <TableRow>
+                                <TableCell colSpan={3} className="h-24 text-center">
+                                    <div className="text-muted-foreground">
+                                        {searchQuery ? "No centers found" : "No centers available"}
+                                    </div>
+                                </TableCell>
+                            </TableRow>
+                        ) : (
+                            filteredCenters.map((center, index) => {
                             const percentage = getCapacityPercentage(
                                 center.current_occupancy,
                                 center.capacity
@@ -78,7 +100,9 @@ export function EvacuationCentersList({
                                     <TableCell>
                                         <Checkbox
                                             checked={isSelected}
-                                            onCheckedChange={() => onCenterSelect(center.center_id)}
+                                            onCheckedChange={() => 
+                                                onCenterSelect(isSelected ? null : center.center_id)
+                                            }
                                             aria-label={`Select ${center.center_name}`}
                                         />
                                     </TableCell>
@@ -108,7 +132,8 @@ export function EvacuationCentersList({
                                     </TableCell>
                                 </TableRow>
                             );
-                        })}
+                        })
+                        )}
                     </TableBody>
                 </Table>
             </div>
