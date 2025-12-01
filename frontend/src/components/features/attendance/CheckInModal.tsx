@@ -320,7 +320,11 @@ export function CheckInModal({ isOpen, onClose, onSuccess, defaultCenterId }: Ch
                                 onChange={e => setNotes(e.target.value)}
                                 placeholder="Additional notes (optional) - will apply to all selected individuals"
                                 className="w-full min-h-[80px]"
+                                maxLength={100}
                             />
+                            <p className="text-xs text-muted-foreground">
+                                {notes.length}/100 characters
+                            </p>
                         </div>
                     </div>
                 </div>

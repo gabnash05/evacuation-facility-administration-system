@@ -28,6 +28,7 @@ interface TransferIndividualModalProps {
     onClose: () => void;
     onSuccess: (transferCount?: number) => void;
     defaultCenterId?: number;
+    sourceCenterId?: number; // NEW: Add sourceCenterId prop to restrict transfers from this center only
     onTransfer?: (recordId: number, data: TransferData) => Promise<void>;
     onBatchTransfer?: (data: {
         transfers: Array<{
@@ -44,7 +45,8 @@ interface ProcessedIndividual {
     individual: Individual;
     record_id: number | null;
     original_center_name?: string;
-    status: "ready" | "loading" | "error";
+    original_center_id?: number; // NEW: Store the original center ID
+    status: "ready" | "loading" | "error" | "wrong_center"; // NEW: Add wrong_center status
     error?: string;
 }
 
@@ -53,6 +55,7 @@ export function TransferIndividualModal({
     onClose,
     onSuccess,
     defaultCenterId,
+    sourceCenterId, // NEW: Destructure sourceCenterId
     onTransfer,
     onBatchTransfer,
 }: TransferIndividualModalProps) {
@@ -75,17 +78,40 @@ export function TransferIndividualModal({
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [processingRecords, setProcessingRecords] = useState(false);
 
+    // NEW: Helper to get center names
+    const getCenterNameById = (centerId?: number | null) => {
+        if (!centerId) return undefined;
+        const center = centers.find(c => c.center_id === centerId);
+        return center?.center_name;
+    };
+
+    const formatCenterDisplay = (centerId?: number | null) => {
+        if (!centerId) return "";
+        const name = getCenterNameById(centerId);
+        return name || `Center #${centerId}`;
+    };
+
+    const sourceCenterName = sourceCenterId ? getCenterNameById(sourceCenterId) : undefined;
+
+    // NEW: Filter centers to exclude the source center if provided
+    const filteredCenters = sourceCenterId 
+        ? centers.filter(center => center.center_id !== sourceCenterId)
+        : centers;
+
     // Reset form when modal opens/closes
     useEffect(() => {
         if (isOpen) {
-            fetchCurrentAttendees({
-                center_id: defaultCenterId,
-            });
+            // Fetch current attendees from the source center if provided
+            if (sourceCenterId) {
+                fetchCurrentAttendees({
+                    center_id: sourceCenterId,
+                });
+            }
             fetchAllCenters();
         } else {
             resetForm();
         }
-    }, [isOpen, defaultCenterId, fetchCurrentAttendees]);
+    }, [isOpen, sourceCenterId, defaultCenterId, fetchCurrentAttendees]);
 
     const resetForm = () => {
         setCenterSearchQuery("");
@@ -126,6 +152,9 @@ export function TransferIndividualModal({
             );
             
             if (activeRecord) {
+                // NEW: Check if individual is in the source center (if sourceCenterId is provided)
+                const isInSourceCenter = !sourceCenterId || activeRecord.center_id === sourceCenterId;
+                
                 setSelectedIndividuals(prev => 
                     prev.map(ind => 
                         ind.individual.individual_id === individual.individual_id
@@ -133,12 +162,21 @@ export function TransferIndividualModal({
                                 ...ind,
                                 record_id: activeRecord.record_id,
                                 original_center_name: activeRecord.center_name,
-                                status: "ready"
+                                original_center_id: activeRecord.center_id,
+                                status: isInSourceCenter ? "ready" : "wrong_center",
+                                error: isInSourceCenter
+                                    ? undefined
+                                    : `Individual is not checked into your center (${sourceCenterName || "your assigned center"})`
                             }
                             : ind
                     )
                 );
-                setError(null);
+                
+                if (!isInSourceCenter) {
+                    setError(`Individual ${individual.first_name} ${individual.last_name} is not checked into your center.`);
+                } else {
+                    setError(null);
+                }
             } else {
                 setSelectedIndividuals(prev => 
                     prev.map(ind => 
@@ -178,7 +216,7 @@ export function TransferIndividualModal({
     };
 
     const handleSubmit = async () => {
-        // Validate ready individuals
+        // Validate ready individuals (only those with "ready" status)
         const readyIndividuals = selectedIndividuals.filter(ind => ind.status === "ready");
         const readyCount = readyIndividuals.length;
         
@@ -189,6 +227,12 @@ export function TransferIndividualModal({
 
         if (!selectedCenterId) {
             setError("Please select a destination center");
+            return;
+        }
+
+        // NEW: Prevent transferring to the same center
+        if (sourceCenterId && selectedCenterId === sourceCenterId) {
+            setError("Cannot transfer individuals to the same center they are currently in.");
             return;
         }
 
@@ -271,12 +315,13 @@ export function TransferIndividualModal({
 
     const getStatusColor = (status: string) => {
         switch (status.toLowerCase()) {
-            case "checked_in":
+            case "ready":
                 return "bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-200";
-            case "checked_out":
-                return "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-200";
-            case "transferred":
-                return "bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-200";
+            case "loading":
+                return "bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-200";
+            case "error":
+            case "wrong_center":
+                return "bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-200";
             default:
                 return "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-200";
         }
@@ -284,7 +329,19 @@ export function TransferIndividualModal({
 
     const readyCount = selectedIndividuals.filter(ind => ind.status === "ready").length;
     const errorCount = selectedIndividuals.filter(ind => ind.status === "error").length;
+    const wrongCenterCount = selectedIndividuals.filter(ind => ind.status === "wrong_center").length;
     const loadingCount = selectedIndividuals.filter(ind => ind.status === "loading").length;
+
+    // NEW: Info message about source center restriction (using center name when available)
+    const sourceCenterInfo = sourceCenterId ? (
+        <div className="bg-blue-50 dark:bg-blue-950 text-blue-700 dark:text-blue-300 p-3 rounded-md text-sm border border-blue-200 dark:border-blue-800">
+            <div className="font-medium">Transfer Restriction:</div>
+            <div>
+                You can only transfer individuals currently checked into{" "}
+                {formatCenterDisplay(sourceCenterId)}
+            </div>
+        </div>
+    ) : null;
 
     return (
         <Dialog open={isOpen} onOpenChange={handleClose}>
@@ -293,6 +350,11 @@ export function TransferIndividualModal({
                     <DialogTitle className="text-lg font-semibold flex items-center gap-2">
                         <ArrowRightLeft className="h-5 w-5" />
                         {selectedIndividuals.length > 1 ? "Transfer Individuals" : "Transfer Individual"}
+                        {sourceCenterId && (
+                            <Badge variant="outline" className="ml-2">
+                                From {formatCenterDisplay(sourceCenterId)}
+                            </Badge>
+                        )}
                     </DialogTitle>
                 </DialogHeader>
 
@@ -302,6 +364,8 @@ export function TransferIndividualModal({
                             {error}
                         </div>
                     )}
+
+                    {sourceCenterInfo}
 
                     {/* Selected Individuals Display */}
                     {selectedIndividuals.length > 0 && (
@@ -318,6 +382,11 @@ export function TransferIndividualModal({
                                         {loadingCount > 0 && (
                                             <span className="text-yellow-600">
                                                 ⏳ {loadingCount} loading
+                                            </span>
+                                        )}
+                                        {wrongCenterCount > 0 && (
+                                            <span className="text-red-600">
+                                                ✗ {wrongCenterCount} wrong center
                                             </span>
                                         )}
                                         {errorCount > 0 && (
@@ -344,9 +413,9 @@ export function TransferIndividualModal({
                                         className={`flex justify-between items-center p-3 rounded-lg border ${
                                             processedIndividual.status === "ready"
                                                 ? "bg-green-50 dark:bg-green-950 border-green-200 dark:border-green-800"
-                                                : processedIndividual.status === "error"
-                                                ? "bg-red-50 dark:bg-red-950 border-red-200 dark:border-red-800"
-                                                : "bg-yellow-50 dark:bg-yellow-950 border-yellow-200 dark:border-yellow-800"
+                                                : processedIndividual.status === "loading"
+                                                ? "bg-yellow-50 dark:bg-yellow-950 border-yellow-200 dark:border-yellow-800"
+                                                : "bg-red-50 dark:bg-red-950 border-red-200 dark:border-red-800"
                                         }`}
                                     >
                                         <div className="flex-1">
@@ -360,11 +429,11 @@ export function TransferIndividualModal({
                                             {processedIndividual.status === "ready" && (
                                                 <div className="mt-1">
                                                     <div className="text-sm">
-                                                        From: {processedIndividual.original_center_name || "Unknown Center"}
+                                                        From: {processedIndividual.original_center_name || formatCenterDisplay(processedIndividual.original_center_id)}
                                                     </div>
                                                     <Badge
                                                         variant="secondary"
-                                                        className={`${getStatusColor("checked_in")} mt-1`}
+                                                        className={`${getStatusColor("ready")} mt-1`}
                                                     >
                                                         ✓ Ready to transfer (Record #{processedIndividual.record_id})
                                                     </Badge>
@@ -374,6 +443,12 @@ export function TransferIndividualModal({
                                             {processedIndividual.status === "loading" && (
                                                 <div className="text-sm text-yellow-600 mt-1">
                                                     ⏳ Finding active check-in record...
+                                                </div>
+                                            )}
+                                            
+                                            {processedIndividual.status === "wrong_center" && (
+                                                <div className="text-sm text-red-600 mt-1">
+                                                    ✗ {processedIndividual.error}
                                                 </div>
                                             )}
                                             
@@ -409,7 +484,9 @@ export function TransferIndividualModal({
                         />
 
                         <div className="text-sm text-muted-foreground">
-                            Note: Only individuals with active check-in records can be transferred
+                            Note: Only individuals with active check-in records
+                            {sourceCenterId && ` in ${formatCenterDisplay(sourceCenterId)} `}
+                            can be transferred
                         </div>
                     </div>
 
@@ -428,11 +505,17 @@ export function TransferIndividualModal({
                         />
                         
                         <EvacuationCentersList
-                            centers={centers}
+                            centers={filteredCenters} // Use filtered centers
                             selectedCenterId={selectedCenterId}
                             onCenterSelect={setSelectedCenterId}
                             searchQuery={centerSearchQuery}
                         />
+                        
+                        {sourceCenterId && (
+                            <div className="text-sm text-muted-foreground">
+                                Note: Your current center ({formatCenterDisplay(sourceCenterId)}) is not shown in the list
+                            </div>
+                        )}
                     </div>
 
                     {/* Reason for Transfer */}
@@ -452,9 +535,9 @@ export function TransferIndividualModal({
                             onChange={e => setNotes(e.target.value)}
                             placeholder="Additional notes (optional)"
                             className="w-full min-h-[80px]"
-                            maxLength={500}
+                            maxLength={100}
                         />
-                        <p className="text-xs text-muted-foreground">{notes.length}/500 characters</p>
+                        <p className="text-xs text-muted-foreground">{notes.length}/100 characters</p>
                     </div>
                 </div>
 
