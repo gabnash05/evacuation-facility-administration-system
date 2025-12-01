@@ -100,9 +100,11 @@ export function AttendanceTable({
         setRecordToDelete(null);
     };
 
-    // Check if user can perform actions (adjust based on your role requirements)
-    const canManage =
-        userRole === "super_admin" || userRole === "city_admin" || userRole === "center_admin";
+    // Only show delete for super_admin
+    const isSuperAdmin = userRole === "super_admin";
+    
+    // Show check-out and transfer for these roles
+    const canCheckoutTransfer = ["super_admin", "city_admin", "center_admin"].includes(userRole || "");
 
     if (data.length === 0 && !loading) {
         return (
@@ -196,25 +198,25 @@ export function AttendanceTable({
                                                 </Button>
                                             </DropdownMenuTrigger>
                                             <DropdownMenuContent align="end">
-                                                {row.status === "checked_in" && (
-                                                    <DropdownMenuItem
-                                                        onClick={() => onCheckOut(row.record_id)}
-                                                        className="flex items-center gap-2"
-                                                    >
-                                                        <LogOut className="h-4 w-4" />
-                                                        Check Out
-                                                    </DropdownMenuItem>
+                                                {row.status === "checked_in" && canCheckoutTransfer && (
+                                                    <>
+                                                        <DropdownMenuItem
+                                                            onClick={() => onCheckOut(row.record_id)}
+                                                            className="flex items-center gap-2"
+                                                        >
+                                                            <LogOut className="h-4 w-4" />
+                                                            Check Out
+                                                        </DropdownMenuItem>
+                                                        <DropdownMenuItem
+                                                            onClick={() => onTransfer(row.record_id)}
+                                                            className="flex items-center gap-2"
+                                                        >
+                                                            <Move className="h-4 w-4" />
+                                                            Transfer
+                                                        </DropdownMenuItem>
+                                                    </>
                                                 )}
-                                                {row.status === "checked_in" && (
-                                                    <DropdownMenuItem
-                                                        onClick={() => onTransfer(row.record_id)}
-                                                        className="flex items-center gap-2"
-                                                    >
-                                                        <Move className="h-4 w-4" />
-                                                        Transfer
-                                                    </DropdownMenuItem>
-                                                )}
-                                                {canManage && (
+                                                {isSuperAdmin && (
                                                     <DropdownMenuItem
                                                         onClick={() => handleDeleteClick(row)}
                                                         className="flex items-center gap-2 text-destructive focus:text-destructive"

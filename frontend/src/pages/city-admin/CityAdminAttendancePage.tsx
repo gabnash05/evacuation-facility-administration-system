@@ -4,7 +4,7 @@ import { AttendanceTableToolbar } from "@/components/features/attendance/Attenda
 import { TablePagination } from "@/components/common/TablePagination";
 import { CheckInModal } from "@/components/features/attendance/CheckInModal";
 import { CheckOutModal } from "@/components/features/attendance/CheckOutModal";
-import { TransferModal } from "@/components/features/attendance/TransferModal";
+import { TransferIndividualModal } from "@/components/features/transfer/TransferIndividualModal";
 import { SuccessToast } from "@/components/common/SuccessToast";
 import { useAttendanceStore } from "@/store/attendanceRecordsStore";
 import { debounce } from "@/utils/helpers";
@@ -26,6 +26,10 @@ export function CityAdminAttendancePage() {
         setSortConfig,
         fetchAttendanceRecords,
         deleteAttendanceRecord,
+        transferIndividual,
+        transferMultipleIndividuals,
+        checkOutIndividual,
+        checkOutMultipleIndividuals,
     } = useAttendanceStore();
 
     // Get current user and role
@@ -159,14 +163,22 @@ export function CityAdminAttendancePage() {
 
                 <div className="border border-border rounded-lg">
                     <div className="bg-card border-b border-border p-4">
-                        <AttendanceTableToolbar
-                            searchQuery={searchQuery}
-                            onSearchChange={handleSearchChange}
-                            onCheckIn={() => setIsCheckInModalOpen(true)}
-                            entriesPerPage={entriesPerPage}
-                            onEntriesPerPageChange={handleEntriesPerPageChange}
-                            loading={loading}
-                        />
+                            <AttendanceTableToolbar
+                                searchQuery={searchQuery}
+                                onSearchChange={handleSearchChange}
+                                onCheckIn={() => setIsCheckInModalOpen(true)}
+                                onOpenCheckOut={() => {
+                                    setSelectedRecordId(null);
+                                    setIsCheckOutModalOpen(true);
+                                }}
+                                onOpenTransfer={() => {
+                                    setSelectedRecordId(null);
+                                    setIsTransferModalOpen(true);
+                                }}
+                                entriesPerPage={entriesPerPage}
+                                onEntriesPerPageChange={handleEntriesPerPageChange}
+                                loading={loading}
+                            />
                     </div>
                     <div className="border-b border-border">
                         {loading && attendanceRecords.length === 0 ? (
@@ -217,20 +229,38 @@ export function CityAdminAttendancePage() {
                 isOpen={isCheckOutModalOpen}
                 recordId={selectedRecordId}
                 onClose={() => setIsCheckOutModalOpen(false)}
-                onSuccess={() => {
+                onCheckOut={async (recordId: number, data) => {
+                    await checkOutIndividual(recordId, data);
+                }}
+                onBatchCheckOut={async (data) => {
+                    await checkOutMultipleIndividuals(data);
+                }}
+                onSuccess={(checkoutCount?: number) => {
                     setIsCheckOutModalOpen(false);
-                    showSuccessToast("Individual checked out successfully");
+                    const message = selectedRecordId 
+                        ? "Individual checked out successfully"
+                        : `${checkoutCount || 0} individuals checked out successfully`;
+                    showSuccessToast(message);
                     fetchAttendanceRecords();
                 }}
             />
 
-            <TransferModal
+            <TransferIndividualModal
                 isOpen={isTransferModalOpen}
-                recordId={selectedRecordId}
+                defaultCenterId={undefined}
                 onClose={() => setIsTransferModalOpen(false)}
-                onSuccess={() => {
+                onTransfer={async (recordId: number, data) => {
+                    await transferIndividual(recordId, data as any);
+                }}
+                onBatchTransfer={async (data) => {
+                    await transferMultipleIndividuals(data);
+                }}
+                onSuccess={(transferCount?: number) => {
                     setIsTransferModalOpen(false);
-                    showSuccessToast("Individual transferred successfully");
+                    const message = (transferCount || 1) === 1 
+                        ? "Individual transferred successfully"
+                        : `${transferCount || 0} individuals transferred successfully`;
+                    showSuccessToast(message);
                     fetchAttendanceRecords();
                 }}
             />

@@ -11,7 +11,9 @@ from app.services.attendance_records_service import (
     get_attendance_record_by_id,
     check_in_individual,
     check_out_individual,
+    check_out_multiple_individuals,
     transfer_individual,
+    transfer_multiple_individuals,
     get_current_evacuees_by_center,
     get_all_current_evacuees,
     get_attendance_summary_by_center,
@@ -675,6 +677,91 @@ def check_out_individual_route(record_id: int) -> Tuple:
         )
 
 
+@attendance_record_bp.route("/attendance/check-out/batch", methods=["POST"])
+@jwt_required()
+def check_out_multiple_individuals_route() -> Tuple:
+    """
+    Check out multiple individuals from evacuation centers in a single operation.
+
+    Request Body (JSON array):
+        [
+            {
+                "record_id": integer,           # Attendance record ID
+                "check_out_time": string,       # Check-out time (ISO format, optional)
+                "notes": string                 # Additional notes (optional)
+            },
+            ...
+        ]
+
+    Returns:
+        Tuple containing:
+            - JSON response with check-out results
+            - HTTP status code
+    """
+    try:
+        data = request.get_json()
+
+        if not data or not isinstance(data, list):
+            return jsonify({
+                "success": False, 
+                "message": "Request body must be a JSON array of check-out data"
+            }), 400
+
+        if len(data) == 0:
+            return jsonify({
+                "success": False, 
+                "message": "No check-outs provided"
+            }), 400
+
+        # Validate maximum batch size
+        if len(data) > 50:
+            return jsonify({
+                "success": False, 
+                "message": "Maximum batch size is 50 check-outs per request"
+            }), 400
+
+        # Validate each check-out item
+        required_fields = ["record_id"]
+        validated_data = []
+        
+        for i, item in enumerate(data):
+            if not isinstance(item, dict):
+                return jsonify({
+                    "success": False, 
+                    "message": f"Item at index {i} must be a JSON object"
+                }), 400
+
+            # Check required fields
+            for field in required_fields:
+                if field not in item:
+                    return jsonify({
+                        "success": False, 
+                        "message": f"Missing required field '{field}' for check-out at index {i}"
+                    }), 400
+
+            validated_data.append(item)
+
+        logger.info("Batch checking out %s individuals", len(validated_data))
+
+        # Process batch check-out
+        result = check_out_multiple_individuals(validated_data)
+
+        if not result["success"]:
+            return jsonify(result), 400
+
+        return jsonify(result), 200
+
+    except Exception as error:
+        logger.error("Error in batch check-out: %s", str(error))
+        return (
+            jsonify({
+                "success": False,
+                "message": f"Internal server error while processing batch check-out: {str(error)}",
+            }),
+            500,
+        )
+    
+
 @attendance_record_bp.route("/attendance/<int:record_id>/transfer", methods=["PUT"])
 @jwt_required()
 def transfer_individual_route(record_id: int) -> Tuple:
@@ -734,6 +821,110 @@ def transfer_individual_route(record_id: int) -> Tuple:
                     "message": "Internal server error while transferring individual",
                 }
             ),
+            500,
+        )
+
+
+@attendance_record_bp.route("/attendance/transfer/batch", methods=["POST"])
+@jwt_required()
+def transfer_multiple_individuals_route() -> Tuple:
+    """
+    Transfer multiple individuals to different centers in a single operation.
+
+    Request Body (JSON):
+        {
+            "transfers": [
+                {
+                    "record_id": integer,           # Current attendance record ID
+                    "transfer_to_center_id": integer, # Center ID to transfer to
+                    "transfer_time": string,        # Transfer time (ISO format, optional)
+                    "recorded_by_user_id": integer, # User ID (optional, defaults to current user)
+                    "notes": string                 # Additional notes (optional)
+                },
+                ...
+            ]
+        }
+
+    Returns:
+        Tuple containing:
+            - JSON response with transfer results
+            - HTTP status code
+    """
+    try:
+        data = request.get_json()
+
+        if not data or "transfers" not in data:
+            return jsonify({
+                "success": False, 
+                "message": "Request body must contain 'transfers' array"
+            }), 400
+
+        transfers_data = data["transfers"]
+
+        if not isinstance(transfers_data, list):
+            return jsonify({
+                "success": False, 
+                "message": "'transfers' must be an array"
+            }), 400
+
+        if len(transfers_data) == 0:
+            return jsonify({
+                "success": False, 
+                "message": "No transfers provided"
+            }), 400
+
+        # Validate maximum batch size
+        if len(transfers_data) > 50:
+            return jsonify({
+                "success": False, 
+                "message": "Maximum batch size is 50 transfers per request"
+            }), 400
+
+        # Get current user ID from JWT token
+        current_user_id = get_jwt_identity()
+        
+        # Validate and prepare transfer data
+        validated_transfers = []
+        required_fields = ["record_id", "transfer_to_center_id"]
+        
+        for i, transfer_item in enumerate(transfers_data):
+            if not isinstance(transfer_item, dict):
+                return jsonify({
+                    "success": False, 
+                    "message": f"Transfer item at index {i} must be a JSON object"
+                }), 400
+
+            # Check required fields
+            for field in required_fields:
+                if field not in transfer_item:
+                    return jsonify({
+                        "success": False, 
+                        "message": f"Missing required field '{field}' for transfer at index {i}"
+                    }), 400
+
+            # Set default recorded_by_user_id if not provided
+            if "recorded_by_user_id" not in transfer_item:
+                transfer_item["recorded_by_user_id"] = current_user_id
+
+            validated_transfers.append(transfer_item)
+
+        logger.info("Batch transferring %s individuals", len(validated_transfers))
+
+        # Process batch transfers
+        result = transfer_multiple_individuals(validated_transfers)
+
+        if not result["success"]:
+            return jsonify(result), 400
+
+        return jsonify(result), 200
+
+    except Exception as error:
+        logger.error("Error in batch transfer: %s", str(error))
+        return (
+            jsonify({
+                "success": False,
+                "message": f"Internal server error while processing batch transfers: {str(error)}",
+            }),
             500,
         )
 

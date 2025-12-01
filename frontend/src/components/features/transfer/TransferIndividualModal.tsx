@@ -11,19 +11,41 @@ import {
     DialogClose,
 } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
-import { ArrowRightLeft, X, Home, Search } from "lucide-react";
+import { ArrowRightLeft, X, Home, Users } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { useAttendanceStore } from "@/store/attendanceRecordsStore";
+import { useEvacuationCenterStore } from "@/store/evacuationCenterStore";
+import { useIndividualStore } from "@/store/individualStore";
+import { IndividualSearchTable } from "@/components/features/attendance/IndividualSearchTable";
 import { EvacuationCentersList } from "@/components/features/transfer/EvacuationCentersList";
 import { TransferReasonSelect } from "@/components/features/transfer/TransferReasonSelect";
 import type { AttendanceRecord, TransferData, TransferReason } from "@/types/attendance";
+import type { Individual } from "@/types/individual";
 
 interface TransferIndividualModalProps {
     isOpen: boolean;
     onClose: () => void;
-    onSuccess: () => void;
+    onSuccess: (transferCount?: number) => void;
     defaultCenterId?: number;
+    onTransfer?: (recordId: number, data: TransferData) => Promise<void>;
+    onBatchTransfer?: (data: {
+        transfers: Array<{
+            record_id: number;
+            transfer_to_center_id: number;
+            transfer_time?: string;
+            recorded_by_user_id?: number;
+            notes?: string;
+        }>;
+    }) => Promise<void>;
+}
+
+interface ProcessedIndividual {
+    individual: Individual;
+    record_id: number | null;
+    original_center_name?: string;
+    status: "ready" | "loading" | "error";
+    error?: string;
 }
 
 export function TransferIndividualModal({
@@ -31,54 +53,49 @@ export function TransferIndividualModal({
     onClose,
     onSuccess,
     defaultCenterId,
+    onTransfer,
+    onBatchTransfer,
 }: TransferIndividualModalProps) {
     const { 
         currentAttendees, 
-        fetchCurrentAttendees, 
-        transferIndividual,
+        fetchCurrentAttendees,
+        fetchIndividualAttendanceHistory,
         loading: attendanceLoading 
     } = useAttendanceStore();
 
-    const [searchQuery, setSearchQuery] = useState("");
-    const [debouncedSearch, setDebouncedSearch] = useState("");
     const [centerSearchQuery, setCenterSearchQuery] = useState("");
-    const [selectedAttendee, setSelectedAttendee] = useState<AttendanceRecord | null>(null);
+    const { centers, fetchAllCenters, loading: centersLoading } = useEvacuationCenterStore();
+    const { clearSearch } = useIndividualStore();
+    
+    const [selectedIndividuals, setSelectedIndividuals] = useState<ProcessedIndividual[]>([]);
     const [selectedCenterId, setSelectedCenterId] = useState<number | null>(null);
     const [transferReason, setTransferReason] = useState<TransferReason | "">("");
     const [notes, setNotes] = useState("");
     const [error, setError] = useState<string | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [processingRecords, setProcessingRecords] = useState(false);
 
-    // Debounce search query
-    useEffect(() => {
-        const timer = setTimeout(() => {
-            setDebouncedSearch(searchQuery);
-        }, 500);
-
-        return () => clearTimeout(timer);
-    }, [searchQuery]);
-
-    // Fetch current attendees when modal opens or search changes
+    // Reset form when modal opens/closes
     useEffect(() => {
         if (isOpen) {
             fetchCurrentAttendees({
                 center_id: defaultCenterId,
-                search: debouncedSearch,
             });
+            fetchAllCenters();
         } else {
             resetForm();
         }
-    }, [isOpen, debouncedSearch, defaultCenterId, fetchCurrentAttendees]);
+    }, [isOpen, defaultCenterId, fetchCurrentAttendees]);
 
     const resetForm = () => {
-        setSearchQuery("");
-        setDebouncedSearch("");
         setCenterSearchQuery("");
-        setSelectedAttendee(null);
+        setSelectedIndividuals([]);
         setSelectedCenterId(null);
         setTransferReason("");
         setNotes("");
         setError(null);
+        setProcessingRecords(false);
+        clearSearch();
     };
 
     const handleClose = () => {
@@ -86,17 +103,87 @@ export function TransferIndividualModal({
         onClose();
     };
 
-    const handleSelectAttendee = (attendee: AttendanceRecord) => {
-        setSelectedAttendee(attendee);
+    const handleSelectIndividual = async (individual: Individual) => {
+        // Check if individual is already selected
+        if (selectedIndividuals.find(ind => ind.individual.individual_id === individual.individual_id)) {
+            return;
+        }
+
+        // Add individual with loading state
+        const newIndividual: ProcessedIndividual = {
+            individual,
+            record_id: null,
+            status: "loading"
+        };
+        
+        setSelectedIndividuals(prev => [...prev, newIndividual]);
+        
+        // Find active record for this individual
+        try {
+            const history = await fetchIndividualAttendanceHistory(individual.individual_id);
+            const activeRecord = (history as any[]).find(
+                (record: AttendanceRecord) => record.status === "checked_in" && !record.check_out_time
+            );
+            
+            if (activeRecord) {
+                setSelectedIndividuals(prev => 
+                    prev.map(ind => 
+                        ind.individual.individual_id === individual.individual_id
+                            ? {
+                                ...ind,
+                                record_id: activeRecord.record_id,
+                                original_center_name: activeRecord.center_name,
+                                status: "ready"
+                            }
+                            : ind
+                    )
+                );
+                setError(null);
+            } else {
+                setSelectedIndividuals(prev => 
+                    prev.map(ind => 
+                        ind.individual.individual_id === individual.individual_id
+                            ? {
+                                ...ind,
+                                status: "error",
+                                error: "No active check-in record"
+                            }
+                            : ind
+                    )
+                );
+            }
+        } catch (err: any) {
+            setSelectedIndividuals(prev => 
+                prev.map(ind => 
+                    ind.individual.individual_id === individual.individual_id
+                        ? {
+                            ...ind,
+                            status: "error",
+                            error: "Failed to retrieve attendance history"
+                        }
+                        : ind
+                )
+            );
+        }
     };
 
-    const handleRemoveAttendee = () => {
-        setSelectedAttendee(null);
+    const handleRemoveIndividual = (individualId: number) => {
+        setSelectedIndividuals(prev => 
+            prev.filter(ind => ind.individual.individual_id !== individualId)
+        );
+    };
+
+    const handleClearAllIndividuals = () => {
+        setSelectedIndividuals([]);
     };
 
     const handleSubmit = async () => {
-        if (!selectedAttendee) {
-            setError("Please select an individual to transfer");
+        // Validate ready individuals
+        const readyIndividuals = selectedIndividuals.filter(ind => ind.status === "ready");
+        const readyCount = readyIndividuals.length;
+        
+        if (readyCount === 0) {
+            setError("No individuals ready for transfer. Please select individuals with active check-in records.");
             return;
         }
 
@@ -114,36 +201,73 @@ export function TransferIndividualModal({
         setError(null);
 
         try {
-            const transferData: TransferData = {
-                transfer_to_center_id: selectedCenterId!,
-                notes: notes || undefined,
-            };
+            if (readyCount === 1) {
+                // Single transfer
+                const individual = readyIndividuals[0];
+                if (!individual.record_id) {
+                    throw new Error("No active record found");
+                }
 
-            await transferIndividual(selectedAttendee.record_id, transferData);
-            onSuccess();
-            handleClose();
+                const transferData: TransferData = {
+                    transfer_to_center_id: selectedCenterId!,
+                    notes: `${transferReason}. ${notes || ""}`.trim(),
+                };
+
+                if (typeof onTransfer === "function") {
+                    await onTransfer(individual.record_id, transferData);
+                } else {
+                    // fallback to store action if parent didn't provide handler
+                    await (useAttendanceStore.getState().transferIndividual as any)(
+                        individual.record_id,
+                        transferData
+                    );
+                }
+                
+                onSuccess(1);
+            } else {
+                // Batch transfer
+                const transferData = {
+                    transfers: readyIndividuals.map(ind => ({
+                        record_id: ind.record_id!,
+                        transfer_to_center_id: selectedCenterId!,
+                        notes: `${transferReason}. ${notes || ""}`.trim(),
+                    }))
+                };
+
+                if (typeof onBatchTransfer === "function") {
+                    await onBatchTransfer(transferData);
+                } else {
+                    // fallback to store action if parent didn't provide handler
+                    await (useAttendanceStore.getState().transferMultipleIndividuals as any)(
+                        transferData
+                    );
+                }
+                
+                onSuccess(readyCount);
+            }
+
+            resetForm();
+            onClose();
         } catch (err) {
-            setError(err instanceof Error ? err.message : "Failed to transfer individual");
+            setError(err instanceof Error ? err.message : "Failed to transfer individual(s)");
         } finally {
             setIsSubmitting(false);
         }
     };
 
-    const isFormValid =
-        selectedAttendee &&
-        transferReason &&
-        selectedCenterId !== null;
-
-    // Filter attendees based on search
-    const filteredAttendees = currentAttendees.filter(attendee => {
-        if (!debouncedSearch) return true;
-        const searchLower = debouncedSearch.toLowerCase();
-        return (
-            attendee.individual_name?.toLowerCase().includes(searchLower) ||
-            attendee.household_name?.toLowerCase().includes(searchLower) ||
-            attendee.individual_id.toString().includes(searchLower)
-        );
-    });
+    const getSubmitButtonText = () => {
+        const readyCount = selectedIndividuals.filter(ind => ind.status === "ready").length;
+        
+        if (isSubmitting) {
+            return readyCount === 1 
+                ? "Transferring..." 
+                : `Transferring ${readyCount} Individuals...`;
+        }
+        
+        return readyCount === 1 
+            ? "✓ Confirm Transfer" 
+            : `✓ Transfer ${readyCount} Individuals`;
+    };
 
     const getStatusColor = (status: string) => {
         switch (status.toLowerCase()) {
@@ -158,13 +282,17 @@ export function TransferIndividualModal({
         }
     };
 
+    const readyCount = selectedIndividuals.filter(ind => ind.status === "ready").length;
+    const errorCount = selectedIndividuals.filter(ind => ind.status === "error").length;
+    const loadingCount = selectedIndividuals.filter(ind => ind.status === "loading").length;
+
     return (
         <Dialog open={isOpen} onOpenChange={handleClose}>
             <DialogContent className="!max-w-[900px] w-[95vw] max-h-[90vh] overflow-y-auto">
                 <DialogHeader>
                     <DialogTitle className="text-lg font-semibold flex items-center gap-2">
                         <ArrowRightLeft className="h-5 w-5" />
-                        Transfer Individual
+                        {selectedIndividuals.length > 1 ? "Transfer Individuals" : "Transfer Individual"}
                     </DialogTitle>
                 </DialogHeader>
 
@@ -175,117 +303,115 @@ export function TransferIndividualModal({
                         </div>
                     )}
 
-                    {/* Selected Individual Display */}
-                    {selectedAttendee && (
+                    {/* Selected Individuals Display */}
+                    {selectedIndividuals.length > 0 && (
                         <div className="space-y-3 border-b pb-6">
                             <div className="flex justify-between items-center">
-                                <Label className="text-base font-semibold">Selected Individual</Label>
+                                <div>
+                                    <Label className="text-base font-semibold">
+                                        Selected Individuals ({selectedIndividuals.length})
+                                    </Label>
+                                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                                        <span className="text-green-600">
+                                            ✓ {readyCount} ready
+                                        </span>
+                                        {loadingCount > 0 && (
+                                            <span className="text-yellow-600">
+                                                ⏳ {loadingCount} loading
+                                            </span>
+                                        )}
+                                        {errorCount > 0 && (
+                                            <span className="text-red-600">
+                                                ✗ {errorCount} error
+                                            </span>
+                                        )}
+                                    </div>
+                                </div>
                                 <Button
                                     variant="outline"
                                     size="sm"
-                                    onClick={handleRemoveAttendee}
+                                    onClick={handleClearAllIndividuals}
                                     className="text-destructive hover:text-destructive"
                                 >
                                     <X className="h-4 w-4 mr-1" />
-                                    Clear
+                                    Clear All
                                 </Button>
                             </div>
-                            <div className="flex justify-between items-center p-3 bg-muted/30 rounded-lg border">
-                                <div className="flex-1">
-                                    <div className="font-medium">
-                                        {selectedAttendee.individual_name}
-                                    </div>
-                                    <div className="text-sm text-muted-foreground">
-                                        ID: {selectedAttendee.individual_id} •
-                                        {selectedAttendee.gender && ` ${selectedAttendee.gender} •`}
-                                        Current: {selectedAttendee.center_name}
-                                    </div>
-                                    <div className="flex items-center gap-2 mt-1">
-                                        <div className="flex items-center gap-1 text-sm">
-                                            <Home className="h-3 w-3" />
-                                            {selectedAttendee.household_name}
+                            <div className="space-y-2 max-h-60 overflow-y-auto">
+                                {selectedIndividuals.map((processedIndividual) => (
+                                    <div
+                                        key={processedIndividual.individual.individual_id}
+                                        className={`flex justify-between items-center p-3 rounded-lg border ${
+                                            processedIndividual.status === "ready"
+                                                ? "bg-green-50 dark:bg-green-950 border-green-200 dark:border-green-800"
+                                                : processedIndividual.status === "error"
+                                                ? "bg-red-50 dark:bg-red-950 border-red-200 dark:border-red-800"
+                                                : "bg-yellow-50 dark:bg-yellow-950 border-yellow-200 dark:border-yellow-800"
+                                        }`}
+                                    >
+                                        <div className="flex-1">
+                                            <div className="font-medium">
+                                                {processedIndividual.individual.first_name} {processedIndividual.individual.last_name}
+                                            </div>
+                                            <div className="text-sm text-muted-foreground">
+                                                ID: {processedIndividual.individual.individual_id}
+                                            </div>
+                                            
+                                            {processedIndividual.status === "ready" && (
+                                                <div className="mt-1">
+                                                    <div className="text-sm">
+                                                        From: {processedIndividual.original_center_name || "Unknown Center"}
+                                                    </div>
+                                                    <Badge
+                                                        variant="secondary"
+                                                        className={`${getStatusColor("checked_in")} mt-1`}
+                                                    >
+                                                        ✓ Ready to transfer (Record #{processedIndividual.record_id})
+                                                    </Badge>
+                                                </div>
+                                            )}
+                                            
+                                            {processedIndividual.status === "loading" && (
+                                                <div className="text-sm text-yellow-600 mt-1">
+                                                    ⏳ Finding active check-in record...
+                                                </div>
+                                            )}
+                                            
+                                            {processedIndividual.status === "error" && (
+                                                <div className="text-sm text-red-600 mt-1">
+                                                    ✗ {processedIndividual.error}
+                                                </div>
+                                            )}
                                         </div>
-                                        <Badge
-                                            variant="secondary"
-                                            className={getStatusColor(selectedAttendee.status)}
+                                        <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            onClick={() => handleRemoveIndividual(processedIndividual.individual.individual_id)}
+                                            className="text-destructive hover:text-destructive"
                                         >
-                                            {selectedAttendee.status}
-                                        </Badge>
+                                            <X className="h-4 w-4" />
+                                        </Button>
                                     </div>
-                                </div>
+                                ))}
                             </div>
                         </div>
                     )}
 
                     {/* Individual Search and Selection */}
-                    {!selectedAttendee && (
-                        <div className="space-y-4 border-b pb-6">
-                            <Label className="text-base font-semibold">
-                                Search and Select Individual *
-                            </Label>
+                    <div className="space-y-4 border-b pb-6">
+                        <Label className="text-base font-semibold">
+                            Search and Select Individuals to Transfer *
+                        </Label>
 
-                            {/* Search Bar */}
-                            <div className="relative">
-                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                                <Input
-                                    type="text"
-                                    placeholder="Search by name, household, or ID..."
-                                    value={searchQuery}
-                                    onChange={e => setSearchQuery(e.target.value)}
-                                    className="w-full pl-9"
-                                />
-                                {attendanceLoading && searchQuery !== debouncedSearch && (
-                                    <div className="absolute right-3 top-1/2 -translate-y-1/2">
-                                        <div className="animate-spin h-4 w-4 border-2 border-primary border-t-transparent rounded-full" />
-                                    </div>
-                                )}
-                            </div>
+                        <IndividualSearchTable
+                            onSelectIndividual={handleSelectIndividual}
+                            selectedIndividuals={selectedIndividuals.map(ind => ind.individual)}
+                        />
 
-                            {/* Attendees List */}
-                            <div className="border rounded-lg max-h-[300px] overflow-y-auto">
-                                {attendanceLoading ? (
-                                    <div className="p-8 text-center text-muted-foreground">
-                                        <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary mx-auto mb-2"></div>
-                                        Loading checked-in individuals...
-                                    </div>
-                                ) : filteredAttendees.length === 0 ? (
-                                    <div className="p-8 text-center text-muted-foreground">
-                                        {debouncedSearch
-                                            ? "No checked-in individuals match your search"
-                                            : "No individuals currently checked in"}
-                                    </div>
-                                ) : (
-                                    <div className="divide-y">
-                                        {filteredAttendees.map(attendee => (
-                                            <div
-                                                key={attendee.record_id}
-                                                className="p-3 hover:bg-muted/50 cursor-pointer transition-colors"
-                                                onClick={() => handleSelectAttendee(attendee)}
-                                            >
-                                                <div className="flex items-start justify-between">
-                                                    <div className="flex-1">
-                                                        <div className="font-medium">
-                                                            {attendee.individual_name}
-                                                        </div>
-                                                        <div className="text-sm text-muted-foreground">
-                                                            Household: {attendee.household_name} •
-                                                            Current: {attendee.center_name}
-                                                        </div>
-                                                    </div>
-                                                    <Badge
-                                                        variant="secondary"
-                                                        className={getStatusColor(attendee.status)}
-                                                    >
-                                                        {attendee.status}
-                                                    </Badge>
-                                                </div>
-                                            </div>
-                                        ))}
-                                    </div>
-                                )}
-                            </div>
+                        <div className="text-sm text-muted-foreground">
+                            Note: Only individuals with active check-in records can be transferred
                         </div>
-                    )}
+                    </div>
 
                     {/* Transfer Destination */}
                     <div className="space-y-4 border-b pb-6">
@@ -293,19 +419,16 @@ export function TransferIndividualModal({
                             Select Destination Center *
                         </Label>
                         
-                        {/* Search Bar for Centers */}
-                        <div className="relative">
-                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                            <Input
-                                type="text"
-                                placeholder="Search centers..."
-                                value={centerSearchQuery}
-                                onChange={e => setCenterSearchQuery(e.target.value)}
-                                className="w-full pl-9"
-                            />
-                        </div>
+                        <Input
+                            type="text"
+                            placeholder="Search centers..."
+                            value={centerSearchQuery}
+                            onChange={e => setCenterSearchQuery(e.target.value)}
+                            className="w-full"
+                        />
                         
                         <EvacuationCentersList
+                            centers={centers}
                             selectedCenterId={selectedCenterId}
                             onCenterSelect={setSelectedCenterId}
                             searchQuery={centerSearchQuery}
@@ -341,10 +464,10 @@ export function TransferIndividualModal({
                     </DialogClose>
                     <Button
                         onClick={handleSubmit}
-                        disabled={!isFormValid || isSubmitting}
+                        disabled={readyCount === 0 || !selectedCenterId || !transferReason || isSubmitting}
                         className="bg-green-600 hover:bg-green-700 px-6"
                     >
-                        {isSubmitting ? "Transferring..." : "✓ Confirm Transfer"}
+                        {getSubmitButtonText()}
                     </Button>
                 </DialogFooter>
             </DialogContent>
