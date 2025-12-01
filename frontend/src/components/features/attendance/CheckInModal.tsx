@@ -51,6 +51,7 @@ export function CheckInModal({ isOpen, onClose, onSuccess, defaultCenterId }: Ch
     const safeEvents = events || [];
     const filteredEvents = safeEvents.filter(event => event?.status === "active");
 
+    // Reset form when modal opens/closes
     useEffect(() => {
         if (isOpen) {
             if (!defaultCenterId) {
@@ -60,17 +61,28 @@ export function CheckInModal({ isOpen, onClose, onSuccess, defaultCenterId }: Ch
 
             if (defaultCenterId) {
                 setCenterId(String(defaultCenterId));
+            } else {
+                setCenterId("");
             }
+            
+            // Reset other fields
+            setEventId("");
+            setNotes("");
+            setSelectedIndividuals([]);
+            setError(null);
         } else {
             // Clear search and selections when modal closes
             clearSearch();
             setSelectedIndividuals([]);
+            setEventId("");
+            setNotes("");
+            setError(null);
         }
     }, [isOpen, fetchAllCenters, fetchEvents, defaultCenterId, clearSearch]);
 
     const resetForm = () => {
         setSelectedIndividuals([]);
-        setCenterId("");
+        setCenterId(defaultCenterId ? String(defaultCenterId) : "");
         setEventId("");
         setNotes("");
         setError(null);
@@ -111,7 +123,8 @@ export function CheckInModal({ isOpen, onClose, onSuccess, defaultCenterId }: Ch
 
             await checkInMultipleIndividuals(checkInData);
             onSuccess();
-            handleClose();
+            resetForm(); // Reset form after successful submission
+            onClose();
         } catch (err: any) {
             setError(err.message);
         } finally {

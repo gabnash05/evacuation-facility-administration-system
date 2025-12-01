@@ -10,29 +10,15 @@ import {
     TableRow,
 } from "@/components/ui/table";
 
-// Mock data for demonstration
-const mockCenters = [
-    {
-        center_id: 1,
-        center_name: "San Lorenzo Parish Church",
-        capacity: 500,
-        current_occupancy: 100,
-    },
-    {
-        center_id: 2,
-        center_name: "Iligan City National High School",
-        capacity: 1000,
-        current_occupancy: 600,
-    },
-    {
-        center_id: 3,
-        center_name: "Iligan City National High School - Annex",
-        capacity: 1000,
-        current_occupancy: 50,
-    },
-];
+interface Center {
+    center_id: number;
+    center_name: string;
+    capacity: number;
+    current_occupancy: number;
+}
 
 interface EvacuationCentersListProps {
+    centers: Center[];
     selectedCenterId: number | null;
     onCenterSelect: (centerId: number | null) => void;
     searchQuery?: string;
@@ -40,6 +26,7 @@ interface EvacuationCentersListProps {
 }
 
 export function EvacuationCentersList({
+    centers,
     selectedCenterId,
     onCenterSelect,
     searchQuery = "",
@@ -58,7 +45,7 @@ export function EvacuationCentersList({
     };
 
     // Filter centers based on search query
-    const filteredCenters = mockCenters.filter(center => {
+    const filteredCenters = centers.filter((center: Center) => {
         if (!searchQuery) return true;
         const searchLower = searchQuery.toLowerCase();
         return center.center_name.toLowerCase().includes(searchLower);
@@ -85,7 +72,7 @@ export function EvacuationCentersList({
                                 </TableCell>
                             </TableRow>
                         ) : (
-                            filteredCenters.map((center, index) => {
+                            filteredCenters.map((center: Center, index: number) => {
                             const percentage = getCapacityPercentage(
                                 center.current_occupancy,
                                 center.capacity

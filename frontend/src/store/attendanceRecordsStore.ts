@@ -81,7 +81,21 @@ interface AttendanceState {
     checkInIndividual: (data: CreateAttendanceData) => Promise<void>;
     checkInMultipleIndividuals: (data: CreateAttendanceData[]) => Promise<void>;
     checkOutIndividual: (recordId: number, data?: CheckOutData) => Promise<void>;
+    checkOutMultipleIndividuals: (data: Array<{
+        record_id: number;
+        check_out_time?: string;
+        notes?: string;
+    }>) => Promise<void>;
     transferIndividual: (recordId: number, data: TransferData) => Promise<void>;
+    transferMultipleIndividuals: (data: {
+        transfers: Array<{
+            record_id: number;
+            transfer_to_center_id: number;
+            transfer_time?: string;
+            recorded_by_user_id?: number;
+            notes?: string;
+        }>;
+    }) => Promise<void>;
     deleteAttendanceRecord: (recordId: number) => Promise<void>;
 
     // Utility actions
@@ -367,6 +381,24 @@ export const useAttendanceStore = create<AttendanceState>((set, get) => ({
         }
     },
 
+    checkOutMultipleIndividuals: async (data) => {
+        try {
+            await AttendanceRecordsService.checkOutMultipleIndividuals(data);
+
+            // Refresh relevant data
+            const state = get();
+            if (state.centerId) {
+                await get().fetchCurrentAttendees();
+                await get().fetchAttendanceSummary(state.centerId);
+            }
+            await get().fetchAttendanceRecords();
+        } catch (error) {
+            throw new Error(
+                error instanceof Error ? error.message : "Failed to check out individuals"
+            );
+        }
+    },
+
     transferIndividual: async (recordId: number, data: TransferData) => {
         try {
             await AttendanceRecordsService.transferIndividual(recordId, data);
@@ -382,6 +414,25 @@ export const useAttendanceStore = create<AttendanceState>((set, get) => ({
         } catch (error) {
             throw new Error(
                 error instanceof Error ? error.message : "Failed to transfer individual"
+            );
+        }
+    },
+
+    transferMultipleIndividuals: async (data) => {
+        try {
+            await AttendanceRecordsService.transferMultipleIndividuals(data);
+
+            // Refresh relevant data
+            const state = get();
+            if (state.centerId) {
+                await get().fetchCurrentAttendees();
+                await get().fetchAttendanceSummary(state.centerId);
+            }
+            await get().fetchTransferRecords();
+            await get().fetchAttendanceRecords();
+        } catch (error) {
+            throw new Error(
+                error instanceof Error ? error.message : "Failed to transfer individuals"
             );
         }
     },

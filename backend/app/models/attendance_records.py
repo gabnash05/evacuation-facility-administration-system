@@ -1,6 +1,7 @@
 """Attendance Records model for EFAS."""
 
 from typing import Any, Dict, List, Optional, Tuple
+from datetime import datetime
 from sqlalchemy import text
 from app.models import db
 import logging
@@ -484,27 +485,117 @@ class AttendanceRecord(db.Model):
         check_out_time: str,
         notes: Optional[str] = None
     ) -> Optional["AttendanceRecord"]:
-        """Check out an individual from a center."""
-        record = cls.get_by_id(record_id)
-        if not record:
+        """Check out an individual from a center by creating a new record."""
+        current_record = cls.get_by_id(record_id)
+        if not current_record:
             return None
-    
-        update_data = {
+
+        # Create new check-out record (this is the only action needed)
+        check_out_data = {
+            "individual_id": current_record.individual_id,
+            "center_id": current_record.center_id,
+            "event_id": current_record.event_id,
+            "household_id": current_record.household_id,
             "status": "checked_out",
+            "check_in_time": current_record.check_in_time,  # Keep original check-in time
             "check_out_time": check_out_time,
-            "notes": notes
+            "recorded_by_user_id": current_record.recorded_by_user_id,
+            "notes": f"Checked out. {notes or ''}"
         }
 
-        updated_record = cls.update(record_id, update_data)
-    
-        # Update event occupancy after successful check-out
-        if updated_record:
+        new_record = cls.create(check_out_data)
+
+        if new_record:
             try:
-                cls._update_event_occupancy(record.event_id)
+                cls._update_event_occupancy(current_record.event_id)
             except Exception as e:
-                logger.warning(f"Failed to update event occupancy for event {record.event_id}: {str(e)}")
+                logger.warning(f"Failed to update event occupancy for event {current_record.event_id}: {str(e)}")
         
-        return updated_record
+        return new_record
+
+
+    @classmethod
+    def check_out_multiple_individuals(
+        cls,
+        check_out_data: List[Dict[str, Any]]
+    ) -> Dict[str, Any]:
+        """Check out multiple individuals in a batch operation."""
+        from app.models import db
+        
+        successful_checkouts = []
+        failed_checkouts = []
+        
+        for i, data in enumerate(check_out_data):
+            try:
+                record_id = data["record_id"]
+                check_out_time = data.get("check_out_time")
+                notes = data.get("notes")
+                
+                # Get current record
+                current_record = cls.get_by_id(record_id)
+                if not current_record:
+                    failed_checkouts.append({
+                        "index": i,
+                        "record_id": record_id,
+                        "error": "Attendance record not found"
+                    })
+                    continue
+                
+                # Check if individual is currently checked in
+                if current_record.status != "checked_in" or current_record.check_out_time is not None:
+                    failed_checkouts.append({
+                        "index": i,
+                        "record_id": record_id,
+                        "error": "Individual is not currently checked in"
+                    })
+                    continue
+                
+                # Create new check-out record
+                new_checkout_data = {
+                    "individual_id": current_record.individual_id,
+                    "center_id": current_record.center_id,
+                    "event_id": current_record.event_id,
+                    "household_id": current_record.household_id,
+                    "status": "checked_out",
+                    "check_in_time": current_record.check_in_time,
+                    "check_out_time": check_out_time or datetime.now().isoformat(),
+                    "recorded_by_user_id": current_record.recorded_by_user_id,
+                    "notes": f"Checked out. {notes or ''}"
+                }
+                
+                new_record = cls.create(new_checkout_data)
+                
+                if new_record:
+                    successful_checkouts.append({
+                        "record_id": new_record.record_id,
+                        "individual_id": new_record.individual_id,
+                        "original_record_id": record_id
+                    })
+                    
+                    # Update event occupancy
+                    try:
+                        cls._update_event_occupancy(current_record.event_id)
+                    except Exception as e:
+                        logger.warning(f"Failed to update event occupancy for event {current_record.event_id}: {str(e)}")
+                else:
+                    failed_checkouts.append({
+                        "index": i,
+                        "record_id": record_id,
+                        "error": "Failed to create check-out record"
+                    })
+                    
+            except Exception as error:
+                failed_checkouts.append({
+                    "index": i,
+                    "record_id": data.get("record_id"),
+                    "error": str(error)
+                })
+                logger.error(f"Failed to check out record at index {i}: {str(error)}")
+        
+        return {
+            "successful_checkouts": successful_checkouts,
+            "failed_checkouts": failed_checkouts
+        }
 
 
     @classmethod
@@ -998,6 +1089,7 @@ class AttendanceRecord(db.Model):
         
         # Update event occupancy using the existing Event method
         Event.update_event_occupancy(event_id, current_occupancy)
+
 
     @classmethod
     def _update_associated_events_occupancy(cls, center_id: int) -> None:

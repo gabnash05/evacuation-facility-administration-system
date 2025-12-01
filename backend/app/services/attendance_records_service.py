@@ -398,6 +398,110 @@ def check_out_individual(
         return {"success": False, "message": "Failed to check out individual"}
 
 
+def check_out_multiple_individuals(
+    check_out_data: List[Dict[str, Any]]
+) -> Dict[str, Any]:
+    """
+    Check out multiple individuals in a batch operation.
+
+    Args:
+        check_out_data: List of dictionaries containing check-out data for each record
+            Each dictionary should contain:
+            - record_id: Attendance record ID
+            - check_out_time: Optional check-out time (defaults to current time)
+            - notes: Optional notes
+
+    Returns:
+        Dictionary with batch check-out results including successful and failed check-outs
+    """
+    try:
+        if not check_out_data or not isinstance(check_out_data, list):
+            return {
+                "success": False, 
+                "message": "Data must be a non-empty list of check-out data"
+            }
+
+        if len(check_out_data) == 0:
+            return {
+                "success": False, 
+                "message": "No check-outs provided"
+            }
+
+        # Validate maximum batch size
+        if len(check_out_data) > 50:
+            return {
+                "success": False, 
+                "message": "Maximum batch size is 50 check-outs per request"
+            }
+
+        # Validate each item in the batch
+        required_fields = ["record_id"]
+        for i, item in enumerate(check_out_data):
+            if not isinstance(item, dict):
+                return {
+                    "success": False, 
+                    "message": f"Item at index {i} must be a JSON object"
+                }
+
+            # Check required fields
+            for field in required_fields:
+                if field not in item:
+                    return {
+                        "success": False, 
+                        "message": f"Missing required field '{field}' for check-out at index {i}"
+                    }
+
+        logger.info("Batch checking out %s individuals", len(check_out_data))
+
+        # Process batch check-out using model method
+        result = AttendanceRecord.check_out_multiple_individuals(check_out_data)
+
+        successful_checkouts = result["successful_checkouts"]
+        failed_checkouts = result["failed_checkouts"]
+
+        # Determine overall success and prepare response
+        total_processed = len(successful_checkouts) + len(failed_checkouts)
+        
+        if failed_checkouts:
+            if len(failed_checkouts) == total_processed:
+                # All failed
+                return {
+                    "success": False,
+                    "message": "All check-outs failed",
+                    "data": {
+                        "successful_checkouts": [],
+                        "failed_checkouts": failed_checkouts
+                    }
+                }
+            else:
+                # Partial success
+                return {
+                    "success": True,
+                    "message": f"Successfully checked out {len(successful_checkouts)} out of {total_processed} individuals",
+                    "data": {
+                        "successful_checkouts": successful_checkouts,
+                        "failed_checkouts": failed_checkouts
+                    }
+                }
+        
+        # All successful
+        return {
+            "success": True,
+            "message": f"Successfully checked out {len(successful_checkouts)} individuals",
+            "data": {
+                "successful_checkouts": successful_checkouts,
+                "failed_checkouts": []
+            }
+        }
+        
+    except Exception as error:
+        logger.error("Error in batch check-out service: %s", str(error))
+        return {
+            "success": False,
+            "message": f"Failed to process batch check-out: {str(error)}"
+        }
+    
+
 def transfer_individual(
     record_id: int,
     transfer_to_center_id: int,
@@ -473,6 +577,145 @@ def transfer_individual(
         logger.error("Error transferring individual from record %s: %s", record_id, str(error))
         return {"success": False, "message": "Failed to transfer individual"}
 
+
+def transfer_multiple_individuals(
+    transfers_data: List[Dict[str, Any]]
+) -> Dict[str, Any]:
+    """
+    Transfer multiple individuals to different centers in a batch operation.
+
+    Args:
+        transfers_data: List of dictionaries containing transfer data for each record
+            Each dictionary should contain:
+            - record_id: Current attendance record ID
+            - transfer_to_center_id: Center ID to transfer to
+            - transfer_time: Optional transfer time (defaults to current time)
+            - recorded_by_user_id: User ID who recorded the transfer
+            - notes: Optional notes
+
+    Returns:
+        Dictionary with batch transfer results including successful and failed transfers
+    """
+    try:
+        if not transfers_data or not isinstance(transfers_data, list):
+            return {
+                "success": False, 
+                "message": "Data must be a non-empty list of transfer data"
+            }
+
+        if len(transfers_data) == 0:
+            return {
+                "success": False, 
+                "message": "No transfers provided"
+            }
+
+        # Validate maximum batch size
+        if len(transfers_data) > 50:
+            return {
+                "success": False, 
+                "message": "Maximum batch size is 50 transfers per request"
+            }
+
+        # Validate each transfer in the batch
+        required_fields = ["record_id", "transfer_to_center_id"]
+        for i, transfer_data in enumerate(transfers_data):
+            if not isinstance(transfer_data, dict):
+                return {
+                    "success": False, 
+                    "message": f"Transfer data at index {i} must be a JSON object"
+                }
+
+            # Check required fields
+            for field in required_fields:
+                if field not in transfer_data:
+                    return {
+                        "success": False, 
+                        "message": f"Missing required field '{field}' for transfer at index {i}"
+                    }
+
+        logger.info("Batch transferring %s individuals", len(transfers_data))
+
+        # Process batch transfers
+        successful_transfers = []
+        failed_transfers = []
+        
+        for i, transfer_data in enumerate(transfers_data):
+            try:
+                # Use current time if not provided
+                transfer_time = transfer_data.get("transfer_time")
+                if not transfer_time:
+                    transfer_time = datetime.now().isoformat()
+
+                # Use the existing transfer logic
+                result = transfer_individual(
+                    record_id=transfer_data["record_id"],
+                    transfer_to_center_id=transfer_data["transfer_to_center_id"],
+                    transfer_time=transfer_time,
+                    recorded_by_user_id=transfer_data.get("recorded_by_user_id"),
+                    notes=transfer_data.get("notes")
+                )
+
+                if result["success"]:
+                    successful_transfers.append(result["data"])
+                else:
+                    failed_transfers.append({
+                        "record_id": transfer_data["record_id"],
+                        "error": result["message"]
+                    })
+                    
+            except Exception as error:
+                error_message = str(error)
+                failed_transfers.append({
+                    "record_id": transfer_data["record_id"],
+                    "error": error_message
+                })
+                logger.error(
+                    "Failed to transfer record %s: %s", 
+                    transfer_data["record_id"], error_message
+                )
+
+        # Determine overall success and prepare response
+        total_processed = len(successful_transfers) + len(failed_transfers)
+        
+        if failed_transfers:
+            if len(failed_transfers) == total_processed:
+                # All failed
+                return {
+                    "success": False,
+                    "message": "All transfers failed",
+                    "data": {
+                        "successful_transfers": [],
+                        "failed_transfers": failed_transfers
+                    }
+                }
+            else:
+                # Partial success
+                return {
+                    "success": True,
+                    "message": f"Successfully transferred {len(successful_transfers)} out of {total_processed} individuals",
+                    "data": {
+                        "successful_transfers": successful_transfers,
+                        "failed_transfers": failed_transfers
+                    }
+                }
+        
+        # All successful
+        return {
+            "success": True,
+            "message": f"Successfully transferred {len(successful_transfers)} individuals",
+            "data": {
+                "successful_transfers": successful_transfers,
+                "failed_transfers": []
+            }
+        }
+        
+    except Exception as error:
+        logger.error("Error in batch transfer service: %s", str(error))
+        return {
+            "success": False,
+            "message": f"Failed to process batch transfers: {str(error)}"
+        }
+    
 
 def get_current_evacuees_by_center(
     center_id: int,
@@ -797,3 +1040,4 @@ def get_all_current_evacuees(
     except Exception as error:
         logger.error("Error fetching all current evacuees: %s", str(error))
         return {"success": False, "message": "Failed to fetch current evacuees"}
+        

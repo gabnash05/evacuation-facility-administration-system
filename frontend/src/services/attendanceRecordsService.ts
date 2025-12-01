@@ -140,6 +140,53 @@ export class AttendanceRecordsService {
         }
     }
 
+
+    static async checkOutMultipleIndividuals(data: Array<{
+        record_id: number;
+        check_out_time?: string;
+        notes?: string;
+    }>): Promise<{
+        success: boolean;
+        data: {
+            successful_checkouts: Array<{
+                record_id: number;
+                individual_id: number;
+                original_record_id: number;
+            }>;
+            failed_checkouts: Array<{
+                index: number;
+                record_id: number;
+                error: string;
+            }>;
+        };
+        message: string;
+    }> {
+        try {
+            const response = await api.post<{
+                success: boolean;
+                data: {
+                    successful_checkouts: Array<{
+                        record_id: number;
+                        individual_id: number;
+                        original_record_id: number;
+                    }>;
+                    failed_checkouts: Array<{
+                        index: number;
+                        record_id: number;
+                        error: string;
+                    }>;
+                };
+                message: string;
+            }>("/attendance/check-out/batch", data, {
+                withCredentials: true,
+            });
+            return response.data;
+        } catch (error) {
+            throw new Error(handleApiError(error));
+        }
+    }
+
+
     static async transferIndividual(
         recordId: number,
         data: TransferData
@@ -154,6 +201,45 @@ export class AttendanceRecordsService {
                 data: AttendanceRecord;
                 message: string;
             }>(`/attendance/${recordId}/transfer`, data, {
+                withCredentials: true,
+            });
+            return response.data;
+        } catch (error) {
+            throw new Error(handleApiError(error));
+        }
+    }
+
+    static async transferMultipleIndividuals(data: {
+        transfers: Array<{
+            record_id: number;
+            transfer_to_center_id: number;
+            transfer_time?: string;
+            recorded_by_user_id?: number;
+            notes?: string;
+        }>;
+    }): Promise<{
+        success: boolean;
+        data: {
+            successful_transfers: AttendanceRecord[];
+            failed_transfers: Array<{
+                record_id: number;
+                error: string;
+            }>;
+        };
+        message: string;
+    }> {
+        try {
+            const response = await api.post<{
+                success: boolean;
+                data: {
+                    successful_transfers: AttendanceRecord[];
+                    failed_transfers: Array<{
+                        record_id: number;
+                        error: string;
+                    }>;
+                };
+                message: string;
+            }>("/attendance/transfer/batch", data, {
                 withCredentials: true,
             });
             return response.data;
