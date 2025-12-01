@@ -36,6 +36,7 @@ export interface AttendanceRecord {
     check_in_time: string;
     check_out_time: string;
     transfer_time: string;
+    transfer_from_center_name?: string;
     notes?: string;
 }
 

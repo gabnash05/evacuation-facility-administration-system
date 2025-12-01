@@ -9,6 +9,8 @@ export interface AttendanceRecord {
     gender?: string;
     center_id: number;
     center_name?: string;
+    transfer_from_center_id?: number | null;
+    transfer_from_center_name?: string;
     event_id: number;
     event_name?: string;
     household_id: number;

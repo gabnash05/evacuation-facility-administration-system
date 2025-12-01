@@ -96,11 +96,12 @@ class AttendanceRecord(db.Model):
         sort_by: Optional[str] = None,
         sort_order: Optional[str] = "desc",
     ) -> Dict[str, Any]:
-        # Base query with joins to get related names
+        # Base query with joins to get related names, including source center for transfers
         base_query = """
             FROM attendance_records ar
             LEFT JOIN individuals i ON ar.individual_id = i.individual_id
             LEFT JOIN evacuation_centers ec ON ar.center_id = ec.center_id
+            LEFT JOIN evacuation_centers ec_from ON ar.transfer_from_center_id = ec_from.center_id
             LEFT JOIN events e ON ar.event_id = e.event_id
             LEFT JOIN households h ON ar.household_id = h.household_id
             WHERE 1=1
@@ -163,6 +164,8 @@ class AttendanceRecord(db.Model):
                 ar.check_in_time,
                 ar.check_out_time,
                 ar.transfer_time,
+                ar.transfer_from_center_id,
+                ec_from.center_name AS transfer_from_center_name,
                 ar.notes
             {base_query}
         """
@@ -212,12 +215,14 @@ class AttendanceRecord(db.Model):
                 "record_id": row.record_id,
                 "individual_name": row.individual_name or "Unknown",
                 "center_name": row.center_name or "Unknown Center",
-                "event_name": row.event_name or "Unknown Event", 
+                "event_name": row.event_name or "Unknown Event",
                 "household_name": row.household_name or "Unknown Household",
                 "status": row.status,
                 "check_in_time": row.check_in_time.isoformat() if row.check_in_time else "",
                 "check_out_time": row.check_out_time.isoformat() if row.check_out_time else "",
                 "transfer_time": row.transfer_time.isoformat() if row.transfer_time else "",
+                "transfer_from_center_id": row.transfer_from_center_id,
+                "transfer_from_center_name": row.transfer_from_center_name or "",
                 "notes": row.notes or ""
             }
             records.append(record)
@@ -607,7 +612,14 @@ class AttendanceRecord(db.Model):
         recorded_by_user_id: int,
         notes: Optional[str] = None
     ) -> Optional["AttendanceRecord"]:
-        """Transfer an individual to a different center by creating a new transfer record."""
+        """
+        Transfer an individual to a different center by:
+        - Checking them out from the current center
+        - Creating a transfer record that represents the move
+
+        NOTE: This does NOT automatically check the individual in to the destination center.
+        A separate, explicit check-in is required once their arrival is confirmed.
+        """
         # Get current record
         current_record = cls.get_by_id(record_id)
         if not current_record:
@@ -646,20 +658,6 @@ class AttendanceRecord(db.Model):
 
         # Create the transfer record
         transfer_record = cls.create(transfer_data)
-        
-        # Also create a new check-in record at the destination center
-        check_in_data = {
-            "individual_id": current_record.individual_id,
-            "center_id": transfer_to_center_id,  # New center
-            "event_id": current_record.event_id,
-            "household_id": current_record.household_id,
-            "status": "checked_in",
-            "check_in_time": transfer_time,  # Same time as transfer
-            "recorded_by_user_id": recorded_by_user_id,
-            "notes": f"Checked in after transfer from center {current_record.center_id}. {notes or ''}"
-        }
-
-        check_in_record = cls.create(check_in_data)
 
         try:
             # Update events associated with the old center

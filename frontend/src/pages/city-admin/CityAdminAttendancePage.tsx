@@ -123,27 +123,35 @@ export function CityAdminAttendancePage() {
         { key: "status", label: "Status", sortable: true },
         { key: "check_in_time", label: "Check In", sortable: true },
         { key: "check_out_time", label: "Check Out", sortable: true },
-        { key: "transfer_time", label: "Transfer", sortable: true },
+        { key: "transfer_time", label: "Transfer Time", sortable: true },
+        { key: "transfer_from_center_name", label: "Transferred From", sortable: false },
     ];
 
-    const tableData = attendanceRecords.map(record => ({
-        record_id: record.record_id,
-        individual_name: record.individual_name || "N/A",
-        center_name: record.center_name || `Center ${record.center_id}`,
-        event_name: record.event_name || `Event ${record.event_id}`,
-        household_name: record.household_name || `Household ${record.household_id}`,
-        status: record.status,
-        check_in_time: record.check_in_time
-            ? new Date(record.check_in_time).toLocaleString()
-            : "N/A",
-        check_out_time: record.check_out_time
-            ? new Date(record.check_out_time).toLocaleString()
-            : "N/A",
-        transfer_time: record.transfer_time
-            ? new Date(record.transfer_time).toLocaleString()
-            : "N/A",
-        notes: record.notes,
-    }));
+    const tableData = attendanceRecords.map(record => {
+        const isTransferred = record.status === "transferred";
+
+        return {
+            record_id: record.record_id,
+            individual_name: record.individual_name || "N/A",
+            center_name: record.center_name || `Center ${record.center_id}`,
+            event_name: record.event_name || `Event ${record.event_id}`,
+            household_name: record.household_name || `Household ${record.household_id}`,
+            status: record.status,
+            check_in_time: record.check_in_time
+                ? new Date(record.check_in_time).toLocaleString()
+                : "N/A",
+            check_out_time: record.check_out_time
+                ? new Date(record.check_out_time).toLocaleString()
+                : "N/A",
+            transfer_time: record.transfer_time
+                ? new Date(record.transfer_time).toLocaleString()
+                : "N/A",
+            transfer_from_center_name: isTransferred
+                ? record.transfer_from_center_name || "Unknown Center"
+                : "—",
+            notes: record.notes,
+        };
+    });
 
     return (
         <div className="w-full min-w-0 bg-background flex flex-col relative p-6">
