@@ -29,6 +29,7 @@ interface TransferIndividualModalProps {
     onSuccess: (transferCount?: number) => void;
     defaultCenterId?: number;
     sourceCenterId?: number; // NEW: Add sourceCenterId prop to restrict transfers from this center only
+    initialIndividualId?: number | null; // NEW: Prefill a specific individual for transfer
     onTransfer?: (recordId: number, data: TransferData) => Promise<void>;
     onBatchTransfer?: (data: {
         transfers: Array<{
@@ -56,6 +57,7 @@ export function TransferIndividualModal({
     onSuccess,
     defaultCenterId,
     sourceCenterId, // NEW: Destructure sourceCenterId
+    initialIndividualId,
     onTransfer,
     onBatchTransfer,
 }: TransferIndividualModalProps) {
@@ -68,7 +70,7 @@ export function TransferIndividualModal({
 
     const [centerSearchQuery, setCenterSearchQuery] = useState("");
     const { centers, fetchAllCenters, loading: centersLoading } = useEvacuationCenterStore();
-    const { clearSearch } = useIndividualStore();
+    const { clearSearch, fetchIndividualById } = useIndividualStore();
     
     const [selectedIndividuals, setSelectedIndividuals] = useState<ProcessedIndividual[]>([]);
     const [selectedCenterId, setSelectedCenterId] = useState<number | null>(null);
@@ -98,20 +100,37 @@ export function TransferIndividualModal({
         ? centers.filter(center => center.center_id !== sourceCenterId)
         : centers;
 
-    // Reset form when modal opens/closes
+    // Reset form when modal opens/closes and prefill individual if provided
     useEffect(() => {
-        if (isOpen) {
+        const initializeModal = async () => {
             // Fetch current attendees from the source center if provided
             if (sourceCenterId) {
-                fetchCurrentAttendees({
+                await fetchCurrentAttendees({
                     center_id: sourceCenterId,
                 });
             }
-            fetchAllCenters();
+            await fetchAllCenters();
+
+            // Prefill individual if an ID was provided
+            if (initialIndividualId) {
+                try {
+                    const individual = await fetchIndividualById(initialIndividualId);
+                    if (individual) {
+                        await handleSelectIndividual(individual);
+                    }
+                } catch (err) {
+                    // Any errors are already handled in the store; optionally surface a generic error
+                    setError(err instanceof Error ? err.message : "Failed to prefill individual for transfer");
+                }
+            }
+        };
+
+        if (isOpen) {
+            initializeModal();
         } else {
             resetForm();
         }
-    }, [isOpen, sourceCenterId, defaultCenterId, fetchCurrentAttendees]);
+    }, [isOpen, sourceCenterId, defaultCenterId, initialIndividualId, fetchCurrentAttendees, fetchAllCenters, fetchIndividualById]);
 
     const resetForm = () => {
         setCenterSearchQuery("");
