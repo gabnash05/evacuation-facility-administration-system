@@ -27,7 +27,7 @@ interface AttendanceState {
     loading: boolean;
     error: string | null;
 
-    // Filter and pagination state
+    // Filter and pagination state for main attendance page
     searchQuery: string;
     currentPage: number;
     entriesPerPage: number;
@@ -36,13 +36,25 @@ interface AttendanceState {
         direction: "asc" | "desc" | null;
     } | null;
 
-    // Filter state
-    centerId: number | null;
-    individualId: number | null;
-    eventId: number | null;
-    householdId: number | null;
-    status: string | null;
-    date: string | null;
+    // Filter state for main attendance page
+    attendancePageFilters: {
+        centerId: number | null;
+        individualId: number | null;
+        eventId: number | null;
+        householdId: number | null;
+        status: string | null;
+        date: string | null;
+    };
+
+    // Filter state for modal/other contexts
+    modalFilters: {
+        centerId: number | null;
+        individualId: number | null;
+        eventId: number | null;
+        householdId: number | null;
+        status: string | null;
+        date: string | null;
+    };
 
     // Pagination
     pagination: {
@@ -60,6 +72,27 @@ interface AttendanceState {
     setCurrentPage: (page: number) => void;
     setEntriesPerPage: (entries: number) => void;
     setSortConfig: (config: { key: string; direction: "asc" | "desc" | null } | null) => void;
+    
+    // Separate filter actions for different contexts
+    setAttendancePageFilters: (filters: {
+        centerId?: number | null;
+        individualId?: number | null;
+        eventId?: number | null;
+        householdId?: number | null;
+        status?: string | null;
+        date?: string | null;
+    }) => void;
+    
+    setModalFilters: (filters: {
+        centerId?: number | null;
+        individualId?: number | null;
+        eventId?: number | null;
+        householdId?: number | null;
+        status?: string | null;
+        date?: string | null;
+    }) => void;
+    
+    // Backward compatibility alias (uses attendance page filters)
     setFilters: (filters: {
         centerId?: number | null;
         individualId?: number | null;
@@ -81,13 +114,29 @@ interface AttendanceState {
     checkInIndividual: (data: CreateAttendanceData) => Promise<void>;
     checkInMultipleIndividuals: (data: CreateAttendanceData[]) => Promise<void>;
     checkOutIndividual: (recordId: number, data?: CheckOutData) => Promise<void>;
+    checkOutMultipleIndividuals: (data: Array<{
+        record_id: number;
+        check_out_time?: string;
+        notes?: string;
+    }>) => Promise<void>;
     transferIndividual: (recordId: number, data: TransferData) => Promise<void>;
+    transferMultipleIndividuals: (data: {
+        transfers: Array<{
+            record_id: number;
+            transfer_to_center_id: number;
+            transfer_time?: string;
+            recorded_by_user_id?: number;
+            notes?: string;
+        }>;
+    }) => Promise<void>;
     deleteAttendanceRecord: (recordId: number) => Promise<void>;
 
     // Utility actions
     recalculateCenterOccupancy: (centerId: number) => Promise<void>;
     recalculateAllCenterOccupancies: () => Promise<void>;
     resetState: () => void;
+    resetAttendancePageFilters: () => void;
+    resetModalFilters: () => void;
     clearError: () => void;
 }
 
@@ -102,12 +151,22 @@ const initialState = {
     currentPage: 1,
     entriesPerPage: 10,
     sortConfig: null,
-    centerId: null,
-    individualId: null,
-    eventId: null,
-    householdId: null,
-    status: null,
-    date: null,
+    attendancePageFilters: {
+        centerId: null,
+        individualId: null,
+        eventId: null,
+        householdId: null,
+        status: null,
+        date: null,
+    },
+    modalFilters: {
+        centerId: null,
+        individualId: null,
+        eventId: null,
+        householdId: null,
+        status: null,
+        date: null,
+    },
     pagination: null,
     attendanceSummary: null,
 };
@@ -131,11 +190,25 @@ export const useAttendanceStore = create<AttendanceState>((set, get) => ({
         set({ sortConfig: config, currentPage: 1 });
     },
 
-    setFilters: filters => {
-        set({
-            ...filters,
+    setAttendancePageFilters: filters => {
+        set(state => ({
+            attendancePageFilters: { ...state.attendancePageFilters, ...filters },
             currentPage: 1,
-        });
+        }));
+    },
+
+    setModalFilters: filters => {
+        set(state => ({
+            modalFilters: { ...state.modalFilters, ...filters },
+        }));
+    },
+
+    // Backward compatibility - maps to attendance page filters
+    setFilters: filters => {
+        set(state => ({
+            attendancePageFilters: { ...state.attendancePageFilters, ...filters },
+            currentPage: 1,
+        }));
     },
 
     fetchAttendanceRecords: async (params: GetAttendanceParams = {}) => {
@@ -144,12 +217,7 @@ export const useAttendanceStore = create<AttendanceState>((set, get) => ({
             currentPage,
             entriesPerPage,
             sortConfig,
-            centerId,
-            individualId,
-            eventId,
-            householdId,
-            status,
-            date,
+            attendancePageFilters,
         } = get();
 
         set({ loading: true, error: null });
@@ -163,12 +231,12 @@ export const useAttendanceStore = create<AttendanceState>((set, get) => ({
                     limit: entriesPerPage,
                     sortBy: sortConfig?.key,
                     sortOrder: sortConfig?.direction || undefined,
-                    center_id: centerId || undefined,
-                    individual_id: individualId || undefined,
-                    event_id: eventId || undefined,
-                    household_id: householdId || undefined,
-                    status: (status as any) || undefined,
-                    date: date || undefined,
+                    center_id: attendancePageFilters.centerId || undefined,
+                    individual_id: attendancePageFilters.individualId || undefined,
+                    event_id: attendancePageFilters.eventId || undefined,
+                    household_id: attendancePageFilters.householdId || undefined,
+                    status: (attendancePageFilters.status as any) || undefined,
+                    date: attendancePageFilters.date || undefined,
                 });
 
             set({
@@ -188,7 +256,7 @@ export const useAttendanceStore = create<AttendanceState>((set, get) => ({
     },
 
     fetchCurrentAttendees: async (params: GetCurrentAttendeesParams = {}) => {
-        const { currentPage, entriesPerPage, centerId } = get();
+        const { currentPage, entriesPerPage, attendancePageFilters } = get();
 
         set({ loading: true, error: null });
 
@@ -198,7 +266,7 @@ export const useAttendanceStore = create<AttendanceState>((set, get) => ({
                     ...params,
                     page: currentPage,
                     limit: entriesPerPage,
-                    center_id: centerId || undefined,
+                    center_id: attendancePageFilters.centerId || undefined,
                 });
 
             set({
@@ -217,7 +285,7 @@ export const useAttendanceStore = create<AttendanceState>((set, get) => ({
     },
 
     fetchEventAttendance: async (eventId: number, params: GetEventAttendanceParams = {}) => {
-        const { currentPage, entriesPerPage, centerId } = get();
+        const { currentPage, entriesPerPage, attendancePageFilters } = get();
 
         set({ loading: true, error: null });
 
@@ -227,7 +295,7 @@ export const useAttendanceStore = create<AttendanceState>((set, get) => ({
                     ...params,
                     page: currentPage,
                     limit: entriesPerPage,
-                    center_id: centerId || undefined,
+                    center_id: attendancePageFilters.centerId || undefined,
                 });
 
             set({
@@ -246,7 +314,7 @@ export const useAttendanceStore = create<AttendanceState>((set, get) => ({
     },
 
     fetchTransferRecords: async (params: GetTransferRecordsParams = {}) => {
-        const { currentPage, entriesPerPage, centerId } = get();
+        const { currentPage, entriesPerPage, attendancePageFilters } = get();
 
         set({ loading: true, error: null });
 
@@ -256,7 +324,7 @@ export const useAttendanceStore = create<AttendanceState>((set, get) => ({
                     ...params,
                     page: currentPage,
                     limit: entriesPerPage,
-                    center_id: centerId || undefined,
+                    center_id: attendancePageFilters.centerId || undefined,
                 });
 
             set({
@@ -321,9 +389,9 @@ export const useAttendanceStore = create<AttendanceState>((set, get) => ({
 
             // Refresh relevant data based on current view
             const state = get();
-            if (state.centerId) {
+            if (state.attendancePageFilters.centerId) {
                 await get().fetchCurrentAttendees();
-                await get().fetchAttendanceSummary(state.centerId);
+                await get().fetchAttendanceSummary(state.attendancePageFilters.centerId);
             }
         } catch (error) {
             throw new Error(
@@ -338,9 +406,9 @@ export const useAttendanceStore = create<AttendanceState>((set, get) => ({
 
             // Refresh relevant data based on current view
             const state = get();
-            if (state.centerId) {
+            if (state.attendancePageFilters.centerId) {
                 await get().fetchCurrentAttendees();
-                await get().fetchAttendanceSummary(state.centerId);
+                await get().fetchAttendanceSummary(state.attendancePageFilters.centerId);
             }
         } catch (error) {
             throw new Error(
@@ -355,14 +423,32 @@ export const useAttendanceStore = create<AttendanceState>((set, get) => ({
 
             // Refresh relevant data
             const state = get();
-            if (state.centerId) {
+            if (state.attendancePageFilters.centerId) {
                 await get().fetchCurrentAttendees();
-                await get().fetchAttendanceSummary(state.centerId);
+                await get().fetchAttendanceSummary(state.attendancePageFilters.centerId);
             }
             await get().fetchAttendanceRecords();
         } catch (error) {
             throw new Error(
                 error instanceof Error ? error.message : "Failed to check out individual"
+            );
+        }
+    },
+
+    checkOutMultipleIndividuals: async (data) => {
+        try {
+            await AttendanceRecordsService.checkOutMultipleIndividuals(data);
+
+            // Refresh relevant data
+            const state = get();
+            if (state.attendancePageFilters.centerId) {
+                await get().fetchCurrentAttendees();
+                await get().fetchAttendanceSummary(state.attendancePageFilters.centerId);
+            }
+            await get().fetchAttendanceRecords();
+        } catch (error) {
+            throw new Error(
+                error instanceof Error ? error.message : "Failed to check out individuals"
             );
         }
     },
@@ -373,15 +459,34 @@ export const useAttendanceStore = create<AttendanceState>((set, get) => ({
 
             // Refresh relevant data
             const state = get();
-            if (state.centerId) {
+            if (state.attendancePageFilters.centerId) {
                 await get().fetchCurrentAttendees();
-                await get().fetchAttendanceSummary(state.centerId);
+                await get().fetchAttendanceSummary(state.attendancePageFilters.centerId);
             }
             await get().fetchTransferRecords();
             await get().fetchAttendanceRecords();
         } catch (error) {
             throw new Error(
                 error instanceof Error ? error.message : "Failed to transfer individual"
+            );
+        }
+    },
+
+    transferMultipleIndividuals: async (data) => {
+        try {
+            await AttendanceRecordsService.transferMultipleIndividuals(data);
+
+            // Refresh relevant data
+            const state = get();
+            if (state.attendancePageFilters.centerId) {
+                await get().fetchCurrentAttendees();
+                await get().fetchAttendanceSummary(state.attendancePageFilters.centerId);
+            }
+            await get().fetchTransferRecords();
+            await get().fetchAttendanceRecords();
+        } catch (error) {
+            throw new Error(
+                error instanceof Error ? error.message : "Failed to transfer individuals"
             );
         }
     },
@@ -432,6 +537,33 @@ export const useAttendanceStore = create<AttendanceState>((set, get) => ({
                 error instanceof Error ? error.message : "Failed to recalculate all occupancies"
             );
         }
+    },
+
+    resetAttendancePageFilters: () => {
+        set(state => ({
+            attendancePageFilters: {
+                centerId: null,
+                individualId: null,
+                eventId: null,
+                householdId: null,
+                status: null,
+                date: null,
+            },
+            currentPage: 1,
+        }));
+    },
+
+    resetModalFilters: () => {
+        set({
+            modalFilters: {
+                centerId: null,
+                individualId: null,
+                eventId: null,
+                householdId: null,
+                status: null,
+                date: null,
+            },
+        });
     },
 
     clearError: () => {

@@ -11,7 +11,9 @@ from app.services.attendance_records_service import (
     get_attendance_record_by_id,
     check_in_individual,
     check_out_individual,
+    check_out_multiple_individuals,
     transfer_individual,
+    transfer_multiple_individuals,
     get_current_evacuees_by_center,
     get_all_current_evacuees,
     get_attendance_summary_by_center,
@@ -22,6 +24,7 @@ from app.services.attendance_records_service import (
     recalculate_all_center_occupancies,
     delete_attendance_record,
 )
+from app.services.user_service import get_current_user
 
 # Configure logger for this module
 logger = logging.getLogger(__name__)
@@ -649,6 +652,48 @@ def check_out_individual_route(record_id: int) -> Tuple:
     try:
         data = request.get_json() or {}
 
+        # Determine current user and enforce center-based restriction for center-bound roles
+        current_user_id = get_jwt_identity()
+        try:
+            current_user_id_int = int(current_user_id) if current_user_id is not None else None
+        except (TypeError, ValueError):
+            current_user_id_int = None
+
+        current_user = get_current_user(current_user_id_int) if current_user_id_int is not None else None
+
+        if not current_user:
+            return (
+                jsonify(
+                    {
+                        "success": False,
+                        "message": "Unauthorized: Unable to determine current user",
+                    }
+                ),
+                401,
+            )
+
+        # Only enforce center restrictions for roles that are tied to a specific center
+        if current_user.role in ["center_admin", "volunteer"] and current_user.center_id is not None:
+            record_result = get_attendance_record_by_id(record_id)
+
+            if not record_result.get("success"):
+                # Preserve existing 404 behaviour when record is not found
+                return jsonify(record_result), 404
+
+            record_data = record_result.get("data") or {}
+            record_center_id = record_data.get("center_id")
+
+            if record_center_id != current_user.center_id:
+                return (
+                    jsonify(
+                        {
+                            "success": False,
+                            "message": "You can only check out individuals who are checked in to your assigned center.",
+                        }
+                    ),
+                    403,
+                )
+
         logger.info("Checking out individual from record: %s", record_id)
 
         result = check_out_individual(
@@ -674,6 +719,145 @@ def check_out_individual_route(record_id: int) -> Tuple:
             500,
         )
 
+
+@attendance_record_bp.route("/attendance/check-out/batch", methods=["POST"])
+@jwt_required()
+def check_out_multiple_individuals_route() -> Tuple:
+    """
+    Check out multiple individuals from evacuation centers in a single operation.
+
+    Request Body (JSON array):
+        [
+            {
+                "record_id": integer,           # Attendance record ID
+                "check_out_time": string,       # Check-out time (ISO format, optional)
+                "notes": string                 # Additional notes (optional)
+            },
+            ...
+        ]
+
+    Returns:
+        Tuple containing:
+            - JSON response with check-out results
+            - HTTP status code
+    """
+    try:
+        data = request.get_json()
+
+        if not data or not isinstance(data, list):
+            return jsonify({
+                "success": False, 
+                "message": "Request body must be a JSON array of check-out data"
+            }), 400
+
+        if len(data) == 0:
+            return jsonify({
+                "success": False, 
+                "message": "No check-outs provided"
+            }), 400
+
+        # Validate maximum batch size
+        if len(data) > 50:
+            return jsonify({
+                "success": False, 
+                "message": "Maximum batch size is 50 check-outs per request"
+            }), 400
+
+        # Determine current user for center-based restriction checks
+        current_user_id = get_jwt_identity()
+        try:
+            current_user_id_int = int(current_user_id) if current_user_id is not None else None
+        except (TypeError, ValueError):
+            current_user_id_int = None
+
+        current_user = get_current_user(current_user_id_int) if current_user_id_int is not None else None
+
+        if not current_user:
+            return jsonify({
+                "success": False,
+                "message": "Unauthorized: Unable to determine current user",
+            }), 401
+
+        # Validate each check-out item
+        required_fields = ["record_id"]
+        validated_data = []
+        
+        for i, item in enumerate(data):
+            if not isinstance(item, dict):
+                return jsonify({
+                    "success": False, 
+                    "message": f"Item at index {i} must be a JSON object"
+                }), 400
+
+            # Check required fields
+            for field in required_fields:
+                if field not in item:
+                    return jsonify({
+                        "success": False, 
+                        "message": f"Missing required field '{field}' for check-out at index {i}"
+                    }), 400
+
+            validated_data.append(item)
+
+        # Enforce center restriction for center-bound roles: all records in batch must belong to user's center
+        if current_user.role in ["center_admin", "volunteer"] and current_user.center_id is not None:
+            invalid_records = []
+
+            for i, item in enumerate(validated_data):
+                record_id = item.get("record_id")
+                record_result = get_attendance_record_by_id(record_id)
+
+                if not record_result.get("success"):
+                    invalid_records.append(
+                        {
+                            "index": i,
+                            "record_id": record_id,
+                            "error": "Attendance record not found",
+                        }
+                    )
+                    continue
+
+                record_data = record_result.get("data") or {}
+                record_center_id = record_data.get("center_id")
+
+                if record_center_id != current_user.center_id:
+                    invalid_records.append(
+                        {
+                            "index": i,
+                            "record_id": record_id,
+                            "error": f"Record belongs to center {record_center_id}, not your assigned center {current_user.center_id}",
+                        }
+                    )
+
+            if invalid_records:
+                return jsonify({
+                    "success": False,
+                    "message": "You can only check out individuals who are checked in to your assigned center.",
+                    "data": {
+                        "invalid_checkouts": invalid_records
+                    }
+                }), 403
+
+        logger.info("Batch checking out %s individuals", len(validated_data))
+
+        # Process batch check-out
+        result = check_out_multiple_individuals(validated_data)
+
+        if not result["success"]:
+            return jsonify(result), 400
+
+        return jsonify(result), 200
+
+    except Exception as error:
+        logger.error("Error in batch check-out: %s", str(error))
+        return (
+            jsonify({
+                "success": False,
+                "message": f"Internal server error while processing batch check-out: {str(error)}",
+            }),
+            500,
+        )
+    
 
 @attendance_record_bp.route("/attendance/<int:record_id>/transfer", methods=["PUT"])
 @jwt_required()
@@ -704,10 +888,50 @@ def transfer_individual_route(record_id: int) -> Tuple:
         if "transfer_to_center_id" not in data:
             return jsonify({"success": False, "message": "Missing required field: transfer_to_center_id"}), 400
 
-        # Get current user ID from JWT token if recorded_by_user_id not provided
+        # Get current user ID from JWT token
         current_user_id = get_jwt_identity()
+        try:
+            current_user_id_int = int(current_user_id) if current_user_id is not None else None
+        except (TypeError, ValueError):
+            current_user_id_int = None
+
+        current_user = get_current_user(current_user_id_int) if current_user_id_int is not None else None
+
+        if not current_user:
+            return (
+                jsonify(
+                    {
+                        "success": False,
+                        "message": "Unauthorized: Unable to determine current user",
+                    }
+                ),
+                401,
+            )
+
+        # Enforce center restriction for center-bound roles: record must belong to user's center
+        if current_user.role in ["center_admin", "volunteer"] and current_user.center_id is not None:
+            record_result = get_attendance_record_by_id(record_id)
+
+            if not record_result.get("success"):
+                return jsonify(record_result), 404
+
+            record_data = record_result.get("data") or {}
+            record_center_id = record_data.get("center_id")
+
+            if record_center_id != current_user.center_id:
+                return (
+                    jsonify(
+                        {
+                            "success": False,
+                            "message": "You can only transfer individuals who are checked in to your assigned center.",
+                        }
+                    ),
+                    403,
+                )
+
+        # Default recorded_by_user_id to the authenticated user if not provided
         if "recorded_by_user_id" not in data:
-            data["recorded_by_user_id"] = current_user_id
+            data["recorded_by_user_id"] = current_user_id_int
 
         logger.info("Transferring individual from record %s to center %s", 
                    record_id, data.get("transfer_to_center_id"))
@@ -734,6 +958,161 @@ def transfer_individual_route(record_id: int) -> Tuple:
                     "message": "Internal server error while transferring individual",
                 }
             ),
+            500,
+        )
+
+
+@attendance_record_bp.route("/attendance/transfer/batch", methods=["POST"])
+@jwt_required()
+def transfer_multiple_individuals_route() -> Tuple:
+    """
+    Transfer multiple individuals to different centers in a single operation.
+
+    Request Body (JSON):
+        {
+            "transfers": [
+                {
+                    "record_id": integer,           # Current attendance record ID
+                    "transfer_to_center_id": integer, # Center ID to transfer to
+                    "transfer_time": string,        # Transfer time (ISO format, optional)
+                    "recorded_by_user_id": integer, # User ID (optional, defaults to current user)
+                    "notes": string                 # Additional notes (optional)
+                },
+                ...
+            ]
+        }
+
+    Returns:
+        Tuple containing:
+            - JSON response with transfer results
+            - HTTP status code
+    """
+    try:
+        data = request.get_json()
+
+        if not data or "transfers" not in data:
+            return jsonify({
+                "success": False, 
+                "message": "Request body must contain 'transfers' array"
+            }), 400
+
+        transfers_data = data["transfers"]
+
+        if not isinstance(transfers_data, list):
+            return jsonify({
+                "success": False, 
+                "message": "'transfers' must be an array"
+            }), 400
+
+        if len(transfers_data) == 0:
+            return jsonify({
+                "success": False, 
+                "message": "No transfers provided"
+            }), 400
+
+        # Validate maximum batch size
+        if len(transfers_data) > 50:
+            return jsonify({
+                "success": False, 
+                "message": "Maximum batch size is 50 transfers per request"
+            }), 400
+
+        # Get current user ID from JWT token
+        current_user_id = get_jwt_identity()
+        try:
+            current_user_id_int = int(current_user_id) if current_user_id is not None else None
+        except (TypeError, ValueError):
+            current_user_id_int = None
+
+        current_user = get_current_user(current_user_id_int) if current_user_id_int is not None else None
+
+        if not current_user:
+            return jsonify({
+                "success": False,
+                "message": "Unauthorized: Unable to determine current user",
+            }), 401
+        
+        # Validate and prepare transfer data
+        validated_transfers = []
+        required_fields = ["record_id", "transfer_to_center_id"]
+        
+        for i, transfer_item in enumerate(transfers_data):
+            if not isinstance(transfer_item, dict):
+                return jsonify({
+                    "success": False, 
+                    "message": f"Transfer item at index {i} must be a JSON object"
+                }), 400
+
+            # Check required fields
+            for field in required_fields:
+                if field not in transfer_item:
+                    return jsonify({
+                        "success": False, 
+                        "message": f"Missing required field '{field}' for transfer at index {i}"
+                    }), 400
+
+            # Set default recorded_by_user_id if not provided
+            if "recorded_by_user_id" not in transfer_item:
+                transfer_item["recorded_by_user_id"] = current_user_id_int
+
+            validated_transfers.append(transfer_item)
+
+        # Enforce center restriction for center-bound roles: all records must belong to user's center
+        if current_user.role in ["center_admin", "volunteer"] and current_user.center_id is not None:
+            invalid_transfers = []
+
+            for i, transfer_item in enumerate(validated_transfers):
+                record_id = transfer_item.get("record_id")
+                record_result = get_attendance_record_by_id(record_id)
+
+                if not record_result.get("success"):
+                    invalid_transfers.append(
+                        {
+                            "index": i,
+                            "record_id": record_id,
+                            "error": "Attendance record not found",
+                        }
+                    )
+                    continue
+
+                record_data = record_result.get("data") or {}
+                record_center_id = record_data.get("center_id")
+
+                if record_center_id != current_user.center_id:
+                    invalid_transfers.append(
+                        {
+                            "index": i,
+                            "record_id": record_id,
+                            "error": f"Record belongs to center {record_center_id}, not your assigned center {current_user.center_id}",
+                        }
+                    )
+
+            if invalid_transfers:
+                return jsonify({
+                    "success": False,
+                    "message": "You can only transfer individuals who are checked in to your assigned center.",
+                    "data": {
+                        "invalid_transfers": invalid_transfers
+                    }
+                }), 403
+
+        logger.info("Batch transferring %s individuals", len(validated_transfers))
+
+        # Process batch transfers
+        result = transfer_multiple_individuals(validated_transfers)
+
+        if not result["success"]:
+            return jsonify(result), 400
+
+        return jsonify(result), 200
+
+    except Exception as error:
+        logger.error("Error in batch transfer: %s", str(error))
+        return (
+            jsonify({
+                "success": False,
+                "message": f"Internal server error while processing batch transfers: {str(error)}",
+            }),
             500,
         )
 

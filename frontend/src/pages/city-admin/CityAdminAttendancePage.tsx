@@ -4,7 +4,7 @@ import { AttendanceTableToolbar } from "@/components/features/attendance/Attenda
 import { TablePagination } from "@/components/common/TablePagination";
 import { CheckInModal } from "@/components/features/attendance/CheckInModal";
 import { CheckOutModal } from "@/components/features/attendance/CheckOutModal";
-import { TransferModal } from "@/components/features/attendance/TransferModal";
+import { TransferIndividualModal } from "@/components/features/transfer/TransferIndividualModal";
 import { SuccessToast } from "@/components/common/SuccessToast";
 import { useAttendanceStore } from "@/store/attendanceRecordsStore";
 import { debounce } from "@/utils/helpers";
@@ -24,8 +24,13 @@ export function CityAdminAttendancePage() {
         setCurrentPage,
         setEntriesPerPage,
         setSortConfig,
+        setAttendancePageFilters,
         fetchAttendanceRecords,
         deleteAttendanceRecord,
+        transferIndividual,
+        transferMultipleIndividuals,
+        checkOutIndividual,
+        checkOutMultipleIndividuals,
     } = useAttendanceStore();
 
     // Get current user and role
@@ -36,6 +41,7 @@ export function CityAdminAttendancePage() {
     const [isCheckOutModalOpen, setIsCheckOutModalOpen] = useState(false);
     const [isTransferModalOpen, setIsTransferModalOpen] = useState(false);
     const [selectedRecordId, setSelectedRecordId] = useState<number | null>(null);
+    const [prefillIndividualId, setPrefillIndividualId] = useState<number | null>(null);
     const [successToast, setSuccessToast] = useState({
         isOpen: false,
         message: "",
@@ -45,6 +51,18 @@ export function CityAdminAttendancePage() {
         () => debounce(() => fetchAttendanceRecords(), 500),
         [fetchAttendanceRecords]
     );
+
+    useEffect(() => {
+        // Reset any existing filters when page loads
+        setAttendancePageFilters({
+            centerId: null,
+            individualId: null,
+            eventId: null,
+            householdId: null,
+            status: null,
+            date: null
+        });
+    }, [setAttendancePageFilters]);
 
     useEffect(() => {
         debouncedFetchAttendanceRecords();
@@ -77,6 +95,8 @@ export function CityAdminAttendancePage() {
 
     const handleOpenTransferModal = (id: number) => {
         setSelectedRecordId(id);
+        const record = attendanceRecords.find(r => r.record_id === id);
+        setPrefillIndividualId(record?.individual_id ?? null);
         setIsTransferModalOpen(true);
     };
 
@@ -119,27 +139,35 @@ export function CityAdminAttendancePage() {
         { key: "status", label: "Status", sortable: true },
         { key: "check_in_time", label: "Check In", sortable: true },
         { key: "check_out_time", label: "Check Out", sortable: true },
-        { key: "transfer_time", label: "Transfer", sortable: true },
+        { key: "transfer_time", label: "Transfer Time", sortable: true },
+        { key: "transfer_from_center_name", label: "Transferred From", sortable: false },
     ];
 
-    const tableData = attendanceRecords.map(record => ({
-        record_id: record.record_id,
-        individual_name: record.individual_name || "N/A",
-        center_name: record.center_name || `Center ${record.center_id}`,
-        event_name: record.event_name || `Event ${record.event_id}`,
-        household_name: record.household_name || `Household ${record.household_id}`,
-        status: record.status,
-        check_in_time: record.check_in_time
-            ? new Date(record.check_in_time).toLocaleString()
-            : "N/A",
-        check_out_time: record.check_out_time
-            ? new Date(record.check_out_time).toLocaleString()
-            : "N/A",
-        transfer_time: record.transfer_time
-            ? new Date(record.transfer_time).toLocaleString()
-            : "N/A",
-        notes: record.notes,
-    }));
+    const tableData = attendanceRecords.map(record => {
+        const isTransferred = record.status === "transferred";
+
+        return {
+            record_id: record.record_id,
+            individual_name: record.individual_name || "N/A",
+            center_name: record.center_name || `Center ${record.center_id}`,
+            event_name: record.event_name || `Event ${record.event_id}`,
+            household_name: record.household_name || `Household ${record.household_id}`,
+            status: record.status,
+            check_in_time: record.check_in_time
+                ? new Date(record.check_in_time).toLocaleString()
+                : "N/A",
+            check_out_time: record.check_out_time
+                ? new Date(record.check_out_time).toLocaleString()
+                : "N/A",
+            transfer_time: record.transfer_time
+                ? new Date(record.transfer_time).toLocaleString()
+                : "N/A",
+            transfer_from_center_name: isTransferred
+                ? record.transfer_from_center_name || "Unknown Center"
+                : "N/A",
+            notes: record.notes,
+        };
+    });
 
     return (
         <div className="w-full min-w-0 bg-background flex flex-col relative p-6">
@@ -159,14 +187,23 @@ export function CityAdminAttendancePage() {
 
                 <div className="border border-border rounded-lg">
                     <div className="bg-card border-b border-border p-4">
-                        <AttendanceTableToolbar
-                            searchQuery={searchQuery}
-                            onSearchChange={handleSearchChange}
-                            onCheckIn={() => setIsCheckInModalOpen(true)}
-                            entriesPerPage={entriesPerPage}
-                            onEntriesPerPageChange={handleEntriesPerPageChange}
-                            loading={loading}
-                        />
+                            <AttendanceTableToolbar
+                                searchQuery={searchQuery}
+                                onSearchChange={handleSearchChange}
+                                onCheckIn={() => setIsCheckInModalOpen(true)}
+                                onOpenCheckOut={() => {
+                                    setSelectedRecordId(null);
+                                    setIsCheckOutModalOpen(true);
+                                }}
+                                onOpenTransfer={() => {
+                                setSelectedRecordId(null);
+                                setPrefillIndividualId(null);
+                                    setIsTransferModalOpen(true);
+                                }}
+                                entriesPerPage={entriesPerPage}
+                                onEntriesPerPageChange={handleEntriesPerPageChange}
+                                loading={loading}
+                            />
                     </div>
                     <div className="border-b border-border">
                         {loading && attendanceRecords.length === 0 ? (
@@ -217,20 +254,39 @@ export function CityAdminAttendancePage() {
                 isOpen={isCheckOutModalOpen}
                 recordId={selectedRecordId}
                 onClose={() => setIsCheckOutModalOpen(false)}
-                onSuccess={() => {
+                onCheckOut={async (recordId: number, data) => {
+                    await checkOutIndividual(recordId, data);
+                }}
+                onBatchCheckOut={async (data) => {
+                    await checkOutMultipleIndividuals(data);
+                }}
+                onSuccess={(checkoutCount?: number) => {
                     setIsCheckOutModalOpen(false);
-                    showSuccessToast("Individual checked out successfully");
+                    const message = selectedRecordId 
+                        ? "Individual checked out successfully"
+                        : `${checkoutCount || 0} individuals checked out successfully`;
+                    showSuccessToast(message);
                     fetchAttendanceRecords();
                 }}
             />
 
-            <TransferModal
+            <TransferIndividualModal
                 isOpen={isTransferModalOpen}
-                recordId={selectedRecordId}
+                defaultCenterId={undefined}
+                initialIndividualId={prefillIndividualId}
                 onClose={() => setIsTransferModalOpen(false)}
-                onSuccess={() => {
+                onTransfer={async (recordId: number, data) => {
+                    await transferIndividual(recordId, data as any);
+                }}
+                onBatchTransfer={async (data) => {
+                    await transferMultipleIndividuals(data);
+                }}
+                onSuccess={(transferCount?: number) => {
                     setIsTransferModalOpen(false);
-                    showSuccessToast("Individual transferred successfully");
+                    const message = (transferCount || 1) === 1 
+                        ? "Individual transferred successfully"
+                        : `${transferCount || 0} individuals transferred successfully`;
+                    showSuccessToast(message);
                     fetchAttendanceRecords();
                 }}
             />

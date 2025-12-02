@@ -15,6 +15,8 @@ interface AttendanceTableToolbarProps {
     searchQuery: string;
     onSearchChange: (query: string) => void;
     onCheckIn: () => void;
+    onOpenCheckOut?: () => void;
+    onOpenTransfer?: () => void;
     entriesPerPage: number;
     onEntriesPerPageChange: (entries: number) => void;
     loading: boolean;
@@ -29,6 +31,8 @@ function AttendanceTableToolbarComponent({
     searchQuery,
     onSearchChange,
     onCheckIn,
+    onOpenCheckOut,
+    onOpenTransfer,
     entriesPerPage,
     onEntriesPerPageChange,
     loading,
@@ -53,9 +57,17 @@ function AttendanceTableToolbarComponent({
                     onChange={e => onSearchChange(e.target.value)}
                     className="w-full md:w-64"
                 />
-                <Button onClick={onCheckIn} disabled={loading}>
-                    Check In
-                </Button>
+                <div className="flex items-center gap-2">
+                    <Button onClick={onCheckIn} disabled={loading}>
+                        Check In
+                    </Button>
+                    <Button onClick={() => onOpenCheckOut && onOpenCheckOut()} disabled={loading}>
+                        Check Out
+                    </Button>
+                    <Button onClick={() => onOpenTransfer && onOpenTransfer()} disabled={loading}>
+                        Transfer
+                    </Button>
+                </div>
             </div>
 
             {/* Entries per page selector */}

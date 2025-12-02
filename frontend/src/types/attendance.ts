@@ -9,6 +9,8 @@ export interface AttendanceRecord {
     gender?: string;
     center_id: number;
     center_name?: string;
+    transfer_from_center_id?: number | null;
+    transfer_from_center_name?: string;
     event_id: number;
     event_name?: string;
     household_id: number;
@@ -88,3 +90,12 @@ export type AttendanceSummaryResponse = ApiResponse<AttendanceSummary>;
 export type IndividualAttendanceHistoryResponse = ApiResponse<AttendanceRecord[]>;
 export type OccupancyRecalculationResponse = ApiResponse<{ new_occupancy: number }>;
 export type AllOccupanciesRecalculationResponse = ApiResponse<OccupancyRecalculationResult[]>;
+
+export type TransferReason =
+    | "medical_emergency"
+    | "family_request"
+    | "center_capacity"
+    | "relocation"
+    | "safety_concerns"
+    | "special_needs"
+    | "other";

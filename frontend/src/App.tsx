@@ -134,11 +134,6 @@ function App() {
                                         element={<VolunteerAttendancePage />}
                                     />
                                     <Route
-                                        path="transfer-individual"
-                                        element={<div>Transfer Individual Page</div>}
-                                    />{" "}
-                                    {/* replace with actual page when available */}
-                                    <Route
                                         path="households"
                                         element={<VolunteerHouseholdsPage />}
                                     />
