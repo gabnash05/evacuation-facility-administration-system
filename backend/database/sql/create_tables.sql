@@ -839,7 +839,6 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
--- Function to transfer an individual
 CREATE OR REPLACE FUNCTION transfer_individual(
     p_individual_id INTEGER,
     p_from_center_id INTEGER,
@@ -864,7 +863,9 @@ BEGIN
     -- Check out from current center
     PERFORM check_out_individual(p_individual_id, p_from_center_id, p_recorded_by_user_id, 'Transferred out');
     
-    -- Insert transfer record
+    -- Insert transfer record (represents the move between centers)
+    -- NOTE: This does NOT automatically check the individual in to the destination center.
+    -- A separate explicit check-in must be performed once arrival is confirmed.
     INSERT INTO attendance_records (
         individual_id, center_id, event_id, household_id,
         status, transfer_from_center_id, transfer_to_center_id,
@@ -874,9 +875,6 @@ BEGIN
         'transferred', p_from_center_id, p_to_center_id,
         CURRENT_TIMESTAMP, p_recorded_by_user_id, p_notes
     ) RETURNING record_id INTO v_record_id;
-    
-    -- Check in to new center
-    PERFORM check_in_individual(p_individual_id, p_to_center_id, p_event_id, p_recorded_by_user_id, 'Transferred in');
     
     RETURN v_record_id;
 END;

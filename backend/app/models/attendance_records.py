@@ -1,6 +1,7 @@
 """Attendance Records model for EFAS."""
 
 from typing import Any, Dict, List, Optional, Tuple
+from datetime import datetime
 from sqlalchemy import text
 from app.models import db
 import logging
@@ -95,11 +96,12 @@ class AttendanceRecord(db.Model):
         sort_by: Optional[str] = None,
         sort_order: Optional[str] = "desc",
     ) -> Dict[str, Any]:
-        # Base query with joins to get related names
+        # Base query with joins to get related names, including source center for transfers
         base_query = """
             FROM attendance_records ar
             LEFT JOIN individuals i ON ar.individual_id = i.individual_id
             LEFT JOIN evacuation_centers ec ON ar.center_id = ec.center_id
+            LEFT JOIN evacuation_centers ec_from ON ar.transfer_from_center_id = ec_from.center_id
             LEFT JOIN events e ON ar.event_id = e.event_id
             LEFT JOIN households h ON ar.household_id = h.household_id
             WHERE 1=1
@@ -154,6 +156,8 @@ class AttendanceRecord(db.Model):
         select_query = f"""
             SELECT 
                 ar.record_id,
+                ar.individual_id,
+                ar.household_id,
                 CONCAT(i.first_name, ' ', i.last_name) as individual_name,
                 ec.center_name,
                 e.event_name,
@@ -162,6 +166,8 @@ class AttendanceRecord(db.Model):
                 ar.check_in_time,
                 ar.check_out_time,
                 ar.transfer_time,
+                ar.transfer_from_center_id,
+                ec_from.center_name AS transfer_from_center_name,
                 ar.notes
             {base_query}
         """
@@ -209,14 +215,18 @@ class AttendanceRecord(db.Model):
         for row in results:
             record = {
                 "record_id": row.record_id,
+                "individual_id": row.individual_id,
+                "household_id": row.household_id,
                 "individual_name": row.individual_name or "Unknown",
                 "center_name": row.center_name or "Unknown Center",
-                "event_name": row.event_name or "Unknown Event", 
+                "event_name": row.event_name or "Unknown Event",
                 "household_name": row.household_name or "Unknown Household",
                 "status": row.status,
                 "check_in_time": row.check_in_time.isoformat() if row.check_in_time else "",
                 "check_out_time": row.check_out_time.isoformat() if row.check_out_time else "",
                 "transfer_time": row.transfer_time.isoformat() if row.transfer_time else "",
+                "transfer_from_center_id": row.transfer_from_center_id,
+                "transfer_from_center_name": row.transfer_from_center_name or "",
                 "notes": row.notes or ""
             }
             records.append(record)
@@ -484,27 +494,117 @@ class AttendanceRecord(db.Model):
         check_out_time: str,
         notes: Optional[str] = None
     ) -> Optional["AttendanceRecord"]:
-        """Check out an individual from a center."""
-        record = cls.get_by_id(record_id)
-        if not record:
+        """Check out an individual from a center by creating a new record."""
+        current_record = cls.get_by_id(record_id)
+        if not current_record:
             return None
-    
-        update_data = {
+
+        # Create new check-out record (this is the only action needed)
+        check_out_data = {
+            "individual_id": current_record.individual_id,
+            "center_id": current_record.center_id,
+            "event_id": current_record.event_id,
+            "household_id": current_record.household_id,
             "status": "checked_out",
+            "check_in_time": current_record.check_in_time,  # Keep original check-in time
             "check_out_time": check_out_time,
-            "notes": notes
+            "recorded_by_user_id": current_record.recorded_by_user_id,
+            "notes": f"Checked out. {notes or ''}"
         }
 
-        updated_record = cls.update(record_id, update_data)
-    
-        # Update event occupancy after successful check-out
-        if updated_record:
+        new_record = cls.create(check_out_data)
+
+        if new_record:
             try:
-                cls._update_event_occupancy(record.event_id)
+                cls._update_event_occupancy(current_record.event_id)
             except Exception as e:
-                logger.warning(f"Failed to update event occupancy for event {record.event_id}: {str(e)}")
+                logger.warning(f"Failed to update event occupancy for event {current_record.event_id}: {str(e)}")
         
-        return updated_record
+        return new_record
+
+
+    @classmethod
+    def check_out_multiple_individuals(
+        cls,
+        check_out_data: List[Dict[str, Any]]
+    ) -> Dict[str, Any]:
+        """Check out multiple individuals in a batch operation."""
+        from app.models import db
+        
+        successful_checkouts = []
+        failed_checkouts = []
+        
+        for i, data in enumerate(check_out_data):
+            try:
+                record_id = data["record_id"]
+                check_out_time = data.get("check_out_time")
+                notes = data.get("notes")
+                
+                # Get current record
+                current_record = cls.get_by_id(record_id)
+                if not current_record:
+                    failed_checkouts.append({
+                        "index": i,
+                        "record_id": record_id,
+                        "error": "Attendance record not found"
+                    })
+                    continue
+                
+                # Check if individual is currently checked in
+                if current_record.status != "checked_in" or current_record.check_out_time is not None:
+                    failed_checkouts.append({
+                        "index": i,
+                        "record_id": record_id,
+                        "error": "Individual is not currently checked in"
+                    })
+                    continue
+                
+                # Create new check-out record
+                new_checkout_data = {
+                    "individual_id": current_record.individual_id,
+                    "center_id": current_record.center_id,
+                    "event_id": current_record.event_id,
+                    "household_id": current_record.household_id,
+                    "status": "checked_out",
+                    "check_in_time": current_record.check_in_time,
+                    "check_out_time": check_out_time or datetime.now().isoformat(),
+                    "recorded_by_user_id": current_record.recorded_by_user_id,
+                    "notes": f"Checked out. {notes or ''}"
+                }
+                
+                new_record = cls.create(new_checkout_data)
+                
+                if new_record:
+                    successful_checkouts.append({
+                        "record_id": new_record.record_id,
+                        "individual_id": new_record.individual_id,
+                        "original_record_id": record_id
+                    })
+                    
+                    # Update event occupancy
+                    try:
+                        cls._update_event_occupancy(current_record.event_id)
+                    except Exception as e:
+                        logger.warning(f"Failed to update event occupancy for event {current_record.event_id}: {str(e)}")
+                else:
+                    failed_checkouts.append({
+                        "index": i,
+                        "record_id": record_id,
+                        "error": "Failed to create check-out record"
+                    })
+                    
+            except Exception as error:
+                failed_checkouts.append({
+                    "index": i,
+                    "record_id": data.get("record_id"),
+                    "error": str(error)
+                })
+                logger.error(f"Failed to check out record at index {i}: {str(error)}")
+        
+        return {
+            "successful_checkouts": successful_checkouts,
+            "failed_checkouts": failed_checkouts
+        }
 
 
     @classmethod
@@ -516,7 +616,14 @@ class AttendanceRecord(db.Model):
         recorded_by_user_id: int,
         notes: Optional[str] = None
     ) -> Optional["AttendanceRecord"]:
-        """Transfer an individual to a different center by creating a new transfer record."""
+        """
+        Transfer an individual to a different center by:
+        - Checking them out from the current center
+        - Creating a transfer record that represents the move
+
+        NOTE: This does NOT automatically check the individual in to the destination center.
+        A separate, explicit check-in is required once their arrival is confirmed.
+        """
         # Get current record
         current_record = cls.get_by_id(record_id)
         if not current_record:
@@ -555,20 +662,6 @@ class AttendanceRecord(db.Model):
 
         # Create the transfer record
         transfer_record = cls.create(transfer_data)
-        
-        # Also create a new check-in record at the destination center
-        check_in_data = {
-            "individual_id": current_record.individual_id,
-            "center_id": transfer_to_center_id,  # New center
-            "event_id": current_record.event_id,
-            "household_id": current_record.household_id,
-            "status": "checked_in",
-            "check_in_time": transfer_time,  # Same time as transfer
-            "recorded_by_user_id": recorded_by_user_id,
-            "notes": f"Checked in after transfer from center {current_record.center_id}. {notes or ''}"
-        }
-
-        check_in_record = cls.create(check_in_data)
 
         try:
             # Update events associated with the old center
@@ -998,6 +1091,7 @@ class AttendanceRecord(db.Model):
         
         # Update event occupancy using the existing Event method
         Event.update_event_occupancy(event_id, current_occupancy)
+
 
     @classmethod
     def _update_associated_events_occupancy(cls, center_id: int) -> None:

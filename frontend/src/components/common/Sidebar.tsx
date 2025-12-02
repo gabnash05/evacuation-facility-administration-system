@@ -143,12 +143,6 @@ export function AppSidebar({ role, roleLabel, userEmail }: AppSidebarProps) {
                         icon: <NotebookPen className="w-4 h-4" />,
                     },
                     {
-                        key: "transfer-individual",
-                        label: "Transfer Individual",
-                        href: "/volunteer/transfer-individual",
-                        icon: <ArrowLeftRight className="w-4 h-4" />,
-                    },
-                    {
                         key: "households",
                         label: "Households",
                         href: "/volunteer/households",

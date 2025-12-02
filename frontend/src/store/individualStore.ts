@@ -37,6 +37,7 @@ interface IndividualState {
     updateIndividual: (id: number, data: any) => Promise<void>;
     deleteIndividuals: (ids: number[]) => Promise<void>;
     fetchByHousehold: (household_id: number) => Promise<void>;
+    fetchIndividualById: (id: number) => Promise<Individual | null>;
     resetState: () => void;
 }
 
@@ -213,6 +214,25 @@ export const useIndividualStore = create<IndividualState>((set, get) => ({
                 error: err instanceof Error ? err.message : "Failed to fetch household individuals", 
                 loading: false 
             });
+        }
+    },
+
+    fetchIndividualById: async (id: number): Promise<Individual | null> => {
+        set({ loading: true, error: null });
+        try {
+            const response: IndividualResponse = await IndividualService.getIndividualById(id);
+            if (!response.success || !response.data) {
+                throw new Error(response.message || "Failed to fetch individual");
+            }
+            const individual = response.data;
+            set({ loading: false });
+            return individual;
+        } catch (err) {
+            set({
+                error: err instanceof Error ? err.message : "Failed to fetch individual",
+                loading: false,
+            });
+            return null;
         }
     },
 
