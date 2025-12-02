@@ -1,5 +1,3 @@
-"""Service layer for user management and authentication operations."""
-
 import logging
 from typing import Any, Dict, List, Optional
 
@@ -403,12 +401,13 @@ def update_user(user_id: int, update_data: Dict[str, Any]) -> Dict[str, Any]:
             if existing_user_with_email and existing_user_with_email.user_id != user_id:
                 return {"success": False, "message": "Email already registered"}
 
-        # --- LOGIC ADDED HERE ---
-        # If password is provided, hash it and rename key to password_hash
-        if "password" in valid_data and valid_data["password"]:
-            valid_data["password_hash"] = generate_password_hash(valid_data["password"])
-            del valid_data["password"]  # Remove the raw password field
-        # ------------------------
+        # Handle password update safely
+        if "password" in valid_data:
+            if valid_data["password"]:
+                valid_data["password_hash"] = generate_password_hash(valid_data["password"])
+            
+
+            del valid_data["password"]
 
         # Update user
         updated_user = User.update_user(user_id, valid_data)
