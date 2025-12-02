@@ -24,6 +24,7 @@ export function CityAdminAttendancePage() {
         setCurrentPage,
         setEntriesPerPage,
         setSortConfig,
+        setAttendancePageFilters,
         fetchAttendanceRecords,
         deleteAttendanceRecord,
         transferIndividual,
@@ -40,6 +41,7 @@ export function CityAdminAttendancePage() {
     const [isCheckOutModalOpen, setIsCheckOutModalOpen] = useState(false);
     const [isTransferModalOpen, setIsTransferModalOpen] = useState(false);
     const [selectedRecordId, setSelectedRecordId] = useState<number | null>(null);
+    const [prefillIndividualId, setPrefillIndividualId] = useState<number | null>(null);
     const [successToast, setSuccessToast] = useState({
         isOpen: false,
         message: "",
@@ -49,6 +51,18 @@ export function CityAdminAttendancePage() {
         () => debounce(() => fetchAttendanceRecords(), 500),
         [fetchAttendanceRecords]
     );
+
+    useEffect(() => {
+        // Reset any existing filters when page loads
+        setAttendancePageFilters({
+            centerId: null,
+            individualId: null,
+            eventId: null,
+            householdId: null,
+            status: null,
+            date: null
+        });
+    }, [setAttendancePageFilters]);
 
     useEffect(() => {
         debouncedFetchAttendanceRecords();
@@ -81,6 +95,8 @@ export function CityAdminAttendancePage() {
 
     const handleOpenTransferModal = (id: number) => {
         setSelectedRecordId(id);
+        const record = attendanceRecords.find(r => r.record_id === id);
+        setPrefillIndividualId(record?.individual_id ?? null);
         setIsTransferModalOpen(true);
     };
 
@@ -148,7 +164,7 @@ export function CityAdminAttendancePage() {
                 : "N/A",
             transfer_from_center_name: isTransferred
                 ? record.transfer_from_center_name || "Unknown Center"
-                : "—",
+                : "N/A",
             notes: record.notes,
         };
     });
@@ -180,7 +196,8 @@ export function CityAdminAttendancePage() {
                                     setIsCheckOutModalOpen(true);
                                 }}
                                 onOpenTransfer={() => {
-                                    setSelectedRecordId(null);
+                                setSelectedRecordId(null);
+                                setPrefillIndividualId(null);
                                     setIsTransferModalOpen(true);
                                 }}
                                 entriesPerPage={entriesPerPage}
@@ -256,6 +273,7 @@ export function CityAdminAttendancePage() {
             <TransferIndividualModal
                 isOpen={isTransferModalOpen}
                 defaultCenterId={undefined}
+                initialIndividualId={prefillIndividualId}
                 onClose={() => setIsTransferModalOpen(false)}
                 onTransfer={async (recordId: number, data) => {
                     await transferIndividual(recordId, data as any);

@@ -156,6 +156,8 @@ class AttendanceRecord(db.Model):
         select_query = f"""
             SELECT 
                 ar.record_id,
+                ar.individual_id,
+                ar.household_id,
                 CONCAT(i.first_name, ' ', i.last_name) as individual_name,
                 ec.center_name,
                 e.event_name,
@@ -213,6 +215,8 @@ class AttendanceRecord(db.Model):
         for row in results:
             record = {
                 "record_id": row.record_id,
+                "individual_id": row.individual_id,
+                "household_id": row.household_id,
                 "individual_name": row.individual_name or "Unknown",
                 "center_name": row.center_name or "Unknown Center",
                 "event_name": row.event_name or "Unknown Event",

@@ -25,7 +25,7 @@ export function CenterAdminAttendancePage() {
         setCurrentPage,
         setEntriesPerPage,
         setSortConfig,
-        setFilters,
+        setAttendancePageFilters,
         fetchAttendanceRecords,
         deleteAttendanceRecord,
         transferIndividual,
@@ -43,6 +43,7 @@ export function CenterAdminAttendancePage() {
     const [isCheckOutModalOpen, setIsCheckOutModalOpen] = useState(false);
     const [isTransferModalOpen, setIsTransferModalOpen] = useState(false);
     const [selectedRecordId, setSelectedRecordId] = useState<number | null>(null);
+    const [prefillIndividualId, setPrefillIndividualId] = useState<number | null>(null);
     const [successToast, setSuccessToast] = useState({
         isOpen: false,
         message: "",
@@ -56,9 +57,16 @@ export function CenterAdminAttendancePage() {
     // Set center filter and fetch records when centerId is available
     useEffect(() => {
         if (centerId) {
-            setFilters({ centerId });
+            setAttendancePageFilters({
+                centerId,
+                individualId: null,
+                eventId: null,
+                householdId: null,
+                status: null,
+                date: null
+            });
         }
-    }, [centerId, setFilters]);
+    }, [centerId, setAttendancePageFilters]);
 
     useEffect(() => {
         if (centerId) {
@@ -93,6 +101,8 @@ export function CenterAdminAttendancePage() {
 
     const handleOpenTransferModal = (id: number) => {
         setSelectedRecordId(id);
+        const record = attendanceRecords.find(r => r.record_id === id);
+        setPrefillIndividualId(record?.individual_id ?? null);
         setIsTransferModalOpen(true);
     };
 
@@ -160,7 +170,7 @@ export function CenterAdminAttendancePage() {
                 : "N/A",
             transfer_from_center_name: isTransferred
                 ? record.transfer_from_center_name || "Unknown Center"
-                : "—",
+                : "N/A",
             notes: record.notes,
         };
     });
@@ -209,6 +219,7 @@ export function CenterAdminAttendancePage() {
                             }}
                             onOpenTransfer={() => {
                                 setSelectedRecordId(null);
+                                setPrefillIndividualId(null);
                                 setIsTransferModalOpen(true);
                             }}
                             entriesPerPage={entriesPerPage}
@@ -286,6 +297,7 @@ export function CenterAdminAttendancePage() {
             <TransferIndividualModal
                 isOpen={isTransferModalOpen}
                 defaultCenterId={centerId} // Pass centerId to restrict transfers to this center
+                initialIndividualId={prefillIndividualId}
                 onClose={() => setIsTransferModalOpen(false)}
                 onTransfer={async (recordId: number, data) => {
                     await transferIndividual(recordId, data as any);
