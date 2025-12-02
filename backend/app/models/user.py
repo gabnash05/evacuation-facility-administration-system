@@ -202,7 +202,9 @@ class User(db.Model):
         params = {"user_id": user_id}
 
         for field, value in update_data.items():
-            if value is not None and field != "user_id":  # Prevent ID modification
+            # FIX: Removed 'and value is not None' check.
+            # We must allow None values so we can set fields (like center_id) to NULL.
+            if field != "user_id":  # Prevent ID modification
                 set_clauses.append(f"{field} = :{field}")
                 params[field] = value
 

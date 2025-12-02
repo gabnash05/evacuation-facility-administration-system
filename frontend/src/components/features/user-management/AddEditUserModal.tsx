@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useEvacuationCenterStore } from "@/store/evacuationCenterStore";
 import type { User, UserRole } from "@/types/user";
 import { useUserStore } from "@/store/userStore";
-import { useAuthStore } from "@/store/authStore"; // ADD THIS IMPORT
+import { useAuthStore } from "@/store/authStore";
 
 const baseSchema = z.object({
     email: z.string().email({ message: "Please enter a valid email address." }),
@@ -43,19 +43,28 @@ interface AddEditUserModalProps {
 
 export function AddEditUserModal({ isOpen, onClose, userToEdit, currentUserRole, onSuccess }: AddEditUserModalProps) {
     const { centers, fetchAllCenters } = useEvacuationCenterStore();
-    const { user: currentUser } = useAuthStore(); // ADD THIS
+    const { user: currentUser } = useAuthStore();
     const isEditMode = !!userToEdit;
 
     // Check if current user is center admin
     const isCenterAdmin = currentUserRole === "center_admin";
     const userCenterId = currentUser?.center_id;
 
+    // Logic to determine which roles are visible in the dropdown
     const availableRoles = useMemo(() => {
         if (currentUserRole === "super_admin") {
-            return [ { value: "super_admin", label: "Super Admin" }, { value: "city_admin", label: "City Admin" }, { value: "center_admin", label: "Center Admin" }, { value: "volunteer", label: "Volunteer" }];
+            return [
+                { value: "super_admin", label: "Super Admin" },
+                { value: "city_admin", label: "City Admin" },
+                { value: "center_admin", label: "Center Admin" },
+                { value: "volunteer", label: "Volunteer" }
+            ];
         }
         if (currentUserRole === "city_admin") {
-            return [ { value: "center_admin", label: "Center Admin" }, { value: "volunteer", label: "Volunteer" }];
+            return [
+                { value: "center_admin", label: "Center Admin" },
+                { value: "volunteer", label: "Volunteer" }
+            ];
         }
         return [{ value: "volunteer", label: "Volunteer" }];
     }, [currentUserRole]);
@@ -115,20 +124,30 @@ export function AddEditUserModal({ isOpen, onClose, userToEdit, currentUserRole,
 
     const onSubmit = async (data: UserFormData) => {
         setSubmitError(null);
-        // build payload with center_id normalized (string -> number | undefined)
+        
         const payload: any = {
             email: data.email,
             role: data.role,
         };
 
-        // For center admin, always use their center_id
+        // Determine if the selected role requires a center
+        const roleRequiresCenter = ["center_admin", "volunteer"].includes(data.role);
+
         if (isCenterAdmin && userCenterId) {
+            // Case 1: Center Admin (locked to their center)
             payload.center_id = userCenterId;
-        } else if (data.center_id && data.center_id !== "") {
-            const n = Number(data.center_id);
-            payload.center_id = Number.isFinite(n) ? n : data.center_id;
+        } else if (roleRequiresCenter) {
+            // Case 2: Role requires center (Center Admin / Volunteer)
+            if (data.center_id && data.center_id !== "") {
+                const n = Number(data.center_id);
+                payload.center_id = Number.isFinite(n) ? n : data.center_id;
+            } else {
+                payload.center_id = undefined;
+            }
         } else {
-            payload.center_id = undefined;
+            // Case 3: Role forbids center (Super Admin / City Admin)
+            // Explicitly set to null to clear any existing association in the database
+            payload.center_id = null;
         }
 
         if (data.password && data.password !== "") {
