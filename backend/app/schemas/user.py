@@ -86,6 +86,11 @@ class UserUpdateSchema(Schema):
     """Schema for updating user information."""
 
     email = fields.Email(allow_none=True)
+    # ADDED: Allow password update
+    password = fields.String(
+        allow_none=True, 
+        validate=validate.Length(min=6, error="Password must be at least 6 characters")
+    )
     role = fields.String(
         allow_none=True,
         validate=validate.OneOf(
