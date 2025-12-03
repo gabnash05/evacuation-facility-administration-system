@@ -1,8 +1,15 @@
+// Updated authStore.ts with resetState method
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import type { AuthResponse, User, UserRole } from "@/types/user";
 import type { LoginFormData } from "@/schemas";
 import { AuthService } from "@/services/authService";
+import { useAttendanceStore } from "./attendanceRecordsStore";
+import { useIndividualStore } from "./individualStore";
+import { useEvacuationCenterStore } from "./evacuationCenterStore";
+import { useUserStore } from "./userStore";
+import { useEventStore } from "./eventStore";
+import { useHouseholdStore } from "./householdStore";
 
 interface AuthState {
     user: User | null;
@@ -15,6 +22,7 @@ interface AuthState {
     hasRole: (roles: UserRole[]) => boolean;
     checkAuth: () => Promise<boolean>;
     clearAuth: () => void;
+    resetState: () => void; // Add this
 }
 
 export const useAuthStore = create<AuthState>()(
@@ -52,6 +60,23 @@ export const useAuthStore = create<AuthState>()(
                 set({ isLoggingOut: true });
                 try {
                     await AuthService.logout();
+                    
+                    // Reset all stores
+                    const attendanceStore = useAttendanceStore.getState();
+                    const individualStore = useIndividualStore.getState();
+                    const evacuationCenterStore = useEvacuationCenterStore.getState();
+                    const userStore = useUserStore.getState();
+                    const eventStore = useEventStore.getState();
+                    const householdStore = useHouseholdStore.getState();
+                    
+                    if (attendanceStore.resetState) attendanceStore.resetState();
+                    if (individualStore.resetState) individualStore.resetState();
+                    if (evacuationCenterStore.resetState) evacuationCenterStore.resetState();
+                    if (userStore.resetState) userStore.resetState();
+                    if (eventStore.resetState) eventStore.resetState();
+                    if (householdStore.resetState) householdStore.resetState();
+                    
+                    // Clear auth store
                     set({
                         user: null,
                         isAuthenticated: false,
@@ -59,6 +84,21 @@ export const useAuthStore = create<AuthState>()(
                     });
                 } catch (error) {
                     console.error("Logout error:", error);
+                    // Still reset stores even if logout API fails
+                    const attendanceStore = useAttendanceStore.getState();
+                    const individualStore = useIndividualStore.getState();
+                    const evacuationCenterStore = useEvacuationCenterStore.getState();
+                    const userStore = useUserStore.getState();
+                    const eventStore = useEventStore.getState();
+                    const householdStore = useHouseholdStore.getState();
+                    
+                    if (attendanceStore.resetState) attendanceStore.resetState();
+                    if (individualStore.resetState) individualStore.resetState();
+                    if (evacuationCenterStore.resetState) evacuationCenterStore.resetState();
+                    if (userStore.resetState) userStore.resetState();
+                    if (eventStore.resetState) eventStore.resetState();
+                    if (householdStore.resetState) householdStore.resetState();
+                    
                     set({
                         user: null,
                         isAuthenticated: false,
@@ -90,6 +130,15 @@ export const useAuthStore = create<AuthState>()(
 
             clearAuth: () => {
                 set({ user: null, isAuthenticated: false });
+            },
+
+            resetState: () => {
+                set({
+                    user: null,
+                    isAuthenticated: false,
+                    isLoading: false,
+                    isLoggingOut: false,
+                });
             },
         }),
         {
