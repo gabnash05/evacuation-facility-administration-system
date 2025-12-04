@@ -87,10 +87,6 @@ export function VolunteerDashboard() {
         navigate("/volunteer/attendance");
     };
 
-    const handleTransferClick = () => {
-        navigate("/volunteer/transfer-individual");
-    };
-
     const handleHouseholdClick = () => {
         navigate("/volunteer/households");
     };
@@ -129,12 +125,6 @@ export function VolunteerDashboard() {
                             color: "bg-blue-500",
                             icon: UserRoundCheck,
                             onClick: handleAttendanceClick,
-                        },
-                        {
-                            label: "Transfer Individual",
-                            color: "bg-red-500",
-                            icon: Ambulance,
-                            onClick: handleTransferClick,
                         },
                         {
                             label: "Register Household",
