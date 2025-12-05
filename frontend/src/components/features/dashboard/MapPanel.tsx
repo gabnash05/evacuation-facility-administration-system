@@ -1,6 +1,7 @@
 "use client";
 
 import { Eye, EyeOff, Map } from "lucide-react";
+import MonoMap from "../map/Map"
 
 interface SelectedCenter {
     name: string;
@@ -46,10 +47,10 @@ export function MapPanel({
     };
 
     return (
-        <div className="relative w-full h-[43vh] border-b border-border flex">
+        <div className="relative w-full h-[50vh] border-b border-border flex">
             {/* Map Placeholder */}
-            <div className="flex-1 bg-muted/30 flex items-center justify-center text-muted-foreground">
-                <p>Map Placeholder</p>
+            <div className="flex-1 w-full rounded-lg overflow-hidden z-0">
+                <MonoMap />
             </div>
 
             {/* Right Info Panel */}
