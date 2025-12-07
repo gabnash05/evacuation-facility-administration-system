@@ -13,6 +13,7 @@ import { CenterAdminAttendancePage } from "./pages/center-admin/CenterAdminAtten
 import { VolunteerDashboard } from "@/pages/volunteer/VolunteerDashboard";
 import { VolunteerHouseholdsPage } from "./pages/volunteer/VolunteerHouseholdsPage";
 import { VolunteerAttendancePage } from "./pages/volunteer/VolunteerAttendancePage";
+import VolunteerDistributeAidPage from "@/pages/volunteer/VolunteerDistributeAidPage";
 
 import MainLayout from "@/layouts/MainLayout";
 import LoginPage from "@/pages/auth/LoginPage";
@@ -139,7 +140,7 @@ function App() {
                                     />
                                     <Route
                                         path="aid-distribution"
-                                        element={<div>Aid Distribution Page</div>}
+                                        element={<VolunteerDistributeAidPage />}
                                     />{" "}
                                     {/* replace with actual page when available */}
                                     <Route path="*" element={<Navigate to="dashboard" replace />} />
