@@ -6,17 +6,21 @@ export interface EvacuationCenter {
     center_id: number;
     center_name: string;
     address: string;
+    latitude: number;
+    longitude: number;
     capacity: number;
     status: CenterStatus;
     current_occupancy: number;
     created_at: string;
     updated_at?: string;
-    photo_data?: string; // Change from photo_url to photo_data for base64
+    photo_data?: string;
 }
 
 export interface CreateCenterData {
     center_name: string;
     address: string;
+    latitude: number;
+    longitude: number;
     capacity: number;
     status?: CenterStatus;
     photo?: File;
@@ -25,6 +29,8 @@ export interface CreateCenterData {
 export interface UpdateCenterData {
     center_name?: string;
     address?: string;
+    latitude?: number;
+    longitude?: number;
     capacity?: number;
     status?: CenterStatus;
     current_occupancy?: number;

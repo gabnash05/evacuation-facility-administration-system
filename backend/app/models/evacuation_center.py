@@ -1,8 +1,8 @@
 """Evacuation Center model for EFAS."""
 
 from typing import Any, Dict, List, Optional
-
-from sqlalchemy import text
+from sqlalchemy import text, func
+from geoalchemy2.types import Geometry
 
 from app.models import db
 from app.schemas.evacuation_center import EvacuationCenterResponseSchema
@@ -16,6 +16,7 @@ class EvacuationCenter(db.Model):
     center_id = db.Column(db.Integer, primary_key=True)
     center_name = db.Column(db.String(255), nullable=False, index=True)
     address = db.Column(db.String(255), nullable=False)
+    coordinates = db.Column(Geometry(geometry_type='POINT', srid=4326), nullable=False)
     capacity = db.Column(db.Integer, nullable=False)
     status = db.Column(db.String(20), nullable=False, default="active")
     current_occupancy = db.Column(db.Integer, nullable=False, default=0)
@@ -23,18 +24,103 @@ class EvacuationCenter(db.Model):
     created_at = db.Column(db.DateTime, default=db.func.now())
     updated_at = db.Column(db.DateTime, default=db.func.now(), onupdate=db.func.now())
 
+
+    # Update the latitude and longitude properties in EvacuationCenter model
+
+    @property
+    def latitude(self):
+        """Get latitude from coordinates."""
+        if self.coordinates:
+            try:
+                # Try to access as tuple/list
+                if isinstance(self.coordinates, (list, tuple)):
+                    # PostgreSQL POINT is (x, y) where x=longitude, y=latitude
+                    return float(self.coordinates[1]) if len(self.coordinates) >= 2 else None
+                elif hasattr(self.coordinates, '__getitem__'):
+                    # Handle SQLAlchemy result objects
+                    try:
+                        return float(self.coordinates[1])
+                    except:
+                        pass
+                elif hasattr(self.coordinates, 'y'):
+                    # Handle geometry objects
+                    return float(self.coordinates.y)
+            except (ValueError, TypeError, IndexError, AttributeError) as e:
+                # Log the error but don't crash
+                import logging
+                logging.error(f"Error getting latitude from coordinates: {e}, type: {type(self.coordinates)}")
+                return None
+        return None
+
+    @property
+    def longitude(self):
+        """Get longitude from coordinates."""
+        if self.coordinates:
+            try:
+                # Try to access as tuple/list
+                if isinstance(self.coordinates, (list, tuple)):
+                    # PostgreSQL POINT is (x, y) where x=longitude, y=latitude
+                    return float(self.coordinates[0]) if len(self.coordinates) >= 1 else None
+                elif hasattr(self.coordinates, '__getitem__'):
+                    # Handle SQLAlchemy result objects
+                    try:
+                        return float(self.coordinates[0])
+                    except:
+                        pass
+                elif hasattr(self.coordinates, 'x'):
+                    # Handle geometry objects
+                    return float(self.coordinates.x)
+            except (ValueError, TypeError, IndexError, AttributeError) as e:
+                # Log the error but don't crash
+                import logging
+                logging.error(f"Error getting longitude from coordinates: {e}, type: {type(self.coordinates)}")
+                return None
+        return None
+
+
     def to_dict(self):
         """Convert center to dictionary for JSON serialization."""
         schema = EvacuationCenterResponseSchema()
         return schema.dump(self)
+
 
     def to_schema(self):
         """Convert center to Marshmallow response schema."""
         schema = EvacuationCenterResponseSchema()
         return schema.dump(self)
 
+
     def __repr__(self):
         return f"<EvacuationCenter(center_id={self.center_id}, name='{self.center_name}', status='{self.status}')>"
+    
+
+    @staticmethod
+    def _parse_coordinates(coords):
+        """Parse coordinates from various formats."""
+        if not coords:
+            return None, None
+        
+        if isinstance(coords, str):
+            # Remove parentheses and split
+            coords_str = coords.strip('()')
+            parts = coords_str.split(',')
+            if len(parts) == 2:
+                try:
+                    longitude = float(parts[0].strip())
+                    latitude = float(parts[1].strip())
+                    return longitude, latitude
+                except (ValueError, TypeError):
+                    pass
+        elif isinstance(coords, (tuple, list)):
+            if len(coords) >= 2:
+                try:
+                    longitude = float(coords[0])
+                    latitude = float(coords[1])
+                    return longitude, latitude
+                except (ValueError, TypeError):
+                    pass
+        return None, None
+
 
     @classmethod
     def _row_to_center(cls, row) -> Optional["EvacuationCenter"]:
@@ -46,7 +132,7 @@ class EvacuationCenter(db.Model):
             row_dict = row._asdict()
         except AttributeError:
             row_dict = dict(row)
-
+        
         return cls(**row_dict)
 
     @classmethod
@@ -58,6 +144,7 @@ class EvacuationCenter(db.Model):
         ).fetchone()
 
         return cls._row_to_center(result)
+
 
     @classmethod
     def get_all(
@@ -221,11 +308,38 @@ class EvacuationCenter(db.Model):
     @classmethod
     def create(cls, data: Dict[str, Any]) -> "EvacuationCenter":
         """Create a new evacuation center using raw SQL."""
-        # Build the query dynamically to include photo_data if present
+        # Build the query dynamically
         fields = []
         values = []
         params = {}
 
+        # Handle coordinates - accept various formats
+        latitude = None
+        longitude = None
+        
+        # Check for separate lat/lng fields
+        if 'latitude' in data and 'longitude' in data:
+            try:
+                latitude = float(data['latitude'])
+                longitude = float(data['longitude'])
+            except (ValueError, TypeError):
+                pass
+        # Check for coordinates field (string format like "(longitude, latitude)")
+        elif 'coordinates' in data:
+            longitude, latitude = cls._parse_coordinates(data['coordinates'])
+        
+        # If we have valid coordinates, add them to the query
+        if latitude is not None and longitude is not None:
+            # Create POINT from lat/lng using PostgreSQL POINT() function
+            fields.append("coordinates")
+            # Format POINT directly in SQL string
+            values.append(f"POINT({longitude}, {latitude})")
+            # Remove from data dictionary
+            data.pop('latitude', None)
+            data.pop('longitude', None)
+            data.pop('coordinates', None)
+
+        # Add other fields
         for field in [
             "center_name",
             "address",
@@ -246,7 +360,7 @@ class EvacuationCenter(db.Model):
             f"""  
             INSERT INTO evacuation_centers ({', '.join(fields)})
             VALUES ({', '.join(values)})
-            RETURNING center_id, created_at, updated_at
+            RETURNING center_id, created_at, updated_at, coordinates
             """
         )
 
@@ -254,8 +368,8 @@ class EvacuationCenter(db.Model):
         db.session.commit()
 
         result_dict = result._asdict()
-
-        # Create center object with all data
+        
+        # Merge with original data (excluding lat/lng)
         center_data = {**data, **result_dict}
         return cls(**center_data)
 
@@ -268,6 +382,30 @@ class EvacuationCenter(db.Model):
         set_clauses = []
         params = {"center_id": center_id}
 
+        # Handle coordinates - accept various formats
+        latitude = None
+        longitude = None
+        
+        # Check for separate lat/lng fields
+        if 'latitude' in update_data and 'longitude' in update_data:
+            try:
+                latitude = float(update_data['latitude'])
+                longitude = float(update_data['longitude'])
+            except (ValueError, TypeError):
+                pass
+        # Check for coordinates field (string format like "(longitude, latitude)")
+        elif 'coordinates' in update_data:
+            longitude, latitude = cls._parse_coordinates(update_data['coordinates'])
+        
+        # If we have valid coordinates, add them to the query
+        if latitude is not None and longitude is not None:
+            # Direct string formatting for POINT
+            set_clauses.append(f"coordinates = POINT({longitude}, {latitude})")
+            update_data.pop('latitude', None)
+            update_data.pop('longitude', None)
+            update_data.pop('coordinates', None)
+
+        # Add other fields
         for field, value in update_data.items():
             if field != "center_id":  # Prevent ID modification
                 set_clauses.append(f"{field} = :{field}")
@@ -292,6 +430,7 @@ class EvacuationCenter(db.Model):
         db.session.commit()
 
         return cls._row_to_center(result)
+
 
     @classmethod
     def delete(cls, center_id: int) -> bool:
@@ -411,5 +550,111 @@ class EvacuationCenter(db.Model):
                 "active_centers_count": 0,
                 "total_centers_count": 0,
             }
+
+    @classmethod
+    def get_centers_by_proximity(
+        cls,
+        latitude: float,
+        longitude: float,
+        radius_km: float = 10.0,
+        limit: int = 10
+    ) -> List["EvacuationCenter"]:
+        """
+        Find evacuation centers within a specified radius of given coordinates.
         
+        Args:
+            latitude: Latitude of reference point
+            longitude: Longitude of reference point
+            radius_km: Search radius in kilometers (default: 10km)
+            limit: Maximum number of results to return
+            
+        Returns:
+            List of EvacuationCenter objects sorted by distance
+        """
+        # Using PostGIS ST_DistanceSphere for accurate distance calculation
+        query = text("""
+            SELECT *,
+                ST_DistanceSphere(
+                    coordinates,
+                    ST_SetSRID(ST_MakePoint(:longitude, :latitude), 4326)
+                ) / 1000 as distance_km
+            FROM evacuation_centers
+            WHERE status = 'active'
+            AND ST_DistanceSphere(
+                coordinates,
+                ST_SetSRID(ST_MakePoint(:longitude, :latitude), 4326)
+            ) <= :radius_meters
+            ORDER BY distance_km ASC
+            LIMIT :limit
+        """)
         
+        params = {
+            "latitude": latitude,
+            "longitude": longitude,
+            "radius_meters": radius_km * 1000,  # Convert km to meters
+            "limit": limit
+        }
+        
+        results = db.session.execute(query, params).fetchall()
+        
+        centers = [
+            cls._row_to_center(row) for row in results if cls._row_to_center(row)
+        ]
+        
+        # Add distance to each center object
+        for i, row in enumerate(results):
+            if i < len(centers):
+                centers[i].distance_km = row[-1]  # Last column is distance_km
+        
+        return centers
+
+    @classmethod
+    def get_centers_in_bounds(
+        cls,
+        north: float,
+        south: float,
+        east: float,
+        west: float,
+        status: Optional[str] = "active"
+    ) -> List["EvacuationCenter"]:
+        """
+        Get all centers within a geographic bounding box.
+        Useful for map viewport filtering.
+        
+        Args:
+            north: Northern boundary latitude
+            south: Southern boundary latitude
+            east: Eastern boundary longitude
+            west: Western boundary longitude
+            status: Optional status filter
+            
+        Returns:
+            List of EvacuationCenter objects
+        """
+        # Using PostGIS ST_MakeEnvelope for bounding box query
+        base_query = """
+            SELECT *
+            FROM evacuation_centers
+            WHERE ST_Within(
+                coordinates,
+                ST_MakeEnvelope(:west, :south, :east, :north, 4326)
+            )
+        """
+        
+        params = {
+            "north": north,
+            "south": south,
+            "east": east,
+            "west": west
+        }
+        
+        if status:
+            base_query += " AND status = :status"
+            params["status"] = status
+        
+        query = text(base_query)
+        results = db.session.execute(query, params).fetchall()
+        
+        return [
+            cls._row_to_center(row) for row in results if cls._row_to_center(row)
+        ]

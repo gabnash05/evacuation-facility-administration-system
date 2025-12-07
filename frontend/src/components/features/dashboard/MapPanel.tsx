@@ -1,7 +1,7 @@
 "use client";
 
 import { Eye, EyeOff, Map } from "lucide-react";
-import MonoMap from "../map/Map"
+import MonoMap from "../map/MonoMap"
 
 interface SelectedCenter {
     name: string;
