@@ -449,12 +449,12 @@ export function EditEvacuationCenterForm({
                                     </Label>
                                     <div className="space-y-3">
                                         {formData.latitude && formData.longitude ? (
-                                            <div className="p-4 border border-green-200 bg-green-50 rounded-md">
+                                            <div className="p-4 border border-green-200 bg-green-50 rounded-md dark:border-green-800 dark:bg-green-950/30">
                                                 <div className="flex items-start justify-between">
                                                     <div className="space-y-2">
                                                         <div className="flex items-center gap-2">
-                                                            <MapPin className="h-4 w-4 text-green-600" />
-                                                            <span className="font-medium text-green-700">
+                                                            <MapPin className="h-4 w-4 text-green-600 dark:text-green-400" />
+                                                            <span className="font-medium text-green-700 dark:text-green-300">
                                                                 Location Selected
                                                             </span>
                                                         </div>
@@ -479,7 +479,7 @@ export function EditEvacuationCenterForm({
                                                 </div>
                                             </div>
                                         ) : (
-                                            <div className="p-6 border-2 border-dashed border-muted-foreground/25 rounded-lg text-center cursor-pointer hover:border-muted-foreground/50 transition-colors bg-background"
+                                            <div className="p-6 border-2 border-dashed border-muted-foreground/25 rounded-lg text-center cursor-pointer hover:border-muted-foreground/50 transition-colors bg-background dark:bg-background"
                                                 onClick={handleOpenMapPicker}>
                                                 <div className="space-y-3">
                                                     <div className="text-muted-foreground">
