@@ -20,8 +20,13 @@ L.Icon.Default.mergeOptions({
 });
 
 // Capacity-based color coding
-const getCapacityColor = (currentCapacity: number, maxCapacity: number, isDark: boolean) => {
+const getCapacityColor = (currentCapacity: number, maxCapacity: number, isDark: boolean, isHighlighted: boolean = false) => {
     const percentage = currentCapacity / maxCapacity;
+    
+    if (isHighlighted) {
+        // Return special highlight color for the admin's center
+        return isDark ? "#3b82f6" : "#2563eb"; // Blue color for highlighted center
+    }
     
     if (percentage >= 0.9) return isDark ? "#dc2626" : "#ef4444";
     if (percentage >= 0.7) return isDark ? "#ea580c" : "#f97316";
@@ -30,57 +35,8 @@ const getCapacityColor = (currentCapacity: number, maxCapacity: number, isDark: 
     return isDark ? "#059669" : "#10b981";
 };
 
-// Mock data
-const MOCK_EVACUATION_CENTERS = [
-    {
-        id: 1,
-        name: "Main Evacuation Center",
-        position: [8.230205, 124.249607] as [number, number],
-        currentCapacity: 450,
-        maxCapacity: 500,
-        address: "123 Main St, Cagayan de Oro",
-        contact: "0912-345-6789"
-    },
-    {
-        id: 2,
-        name: "Medical Station Alpha",
-        position: [8.235205, 124.254607] as [number, number],
-        currentCapacity: 75,
-        maxCapacity: 100,
-        address: "456 Health Ave, Cagayan de Oro",
-        contact: "0913-456-7890"
-    },
-    {
-        id: 3,
-        name: "Temporary Shelter A",
-        position: [8.225205, 124.244607] as [number, number],
-        currentCapacity: 280,
-        maxCapacity: 300,
-        address: "789 Shelter Rd, Cagayan de Oro",
-        contact: "0914-567-8901"
-    },
-    {
-        id: 4,
-        name: "Emergency Food Station",
-        position: [8.240205, 124.259607] as [number, number],
-        currentCapacity: 120,
-        maxCapacity: 200,
-        address: "321 Food Blvd, Cagayan de Oro",
-        contact: "0915-678-9012"
-    },
-    {
-        id: 5,
-        name: "North District Shelter",
-        position: [8.245205, 124.264607] as [number, number],
-        currentCapacity: 40,
-        maxCapacity: 150,
-        address: "654 North St, Cagayan de Oro",
-        contact: "0916-789-0123"
-    }
-];
-
 // Create icon with tooltip that shows name by default
-const createMarkerIcon = (name: string, color: string, currentCapacity: number, maxCapacity: number) => {
+const createMarkerIcon = (name: string, color: string, currentCapacity: number, maxCapacity: number, isHighlighted: boolean = false) => {
     const percentage = Math.round((currentCapacity / maxCapacity) * 100);
     
     return L.divIcon({
@@ -89,6 +45,12 @@ const createMarkerIcon = (name: string, color: string, currentCapacity: number, 
                 <!-- Main marker -->
                 <div class="relative w-7 h-7 rounded-full border-2 border-white shadow-lg transition-all duration-200 group-hover:scale-110"
                      style="background-color: ${color}">
+                    ${isHighlighted ? `
+                    <!-- Highlight ring for admin's center -->
+                    <div class="absolute inset-0 rounded-full animate-ping"
+                         style="background-color: ${color}; opacity: 0.3;">
+                    </div>
+                    ` : ''}
                 </div>
                 
                 <!-- Center dot -->
@@ -97,7 +59,7 @@ const createMarkerIcon = (name: string, color: string, currentCapacity: number, 
                 </div>
             </div>
         `,
-        className: "custom-marker",
+        className: isHighlighted ? "custom-marker highlighted-marker" : "custom-marker",
         iconSize: [28, 48],
         iconAnchor: [14, 24],
     });
@@ -119,14 +81,16 @@ interface MapProps {
     centers?: EvacuationCenter[];
     className?: string;
     onCenterClick?: (id: number) => void;
+    highlightCenterId?: number;
 }
 
 export default function MonoMap({
     center = [8.230205, 124.249607],
     zoom = 13,
-    centers = MOCK_EVACUATION_CENTERS,
+    centers = [], // Default to empty array
     className = "",
     onCenterClick = () => {},
+    highlightCenterId, // Add this to destructuring
 }: MapProps) {
     const { theme } = useTheme();
     const [hoveredCenter, setHoveredCenter] = useState<number | null>(null);
@@ -140,9 +104,12 @@ export default function MonoMap({
         setHoveredCenter(id);
     };
 
-    // Calculate bounds
+    // Calculate bounds - handle empty centers array
     const calculateBounds = () => {
-        if (centers.length === 0) return undefined;
+        if (centers.length === 0) {
+            // Return undefined to use the default center/zoom
+            return undefined;
+        }
         return centers.map(c => c.position);
     };
 
@@ -169,8 +136,9 @@ export default function MonoMap({
                 <ScaleControl imperial={false} position="bottomleft" />
                 
                 {centers.map((center) => {
-                    const color = getCapacityColor(center.currentCapacity, center.maxCapacity, isDark);
-                    const icon = createMarkerIcon(center.name, color, center.currentCapacity, center.maxCapacity);
+                    const isHighlighted = center.id === highlightCenterId;
+                    const color = getCapacityColor(center.currentCapacity, center.maxCapacity, isDark, isHighlighted);
+                    const icon = createMarkerIcon(center.name, color, center.currentCapacity, center.maxCapacity, isHighlighted);
                     const percentage = Math.round((center.currentCapacity / center.maxCapacity) * 100);
                     
                     return (
@@ -189,10 +157,17 @@ export default function MonoMap({
                                 offset={[0, -45]}
                                 opacity={1}
                                 permanent={false}
-                                className="custom-tooltip"
+                                className={`custom-tooltip ${isHighlighted ? 'highlighted-tooltip' : ''}`}
                             >
                                 <div className="px-3 py-2">
-                                    <div className="font-medium text-sm text-foreground">{center.name}</div>
+                                    <div className="font-medium text-sm text-foreground flex flex-wrap items-center">
+                                        {center.name}
+                                        {isHighlighted && (
+                                            <span className="ml-2 px-2 py-0.5 text-xs bg-blue-100 text-blue-700 rounded-full shrink-0">
+                                                Your Center
+                                            </span>
+                                        )}
+                                    </div>
                                     <div className="text-xs mt-1 space-y-1">
                                         <div className="flex items-center gap-2 text-foreground">
                                             <div 
