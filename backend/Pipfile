@@ -15,6 +15,7 @@ marshmallow = "*"
 gunicorn = "*"
 werkzeug = "*"
 psycopg2-binary = "*"
+geoalchemy2 = "*"
 
 [dev-packages]
 flake8 = "*"

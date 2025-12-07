@@ -15,6 +15,9 @@ from app.services.evacuation_center_service import (
     get_centers,
     update_center,
     get_all_centers,
+    get_city_summary,
+    get_centers_by_proximity,
+    get_centers_in_bounds,
 )
 
 # Configure logger for this module
@@ -86,6 +89,8 @@ def get_centers_route() -> Tuple:
 
         if not result["success"]:
             return jsonify(result), 400
+
+        print(result)
 
         return jsonify(result), 200
 
@@ -207,7 +212,7 @@ def get_center_events(center_id: int):
 
 
 @evacuation_center_bp.route("/evacuation_centers", methods=["POST"])
-# @jwt_required()
+@jwt_required()
 def create_new_center_route() -> Tuple:
     """
     Create a new evacuation center.
@@ -215,6 +220,8 @@ def create_new_center_route() -> Tuple:
     Request Body (multipart/form-data):
         center_name (string) - Center name
         address (string) - Center address
+        latitude (float) - Latitude coordinate
+        longitude (float) - Longitude coordinate
         capacity (integer) - Center capacity
         current_occupancy (integer, optional) - Current occupancy (default: 0)
         status (string, optional) - Center status (default: active)
@@ -231,6 +238,8 @@ def create_new_center_route() -> Tuple:
             data = {
                 "center_name": request.form.get("center_name"),
                 "address": request.form.get("address"),
+                "latitude": request.form.get("latitude", type=float),
+                "longitude": request.form.get("longitude", type=float),
                 "capacity": request.form.get("capacity", type=int),
                 "current_occupancy": request.form.get("current_occupancy", 0, type=int),
                 "status": request.form.get("status", "active"),
@@ -268,12 +277,36 @@ def create_new_center_route() -> Tuple:
 @evacuation_center_bp.route("/evacuation_centers/<int:center_id>", methods=["PUT"])
 @jwt_required()
 def update_existing_center_route(center_id: int) -> Tuple:
+    """
+    Update an existing evacuation center.
+
+    Args:
+        center_id: Center ID to update
+
+    Request Body (multipart/form-data):
+        center_name (string, optional) - Center name
+        address (string, optional) - Center address
+        latitude (float, optional) - Latitude coordinate
+        longitude (float, optional) - Longitude coordinate
+        capacity (integer, optional) - Center capacity
+        current_occupancy (integer, optional) - Current occupancy
+        status (string, optional) - Center status
+        photo (file, optional) - Center photo
+        remove_photo (string, optional) - "true" to remove existing photo
+
+    Returns:
+        Tuple containing:
+            - JSON response with standardized format
+            - HTTP status code
+    """
     try:
         # Check if request is multipart/form-data for file upload
         if request.content_type and "multipart/form-data" in request.content_type:
             data = {
                 "center_name": request.form.get("center_name"),
                 "address": request.form.get("address"),
+                "latitude": request.form.get("latitude", type=float),
+                "longitude": request.form.get("longitude", type=float),
                 "capacity": request.form.get("capacity", type=int),
                 "current_occupancy": request.form.get("current_occupancy", type=int),
                 "status": request.form.get("status"),
@@ -283,7 +316,7 @@ def update_existing_center_route(center_id: int) -> Tuple:
             photo_file = request.files.get("photo")
             remove_photo = (
                 request.form.get("remove_photo") == "true"
-            )  # This should be working
+            )
         else:
             data = request.get_json()
             photo_file = None
@@ -298,7 +331,7 @@ def update_existing_center_route(center_id: int) -> Tuple:
 
         result = update_center(
             center_id, data, photo_file, remove_photo
-        )  # This calls the service
+        )
 
         if not result["success"]:
             return jsonify(result), 400
@@ -354,6 +387,7 @@ def delete_existing_center_route(center_id: int) -> Tuple:
             500,
         )
 
+
 @evacuation_center_bp.route("/evacuation_centers/summary", methods=["GET"])
 @jwt_required()
 def get_city_summary_route() -> Tuple:
@@ -379,8 +413,6 @@ def get_city_summary_route() -> Tuple:
         }
     """
     try:
-        from app.services.evacuation_center_service import get_city_summary
-        
         logger.info("Fetching Iligan City evacuation centers summary")
         
         result = get_city_summary()
@@ -396,6 +428,140 @@ def get_city_summary_route() -> Tuple:
             jsonify({
                 "success": False,
                 "message": "Internal server error while fetching city summary"
+            }),
+            500
+        )
+
+
+@evacuation_center_bp.route("/evacuation_centers/nearby", methods=["GET"])
+@jwt_required()
+def get_nearby_centers_route() -> Tuple:
+    """
+    Find evacuation centers within a specified radius of given coordinates.
+    
+    Query Parameters:
+        lat (float) - Latitude of reference point (required)
+        lng (float) - Longitude of reference point (required)
+        radius (float) - Search radius in kilometers (default: 10.0)
+        limit (int) - Maximum number of results to return (default: 10)
+        
+    Returns:
+        Tuple containing:
+            - JSON response with centers data including distance
+            - HTTP status code
+    """
+    try:
+        # Extract query parameters
+        latitude = request.args.get("lat", type=float)
+        longitude = request.args.get("lng", type=float)
+        radius = request.args.get("radius", 10.0, type=float)
+        limit = request.args.get("limit", 10, type=int)
+        
+        # Validate required parameters
+        if latitude is None or longitude is None:
+            return jsonify({
+                "success": False,
+                "message": "Latitude (lat) and longitude (lng) parameters are required"
+            }), 400
+            
+        if radius <= 0:
+            return jsonify({
+                "success": False,
+                "message": "Radius must be greater than 0"
+            }), 400
+            
+        if limit <= 0 or limit > 100:
+            return jsonify({
+                "success": False,
+                "message": "Limit must be between 1 and 100"
+            }), 400
+            
+        logger.info(
+            "Finding centers near coordinates: (%s, %s), radius: %skm, limit: %s",
+            latitude, longitude, radius, limit
+        )
+        
+        result = get_centers_by_proximity(
+            latitude=latitude,
+            longitude=longitude,
+            radius_km=radius,
+            limit=limit
+        )
+        
+        if not result["success"]:
+            return jsonify(result), 400
+            
+        return jsonify(result), 200
+        
+    except Exception as error:
+        logger.error("Error finding nearby centers: %s", str(error))
+        return (
+            jsonify({
+                "success": False,
+                "message": "Internal server error while finding nearby centers"
+            }),
+            500
+        )
+
+
+@evacuation_center_bp.route("/evacuation_centers/in-bounds", methods=["GET"])
+@jwt_required()
+def get_centers_in_bounds_route() -> Tuple:
+    """
+    Get all centers within a geographic bounding box.
+    Useful for map viewport filtering.
+    
+    Query Parameters:
+        north (float) - Northern boundary latitude (required)
+        south (float) - Southern boundary latitude (required)
+        east (float) - Eastern boundary longitude (required)
+        west (float) - Western boundary longitude (required)
+        status (string) - Filter by status (optional, default: "active")
+        
+    Returns:
+        Tuple containing:
+            - JSON response with centers data
+            - HTTP status code
+    """
+    try:
+        # Extract query parameters
+        north = request.args.get("north", type=float)
+        south = request.args.get("south", type=float)
+        east = request.args.get("east", type=float)
+        west = request.args.get("west", type=float)
+        status = request.args.get("status", "active")
+        
+        # Validate required parameters
+        if None in [north, south, east, west]:
+            return jsonify({
+                "success": False,
+                "message": "All bounding box parameters (north, south, east, west) are required"
+            }), 400
+            
+        logger.info(
+            "Finding centers in bounds: north=%s, south=%s, east=%s, west=%s, status=%s",
+            north, south, east, west, status
+        )
+        
+        result = get_centers_in_bounds(
+            north=north,
+            south=south,
+            east=east,
+            west=west,
+            status=status
+        )
+        
+        if not result["success"]:
+            return jsonify(result), 400
+            
+        return jsonify(result), 200
+        
+    except Exception as error:
+        logger.error("Error finding centers in bounds: %s", str(error))
+        return (
+            jsonify({
+                "success": False,
+                "message": "Internal server error while finding centers in bounds"
             }),
             500
         )
