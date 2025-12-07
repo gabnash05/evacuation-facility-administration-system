@@ -2,7 +2,7 @@
 
 import logging
 import base64
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Optional, List
 
 from app.models.evacuation_center import EvacuationCenter
 from app.schemas.evacuation_center import (
@@ -146,6 +146,8 @@ def get_all_centers() -> Dict[str, Any]:
                         "center_id": getattr(center, "center_id", None),
                         "center_name": getattr(center, "center_name", "Unknown"),
                         "address": getattr(center, "address", ""),
+                        "latitude": float(getattr(center, "latitude", 0.0)),
+                        "longitude": float(getattr(center, "longitude", 0.0)),
                         "capacity": getattr(center, "capacity", 0),
                         "current_occupancy": getattr(center, "current_occupancy", 0),
                         "status": getattr(center, "status", "inactive"),
@@ -210,6 +212,15 @@ def create_center(data: Dict[str, Any], photo_file=None) -> Dict[str, Any]:
                 logger.error("Error processing photo: %s", str(e))
                 return {"success": False, "message": "Failed to process photo"}
 
+        # Validate coordinates if provided
+        if "latitude" in valid_data and "longitude" in valid_data:
+            lat = valid_data["latitude"]
+            lng = valid_data["longitude"]
+            if lat < -90 or lat > 90:
+                return {"success": False, "message": "Invalid latitude value"}
+            if lng < -180 or lng > 180:
+                return {"success": False, "message": "Invalid longitude value"}
+
         # Create new center
         center = EvacuationCenter.create(valid_data)
 
@@ -232,6 +243,18 @@ def update_center(
     photo_file=None,
     remove_photo: bool = False,
 ) -> Dict[str, Any]:
+    """
+    Update an evacuation center.
+
+    Args:
+        center_id: Center ID
+        update_data: Update data
+        photo_file: Optional new photo file
+        remove_photo: Whether to remove existing photo
+
+    Returns:
+        Dictionary with update result
+    """
     try:
         # DEBUG: Log the incoming parameters
         logger.info("🔧 [Backend Service] update_center called with:")
@@ -272,7 +295,26 @@ def update_center(
                         "message": "Evacuation center name already exists",
                     }
 
-        # Handle photo upload/removal - FIXED with explicit None handling
+        # Validate coordinates if being updated
+        if "latitude" in valid_data and "longitude" in valid_data:
+            lat = valid_data["latitude"]
+            lng = valid_data["longitude"]
+            if lat is not None and (lat < -90 or lat > 90):
+                return {"success": False, "message": "Invalid latitude value"}
+            if lng is not None and (lng < -180 or lng > 180):
+                return {"success": False, "message": "Invalid longitude value"}
+        
+        # Validate coordinate pairing
+        lat_provided = "latitude" in valid_data and valid_data["latitude"] is not None
+        lng_provided = "longitude" in valid_data and valid_data["longitude"] is not None
+        
+        if lat_provided != lng_provided:
+            return {
+                "success": False,
+                "message": "Both latitude and longitude must be provided together"
+            }
+
+        # Handle photo upload/removal
         if remove_photo:
             # Remove existing photo - explicitly set to None
             valid_data["photo_data"] = None
@@ -315,7 +357,7 @@ def update_center(
             )
 
         # Check if we're updating occupancy - if so, use the specialized method
-        if "current_occupancy" in valid_data or "capacity" in valid_data:
+        if "current_occupancy" in valid_data:
             new_occupancy = valid_data["current_occupancy"]
             logger.info(
                 "🔧 [Backend Service] Occupancy update detected, using update_occupancy method for center %s to %s",
@@ -353,10 +395,6 @@ def update_center(
     except ValueError as error:
         # Handle occupancy validation errors
         return {"success": False, "message": str(error)}
-    except Exception as error:
-        logger.error("Error updating evacuation center %s: %s", center_id, str(error))
-        return {"success": False, "message": "Failed to update evacuation center"}
-
     except Exception as error:
         logger.error("Error updating evacuation center %s: %s", center_id, str(error))
         return {"success": False, "message": "Failed to update evacuation center"}
@@ -424,6 +462,7 @@ def update_center_occupancy(center_id: int, new_occupancy: int) -> Dict[str, Any
         )
         return {"success": False, "message": "Failed to update occupancy"}
 
+
 def get_city_summary() -> Dict[str, Any]:
     """
     Get aggregated summary of all evacuation centers in Iligan City.
@@ -445,3 +484,104 @@ def get_city_summary() -> Dict[str, Any]:
             "success": False, 
             "message": "Failed to get city summary"
         }
+
+
+def get_centers_by_proximity(
+    latitude: float,
+    longitude: float,
+    radius_km: float = 10.0,
+    limit: int = 10
+) -> Dict[str, Any]:
+    """
+    Find evacuation centers within a specified radius of given coordinates.
+    
+    Args:
+        latitude: Latitude of reference point
+        longitude: Longitude of reference point
+        radius_km: Search radius in kilometers (default: 10km)
+        limit: Maximum number of results to return
+        
+    Returns:
+        Dictionary with centers data including distance information
+    """
+    try:
+        # Validate coordinates
+        if latitude < -90 or latitude > 90:
+            return {"success": False, "message": "Invalid latitude value"}
+        if longitude < -180 or longitude > 180:
+            return {"success": False, "message": "Invalid longitude value"}
+        
+        centers = EvacuationCenter.get_centers_by_proximity(
+            latitude=latitude,
+            longitude=longitude,
+            radius_km=radius_km,
+            limit=limit
+        )
+        
+        # Convert centers to schema format
+        centers_data = []
+        for center in centers:
+            center_data = center.to_schema()
+            # Add distance information if available
+            if hasattr(center, 'distance_km'):
+                center_data['distance_km'] = round(center.distance_km, 2)
+            centers_data.append(center_data)
+        
+        return {
+            "success": True,
+            "data": centers_data,
+            "message": f"Found {len(centers_data)} centers within {radius_km}km radius"
+        }
+        
+    except Exception as error:
+        logger.error("Error finding centers by proximity: %s", str(error))
+        return {"success": False, "message": "Failed to find centers by proximity"}
+
+
+def get_centers_in_bounds(
+    north: float,
+    south: float,
+    east: float,
+    west: float,
+    status: Optional[str] = "active"
+) -> Dict[str, Any]:
+    """
+    Get all centers within a geographic bounding box.
+    Useful for map viewport filtering.
+    
+    Args:
+        north: Northern boundary latitude
+        south: Southern boundary latitude
+        east: Eastern boundary longitude
+        west: Western boundary longitude
+        status: Optional status filter
+        
+    Returns:
+        Dictionary with centers data
+    """
+    try:
+        # Validate bounds
+        if south > north:
+            return {"success": False, "message": "South must be less than north"}
+        if west > east:
+            return {"success": False, "message": "West must be less than east"}
+        
+        centers = EvacuationCenter.get_centers_in_bounds(
+            north=north,
+            south=south,
+            east=east,
+            west=west,
+            status=status
+        )
+        
+        centers_data = [center.to_schema() for center in centers]
+        
+        return {
+            "success": True,
+            "data": centers_data,
+            "message": f"Found {len(centers_data)} centers in the specified area"
+        }
+        
+    except Exception as error:
+        logger.error("Error getting centers in bounds: %s", str(error))
+        return {"success": False, "message": "Failed to get centers in bounds"}

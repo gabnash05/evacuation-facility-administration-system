@@ -1,4 +1,8 @@
 // components/map/MonoMap.tsx
+
+// MAP TILES FROM:
+// https://docs.stadiamaps.com/themes/
+
 import { useState } from "react";
 import { MapContainer, TileLayer, Marker, ScaleControl, Tooltip } from "react-leaflet";
 import { useTheme } from "@/components/common/ThemeProvider";

@@ -59,9 +59,11 @@ export class EvacuationCenterService {
         try {
             const formData = new FormData();
 
-            // Append form data
+            // Append form data (including coordinates)
             formData.append("center_name", data.center_name);
             formData.append("address", data.address);
+            formData.append("latitude", data.latitude.toString());
+            formData.append("longitude", data.longitude.toString());
             formData.append("capacity", data.capacity.toString());
             formData.append("current_occupancy", (data.current_occupancy || 0).toString());
             formData.append("status", data.status || "active");
@@ -91,9 +93,11 @@ export class EvacuationCenterService {
         try {
             const formData = new FormData();
 
-            // Append form data (only provided fields)
+            // Append form data (only provided fields, including coordinates)
             if (updates.center_name) formData.append("center_name", updates.center_name);
             if (updates.address) formData.append("address", updates.address);
+            if (updates.latitude !== undefined) formData.append("latitude", updates.latitude.toString());
+            if (updates.longitude !== undefined) formData.append("longitude", updates.longitude.toString());
             if (updates.capacity) formData.append("capacity", updates.capacity.toString());
             if (updates.current_occupancy !== undefined)
                 formData.append("current_occupancy", updates.current_occupancy.toString());
@@ -139,6 +143,87 @@ export class EvacuationCenterService {
                 success: boolean;
                 data: CitySummary;
             }>("/evacuation_centers/summary", {
+                withCredentials: true,
+            });
+            return response.data;
+        } catch (error) {
+            throw new Error(handleApiError(error));
+        }
+    }
+
+    static async getCentersByProximity(
+        latitude: number,
+        longitude: number,
+        radius: number = 10.0,
+        limit: number = 10
+    ): Promise<{
+        success: boolean;
+        data: (EvacuationCenter & { distance_km?: number })[];
+        message: string;
+    }> {
+        try {
+            const response = await api.get<{
+                success: boolean;
+                data: (EvacuationCenter & { distance_km?: number })[];
+                message: string;
+            }>("/evacuation_centers/nearby", {
+                params: {
+                    lat: latitude,
+                    lng: longitude,
+                    radius,
+                    limit
+                },
+                withCredentials: true,
+            });
+            return response.data;
+        } catch (error) {
+            throw new Error(handleApiError(error));
+        }
+    }
+
+    static async getCentersInBounds(
+        bounds: {
+            north: number;
+            south: number;
+            east: number;
+            west: number;
+        },
+        status: string = "active"
+    ): Promise<{
+        success: boolean;
+        data: EvacuationCenter[];
+        message: string;
+    }> {
+        try {
+            const response = await api.get<{
+                success: boolean;
+                data: EvacuationCenter[];
+                message: string;
+            }>("/evacuation_centers/in-bounds", {
+                params: {
+                    north: bounds.north,
+                    south: bounds.south,
+                    east: bounds.east,
+                    west: bounds.west,
+                    status
+                },
+                withCredentials: true,
+            });
+            return response.data;
+        } catch (error) {
+            throw new Error(handleApiError(error));
+        }
+    }
+
+    static async getCenterEvents(centerId: number): Promise<{
+        success: boolean;
+        data: any[]; // Replace 'any' with your Event type
+    }> {
+        try {
+            const response = await api.get<{
+                success: boolean;
+                data: any[];
+            }>(`/evacuation_centers/${centerId}/events`, {
                 withCredentials: true,
             });
             return response.data;
