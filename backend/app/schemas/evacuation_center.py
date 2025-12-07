@@ -134,7 +134,6 @@ class EvacuationCenterResponseSchema(Schema):
     photo_data = fields.String(dump_only=True)  # Return base64 string
     created_at = fields.DateTime(dump_only=True)
     updated_at = fields.DateTime(dump_only=True)
-    coordinates = fields.Raw(dump_only=True)  # Raw coordinates field if needed
 
     def get_latitude(self, obj):
         """Extract latitude from coordinates."""

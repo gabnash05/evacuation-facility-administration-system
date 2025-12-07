@@ -2,6 +2,7 @@
 
 import { Eye, EyeOff, Map } from "lucide-react";
 import MonoMap from "../map/MonoMap"
+import type { EvacuationCenter } from "@/types/center";
 
 interface SelectedCenter {
     name: string;
@@ -9,6 +10,8 @@ interface SelectedCenter {
     status: "active" | "inactive" | "closed";
     capacity: number;
     current_occupancy: number;
+    latitude?: number;
+    longitude?: number;
 }
 
 interface MapPanelProps {
@@ -18,6 +21,8 @@ interface MapPanelProps {
     isLoadingCenter: boolean;
     getCenterStatusStyles: (status: string) => string;
     getUsageColor: (percentage: number) => string;
+    centers?: EvacuationCenter[];
+    highlightCenterId?: number; // Add this prop
 }
 
 export function MapPanel({
@@ -27,6 +32,8 @@ export function MapPanel({
     isLoadingCenter,
     getCenterStatusStyles,
     getUsageColor,
+    centers = [],
+    highlightCenterId, // Add this to destructuring
 }: MapPanelProps) {
     const usagePercentage =
         selectedCenter.capacity > 0
@@ -46,11 +53,48 @@ export function MapPanel({
         }
     };
 
+    // Filter out centers with invalid coordinates
+    const validCenters = centers.filter(center => 
+        center.latitude != null && 
+        center.longitude != null &&
+        !isNaN(center.latitude) && 
+        !isNaN(center.longitude) &&
+        Math.abs(center.latitude) <= 90 &&
+        Math.abs(center.longitude) <= 180
+    );
+
+    // Format centers for MonoMap
+    const formattedCenters = validCenters.map(center => ({
+        id: center.center_id,
+        name: center.center_name,
+        position: [center.latitude, center.longitude] as [number, number],
+        currentCapacity: center.current_occupancy,
+        maxCapacity: center.capacity,
+        address: center.address,
+        contact: "",
+    }));
+
+    // Set map center to the admin's assigned center or first center or default
+    const adminCenter = validCenters.find(center => center.center_id === highlightCenterId);
+    const mapCenter: [number, number] = adminCenter 
+        ? [adminCenter.latitude, adminCenter.longitude]
+        : validCenters.length > 0 
+            ? [validCenters[0].latitude, validCenters[0].longitude]
+            : [8.230205, 124.249607];
+
     return (
         <div className="relative w-full h-[50vh] border-b border-border flex">
             {/* Map Placeholder */}
             <div className="flex-1 w-full rounded-lg overflow-hidden z-0">
-                <MonoMap />
+                <MonoMap 
+                    centers={formattedCenters}
+                    center={mapCenter}
+                    onCenterClick={(id) => {
+                        // Optional: Handle marker click if needed
+                        console.log("Marker clicked:", id);
+                    }}
+                    highlightCenterId={highlightCenterId} // Pass highlight prop
+                />
             </div>
 
             {/* Right Info Panel */}
