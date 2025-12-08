@@ -53,6 +53,7 @@ def create_app(config_class=Config):
     from app.routes.individuals import individuals_bp
     from app.routes.user import user_bp
     from app.routes.attendance_records import attendance_record_bp
+    from app.routes.stats_routes import stats_bp
 
     app.register_blueprint(auth_bp, url_prefix="/api")
     app.register_blueprint(households_bp, url_prefix="/api")
@@ -61,6 +62,7 @@ def create_app(config_class=Config):
     app.register_blueprint(individuals_bp, url_prefix="/api")
     app.register_blueprint(user_bp, url_prefix="/api")
     app.register_blueprint(attendance_record_bp, url_prefix="/api")
+    app.register_blueprint(stats_bp, url_prefix="/api/stats")
 
     @app.route("/", defaults={"path": ""})
     @app.route("/<path:path>")
