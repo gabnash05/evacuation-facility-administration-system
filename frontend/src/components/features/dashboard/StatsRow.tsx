@@ -107,13 +107,6 @@ export function StatsRow({ centerId }: StatsRowProps) {
                         Reset
                     </Button>
                 )}
-
-                {/* Active Filter Indicator */}
-                {hasActiveFilters && (
-                    <span className="text-xs text-muted-foreground">
-                        (Filtered view - Stats 1 & 2 only)
-                    </span>
-                )}
             </div>
 
             {/* Stats Display Section */}
