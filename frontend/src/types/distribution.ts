@@ -4,7 +4,7 @@ export interface Allocation {
     total_quantity: number;
     remaining_quantity: number;
     category_name: string;
-    status: 'active' | 'depleted';
+    status: 'active' | 'depleted' | 'cancelled';
 }
 
 export interface HouseholdOption {
@@ -17,6 +17,12 @@ export interface HouseholdOption {
 export interface DistributionRecord {
     distribution_id: number;
     distribution_date: string;
+    
+    // IDs are needed for Editing
+    household_id: number;
+    allocation_id: number; 
+
+    // Display names
     household_name: string;
     resource_name: string; 
     quantity: number;
