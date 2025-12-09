@@ -4,7 +4,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-d
 import { CityAdminDashboard } from "./pages/city-admin/CityAdminDashboard";
 import { CityAdminCentersPage } from "@/pages/city-admin/CityAdminCentersPage";
 import { CityAdminHouseholdsPage } from "./pages/city-admin/CityAdminHouseholdsPage";
-import { CityAdminAttendancePage } from "./pages/city-admin/CityAdminAttendancePage";
+import { CityAdminAttendancePage } from "./pages/city-admin/CityAdminAttendancePageV2";
 
 import { CenterAdminDashboard } from "@/pages/center-admin/CenterAdminDashboard";
 import { CenterAdminHouseholdsPage } from "./pages/center-admin/CenterAdminHouseholds";

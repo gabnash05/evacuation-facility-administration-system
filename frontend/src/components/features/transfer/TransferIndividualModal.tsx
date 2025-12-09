@@ -140,7 +140,6 @@ export function TransferIndividualModal({
         setNotes("");
         setError(null);
         setProcessingRecords(false);
-        clearSearch();
     };
 
     const handleClose = () => {
