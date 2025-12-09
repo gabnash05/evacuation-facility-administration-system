@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect } from "react";
 import { EventDetailsModal } from "@/components/features/dashboard/EventDetailsModal";
 import { MapPanel } from "@/components/features/dashboard/MapPanel";
-import { StatsRow } from "@/components/features/dashboard/StatsRow";
+import { StatsRow } from "@/components/features/dashboard/StatsRow"; // Updated import
 import { EventHistoryTable } from "@/components/features/dashboard/EventHistoryTable";
 import { ErrorAlert } from "@/components/features/dashboard/ErrorAlert";
 import { CreateEventModal } from "@/components/features/events/CreateEventModal";
@@ -12,7 +12,6 @@ import { useEvacuationCenterStore } from "@/store/evacuationCenterStore";
 import { formatDate } from "@/utils/formatters";
 import type { Event, EventDetails } from "@/types/event";
 import { useAuthStore } from "@/store/authStore";
-import type { EvacuationCenter } from "@/types/center";
 
 interface SelectedCenter {
     name: string;
@@ -37,13 +36,13 @@ export function CityAdminDashboard() {
     const [successToast, setSuccessToast] = useState({ isOpen: false, message: "" });
 
     // Use evacuation center store instead of local state
-    const { 
-        centers: evacuationCenters, 
+    const {
+        centers: evacuationCenters,
         mapCenters,
         loading: isLoadingCenters,
         citySummary,
-        fetchAllCenters, 
-        fetchCitySummary 
+        fetchAllCenters,
+        fetchCitySummary,
     } = useEvacuationCenterStore();
 
     // City-wide summary instead of single center
@@ -80,8 +79,7 @@ export function CityAdminDashboard() {
     const { user } = useAuthStore();
     const userRole = user?.role;
 
-    // Stats loading state
-    const [isLoadingStats] = useState(false);
+    // Center loading state
     const [isLoadingCenter, setIsLoadingCenter] = useState(true);
 
     // Fetch all evacuation centers using the store
@@ -103,7 +101,7 @@ export function CityAdminDashboard() {
             try {
                 setIsLoadingCenter(true);
                 await fetchCitySummary();
-                
+
                 // Update selectedCenter with city summary data
                 if (citySummary) {
                     setSelectedCenter({
@@ -269,7 +267,6 @@ export function CityAdminDashboard() {
             }
         }
 
-        // Set the new sort config - this will trigger the useEffect to refetch
         setSortConfig(newDirection ? { key: column, direction: newDirection } : null);
     };
 
@@ -280,13 +277,6 @@ export function CityAdminDashboard() {
     const handleToastClose = () => {
         setSuccessToast({ isOpen: false, message: "" });
     };
-
-    const statsData = [
-        { label: "Total Checked In", value: "300", max: "1000", percentage: 30 },
-        { label: "Total Checked Out", value: "271", max: "500", percentage: 54 },
-        { label: "Total Missing", value: "5", max: "", percentage: 0 },
-        { label: "Total Unaccounted", value: "429", max: "1000", percentage: 43 },
-    ];
 
     const formattedEvents = useMemo(() => {
         return events.map(event => ({
@@ -316,10 +306,11 @@ export function CityAdminDashboard() {
                 isLoadingCenter={isLoadingCenter || isLoadingCenters}
                 getCenterStatusStyles={getCenterStatusStyles}
                 getUsageColor={getUsageColor}
-                centers={mapCenters.length > 0 ? mapCenters : evacuationCenters} // Use mapCenters or centers from store
+                centers={mapCenters.length > 0 ? mapCenters : evacuationCenters}
             />
 
-            <StatsRow statsData={statsData} isLoadingStats={isLoadingStats} />
+            {/* UPDATED: Use new StatsRow with filters - NO centerId for city admin */}
+            <StatsRow />
 
             <EventHistoryTable
                 paginatedData={paginatedData}
