@@ -1,7 +1,13 @@
 // store/individualStore.ts
 import { create } from "zustand";
 import { IndividualService } from "@/services/individualService";
-import type { Individual, IndividualsResponse, IndividualResponse } from "@/types/individual";
+import type { 
+    Individual, 
+    IndividualsResponse, 
+    IndividualResponse,
+    IndividualFilterParams,
+    StatusSummaryResponse
+} from "@/types/individual";
 
 interface IndividualState {
     individuals: Individual[];
@@ -18,26 +24,40 @@ interface IndividualState {
         total_items: number;
         limit: number;
     } | null;
+    appliedFilters: {
+        status?: string;
+        gender?: string;
+        age_group?: string;
+        center_id?: number;
+        household_id?: number;
+        search?: string;
+    };
+    statusSummary: {
+        summary: Record<string, any>;
+        total_individuals: number;
+        filters_applied: {
+            center_id?: number;
+            event_id?: number;
+        };
+    } | null;
 
     // actions
     setSearchQuery: (q: string) => void;
     setCurrentPage: (p: number) => void;
     setEntriesPerPage: (n: number) => void;
-    fetchIndividuals: (opts?: { search?: string; page?: number; limit?: number }) => Promise<void>;
-    searchIndividuals: (params: {
-        search?: string;
-        page?: number;
-        limit?: number;
-        sort_by?: string;
-        sort_order?: string;
-        household_id?: number;
-    }) => Promise<{ success: boolean; data: Individual[]; pagination: any }>;
+    setFilter: (filter: keyof IndividualState['appliedFilters'], value: any) => void;
+    clearFilters: () => void;
+    fetchIndividuals: (params?: IndividualFilterParams) => Promise<void>;
+    searchIndividuals: (params: IndividualFilterParams) => Promise<{ success: boolean; data: Individual[]; pagination: any }>;
     clearSearch: () => void;
     addIndividual: (data: any) => Promise<void>;
     updateIndividual: (id: number, data: any) => Promise<void>;
     deleteIndividuals: (ids: number[]) => Promise<void>;
     fetchByHousehold: (household_id: number) => Promise<void>;
     fetchIndividualById: (id: number) => Promise<Individual | null>;
+    fetchStatusSummary: (params?: { center_id?: number; event_id?: number }) => Promise<void>;
+    searchIndividualsByName: (name: string, limit?: number) => Promise<Individual[]>;
+    recalculateStatuses: () => Promise<void>;
     resetState: () => void;
 }
 
@@ -51,26 +71,64 @@ const initialState = {
     entriesPerPage: 10,
     totalRecords: 0,
     pagination: null as IndividualState["pagination"],
+    appliedFilters: {
+        status: undefined,
+        gender: undefined,
+        age_group: undefined,
+        center_id: undefined,
+        household_id: undefined,
+        search: "",
+    },
+    statusSummary: null as IndividualState["statusSummary"],
 };
 
 export const useIndividualStore = create<IndividualState>((set, get) => ({
     ...initialState,
 
     setSearchQuery: (q: string) => set({ searchQuery: q, currentPage: 1 }),
+
     setCurrentPage: (p: number) => set({ currentPage: p }),
+
     setEntriesPerPage: (n: number) => set({ entriesPerPage: n, currentPage: 1 }),
 
-    fetchIndividuals: async (opts = {}) => {
+    setFilter: (filter: keyof IndividualState['appliedFilters'], value: any) => {
+        set(state => ({
+            appliedFilters: {
+                ...state.appliedFilters,
+                [filter]: value === 'all' || value === '' ? undefined : value
+            },
+            currentPage: 1
+        }));
+    },
+
+    clearFilters: () => {
+        set({
+            appliedFilters: initialState.appliedFilters,
+            currentPage: 1
+        });
+    },
+
+    fetchIndividuals: async (params: IndividualFilterParams = {}) => {
         set({ loading: true, error: null });
-        const search = opts.search ?? get().searchQuery;
-        const page = opts.page ?? get().currentPage;
-        const limit = opts.limit ?? get().entriesPerPage;
+        
+        const currentFilters = get().appliedFilters;
+        const page = params.page ?? get().currentPage;
+        const limit = params.limit ?? get().entriesPerPage;
+        
+        const search = params.search ?? currentFilters.search ?? get().searchQuery;
 
         try {
             const response: IndividualsResponse = await IndividualService.getIndividuals({
                 search,
                 page,
                 limit,
+                sortBy: params.sortBy,
+                sortOrder: params.sortOrder,
+                household_id: params.household_id ?? currentFilters.household_id,
+                status: params.status ?? currentFilters.status as any,
+                gender: params.gender ?? currentFilters.gender as any,
+                age_group: params.age_group ?? currentFilters.age_group as any,
+                center_id: params.center_id ?? currentFilters.center_id,
             });
 
             if (!response.success) {
@@ -79,12 +137,14 @@ export const useIndividualStore = create<IndividualState>((set, get) => ({
 
             const individualsData = response.data?.results || [];
             const paginationData = response.data?.pagination;
+            const filterMeta = response.data?.filters;
 
             set({
                 individuals: individualsData,
                 paginatedIndividuals: individualsData,
                 totalRecords: paginationData?.total_items || 0,
                 pagination: paginationData,
+                appliedFilters: filterMeta?.applied_filters || initialState.appliedFilters,
                 loading: false,
             });
         } catch (err) {
@@ -99,16 +159,20 @@ export const useIndividualStore = create<IndividualState>((set, get) => ({
         }
     },
 
-    searchIndividuals: async (params = {}) => {
+    searchIndividuals: async (params: IndividualFilterParams = {}) => {
         set({ loading: true, error: null });
         try {
             const response: IndividualsResponse = await IndividualService.getIndividuals({
                 search: params.search || "",
                 page: params.page || 1,
                 limit: params.limit || 10,
-                sortBy: params.sort_by,
-                sortOrder: params.sort_order,
+                sortBy: params.sortBy,
+                sortOrder: params.sortOrder,
                 household_id: params.household_id,
+                status: params.status,
+                gender: params.gender,
+                age_group: params.age_group,
+                center_id: params.center_id,
             });
 
             if (!response.success) {
@@ -117,6 +181,7 @@ export const useIndividualStore = create<IndividualState>((set, get) => ({
 
             const individualsData = response.data?.results || [];
             const paginationData = response.data?.pagination;
+            const filterMeta = response.data?.filters;
             
             set({
                 paginatedIndividuals: individualsData,
@@ -124,6 +189,7 @@ export const useIndividualStore = create<IndividualState>((set, get) => ({
                 currentPage: paginationData?.current_page || 1,
                 searchQuery: params.search || "",
                 pagination: paginationData,
+                appliedFilters: filterMeta?.applied_filters || initialState.appliedFilters,
                 loading: false,
             });
 
@@ -145,13 +211,17 @@ export const useIndividualStore = create<IndividualState>((set, get) => ({
     },
 
     clearSearch: () => {
-        set({
-            paginatedIndividuals: [],
-            searchQuery: "",
-            currentPage: 1,
-            totalRecords: 0,
+        set(state => ({
+            paginatedIndividuals: [],  // Clear displayed data only
+            searchQuery: "",           // Clear search query
+            currentPage: 1,            // Reset to page 1
+            totalRecords: 0,           // Reset count
+            appliedFilters: {
+                ...state.appliedFilters,  // KEEP ALL EXISTING FILTERS
+                search: "",               // Only clear the search text
+            },
             error: null,
-        });
+        }));
     },
 
     addIndividual: async (data: any) => {
@@ -184,7 +254,6 @@ export const useIndividualStore = create<IndividualState>((set, get) => ({
             if (!response.success) {
                 throw new Error(response.message);
             }
-            // after deletion, refresh list. Adjust pagination if needed
             const { individuals, currentPage } = get();
             if (individuals.length === ids.length && currentPage > 1) {
                 set({ currentPage: currentPage - 1 });
@@ -233,6 +302,60 @@ export const useIndividualStore = create<IndividualState>((set, get) => ({
                 loading: false,
             });
             return null;
+        }
+    },
+
+    fetchStatusSummary: async (params?: { center_id?: number; event_id?: number }) => {
+        set({ loading: true, error: null });
+        try {
+            const response: StatusSummaryResponse = await IndividualService.getStatusSummary(params);
+            if (!response.success) {
+                throw new Error(response.message);
+            }
+            set({
+                statusSummary: response.data,
+                loading: false,
+            });
+        } catch (err) {
+            set({
+                error: err instanceof Error ? err.message : "Failed to fetch status summary",
+                loading: false,
+                statusSummary: null,
+            });
+        }
+    },
+
+    searchIndividualsByName: async (name: string, limit: number = 10): Promise<Individual[]> => {
+        set({ loading: true, error: null });
+        try {
+            const response = await IndividualService.searchIndividuals(name, limit);
+            if (!response.success) {
+                throw new Error(response.message);
+            }
+            set({ loading: false });
+            return response.data || [];
+        } catch (err) {
+            set({
+                error: err instanceof Error ? err.message : "Failed to search individuals by name",
+                loading: false,
+            });
+            return [];
+        }
+    },
+
+    recalculateStatuses: async () => {
+        set({ loading: true, error: null });
+        try {
+            const response = await IndividualService.recalculateStatuses();
+            if (!response.success) {
+                throw new Error(response.message);
+            }
+            set({ loading: false });
+        } catch (err) {
+            set({
+                error: err instanceof Error ? err.message : "Failed to recalculate statuses",
+                loading: false,
+            });
         }
     },
 

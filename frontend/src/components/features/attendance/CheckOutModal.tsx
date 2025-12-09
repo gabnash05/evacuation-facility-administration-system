@@ -41,7 +41,6 @@ export function CheckOutModal({
     defaultCenterId // NEW: Destructure defaultCenterId
 }: CheckOutModalProps) {
     const { checkOutIndividual, checkOutMultipleIndividuals, fetchIndividualAttendanceHistory } = useAttendanceStore();
-    const { clearSearch } = useIndividualStore();
     const { centers, fetchAllCenters } = useEvacuationCenterStore();
 
     const [notes, setNotes] = useState("");
@@ -57,13 +56,11 @@ export function CheckOutModal({
             resetForm();
             fetchAllCenters();
         } else {
-            // Clear everything when modal closes
-            clearSearch();
             setSelectedIndividuals([]);
             setResolvedRecords([]);
             setFindingRecords(false);
         }
-    }, [isOpen, clearSearch, fetchAllCenters]);
+    }, [isOpen, fetchAllCenters]);
 
     const resetForm = () => {
         setNotes("");
@@ -87,7 +84,6 @@ export function CheckOutModal({
 
     const handleClose = () => {
         resetForm();
-        clearSearch();
         onClose();
     };
 
@@ -151,7 +147,6 @@ export function CheckOutModal({
 
             onSuccess(resolvedRecords.length);
             resetForm();
-            clearSearch();
             onClose();
         } catch (err: any) {
             setError(err?.message || "Failed to check out individuals");

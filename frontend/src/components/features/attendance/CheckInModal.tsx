@@ -32,9 +32,16 @@ interface CheckInModalProps {
     onClose: () => void;
     onSuccess: () => void;
     defaultCenterId?: number;
+    individualToCheckIn?: any;
 }
 
-export function CheckInModal({ isOpen, onClose, onSuccess, defaultCenterId }: CheckInModalProps) {
+export function CheckInModal({ 
+    isOpen, 
+    onClose, 
+    onSuccess, 
+    defaultCenterId,
+    individualToCheckIn
+}: CheckInModalProps) {
     const { checkInMultipleIndividuals } = useAttendanceStore();
     const { centers, fetchAllCenters, loading: centersLoading } = useEvacuationCenterStore();
     const { events, fetchEvents, loading: eventsLoading } = useEventStore();
@@ -70,15 +77,31 @@ export function CheckInModal({ isOpen, onClose, onSuccess, defaultCenterId }: Ch
             setNotes("");
             setSelectedIndividuals([]);
             setError(null);
+
+            // ADD THIS: Pre-select individual if provided
+            if (individualToCheckIn) {
+                // Convert individualToCheckIn to Individual type if needed
+                const individual: Individual = {
+                    individual_id: individualToCheckIn.individual_id,
+                    first_name: individualToCheckIn.first_name,
+                    last_name: individualToCheckIn.last_name,
+                    date_of_birth: individualToCheckIn.date_of_birth,
+                    gender: individualToCheckIn.gender,
+                    relationship_to_head: individualToCheckIn.relationship_to_head,
+                    household_id: individualToCheckIn.household_id,
+                    current_status: individualToCheckIn.current_status,
+                    created_at: individualToCheckIn.created_at,
+                    updated_at: individualToCheckIn.updated_at,
+                };
+                setSelectedIndividuals([individual]);
+            }
         } else {
-            // Clear search and selections when modal closes
-            clearSearch();
             setSelectedIndividuals([]);
             setEventId("");
             setNotes("");
             setError(null);
         }
-    }, [isOpen, fetchAllCenters, fetchEvents, defaultCenterId, clearSearch]);
+    }, [isOpen, fetchAllCenters, fetchEvents, defaultCenterId, individualToCheckIn]);
 
     const resetForm = () => {
         setSelectedIndividuals([]);
@@ -86,7 +109,6 @@ export function CheckInModal({ isOpen, onClose, onSuccess, defaultCenterId }: Ch
         setEventId("");
         setNotes("");
         setError(null);
-        clearSearch();
     };
 
     const handleClose = () => {

@@ -694,8 +694,6 @@ def check_out_individual_route(record_id: int) -> Tuple:
                     403,
                 )
 
-        logger.info("Checking out individual from record: %s", record_id)
-
         result = check_out_individual(
             record_id=record_id,
             check_out_time=data.get("check_out_time"),
