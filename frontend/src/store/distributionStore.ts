@@ -11,6 +11,7 @@ interface DistributionState {
     currentPage: number;
     entriesPerPage: number;
     
+    // Actions
     fetchData: () => Promise<void>;
     setSearchQuery: (query: string) => void;
     setCurrentPage: (page: number) => void;
@@ -20,8 +21,17 @@ interface DistributionState {
         householdId: number, 
         items: { allocationId: number; quantity: number }[]
     ) => Promise<void>;
+
+    deleteDistribution: (id: number) => Promise<void>;
+    
+    // UPDATED: Now accepts full update object
+    updateDistribution: (
+        id: number, 
+        updates: { household_id: number; allocation_id: number; quantity: number }
+    ) => Promise<void>;
 }
 
+// --- MOCK DATA ---
 const MOCK_ALLOCATIONS: Allocation[] = [
     { allocation_id: 1, resource_name: "Family Food Packs", total_quantity: 500, remaining_quantity: 450, category_name: "Food", status: "active" },
     { allocation_id: 2, resource_name: "Bottled Water (500ml)", total_quantity: 1000, remaining_quantity: 800, category_name: "Water", status: "active" },
@@ -33,7 +43,9 @@ const MOCK_HISTORY: DistributionRecord[] = [
     { 
         distribution_id: 1, 
         distribution_date: new Date().toISOString(), 
-        household_name: "Sample Distribution Record", 
+        household_id: 101, // Mock ID
+        household_name: "Dela Cruz Family", 
+        allocation_id: 1,
         resource_name: "Family Food Packs", 
         quantity: 1, 
         volunteer_name: "Volunteer One",
@@ -56,19 +68,15 @@ export const useDistributionStore = create<DistributionState>((set, get) => ({
 
     fetchData: async () => {
         set({ isLoading: true });
-        
         try {
-
+            // Fetch Real Households
             const response = await HouseholdService.getHouseholds({ limit: 100 });
-            
             const rawHouseholds = response.data?.results || [];
 
             const realHouseholds: HouseholdOption[] = rawHouseholds.map((h: any) => ({
                 household_id: h.household_id,
                 household_name: h.household_name,
-                
                 member_count: h.member_count ?? (h.individuals?.length || 0),
-                
                 family_head: h.household_head 
                     ? `${h.household_head.first_name} ${h.household_head.last_name}` 
                     : "No Head Assigned"
@@ -94,32 +102,19 @@ export const useDistributionStore = create<DistributionState>((set, get) => ({
 
     submitDistribution: async (householdId, items) => {
         set({ isLoading: true });
-        
         setTimeout(() => {
             const { allocations, households, history } = get();
             const targetHousehold = households.find(h => h.household_id === householdId);
-            
             if (!targetHousehold) return;
-
-            const updatedAllocations = allocations.map(alloc => {
-                const itemToDeduct = items.find(i => i.allocationId === alloc.allocation_id);
-                if (itemToDeduct) {
-                    const newRemaining = alloc.remaining_quantity - itemToDeduct.quantity;
-                    return {
-                        ...alloc,
-                        remaining_quantity: newRemaining,
-                        status: newRemaining === 0 ? "depleted" : alloc.status
-                    } as Allocation;
-                }
-                return alloc;
-            });
 
             const newLogs: DistributionRecord[] = items.map(item => {
                 const allocDetails = allocations.find(a => a.allocation_id === item.allocationId);
                 return {
                     distribution_id: Math.random(),
                     distribution_date: new Date().toISOString(),
+                    household_id: targetHousehold.household_id, // Store ID
                     household_name: targetHousehold.household_name,
+                    allocation_id: item.allocationId, // Store ID
                     resource_name: allocDetails?.resource_name || "Unknown",
                     quantity: item.quantity,
                     volunteer_name: "Current User", 
@@ -128,10 +123,52 @@ export const useDistributionStore = create<DistributionState>((set, get) => ({
             });
 
             set({
-                allocations: updatedAllocations,
                 history: [...newLogs, ...history], 
                 isLoading: false
             });
-        }, 1000);
+        }, 800);
+    },
+
+    deleteDistribution: async (id) => {
+        set({ isLoading: true });
+        setTimeout(() => {
+            const { history } = get();
+            set({
+                history: history.filter(h => h.distribution_id !== id),
+                isLoading: false
+            });
+        }, 600);
+    },
+
+    // UPDATED: Handle Full Updates
+    updateDistribution: async (id, updates) => {
+        set({ isLoading: true });
+        
+        setTimeout(() => {
+            const { history, households, allocations } = get();
+            
+            // Find related objects to update names
+            const newHousehold = households.find(h => h.household_id === updates.household_id);
+            const newAlloc = allocations.find(a => a.allocation_id === updates.allocation_id);
+
+            const updatedHistory = history.map(h => {
+                if (h.distribution_id === id) {
+                    return { 
+                        ...h, 
+                        quantity: updates.quantity,
+                        household_id: updates.household_id,
+                        household_name: newHousehold ? newHousehold.household_name : h.household_name,
+                        allocation_id: updates.allocation_id,
+                        resource_name: newAlloc ? newAlloc.resource_name : h.resource_name
+                    };
+                }
+                return h;
+            });
+
+            set({
+                history: updatedHistory,
+                isLoading: false
+            });
+        }, 600);
     }
 }));

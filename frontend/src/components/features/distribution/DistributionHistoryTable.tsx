@@ -6,16 +6,29 @@ import {
     TableHeader,
     TableRow,
 } from "@/components/ui/table";
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Button } from "@/components/ui/button";
 import { format } from "date-fns";
 import type{ DistributionRecord } from "@/types/distribution";
 import { Badge } from "@/components/ui/badge";
+import { MoreVertical, Edit2, Trash2 } from "lucide-react";
 
 interface Props {
     data: DistributionRecord[];
     loading?: boolean;
+    userRole?: string; // NEW prop
+    onEdit?: (record: DistributionRecord) => void;
+    onDelete?: (record: DistributionRecord) => void;
 }
 
-export function DistributionHistoryTable({ data, loading }: Props) {
+export function DistributionHistoryTable({ data, loading, userRole, onEdit, onDelete }: Props) {
+    const isSuperAdmin = userRole === "super_admin";
+
     if (loading) {
         return <div className="p-8 text-center text-muted-foreground">Loading records...</div>;
     }
@@ -30,12 +43,13 @@ export function DistributionHistoryTable({ data, loading }: Props) {
                         <TableHead>Aid Type</TableHead>
                         <TableHead>Quantity</TableHead>
                         <TableHead>Volunteer</TableHead>
+                        {isSuperAdmin && <TableHead className="w-[80px]"></TableHead>}
                     </TableRow>
                 </TableHeader>
                 <TableBody>
                     {data.length === 0 ? (
                         <TableRow>
-                            <TableCell colSpan={5} className="h-32 text-center text-muted-foreground">
+                            <TableCell colSpan={isSuperAdmin ? 6 : 5} className="h-32 text-center text-muted-foreground">
                                 No distribution records found.
                             </TableCell>
                         </TableRow>
@@ -59,6 +73,32 @@ export function DistributionHistoryTable({ data, loading }: Props) {
                                 <TableCell className="text-sm">
                                     {record.volunteer_name}
                                 </TableCell>
+                                
+                                {/* Action Column for Super Admin */}
+                                {isSuperAdmin && (
+                                    <TableCell>
+                                        <DropdownMenu>
+                                            <DropdownMenuTrigger asChild>
+                                                <Button variant="ghost" size="icon" className="h-8 w-8">
+                                                    <MoreVertical className="h-4 w-4" />
+                                                </Button>
+                                            </DropdownMenuTrigger>
+                                            <DropdownMenuContent align="end">
+                                                <DropdownMenuItem onClick={() => onEdit?.(record)}>
+                                                    <Edit2 className="h-4 w-4 mr-2" />
+                                                    Edit
+                                                </DropdownMenuItem>
+                                                <DropdownMenuItem 
+                                                    onClick={() => onDelete?.(record)}
+                                                    className="text-destructive focus:text-destructive"
+                                                >
+                                                    <Trash2 className="h-4 w-4 mr-2" />
+                                                    Delete
+                                                </DropdownMenuItem>
+                                            </DropdownMenuContent>
+                                        </DropdownMenu>
+                                    </TableCell>
+                                )}
                             </TableRow>
                         ))
                     )}

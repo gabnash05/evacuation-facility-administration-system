@@ -88,6 +88,12 @@ export function AppSidebar({ role, roleLabel, userEmail }: AppSidebarProps) {
                         href: "/city-admin/reports-and-analytics",
                         icon: <BarChart3 className="w-4 h-4" />,
                     },
+                    {
+                    key: "distribution-records", // Unique key
+                    label: "Distribution Records", // Slightly different label to distinguish
+                    href: "/city-admin/distribution-records", // Points to your new route
+                    icon: <Package className="w-4 h-4" />,
+                    },
                 ];
             case "center_admin":
                 return [

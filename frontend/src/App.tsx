@@ -5,6 +5,7 @@ import { CityAdminDashboard } from "./pages/city-admin/CityAdminDashboard";
 import { CityAdminCentersPage } from "@/pages/city-admin/CityAdminCentersPage";
 import { CityAdminHouseholdsPage } from "./pages/city-admin/CityAdminHouseholdsPage";
 import { CityAdminAttendancePage } from "./pages/city-admin/CityAdminAttendancePage";
+import { CityAdminDistributionPage } from "@/pages/city-admin/CityAdminDistributionPage";
 
 import { CenterAdminDashboard } from "@/pages/center-admin/CenterAdminDashboard";
 import { CenterAdminHouseholdsPage } from "./pages/center-admin/CenterAdminHouseholds";
@@ -67,6 +68,10 @@ function App() {
                                         element={<div>Reports and Analytics Page</div>}
                                     />{" "}
                                     {/* replace with actual page when available */}
+                                    <Route
+                                    path="distribution-records" 
+                                    element={<CityAdminDistributionPage />}
+                                    />
                                     <Route path="*" element={<Navigate to="dashboard" replace />} />
                                 </Routes>
                             </MainLayout>
