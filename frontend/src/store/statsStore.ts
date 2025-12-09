@@ -132,19 +132,19 @@ export const useStatsStore = create<StatsState>((set, get) => ({
 
         return [
             {
-                label: "Occupancy Utilization Rate",
+                label: "Current Occupancy / Total Capacity",
                 value: stats.occupancy_stats.current_occupancy.toString(),
                 max: stats.occupancy_stats.total_capacity.toString(),
                 percentage: Math.round(stats.occupancy_stats.percentage),
             },
             {
-                label: "Registration Penetration",
+                label: "Current Attendance / Total Registered Individuals",
                 value: stats.registration_stats.total_check_ins.toString(),
                 max: stats.registration_stats.total_registered.toString(),
                 percentage: Math.round(stats.registration_stats.percentage),
             },
             {
-                label: "Aid Distribution Efficiency",
+                label: "Aid Distributed / Total Aid Available",
                 value: stats.aid_distribution_stats.total_distributed.toString(),
                 max: stats.aid_distribution_stats.total_allocated.toString(),
                 percentage: Math.round(stats.aid_distribution_stats.percentage),
