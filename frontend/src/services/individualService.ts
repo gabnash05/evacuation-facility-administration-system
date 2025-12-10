@@ -37,7 +37,6 @@ export class IndividualService {
                 withCredentials: true,
             });
             
-            console.log("Get Individuals Response:", response.data);
             return response.data;
         } catch (error) {
             throw new Error(handleApiError(error));
