@@ -1,17 +1,16 @@
 import { useState, useMemo, useEffect } from "react";
 import { EventDetailsModal } from "@/components/features/dashboard/EventDetailsModal";
 import { MapPanel } from "@/components/features/dashboard/MapPanel";
-import { StatsRow } from "@/components/features/dashboard/StatsRow";
+import { StatsRow } from "@/components/features/dashboard/StatsRow"; // Updated import
 import { EventHistoryTable } from "@/components/features/dashboard/EventHistoryTable";
 import { ErrorAlert } from "@/components/features/dashboard/ErrorAlert";
 import { CreateEventModal } from "@/components/features/events/CreateEventModal";
 import { DeleteEventDialog } from "@/components/features/events/DeleteEventDialog";
 import { SuccessToast } from "@/components/features/evacuation-center/SuccessToast";
 import { useEventStore } from "@/store/eventStore";
-import { EvacuationCenterService } from "@/services/evacuationCenterService";
+import { useEvacuationCenterStore } from "@/store/evacuationCenterStore";
 import { formatDate } from "@/utils/formatters";
 import type { Event, EventDetails } from "@/types/event";
-import { useUserStore } from "@/store/userStore";
 import { useAuthStore } from "@/store/authStore";
 
 interface SelectedCenter {
@@ -20,6 +19,8 @@ interface SelectedCenter {
     status: "active" | "inactive" | "closed";
     capacity: number;
     current_occupancy: number;
+    latitude?: number;
+    longitude?: number;
 }
 
 export function CityAdminDashboard() {
@@ -33,6 +34,16 @@ export function CityAdminDashboard() {
     const [deletingEvent, setDeletingEvent] = useState<Event | null>(null);
     const [deleteLoading, setDeleteLoading] = useState(false);
     const [successToast, setSuccessToast] = useState({ isOpen: false, message: "" });
+
+    // Use evacuation center store instead of local state
+    const {
+        centers: evacuationCenters,
+        mapCenters,
+        loading: isLoadingCenters,
+        citySummary,
+        fetchAllCenters,
+        fetchCitySummary,
+    } = useEvacuationCenterStore();
 
     // City-wide summary instead of single center
     const [selectedCenter, setSelectedCenter] = useState<SelectedCenter>({
@@ -68,24 +79,37 @@ export function CityAdminDashboard() {
     const { user } = useAuthStore();
     const userRole = user?.role;
 
-    // Stats loading state
-    const [isLoadingStats] = useState(false);
+    // Center loading state
     const [isLoadingCenter, setIsLoadingCenter] = useState(true);
 
-    // Fetch city-wide summary on mount
+    // Fetch all evacuation centers using the store
     useEffect(() => {
-        const fetchCitySummary = async () => {
+        const fetchAllCentersData = async () => {
+            try {
+                await fetchAllCenters();
+            } catch (error) {
+                console.error("Failed to fetch evacuation centers:", error);
+            }
+        };
+
+        fetchAllCentersData();
+    }, [fetchAllCenters]);
+
+    // Fetch city-wide summary on mount using the store
+    useEffect(() => {
+        const fetchCitySummaryData = async () => {
             try {
                 setIsLoadingCenter(true);
-                const response = await EvacuationCenterService.getCitySummary();
+                await fetchCitySummary();
 
-                if (response.success && response.data) {
+                // Update selectedCenter with city summary data
+                if (citySummary) {
                     setSelectedCenter({
                         name: "Iligan City",
                         address: "",
-                        status: response.data.status,
-                        capacity: response.data.total_capacity,
-                        current_occupancy: response.data.total_current_occupancy,
+                        status: citySummary.status as "active" | "inactive" | "closed",
+                        capacity: citySummary.total_capacity,
+                        current_occupancy: citySummary.total_current_occupancy,
                     });
                 }
             } catch (error) {
@@ -95,8 +119,21 @@ export function CityAdminDashboard() {
             }
         };
 
-        fetchCitySummary();
-    }, []);
+        fetchCitySummaryData();
+    }, [fetchCitySummary]);
+
+    // Update selectedCenter when citySummary changes
+    useEffect(() => {
+        if (citySummary) {
+            setSelectedCenter({
+                name: "Iligan City",
+                address: "",
+                status: citySummary.status as "active" | "inactive" | "closed",
+                capacity: citySummary.total_capacity,
+                current_occupancy: citySummary.total_current_occupancy,
+            });
+        }
+    }, [citySummary]);
 
     useEffect(() => {
         fetchEvents();
@@ -230,7 +267,6 @@ export function CityAdminDashboard() {
             }
         }
 
-        // Set the new sort config - this will trigger the useEffect to refetch
         setSortConfig(newDirection ? { key: column, direction: newDirection } : null);
     };
 
@@ -241,13 +277,6 @@ export function CityAdminDashboard() {
     const handleToastClose = () => {
         setSuccessToast({ isOpen: false, message: "" });
     };
-
-    const statsData = [
-        { label: "Total Checked In", value: "300", max: "1000", percentage: 30 },
-        { label: "Total Checked Out", value: "271", max: "500", percentage: 54 },
-        { label: "Total Missing", value: "5", max: "", percentage: 0 },
-        { label: "Total Unaccounted", value: "429", max: "1000", percentage: 43 },
-    ];
 
     const formattedEvents = useMemo(() => {
         return events.map(event => ({
@@ -274,12 +303,14 @@ export function CityAdminDashboard() {
                 isPanelVisible={isPanelVisible}
                 setIsPanelVisible={setIsPanelVisible}
                 selectedCenter={selectedCenter}
-                isLoadingCenter={isLoadingCenter}
+                isLoadingCenter={isLoadingCenter || isLoadingCenters}
                 getCenterStatusStyles={getCenterStatusStyles}
                 getUsageColor={getUsageColor}
+                centers={mapCenters.length > 0 ? mapCenters : evacuationCenters}
             />
 
-            <StatsRow statsData={statsData} isLoadingStats={isLoadingStats} />
+            {/* UPDATED: Use new StatsRow with filters - NO centerId for city admin */}
+            <StatsRow />
 
             <EventHistoryTable
                 paginatedData={paginatedData}
