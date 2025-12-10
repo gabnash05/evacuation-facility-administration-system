@@ -5,6 +5,7 @@ import { CityAdminDashboard } from "./pages/city-admin/CityAdminDashboard";
 import { CityAdminCentersPage } from "@/pages/city-admin/CityAdminCentersPage";
 import { CityAdminHouseholdsPage } from "./pages/city-admin/CityAdminHouseholdsPage";
 import { CityAdminAttendancePage } from "./pages/city-admin/CityAdminAttendancePageV2";
+import { CityAdminDistributionPage } from "@/pages/city-admin/CityAdminDistributionPage";
 import { CityAdminAidAllocationPage } from "./pages/city-admin/CityAdminAidAllocationPage";
 
 import { CenterAdminDashboard } from "@/pages/center-admin/CenterAdminDashboard";
@@ -14,7 +15,8 @@ import { CenterAdminAidAllocationPage } from "./pages/center-admin/CenterAdminAi
 
 import { VolunteerDashboard } from "@/pages/volunteer/VolunteerDashboard";
 import { VolunteerHouseholdsPage } from "./pages/volunteer/VolunteerHouseholdsPage";
-import { VolunteerAttendancePage } from "./pages/volunteer/VolunteerAttendancePageV2.tsx";
+import { VolunteerAttendancePage } from "./pages/volunteer/VolunteerAttendancePageV2";
+import VolunteerDistributeAidPage from "@/pages/volunteer/VolunteerDistributeAidPage";
 
 import MainLayout from "@/layouts/MainLayout";
 import LoginPage from "@/pages/auth/LoginPage";
@@ -68,6 +70,10 @@ function App() {
                                         element={<div>Reports and Analytics Page</div>}
                                     />{" "}
                                     {/* replace with actual page when available */}
+                                    <Route
+                                    path="distribution-records" 
+                                    element={<CityAdminDistributionPage />}
+                                    />
                                     <Route path="*" element={<Navigate to="dashboard" replace />} />
                                 </Routes>
                             </MainLayout>
@@ -141,7 +147,7 @@ function App() {
                                     />
                                     <Route
                                         path="aid-distribution"
-                                        element={<div>Aid Distribution Page</div>}
+                                        element={<VolunteerDistributeAidPage />}
                                     />{" "}
                                     {/* replace with actual page when available */}
                                     <Route path="*" element={<Navigate to="dashboard" replace />} />
