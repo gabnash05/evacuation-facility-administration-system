@@ -10,6 +10,8 @@ import { useEvacuationCenterStore } from "./evacuationCenterStore";
 import { useUserStore } from "./userStore";
 import { useEventStore } from "./eventStore";
 import { useHouseholdStore } from "./householdStore";
+import { useAidAllocationStore } from "./aidAllocationStore";
+import { useDistributionStore } from "./distributionStore";
 
 interface AuthState {
     user: User | null;
@@ -68,6 +70,8 @@ export const useAuthStore = create<AuthState>()(
                     const userStore = useUserStore.getState();
                     const eventStore = useEventStore.getState();
                     const householdStore = useHouseholdStore.getState();
+                    const aidAllocationStore = useAidAllocationStore.getState();
+                    const distributionStore = useDistributionStore.getState();
                     
                     if (attendanceStore.resetState) attendanceStore.resetState();
                     if (individualStore.resetState) individualStore.resetState();
@@ -75,6 +79,8 @@ export const useAuthStore = create<AuthState>()(
                     if (userStore.resetState) userStore.resetState();
                     if (eventStore.resetState) eventStore.resetState();
                     if (householdStore.resetState) householdStore.resetState();
+                    if (aidAllocationStore.resetState) aidAllocationStore.resetState();
+                    if (distributionStore.resetState) distributionStore.resetState();
                     
                     // Clear auth store
                     set({
@@ -84,13 +90,14 @@ export const useAuthStore = create<AuthState>()(
                     });
                 } catch (error) {
                     console.error("Logout error:", error);
-                    // Still reset stores even if logout API fails
                     const attendanceStore = useAttendanceStore.getState();
                     const individualStore = useIndividualStore.getState();
                     const evacuationCenterStore = useEvacuationCenterStore.getState();
                     const userStore = useUserStore.getState();
                     const eventStore = useEventStore.getState();
                     const householdStore = useHouseholdStore.getState();
+                    const aidAllocationStore = useAidAllocationStore.getState();
+                    const distributionStore = useDistributionStore.getState();
                     
                     if (attendanceStore.resetState) attendanceStore.resetState();
                     if (individualStore.resetState) individualStore.resetState();
@@ -98,6 +105,8 @@ export const useAuthStore = create<AuthState>()(
                     if (userStore.resetState) userStore.resetState();
                     if (eventStore.resetState) eventStore.resetState();
                     if (householdStore.resetState) householdStore.resetState();
+                    if (aidAllocationStore.resetState) aidAllocationStore.resetState();
+                    if (distributionStore.resetState) distributionStore.resetState();
                     
                     set({
                         user: null,

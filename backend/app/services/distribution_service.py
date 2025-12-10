@@ -46,16 +46,42 @@ class DistributionService:
             logger.error(f"Distribution error: {str(e)}")
             return {"success": False, "message": str(e)}, 400
 
-    # ... (the rest of the file remains the same) ...
     @staticmethod
     def get_history(params):
         try:
-            result = Distribution.get_history_paginated(**params)
-            return {"success": True, "data": result["data"], "pagination": { "total": result["total"] }}, 200
+            page = params.get('page', 1)
+            limit = params.get('limit', 10)
+            
+            result = Distribution.get_history_paginated(
+                center_id=params.get('center_id'),
+                search=params.get('search'),
+                page=page,
+                limit=limit,
+                sort_by=params.get('sort_by', 'distribution_date'),
+                sort_order=params.get('sort_order', 'desc')
+            )
+            
+            # Calculate pagination metadata
+            total_items = result["total"]
+            total_pages = max(1, (total_items + limit - 1) // limit)  # Ceiling division
+            
+            return {
+                "success": True, 
+                "data": {
+                    "results": result["data"],  # Nest the data array
+                    "pagination": {
+                        "current_page": page,
+                        "total_pages": total_pages,
+                        "total_items": total_items,
+                        "limit": limit
+                    }
+                }
+            }, 200
+            
         except Exception as e:
             logger.error(f"Fetch history error: {str(e)}")
             return {"success": False, "message": "Failed to fetch history"}, 500
-
+    
     @staticmethod
     def update_distribution(distribution_id, update_data):
         try:

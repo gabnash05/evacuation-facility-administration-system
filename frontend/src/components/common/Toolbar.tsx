@@ -23,6 +23,7 @@ interface TableToolbarProps {
     addButtonText?: string;
     showEntriesSelector?: boolean;
     additionalFilters?: React.ReactNode;
+    addButtonDisabled?: boolean;
 }
 
 /**
@@ -37,10 +38,11 @@ function TableToolbarComponent({
     entriesPerPage,
     onEntriesPerPageChange,
     loading,
-    searchPlaceholder = "Search...",
+    searchPlaceholder = "Search",
     addButtonText = "Add Item",
     showEntriesSelector = true,
     additionalFilters,
+    addButtonDisabled = false,
 }: TableToolbarProps) {
     const inputRef = useRef<HTMLInputElement>(null);
 
@@ -51,8 +53,7 @@ function TableToolbarComponent({
     }, [loading]);
 
     return (
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-            {/* Left Section: Search and Add Button */}
+        <div className="flex items-center justify-between gap-4">
             <div className="flex items-center gap-2 w-full md:w-auto">
                 <div className="relative w-full md:w-64">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -66,42 +67,36 @@ function TableToolbarComponent({
                         disabled={loading}
                     />
                 </div>
-                <Button onClick={onAddItem} disabled={loading} className="flex items-center gap-2">
+                <Button 
+                    onClick={onAddItem} 
+                    disabled={loading || addButtonDisabled}
+                    className="gap-2"
+                >
                     <Plus className="h-4 w-4" />
                     {addButtonText}
                 </Button>
             </div>
-
-            {/* Right Section: Filters and Entries Selector */}
+            
             <div className="flex items-center gap-4">
-                {/* Additional Filters */}
-                {additionalFilters && (
-                    <div className="flex items-center gap-2">{additionalFilters}</div>
-                )}
-
-                {/* Entries per page selector */}
-                {showEntriesSelector && (
-                    <div className="flex items-center gap-2">
-                        <span className="text-sm text-muted-foreground">Show</span>
-                        <Select
-                            value={entriesPerPage.toString()}
-                            onValueChange={(val: string) => onEntriesPerPageChange(Number(val))}
-                            disabled={loading}
-                        >
-                            <SelectTrigger className="w-20">
-                                <SelectValue placeholder="Entries" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                {[10, 20, 50, 100].map(count => (
-                                    <SelectItem key={count} value={count.toString()}>
-                                        {count}
-                                    </SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
-                        <span className="text-sm text-muted-foreground">entries</span>
-                    </div>
-                )}
+                <div className="flex items-center gap-2">
+                    <span className="text-sm text-muted-foreground">Show</span>
+                    <Select
+                        value={String(entriesPerPage)}
+                        onValueChange={(value) => onEntriesPerPageChange(Number(value))}
+                        disabled={loading}
+                    >
+                        <SelectTrigger className="w-20">
+                            <SelectValue placeholder="10" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="10">10</SelectItem>
+                            <SelectItem value="25">25</SelectItem>
+                            <SelectItem value="50">50</SelectItem>
+                            <SelectItem value="100">100</SelectItem>
+                        </SelectContent>
+                    </Select>
+                    <span className="text-sm text-muted-foreground">entries</span>
+                </div>
             </div>
         </div>
     );

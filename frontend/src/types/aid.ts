@@ -33,7 +33,7 @@ export interface Allocation {
     updated_at?: string;
     
     // Joined fields (from backend queries)
-    category_name?: string;
+    category_name: string;
     center_name?: string;
     event_name?: string;
     allocated_by?: string;

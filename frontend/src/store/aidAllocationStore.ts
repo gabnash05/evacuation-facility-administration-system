@@ -52,6 +52,7 @@ interface AidAllocationState {
 
     // Reset
     resetAllocationState: () => void;
+    resetState: () => void; // Added for compatibility
 }
 
 const initialState = {
@@ -235,4 +236,5 @@ export const useAidAllocationStore = create<AidAllocationState>((set, get) => ({
     },
 
     resetAllocationState: () => set(initialState),
+    resetState: () => set(initialState), // Added alias for compatibility
 }));

@@ -48,8 +48,24 @@ class Distribution(db.Model):
     quantity_distributed = db.Column(db.Integer, nullable=False)
 
     @classmethod
-    def get_history_paginated(cls, center_id=None, search=None, page=1, limit=10):
+    def get_history_paginated(cls, center_id=None, search=None, page=1, limit=10, sort_by="distribution_date", sort_order="desc"):
         offset = (page - 1) * limit
+        
+        # Map frontend column names to database fields
+        sort_column_mapping = {
+            "distribution_date": "ds.created_at",
+            "household_name": "h.household_name",
+            "category_name": "ac.category_name",
+            "resource_name": "a.resource_name",
+            "quantity": "d.quantity_distributed",
+            "volunteer_name": "u.email"
+        }
+        
+        # Get the actual database column for sorting
+        db_sort_column = sort_column_mapping.get(sort_by, "ds.created_at")
+        
+        # Validate sort_order
+        db_sort_order = "DESC" if sort_order.lower() == "desc" else "ASC"
         
         base_query = """
             FROM distributions d
@@ -57,6 +73,7 @@ class Distribution(db.Model):
             JOIN households h ON ds.household_id = h.household_id
             JOIN users u ON ds.distributed_by_user_id = u.user_id
             JOIN allocations a ON d.allocation_id = a.allocation_id
+            JOIN aid_categories ac ON a.category_id = ac.category_id
             WHERE 1=1
         """
         
@@ -67,12 +84,13 @@ class Distribution(db.Model):
             params["center_id"] = center_id
             
         if search:
-            base_query += " AND (h.household_name ILIKE :search OR a.resource_name ILIKE :search)"
+            base_query += " AND (h.household_name ILIKE :search OR a.resource_name ILIKE :search OR ac.category_name ILIKE :search)"
             params["search"] = f"%{search}%"
 
         count_sql = text(f"SELECT COUNT(*) {base_query}")
         total_count = db.session.execute(count_sql, params).scalar() or 0
 
+        # Updated ORDER BY clause with dynamic sorting
         data_sql = text(f"""
             SELECT 
                 d.distribution_id, 
@@ -81,10 +99,11 @@ class Distribution(db.Model):
                 h.household_name,
                 u.email as volunteer_name,
                 a.resource_name,
+                ac.category_name,
                 a.allocation_id,
                 d.quantity_distributed as quantity
             {base_query}
-            ORDER BY ds.created_at DESC
+            ORDER BY {db_sort_column} {db_sort_order}, d.distribution_id DESC
             LIMIT :limit OFFSET :offset
         """)
         
@@ -100,6 +119,7 @@ class Distribution(db.Model):
                 "household_name": row_dict.get("household_name"),
                 "volunteer_name": row_dict.get("volunteer_name"),
                 "resource_name": row_dict.get("resource_name"),
+                "category_name": row_dict.get("category_name"),
                 "allocation_id": row_dict.get("allocation_id"),
                 "quantity": row_dict.get("quantity")
             })
@@ -108,7 +128,7 @@ class Distribution(db.Model):
             "data": data,
             "total": total_count,
         }
-
+    
     @classmethod
     def add_item(cls, session_id, allocation_id, quantity):
         sql = text("""

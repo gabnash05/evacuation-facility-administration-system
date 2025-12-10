@@ -39,7 +39,7 @@ class AidCategory(db.Model):
     def get_all_active(cls) -> List["AidCategory"]:
         """Get all active aid categories in database order."""
         results = db.session.execute(
-            text("SELECT * FROM aid_categories WHERE is_active = TRUE")  # Removed ORDER BY to maintain database order
+            text("SELECT * FROM aid_categories WHERE is_active = TRUE")
         ).fetchall()
 
         categories = []

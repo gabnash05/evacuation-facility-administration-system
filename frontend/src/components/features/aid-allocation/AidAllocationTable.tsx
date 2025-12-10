@@ -239,23 +239,30 @@ export function AidDistributionTable({
                     <TableHeader>
                         <TableRow>
                             {columns.map(column => (
-                                <TableHead key={column.key} className={column.className || ""}>
+                                <TableHead 
+                                    key={column.key} 
+                                    className={`${column.className || ""} ${column.sortable !== false && onSort ? "p-0" : ""}`}
+                                >
                                     {column.sortable !== false && onSort ? (
                                         <Button
                                             variant="ghost"
                                             onClick={() => onSort(column.key)}
-                                            className="h-8 px-2 hover:bg-transparent font-semibold w-full justify-start p-0"
+                                            className="h-full w-full justify-start px-3 py-3 hover:bg-transparent font-semibold"
                                         >
-                                            {column.label}
-                                            {getSortIcon(column.key)}
+                                            <span className="flex items-center gap-1">
+                                                {column.label}
+                                                {getSortIcon(column.key)}
+                                            </span>
                                         </Button>
                                     ) : (
-                                        column.label
+                                        <div className="px-3 py-3">
+                                            {column.label}
+                                        </div>
                                     )}
                                 </TableHead>
                             ))}
                             {showActions && (
-                                <TableHead className="text-right">Actions</TableHead>
+                                <TableHead className="text-right px-4 py-3">Actions</TableHead>
                             )}
                         </TableRow>
                     </TableHeader>
@@ -298,7 +305,7 @@ export function AidDistributionTable({
                                         </TableCell>
                                     ))}
                                     {showActions && (
-                                        <TableCell className="text-right" onClick={e => e.stopPropagation()}>
+                                        <TableCell className="text-right px-4" onClick={e => e.stopPropagation()}>
                                             <DropdownMenu>
                                                 <DropdownMenuTrigger asChild>
                                                     <Button variant="ghost" size="icon">
