@@ -509,7 +509,6 @@ class EvacuationCenter(db.Model):
                     COALESCE(SUM(capacity), 0) as total_capacity,
                     COALESCE(SUM(current_occupancy), 0) as total_occupancy
                 FROM evacuation_centers
-                WHERE status = 'active'
             """)
             
             active_result = db.session.execute(active_summary_query).fetchone()

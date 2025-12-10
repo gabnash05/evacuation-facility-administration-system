@@ -490,45 +490,75 @@ class AttendanceRecord(db.Model):
     @classmethod
     def check_out_individual(
         cls,
+        record_id: int, 
+        check_out_time: str,
+        notes: Optional[str] = None
+    ) -> Optional["AttendanceRecord"]:
+        """Check out an individual by finding their current check-in record."""
+        
+        # Find the active check-in record for this individual
+        current_record_query = text("""
+            SELECT record_id 
+            FROM attendance_records 
+            WHERE individual_id = :individual_id 
+            AND status = 'checked_in' 
+            AND check_out_time IS NULL
+            ORDER BY check_in_time DESC
+            LIMIT 1
+        """)
+        
+        result = db.session.execute(
+            current_record_query,
+            {"individual_id": record_id}
+        ).fetchone()
+        
+        if not result:
+            raise ValueError("No active check-in found for this individual")
+        
+        record_id = result[0]
+        
+        return cls._check_out_by_record_id(record_id, check_out_time, notes)
+    
+
+    @classmethod
+    def _check_out_by_record_id(
+        cls,
         record_id: int,
         check_out_time: str,
         notes: Optional[str] = None
     ) -> Optional["AttendanceRecord"]:
-        """Check out an individual from a center by creating a new record."""
+        """Internal method to check out by record ID."""
         current_record = cls.get_by_id(record_id)
         if not current_record:
             return None
 
-        # Create new check-out record (this is the only action needed)
-        check_out_data = {
-            "individual_id": current_record.individual_id,
-            "center_id": current_record.center_id,
-            "event_id": current_record.event_id,
-            "household_id": current_record.household_id,
+        # Verify individual is currently checked in
+        if current_record.status != 'checked_in' or current_record.check_out_time is not None:
+            raise ValueError("Individual is not currently checked in")
+
+        # Update the existing record to checked_out
+        update_data = {
             "status": "checked_out",
-            "check_in_time": current_record.check_in_time,  # Keep original check-in time
             "check_out_time": check_out_time,
-            "recorded_by_user_id": current_record.recorded_by_user_id,
-            "notes": f"Checked out. {notes or ''}"
+            "notes": f"{current_record.notes or ''} Checked out. {notes or ''}".strip()
         }
 
-        new_record = cls.create(check_out_data)
+        updated_record = cls.update(record_id, update_data)
 
-        if new_record:
+        if updated_record:
             try:
                 cls._update_event_occupancy(current_record.event_id)
             except Exception as e:
                 logger.warning(f"Failed to update event occupancy for event {current_record.event_id}: {str(e)}")
         
-        return new_record
-
+        return updated_record
 
     @classmethod
     def check_out_multiple_individuals(
         cls,
         check_out_data: List[Dict[str, Any]]
     ) -> Dict[str, Any]:
-        """Check out multiple individuals in a batch operation."""
+        """Check out multiple individuals in a batch operation by updating their current records."""
         from app.models import db
         
         successful_checkouts = []
@@ -549,9 +579,9 @@ class AttendanceRecord(db.Model):
                         "error": "Attendance record not found"
                     })
                     continue
-                
+
                 # Check if individual is currently checked in
-                if current_record.status != "checked_in" or current_record.check_out_time is not None:
+                if current_record.status != 'checked_in' or current_record.check_out_time is not None:
                     failed_checkouts.append({
                         "index": i,
                         "record_id": record_id,
@@ -559,25 +589,20 @@ class AttendanceRecord(db.Model):
                     })
                     continue
                 
-                # Create new check-out record
-                new_checkout_data = {
-                    "individual_id": current_record.individual_id,
-                    "center_id": current_record.center_id,
-                    "event_id": current_record.event_id,
-                    "household_id": current_record.household_id,
+                # Update the existing record to checked_out
+                update_data = {
                     "status": "checked_out",
-                    "check_in_time": current_record.check_in_time,
                     "check_out_time": check_out_time or datetime.now().isoformat(),
-                    "recorded_by_user_id": current_record.recorded_by_user_id,
-                    "notes": f"Checked out. {notes or ''}"
+                    "notes": f"{current_record.notes or ''} Checked out. {notes or ''}".strip()
+                    # REMOVED: "updated_at": datetime.now() - This is automatically added in the update() method
                 }
                 
-                new_record = cls.create(new_checkout_data)
+                updated_record = cls.update(record_id, update_data)
                 
-                if new_record:
+                if updated_record:
                     successful_checkouts.append({
-                        "record_id": new_record.record_id,
-                        "individual_id": new_record.individual_id,
+                        "record_id": updated_record.record_id,
+                        "individual_id": updated_record.individual_id,
                         "original_record_id": record_id
                     })
                     
@@ -590,7 +615,7 @@ class AttendanceRecord(db.Model):
                     failed_checkouts.append({
                         "index": i,
                         "record_id": record_id,
-                        "error": "Failed to create check-out record"
+                        "error": "Failed to update check-out record"
                     })
                     
             except Exception as error:
@@ -722,6 +747,7 @@ class AttendanceRecord(db.Model):
                 ar.record_id,
                 CONCAT(i.first_name, ' ', i.last_name) as individual_name,
                 i.gender,
+                i.date_of_birth,  -- ADDED: Include date_of_birth
                 ec.center_name,
                 e.event_name,
                 h.household_name,
@@ -751,7 +777,8 @@ class AttendanceRecord(db.Model):
                 "transfer_time": "ar.transfer_time",
                 "checkInTime": "ar.check_in_time",
                 "checkOutTime": "ar.check_out_time", 
-                "transferTime": "ar.transfer_time"
+                "transferTime": "ar.transfer_time",
+                "date_of_birth": "i.date_of_birth",
             }
             
             if sort_by in sort_mapping:
@@ -778,6 +805,7 @@ class AttendanceRecord(db.Model):
                 "record_id": row.record_id,
                 "individual_name": row.individual_name or "Unknown",
                 "gender": row.gender or "Unknown",
+                "date_of_birth": row.date_of_birth.isoformat() if row.date_of_birth else "",
                 "center_name": row.center_name or "Unknown Center",
                 "event_name": row.event_name or "Unknown Event", 
                 "household_name": row.household_name or "Unknown Household",
@@ -825,6 +853,27 @@ class AttendanceRecord(db.Model):
             "total_transferred": result[3] if result else 0
         }
 
+
+    @classmethod
+    def get_most_recent_record_by_individual_id(cls, individual_id: int) -> Optional["AttendanceRecord"]:
+        """Get the most recent attendance record for an individual by their ID."""
+        result = db.session.execute(
+            text("""
+                SELECT * FROM attendance_records 
+                WHERE individual_id = :individual_id 
+                ORDER BY 
+                    CASE 
+                        WHEN check_in_time IS NOT NULL THEN check_in_time
+                        WHEN transfer_time IS NOT NULL THEN transfer_time
+                        ELSE created_at
+                    END DESC,
+                    record_id DESC
+                LIMIT 1
+            """),
+            {"individual_id": individual_id},
+        ).fetchone()
+
+        return cls._row_to_record(result)
 
     @classmethod
     def get_individual_attendance_history(cls, individual_id: int) -> List["AttendanceRecord"]:

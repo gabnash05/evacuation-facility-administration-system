@@ -5,6 +5,7 @@ from typing import Any, Dict, List, Optional
 from datetime import datetime
 
 from app.models.attendance_records import AttendanceRecord
+from app.models.individual import Individual
 
 # Configure logger for this module
 logger = logging.getLogger(__name__)
@@ -91,6 +92,8 @@ def get_attendance_record_by_id(record_id: int) -> Dict[str, Any]:
     try:
         record = AttendanceRecord.get_by_id(record_id)
 
+        print(record_id)
+
         if not record:
             return {"success": False, "message": "Attendance record not found"}
 
@@ -100,6 +103,45 @@ def get_attendance_record_by_id(record_id: int) -> Dict[str, Any]:
         logger.error("Error fetching attendance record %s: %s", record_id, str(error))
         return {"success": False, "message": "Failed to fetch attendance record"}
 
+
+def get_attendance_record_by_individual_id(individual_id: int) -> Dict[str, Any]:
+    """
+    Get the most recent attendance record for an individual by their ID.
+
+    Args:
+        individual_id: Individual ID
+
+    Returns:
+        Dictionary with record data or error message
+    """
+    try:
+        # Get the most recent record for this individual
+        record = AttendanceRecord.get_most_recent_record_by_individual_id(individual_id)
+
+        if not record:
+            return {
+                "success": False, 
+                "message": "No attendance record found for this individual",
+                "data": None
+            }
+
+        return {
+            "success": True, 
+            "data": record.to_dict()
+        }
+
+    except Exception as error:
+        logger.error(
+            "Error fetching attendance record for individual %s: %s", 
+            individual_id, 
+            str(error)
+        )
+        return {
+            "success": False, 
+            "message": f"Failed to fetch attendance record: {str(error)}",
+            "data": None
+        }
+    
 
 def check_in_individual(
     individual_id: int,
@@ -355,7 +397,7 @@ def check_out_individual(
     Check out an individual from an evacuation center.
 
     Args:
-        record_id: Attendance record ID
+        record_id: Individual ID to check out
         check_out_time: Optional check-out time (defaults to current time)
         notes: Optional notes
 
@@ -367,17 +409,19 @@ def check_out_individual(
         if not check_out_time:
             check_out_time = datetime.now().isoformat()
 
-        # Check if record exists and is checked in
-        record = AttendanceRecord.get_by_id(record_id)
-        if not record:
-            return {"success": False, "message": "Attendance record not found"}
+        # Get the individual's current status
+        individual = Individual.get_by_id(record_id)
+        if not individual:
+            return {"success": False, "message": "Individual not found"}
 
-        if record.status != "checked_in" or record.check_out_time is not None:
+        # Check if individual is currently checked in
+        if individual.get("current_status") != "checked_in":
             return {"success": False, "message": "Individual is not currently checked in"}
 
-        # Check out individual
+        # Check out individual - the AttendanceRecord.check_out_individual method
+        # should find and update the active check-in record
         updated_record = AttendanceRecord.check_out_individual(
-            record_id=record_id,
+            record_id=record_id, 
             check_out_time=check_out_time,
             notes=notes
         )
@@ -385,7 +429,7 @@ def check_out_individual(
         if not updated_record:
             return {"success": False, "message": "Failed to check out individual"}
 
-        logger.info("Individual %s checked out from center %s", record.individual_id, record.center_id)
+        logger.info("Individual %s checked out", record_id)
 
         return {
             "success": True,
@@ -394,9 +438,9 @@ def check_out_individual(
         }
 
     except Exception as error:
-        logger.error("Error checking out individual from record %s: %s", record_id, str(error))
+        logger.error("Error checking out individual %s: %s", record_id, str(error))
         return {"success": False, "message": "Failed to check out individual"}
-
+      
 
 def check_out_multiple_individuals(
     check_out_data: List[Dict[str, Any]]
