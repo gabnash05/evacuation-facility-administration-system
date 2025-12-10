@@ -25,14 +25,14 @@ import { AidAllocationService } from "@/services/aidAllocationService";
 import { EvacuationCenterService } from "@/services/evacuationCenterService";
 import { EventService } from "@/services/eventService";
 
-interface AidAllocationFormProps {
+interface EditAllocationFormProps {
     isOpen: boolean;
     onClose: () => void;
-    onSubmit: (data: any) => void;
-    centers?: Array<{ id: number; name: string }>;
-    initialData?: any;
+    onSubmit: (id: number, data: any) => Promise<void>;
+    allocation: any; // The allocation data to edit
     title?: string;
     submitText?: string;
+    userRole?: string; // optional
 }
 
 interface AidCategory {
@@ -46,28 +46,29 @@ interface ActiveEvent {
     event_name: string;
 }
 
-export function AidAllocationForm({
+export function EditAllocationForm({
     isOpen,
     onClose,
     onSubmit,
-    centers = [],
-    initialData = {},
-    title = "Allocate Aid",
-    submitText = "Allocate Aid",
-}: AidAllocationFormProps) {
+    allocation,
+    title = "Edit Allocation",
+    submitText = "Update Allocation",
+}: EditAllocationFormProps) {
     const [formData, setFormData] = useState({
-        center_id: initialData.center_id || "",
-        category_id: initialData.category_id || "",
-        event_id: initialData.event_id || "",
-        resource_name: initialData.resource_name || "",
-        quantity: initialData.quantity || "",
-        distribution_rule: initialData.distribution_rule || "", // Empty by default
+        center_id: "",
+        category_id: "",
+        event_id: "",
+        resource_name: "",
+        total_quantity: "",
+        distribution_type: "",
+        status: "active",
     });
 
     const [errors, setErrors] = useState<Record<string, string>>({});
+    const [serverError, setServerError] = useState<string | null>(null);
     
     // State for dynamic data
-    const [activeCenters, setActiveCenters] = useState<Array<{ id: number; name: string }>>(centers);
+    const [activeCenters, setActiveCenters] = useState<Array<{ id: number; name: string }>>([]);
     const [aidCategories, setAidCategories] = useState<AidCategory[]>([]);
     const [activeEvents, setActiveEvents] = useState<ActiveEvent[]>([]);
     const [loading, setLoading] = useState({
@@ -76,19 +77,34 @@ export function AidAllocationForm({
         events: false,
     });
 
+    const [submitting, setSubmitting] = useState(false);
+
     // Refs to prevent auto-focus
     const firstSelectRef = useRef<HTMLButtonElement>(null);
     const resourceNameInputRef = useRef<HTMLInputElement>(null);
 
-    // Fetch active evacuation centers if not provided
+    // Pre-fill form with allocation data when it changes
     useEffect(() => {
-        if (isOpen && centers.length === 0) {
-            fetchActiveCenters();
+        if (allocation) {
+            setFormData({
+                center_id: allocation.center_id?.toString() || "",
+                category_id: allocation.category_id?.toString() || "",
+                event_id: allocation.event_id?.toString() || "",
+                resource_name: allocation.resource_name || "",
+                total_quantity: allocation.total_quantity?.toString() || "",
+                distribution_type: allocation.distribution_type || "",
+                status: allocation.status || "active",
+            });
         }
+    }, [allocation]);
+
+    // Fetch active evacuation centers
+    useEffect(() => {
         if (isOpen) {
+            fetchActiveCenters();
             fetchAidCategories();
         }
-    }, [isOpen, centers.length]);
+    }, [isOpen]);
 
     // Fetch events when center changes
     useEffect(() => {
@@ -105,7 +121,7 @@ export function AidAllocationForm({
             const response = await EvacuationCenterService.getCenters({
                 status: "active",
                 limit: 100,
-                sortBy: "center_name", // Sort by name as requested
+                sortBy: "center_name",
                 sortOrder: "asc",
             });
             
@@ -134,7 +150,6 @@ export function AidAllocationForm({
                 const activeCategories = response.data.filter(
                     (category: AidCategory) => category.is_active !== false
                 );
-                // Keep the order as received from database (don't sort)
                 setAidCategories(activeCategories);
             }
         } catch (error) {
@@ -150,9 +165,8 @@ export function AidAllocationForm({
         try {
             const response = await EventService.getEvents({
                 center_id: centerId,
-                status: "active",
                 limit: 100,
-                sortBy: "date_declared", // Sort by date declared
+                sortBy: "date_declared",
                 sortOrder: "desc",
             });
             
@@ -166,7 +180,7 @@ export function AidAllocationForm({
                 setActiveEvents([]);
             }
         } catch (error) {
-            console.error("Error fetching active events:", error);
+            console.error("Error fetching events:", error);
             setActiveEvents([]);
         } finally {
             setLoading(prev => ({ ...prev, events: false }));
@@ -179,9 +193,12 @@ export function AidAllocationForm({
         if (errors[field]) {
             setErrors(prev => ({ ...prev, [field]: "" }));
         }
+        if (serverError) {
+            setServerError(null);
+        }
         
-        // Reset dependent fields when center changes
-        if (field === "center_id") {
+        // Reset event when center changes (unless it's the same center)
+        if (field === "center_id" && formData.center_id !== value) {
             setFormData(prev => ({ 
                 ...prev, 
                 event_id: "",
@@ -191,14 +208,17 @@ export function AidAllocationForm({
     };
 
     const handleQuantityChange = (operation: 'increment' | 'decrement') => {
-        const currentValue = parseInt(formData.quantity) || 0;
+        const currentValue = parseInt(formData.total_quantity) || 0;
         const newValue = operation === 'increment' ? currentValue + 1 : Math.max(1, currentValue - 1);
         
-        setFormData(prev => ({ ...prev, quantity: newValue.toString() }));
+        setFormData(prev => ({ ...prev, total_quantity: newValue.toString() }));
         
         // Clear quantity error if it exists
-        if (errors.quantity) {
-            setErrors(prev => ({ ...prev, quantity: "" }));
+        if (errors.total_quantity) {
+            setErrors(prev => ({ ...prev, total_quantity: "" }));
+        }
+        if (serverError) {
+            setServerError(null);
         }
     };
 
@@ -209,29 +229,74 @@ export function AidAllocationForm({
         if (!formData.category_id) newErrors.category_id = "Category is required";
         if (!formData.event_id) newErrors.event_id = "Event is required";
         if (!formData.resource_name.trim()) newErrors.resource_name = "Relief type is required";
-        if (!formData.quantity || Number(formData.quantity) <= 0) 
-            newErrors.quantity = "Quantity must be greater than 0";
-        if (!formData.distribution_rule) newErrors.distribution_rule = "Distribution rule is required";
+        if (!formData.total_quantity || Number(formData.total_quantity) <= 0) 
+            newErrors.total_quantity = "Quantity must be greater than 0";
+        if (!formData.distribution_type) newErrors.distribution_type = "Distribution rule is required";
+        if (!formData.status) newErrors.status = "Status is required";
+
+        // Enforce lower limit - cannot set total < remaining
+        const originalRemaining = allocation?.remaining_quantity ?? null;
+        if (originalRemaining !== null && originalRemaining !== undefined) {
+            const newTotal = Number(formData.total_quantity || 0);
+            if (newTotal < originalRemaining) {
+                newErrors.total_quantity = `Total quantity cannot be less than remaining quantity (${originalRemaining})`;
+            }
+        }
         
         setErrors(newErrors);
         return Object.keys(newErrors).length === 0;
     };
 
-    const handleSubmit = () => {
-        if (validateForm()) {
+    const handleSubmit = async () => {
+        if (!validateForm()) {
+            return;
+        }
+
+        setSubmitting(true);
+        setServerError(null);
+        try {
             // Map frontend form fields to backend expected payload
-            const payload = {
-                center_id: Number(formData.center_id),
-                category_id: Number(formData.category_id),
-                event_id: Number(formData.event_id),
+            const payload: any = {
                 resource_name: formData.resource_name,
-                total_quantity: Number(formData.quantity),           // backend expects total_quantity
-                distribution_type: formData.distribution_rule,      // backend expects distribution_type
-                // optional fields can be added here if needed (description, notes, suggested_amount)
+                total_quantity: Number(formData.total_quantity),
+                distribution_type: formData.distribution_type,
+                status: formData.status,
+                category_id: Number(formData.category_id),
+                // Note: center_id and event_id cannot be updated per backend restrictions
             };
 
-            onSubmit(payload);
+            // Ensure remaining_quantity is adjusted client-side when total_quantity changes.
+            // This guarantees correct remaining update even if backend logic doesn't apply it.
+            const originalTotal = allocation?.total_quantity ?? 0;
+            const originalRemaining = allocation?.remaining_quantity ?? 0;
+            const newTotal = Number(formData.total_quantity || originalTotal);
+            const delta = newTotal - originalTotal;
+
+            if (delta > 0) {
+                // Increasing total -> increase remaining by same amount
+                payload.remaining_quantity = Number(originalRemaining + delta);
+            } else if (delta < 0) {
+                // Decreasing total -> decrease remaining by same amount but not below 0
+                const decreaseAmount = Math.abs(delta);
+                payload.remaining_quantity = Number(Math.max(0, originalRemaining - decreaseAmount));
+            }
+            // If delta === 0, don't include remaining_quantity
+
+            await onSubmit(allocation.allocation_id, payload);
+            // onSubmit resolved -> success, close modal
             handleClose();
+        } catch (error: any) {
+            // Display error inside the modal (don't close). Prefer specific field messages if returned.
+            const message = error?.message || String(error);
+            // If the backend returned a validation about quantity, attach to total_quantity error
+            if (message.toLowerCase().includes("total quantity") || message.toLowerCase().includes("remaining quantity")) {
+                setErrors(prev => ({ ...prev, total_quantity: message }));
+            } else {
+                setServerError(message);
+            }
+            console.error("Error updating allocation:", message);
+        } finally {
+            setSubmitting(false);
         }
     };
 
@@ -241,10 +306,12 @@ export function AidAllocationForm({
             category_id: "",
             event_id: "",
             resource_name: "",
-            quantity: "",
-            distribution_rule: "", // Reset to empty
+            total_quantity: "",
+            distribution_type: "",
+            status: "active",
         });
         setErrors({});
+        setServerError(null);
         setActiveEvents([]);
         onClose();
     };
@@ -254,56 +321,61 @@ export function AidAllocationForm({
         event.preventDefault();
     };
 
+    // Status options
+    const statusOptions = [
+        { value: "active", label: "Active" },
+        { value: "cancelled", label: "Cancelled" },
+    ];
+
     return (
         <Dialog open={isOpen} onOpenChange={handleClose}>
             <DialogContent 
                 className="max-w-md"
-                onOpenAutoFocus={handleOpenAutoFocus}  // Prevent auto-focus when dialog opens
-                onCloseAutoFocus={(event) => event.preventDefault()}  // Prevent auto-focus when dialog closes
+                onOpenAutoFocus={handleOpenAutoFocus}
+                onCloseAutoFocus={(event) => event.preventDefault()}
             >
                 <DialogHeader>
                     <DialogTitle>{title}</DialogTitle>
                 </DialogHeader>
                 
                 <div className="space-y-4 py-4">
-                    {/* Active Evacuation Center */}
+                    {/* Evacuation Center (Read-only) */}
                     <div className="space-y-2">
                         <Label htmlFor="center_id" className="font-semibold">
-                            Active Evacuation Center
+                            Evacuation Center
                         </Label>
                         <Select
                             value={formData.center_id}
                             onValueChange={(value) => handleChange("center_id", value)}
-                            disabled={loading.centers}
+                            disabled={true} // Center cannot be changed
                         >
                             <SelectTrigger 
-                                className={`w-full ${errors.center_id ? "border-destructive" : ""}`}
-                                ref={firstSelectRef}  // Correct ref type for button element
+                                className="w-full bg-muted"
+                                ref={firstSelectRef}
                             >
-                                <SelectValue placeholder={
-                                    loading.centers ? "Loading centers..." : "Select evacuation center"
-                                } />
+                                <SelectValue />
                             </SelectTrigger>
                             <SelectContent>
-                                {activeCenters.length > 0 ? (
+                                {loading.centers ? (
+                                    <SelectItem value="loading" disabled>
+                                        Loading...
+                                    </SelectItem>
+                                ) : activeCenters.length > 0 ? (
                                     activeCenters.map(center => (
                                         <SelectItem key={center.id} value={center.id.toString()}>
                                             {center.name}
                                         </SelectItem>
                                     ))
                                 ) : (
-                                    <SelectItem value="no-centers" disabled>
-                                        No active centers available
+                                    <SelectItem value="none" disabled>
+                                        No active centers
                                     </SelectItem>
                                 )}
                             </SelectContent>
                         </Select>
-                        {errors.center_id && (
-                            <p className="text-sm text-destructive">{errors.center_id}</p>
-                        )}
                     </div>
 
-                    {/* Event */}
+                    {/* Event (Read-only) */}
                     <div className="space-y-2">
                         <Label htmlFor="event_id" className="font-semibold">
                             Event
@@ -311,39 +383,32 @@ export function AidAllocationForm({
                         <Select
                             value={formData.event_id}
                             onValueChange={(value) => handleChange("event_id", value)}
-                            disabled={!formData.center_id || loading.events}
+                            disabled={true} // Event cannot be changed
                         >
-                            <SelectTrigger 
-                                className={`w-full ${errors.event_id ? "border-destructive" : ""}`}
-                            >
-                                <SelectValue placeholder={
-                                    !formData.center_id 
-                                        ? "Select a center first" 
-                                        : loading.events 
-                                            ? "Loading events..." 
-                                            : "Select event"
-                                } />
+                            <SelectTrigger className="w-full bg-muted">
+                                <SelectValue />
                             </SelectTrigger>
                             <SelectContent>
-                                {activeEvents.length > 0 ? (
+                                {loading.events ? (
+                                    <SelectItem value="loading" disabled>
+                                        Loading...
+                                    </SelectItem>
+                                ) : activeEvents.length > 0 ? (
                                     activeEvents.map(event => (
                                         <SelectItem key={event.event_id} value={event.event_id.toString()}>
                                             {event.event_name}
                                         </SelectItem>
                                     ))
                                 ) : (
-                                    <SelectItem value="no-events" disabled>
-                                        {formData.center_id ? "No active events for this center" : "Select a center first"}
+                                    <SelectItem value="none" disabled>
+                                        No events for selected center
                                     </SelectItem>
                                 )}
                             </SelectContent>
                         </Select>
-                        {errors.event_id && (
-                            <p className="text-sm text-destructive">{errors.event_id}</p>
-                        )}
                     </div>
 
-                    {/* Category */}
+                    {/* Category (Read-only) */}
                     <div className="space-y-2">
                         <Label htmlFor="category_id" className="font-semibold">
                             Category
@@ -351,32 +416,29 @@ export function AidAllocationForm({
                         <Select
                             value={formData.category_id}
                             onValueChange={(value) => handleChange("category_id", value)}
-                            disabled={loading.categories}
+                            disabled={true} // Category cannot be changed
                         >
-                            <SelectTrigger 
-                                className={`w-full ${errors.category_id ? "border-destructive" : ""}`}
-                            >
-                                <SelectValue placeholder={
-                                    loading.categories ? "Loading categories..." : "Select category"
-                                } />
+                            <SelectTrigger className="w-full bg-muted">
+                                <SelectValue />
                             </SelectTrigger>
                             <SelectContent>
-                                {aidCategories.length > 0 ? (
+                                {loading.categories ? (
+                                    <SelectItem value="loading" disabled>
+                                        Loading...
+                                    </SelectItem>
+                                ) : aidCategories.length > 0 ? (
                                     aidCategories.map(category => (
                                         <SelectItem key={category.category_id} value={category.category_id.toString()}>
                                             {category.category_name}
                                         </SelectItem>
                                     ))
                                 ) : (
-                                    <SelectItem value="no-categories" disabled>
-                                        No categories available
+                                    <SelectItem value="none" disabled>
+                                        No active categories
                                     </SelectItem>
                                 )}
                             </SelectContent>
                         </Select>
-                        {errors.category_id && (
-                            <p className="text-sm text-destructive">{errors.category_id}</p>
-                        )}
                     </div>
 
                     {/* Relief Type */}
@@ -392,35 +454,31 @@ export function AidAllocationForm({
                             className={`w-full ${errors.resource_name ? "border-destructive" : ""}`}
                             placeholder="e.g., Food Packs, Medicine, Blankets"
                             autoComplete="off"
-                            autoFocus={false}
-                            tabIndex={-1}  // Prevent tab focus
                         />
                         {errors.resource_name && (
                             <p className="text-sm text-destructive">{errors.resource_name}</p>
                         )}
                     </div>
 
-                    {/* Quantity to Allocate */}
+                    {/* Quantity */}
                     <div className="space-y-2">
-                        <Label htmlFor="quantity" className="font-semibold">
-                            Quantity to Allocate
+                        <Label htmlFor="total_quantity" className="font-semibold">
+                            Total Quantity
                         </Label>
                         <div className="relative w-full">
                             <Input
-                                id="quantity"
+                                id="total_quantity"
                                 type="text"
                                 inputMode="numeric"
                                 pattern="[0-9]*"
-                                value={formData.quantity}
+                                value={formData.total_quantity}
                                 onChange={(e) => {
                                     const value = e.target.value.replace(/[^0-9]/g, '');
-                                    handleChange("quantity", value);
+                                    handleChange("total_quantity", value);
                                 }}
-                                className={`w-full pr-16 ${errors.quantity ? "border-destructive" : ""}`}
+                                className={`w-full pr-16 ${errors.total_quantity ? "border-destructive" : ""}`}
                                 placeholder="e.g., 450"
                                 autoComplete="off"
-                                autoFocus={false}
-                                tabIndex={-1}  // Prevent tab focus
                             />
                             <div className="absolute inset-y-0 right-0 flex flex-col border-l border-input">
                                 <button
@@ -428,7 +486,6 @@ export function AidAllocationForm({
                                     onClick={() => handleQuantityChange('increment')}
                                     className="flex-1 flex items-center justify-center px-3 border-b border-input hover:bg-accent focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
                                     aria-label="Increase quantity"
-                                    tabIndex={-1}  // Prevent tab focus
                                 >
                                     <ChevronUp className="h-3 w-3" />
                                 </button>
@@ -437,39 +494,36 @@ export function AidAllocationForm({
                                     onClick={() => handleQuantityChange('decrement')}
                                     className="flex-1 flex items-center justify-center px-3 hover:bg-accent focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
                                     aria-label="Decrease quantity"
-                                    tabIndex={-1}  // Prevent tab focus
                                 >
                                     <ChevronDown className="h-3 w-3" />
                                 </button>
                             </div>
                         </div>
-                        {errors.quantity && (
-                            <p className="text-sm text-destructive">{errors.quantity}</p>
+                        {errors.total_quantity && (
+                            <p className="text-sm text-destructive">{errors.total_quantity}</p>
                         )}
                     </div>
 
                     {/* Distribution Rule */}
                     <div className="space-y-3">
                         <Label className="font-semibold block">Distribution Rule</Label>
-                        {errors.distribution_rule && (
-                            <p className="text-sm text-destructive">{errors.distribution_rule}</p>
+                        {errors.distribution_type && (
+                            <p className="text-sm text-destructive">{errors.distribution_type}</p>
                         )}
                         <div className="flex space-x-6">
                             <div className="flex items-center">
                                 <input
                                     type="radio"
                                     id="per_individual"
-                                    name="distribution_rule"
+                                    name="distribution_type"
                                     value="per_individual"
-                                    checked={formData.distribution_rule === "per_individual"}
-                                    onChange={(e) => handleChange("distribution_rule", e.target.value)}
+                                    checked={formData.distribution_type === "per_individual"}
+                                    onChange={(e) => handleChange("distribution_type", e.target.value)}
                                     className="h-4 w-4 border-gray-300 text-primary focus:ring-primary cursor-pointer"
-                                    tabIndex={-1}  // Prevent tab focus
                                 />
                                 <Label 
                                     htmlFor="per_individual" 
                                     className="ml-2 cursor-pointer select-none"
-                                    tabIndex={-1}  // Prevent tab focus
                                 >
                                     Per Individual
                                 </Label>
@@ -478,31 +532,61 @@ export function AidAllocationForm({
                                 <input
                                     type="radio"
                                     id="per_household"
-                                    name="distribution_rule"
+                                    name="distribution_type"
                                     value="per_household"
-                                    checked={formData.distribution_rule === "per_household"}
-                                    onChange={(e) => handleChange("distribution_rule", e.target.value)}
+                                    checked={formData.distribution_type === "per_household"}
+                                    onChange={(e) => handleChange("distribution_type", e.target.value)}
                                     className="h-4 w-4 border-gray-300 text-primary focus:ring-primary cursor-pointer"
-                                    tabIndex={-1}  // Prevent tab focus
                                 />
                                 <Label 
                                     htmlFor="per_household" 
                                     className="ml-2 cursor-pointer select-none"
-                                    tabIndex={-1}  // Prevent tab focus
                                 >
                                     Per Household
                                 </Label>
                             </div>
                         </div>
                     </div>
+
+                    {/* Status Field */}
+                    <div className="space-y-2">
+                        <Label htmlFor="status" className="font-semibold">
+                            Status
+                        </Label>
+                        <Select
+                            value={formData.status}
+                            onValueChange={(value) => handleChange("status", value)}
+                        >
+                            <SelectTrigger className={`w-full ${errors.status ? "border-destructive" : ""}`}>
+                                <SelectValue placeholder="Select status" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {statusOptions.map(option => (
+                                    <SelectItem key={option.value} value={option.value}>
+                                        {option.label}
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                        {errors.status && (
+                            <p className="text-sm text-destructive">{errors.status}</p>
+                        )}
+                    </div>
+
+                    {/* Server error (generic) */}
+                    {serverError && (
+                        <div className="bg-destructive/10 text-destructive p-2 rounded">
+                            <p className="text-sm">{serverError}</p>
+                        </div>
+                    )}
                 </div>
 
                 <DialogFooter>
-                    <Button variant="outline" onClick={handleClose}>
+                    <Button variant="outline" onClick={handleClose} disabled={submitting}>
                         Cancel
                     </Button>
-                    <Button onClick={handleSubmit}>
-                        {submitText}
+                    <Button onClick={handleSubmit} disabled={submitting}>
+                        {submitting ? "Updating..." : submitText}
                     </Button>
                 </DialogFooter>
             </DialogContent>

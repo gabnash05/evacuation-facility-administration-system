@@ -1,7 +1,7 @@
 """Flask routes for aid allocation operations (allocation-only)."""
 
 import logging
-from typing import Tuple
+from typing import Tuple, Optional, Any, Dict
 
 from flask import Blueprint, jsonify, request
 from flask_jwt_extended import jwt_required, get_jwt_identity
@@ -234,11 +234,34 @@ def create_allocation_route() -> Tuple:
         )
 
 
+def _coerce_numeric_fields(data: Dict[str, Any], fields: Optional[list] = None) -> Tuple[Dict[str, Any], Tuple[bool, Optional[str]]]:
+    """
+    Coerce specific fields in the incoming JSON to integers when possible.
+    Returns (coerced_data, (ok, error_message_if_any))
+    """
+    if fields is None:
+        fields = ["total_quantity", "remaining_quantity", "suggested_amount", "category_id", "center_id", "event_id"]
+    for f in fields:
+        if f in data:
+            try:
+                val = data[f]
+                # allow null / empty to be treated as None
+                if val is None or (isinstance(val, str) and val.strip() == ""):
+                    data[f] = None
+                else:
+                    data[f] = int(val)
+            except (ValueError, TypeError):
+                return data, (False, f"Invalid value for {f}; expected integer")
+    return data, (True, None)
+
+
 @aid_allocation_bp.route("/allocations/<int:allocation_id>", methods=["PUT"])
 @jwt_required()
 def update_allocation_route(allocation_id: int) -> Tuple:
     """
-    Update an existing allocation (City Admin only).
+    Update an existing allocation.
+    Super Admin: Can edit all fields (with quantity validation)
+    City Admin: Can only cancel allocations (set status to "cancelled")
     """
     try:
         # Get current user
@@ -254,7 +277,7 @@ def update_allocation_route(allocation_id: int) -> Tuple:
         # Only City Admin and Super Admin can update allocations
         if current_user.role not in ["city_admin", "super_admin"]:
             return (
-                jsonify({"success": False, "message": "Only City Administrators can update allocations"}),
+                jsonify({"success": False, "message": "Only Administrators can update allocations"}),
                 403,
             )
 
@@ -262,7 +285,28 @@ def update_allocation_route(allocation_id: int) -> Tuple:
         if not data:
             return jsonify({"success": False, "message": "No data provided"}), 400
 
-        logger.info("Updating allocation: %s", allocation_id)
+        # Coerce numeric fields early so service layer receives correct types
+        data, (ok, err) = _coerce_numeric_fields(data)
+        if not ok:
+            return jsonify({"success": False, "message": err}), 400
+
+        # For City Admin: Only allow status change to "cancelled"
+        if current_user.role == "city_admin":
+            allowed_fields = ["status"]
+            filtered_data = {k: v for k, v in data.items() if k in allowed_fields}
+            
+            # Ensure they're only trying to cancel
+            if "status" in filtered_data and filtered_data["status"] != "cancelled":
+                return (
+                    jsonify({"success": False, "message": "City Administrators can only cancel allocations"}),
+                    403,
+                )
+            
+            data = filtered_data
+        
+        # For Super Admin: Apply quantity validation and adjustments in service layer
+        # (service.update_allocation will handle remaining_quantity adjustments when total_quantity present)
+        logger.info("User %s updating allocation: %s", current_user.email, allocation_id)
 
         # Update allocation
         result = update_allocation(allocation_id, data)

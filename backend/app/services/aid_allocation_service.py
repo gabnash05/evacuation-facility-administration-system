@@ -310,18 +310,152 @@ def create_allocation(data: Dict[str, Any]) -> Dict[str, Any]:
         return {"success": False, "message": f"Failed to create allocation: {str(error)}"}
 
 
+def refresh_allocation_status(allocation_id: int) -> Dict[str, Any]:
+    """
+    Re-evaluate and update an allocation's status based on remaining quantity:
+    - If remaining_quantity == 0 -> depleted (unless status is 'cancelled')
+    - Otherwise -> active (unless status is 'cancelled')
+
+    This is provided as a helper so distribution creation/deletion codepaths
+    (which modify remaining_quantity via SQL or triggers) can call this after
+    performing their changes. It does not modify status if allocation is 'cancelled'.
+    """
+    try:
+        row = db.session.execute(
+            text("SELECT total_quantity, remaining_quantity, status FROM allocations WHERE allocation_id = :id"),
+            {"id": allocation_id}
+        ).fetchone()
+
+        if not row:
+            return {"success": False, "message": "Allocation not found"}
+
+        remaining = int(row.remaining_quantity or 0)
+        current_status = (row.status or "").lower()
+
+        # Do not change status for cancelled allocations
+        if current_status == "cancelled":
+            allocation = Allocation.get_by_id(allocation_id)
+            return {"success": True, "message": "Allocation is cancelled; status unchanged", "data": allocation.to_dict()}
+
+        # Determine desired status: depleted when remaining is 0, otherwise active
+        desired_status = "active" if remaining > 0 else "depleted"
+
+        if desired_status != current_status:
+            db.session.execute(
+                text("UPDATE allocations SET status = :status, updated_at = NOW() WHERE allocation_id = :id"),
+                {"status": desired_status, "id": allocation_id}
+            )
+            db.session.commit()
+
+        allocation = Allocation.get_by_id(allocation_id)
+        return {"success": True, "message": "Allocation status refreshed", "data": allocation.to_dict()}
+    except Exception as error:
+        logger.exception("Error refreshing allocation status")
+        try:
+            db.session.rollback()
+        except Exception:
+            pass
+        return {"success": False, "message": f"Failed to refresh allocation status: {str(error)}"}
+
+
 def update_allocation(allocation_id: int, data: Dict[str, Any]) -> Dict[str, Any]:
     """
     Update an existing allocation and return the updated allocation.
+
+    This implementation updates the allocations table directly via SQL so we
+    avoid creating transient ORM objects that cause INSERTs. We compute the
+    remaining_quantity server-side when total_quantity changes and persist it
+    atomically in the same UPDATE statement. After the update we call
+    refresh_allocation_status to enforce the depletion rule.
     """
     try:
-        updated = Allocation.update(allocation_id, data)
-        if not updated:
-            return {"success": False, "message": "Failed to update allocation"}
+        # Get current allocation using existing helper (returns Allocation dataclass-like object)
+        current_allocation = Allocation.get_by_id(allocation_id)
+        if not current_allocation:
+            return {"success": False, "message": "Allocation not found"}
 
-        return {"success": True, "message": "Allocation updated successfully", "data": updated.to_dict()}
+        # Defensive coercion for integers if present
+        if "total_quantity" in data:
+            try:
+                data["total_quantity"] = int(data["total_quantity"])
+            except (ValueError, TypeError):
+                return {"success": False, "message": "Invalid total_quantity; expected integer"}
+
+        # Compute remaining_quantity delta if total_quantity changes
+        old_total = int(current_allocation.total_quantity or 0)
+        old_remaining = int(current_allocation.remaining_quantity or 0)
+
+        if "total_quantity" in data:
+            new_total = data["total_quantity"]
+            if new_total < old_remaining:
+                return {
+                    "success": False,
+                    "message": f"Total quantity ({new_total}) cannot be less than remaining quantity ({old_remaining})"
+                }
+
+            if new_total > old_total:
+                increase_amount = new_total - old_total
+                computed_remaining = old_remaining + increase_amount
+            elif new_total < old_total:
+                decrease_amount = old_total - new_total
+                computed_remaining = max(0, old_remaining - decrease_amount)
+            else:
+                computed_remaining = old_remaining
+
+            # Ensure remaining does not exceed new total
+            computed_remaining = min(computed_remaining, new_total)
+
+            # Server authoritative: set computed remaining
+            data["remaining_quantity"] = int(computed_remaining)
+
+        # Prevent updating certain fields for safety
+        for protected in ("center_id", "event_id", "allocated_by_user_id"):
+            if protected in data:
+                data.pop(protected, None)
+
+        if not data:
+            return {"success": True, "message": "No changes applied", "data": current_allocation.to_dict()}
+
+        # Build dynamic UPDATE SQL
+        set_clauses: List[str] = []
+        params: Dict[str, Any] = {"allocation_id": allocation_id}
+
+        for key, value in data.items():
+            # Only allow columns that actually exist (simple whitelist by name)
+            # We assume frontend/backend use snake_case matching DB column names.
+            set_clauses.append(f"{key} = :{key}")
+            params[key] = value
+
+        # Add updated_at
+        set_clauses.append("updated_at = NOW()")
+
+        query = text(f"""
+            UPDATE allocations
+            SET {', '.join(set_clauses)}
+            WHERE allocation_id = :allocation_id
+            RETURNING *
+        """)
+
+        result = db.session.execute(query, params).fetchone()
+        db.session.commit()
+
+        # After committing, enforce automatic status rule (depletion when remaining == 0) for this allocation.
+        try:
+            refresh_allocation_status(allocation_id)
+        except Exception:
+            logger.debug("refresh_allocation_status failed (non-fatal)")
+
+        updated_allocation = Allocation._row_to_allocation(result)
+
+        logger.info("Allocation updated - ID: %s (fields: %s)", allocation_id, ", ".join(data.keys()))
+
+        return {"success": True, "message": "Allocation updated successfully", "data": updated_allocation.to_dict()}
     except Exception as error:
         logger.exception("Error updating allocation")
+        try:
+            db.session.rollback()
+        except Exception:
+            pass
         return {"success": False, "message": f"Failed to update allocation: {str(error)}"}
 
 
@@ -352,7 +486,7 @@ def delete_allocation(allocation_id: int) -> Dict[str, Any]:
 
         return {"success": True, "message": "Allocation deleted successfully"}
     except Exception as error:
-        logger.exception("Error deleting allocation %s: %s", allocation_id, str(error))
+        logger.exception("Error deleting allocation")
         return {"success": False, "message": f"Failed to delete allocation: {str(error)}"}
 
 
@@ -370,16 +504,31 @@ def get_allocation_by_id(allocation_id: int) -> Dict[str, Any]:
         return {"success": False, "message": f"Failed to fetch allocation: {str(error)}"}
 
 
-def get_aid_categories() -> Dict[str, Any]:
+def get_aid_categories():
     """
-    Return all active aid categories.
+    Get all aid categories.
+    Available to all authenticated users.
     """
     try:
+        # Get categories in database order (no sorting applied)
         categories = AidCategory.get_all_active()
-        return {"success": True, "data": [c.to_dict() for c in categories]}
+        
+        # Convert to dictionary format
+        categories_data = [category.to_dict() for category in categories]
+        
+        return {
+            "success": True,
+            "data": categories_data,
+            "message": f"Successfully retrieved {len(categories_data)} aid categories"
+        }
+        
     except Exception as error:
-        logger.exception("Error fetching aid categories")
-        return {"success": False, "message": f"Failed to fetch aid categories: {str(error)}"}
+        logger.error("Error fetching aid categories: %s", str(error))
+        return {
+            "success": False, 
+            "message": "Failed to fetch aid categories",
+            "data": []
+        }
 
 
 def update_center_allocation_stats(center_id: Optional[int]) -> None:
