@@ -1,5 +1,5 @@
 // components/attendance/CheckInModal.tsx
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import {
@@ -22,7 +22,6 @@ import { User, Home, Calendar, X } from "lucide-react";
 import { useAttendanceStore } from "@/store/attendanceRecordsStore";
 import { useEvacuationCenterStore } from "@/store/evacuationCenterStore";
 import { useEventStore } from "@/store/eventStore";
-import { useIndividualStore } from "@/store/individualStore";
 import { IndividualSearchTable } from "./IndividualSearchTable";
 import type { CreateAttendanceData } from "@/types/attendance";
 import type { Individual } from "@/types/individual";
@@ -32,13 +31,19 @@ interface CheckInModalProps {
     onClose: () => void;
     onSuccess: () => void;
     defaultCenterId?: number;
+    individualToCheckIn?: any;
 }
 
-export function CheckInModal({ isOpen, onClose, onSuccess, defaultCenterId }: CheckInModalProps) {
+export function CheckInModal({ 
+    isOpen, 
+    onClose, 
+    onSuccess, 
+    defaultCenterId,
+    individualToCheckIn
+}: CheckInModalProps) {
     const { checkInMultipleIndividuals } = useAttendanceStore();
     const { centers, fetchAllCenters, loading: centersLoading } = useEvacuationCenterStore();
     const { events, fetchEvents, loading: eventsLoading } = useEventStore();
-    const { clearSearch } = useIndividualStore();
 
     const [selectedIndividuals, setSelectedIndividuals] = useState<Individual[]>([]);
     const [centerId, setCenterId] = useState<string>("");
@@ -46,10 +51,20 @@ export function CheckInModal({ isOpen, onClose, onSuccess, defaultCenterId }: Ch
     const [notes, setNotes] = useState("");
     const [error, setError] = useState<string | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
+    
+    // ADD LOCAL STATE FOR MODAL SEARCH
+    const [modalSearchQuery, setModalSearchQuery] = useState("");
+    const [modalPage, setModalPage] = useState(1);
+    const [modalSearchResults, setModalSearchResults] = useState<Individual[]>([]);
+    const [modalTotalRecords, setModalTotalRecords] = useState(0);
+    const [modalSearchLoading, setModalSearchLoading] = useState(false);
 
     const safeCenters = centers || [];
     const safeEvents = events || [];
     const filteredEvents = safeEvents.filter(event => event?.status === "active");
+
+    // Use refs for debounce timeout
+    const searchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
     // Reset form when modal opens/closes
     useEffect(() => {
@@ -70,15 +85,55 @@ export function CheckInModal({ isOpen, onClose, onSuccess, defaultCenterId }: Ch
             setNotes("");
             setSelectedIndividuals([]);
             setError(null);
+            
+            // Reset modal search state
+            setModalSearchQuery("");
+            setModalPage(1);
+            setModalSearchResults([]);
+            setModalTotalRecords(0);
+
+            // Pre-select individual if provided
+            if (individualToCheckIn) {
+                const individual: Individual = {
+                    individual_id: individualToCheckIn.individual_id,
+                    first_name: individualToCheckIn.first_name,
+                    last_name: individualToCheckIn.last_name,
+                    date_of_birth: individualToCheckIn.date_of_birth,
+                    gender: individualToCheckIn.gender,
+                    relationship_to_head: individualToCheckIn.relationship_to_head,
+                    household_id: individualToCheckIn.household_id,
+                    current_status: individualToCheckIn.current_status,
+                    created_at: individualToCheckIn.created_at,
+                    updated_at: individualToCheckIn.updated_at,
+                };
+                setSelectedIndividuals([individual]);
+            }
         } else {
-            // Clear search and selections when modal closes
-            clearSearch();
             setSelectedIndividuals([]);
             setEventId("");
             setNotes("");
             setError(null);
+            setModalSearchQuery("");
+            setModalPage(1);
+            setModalSearchResults([]);
+            setModalTotalRecords(0);
+            
+            // Clear any pending search timeout
+            if (searchTimeoutRef.current) {
+                clearTimeout(searchTimeoutRef.current);
+                searchTimeoutRef.current = null;
+            }
         }
-    }, [isOpen, fetchAllCenters, fetchEvents, defaultCenterId, clearSearch]);
+    }, [isOpen, fetchAllCenters, fetchEvents, defaultCenterId, individualToCheckIn]);
+
+    // Cleanup timeout on unmount
+    useEffect(() => {
+        return () => {
+            if (searchTimeoutRef.current) {
+                clearTimeout(searchTimeoutRef.current);
+            }
+        };
+    }, []);
 
     const resetForm = () => {
         setSelectedIndividuals([]);
@@ -86,7 +141,16 @@ export function CheckInModal({ isOpen, onClose, onSuccess, defaultCenterId }: Ch
         setEventId("");
         setNotes("");
         setError(null);
-        clearSearch();
+        setModalSearchQuery("");
+        setModalPage(1);
+        setModalSearchResults([]);
+        setModalTotalRecords(0);
+        
+        // Clear timeout
+        if (searchTimeoutRef.current) {
+            clearTimeout(searchTimeoutRef.current);
+            searchTimeoutRef.current = null;
+        }
     };
 
     const handleClose = () => {
@@ -123,7 +187,7 @@ export function CheckInModal({ isOpen, onClose, onSuccess, defaultCenterId }: Ch
 
             await checkInMultipleIndividuals(checkInData);
             onSuccess();
-            resetForm(); // Reset form after successful submission
+            resetForm();
             onClose();
         } catch (err: any) {
             setError(err.message);
@@ -149,6 +213,141 @@ export function CheckInModal({ isOpen, onClose, onSuccess, defaultCenterId }: Ch
 
     const handleCenterChange = (value: string) => {
         setCenterId(value);
+    };
+
+    // ACTUAL SEARCH FUNCTION
+    const performSearch = useCallback(async (search: string, page: number) => {
+        setModalSearchLoading(true);
+        try {
+            // Import the service directly instead of using the store
+            const { IndividualService } = await import("@/services/individualService");
+            
+            const response = await IndividualService.getIndividuals({
+                search: search,
+                page: page,
+                limit: 10,
+                sortBy: "last_name",
+                sortOrder: "asc",
+            });
+            
+            console.log("Performing modal search with:", { search, page });
+            console.log("Modal search response:", response);
+
+            if (response.success && response.data) {
+                setModalSearchResults(response.data.results || []);
+                setModalTotalRecords(response.data.pagination?.total_items || 0);
+            } else {
+                throw new Error(response.message || "Search failed");
+            }
+        } catch (error) {
+            console.error("Modal search failed:", error);
+            setModalSearchResults([]);
+            setModalTotalRecords(0);
+        } finally {
+            setModalSearchLoading(false);
+        }
+    }, []);
+
+    // REMOVED: Unused debouncedSearch function
+
+    // FIXED: Properly typed handleModalSearch function
+    const handleModalSearch = async (params: {
+        search: string;
+        page: number;
+        limit: number;
+    }): Promise<{ success: boolean; data: Individual[]; totalRecords: number }> => {
+        console.log("handleModalSearch called with:", params);
+        
+        // Don't update state if nothing changed
+        if (modalSearchQuery === params.search && modalPage === params.page) {
+            return {
+                success: true,
+                data: modalSearchResults,
+                totalRecords: modalTotalRecords
+            };
+        }
+        
+        // Update local state
+        setModalSearchQuery(params.search);
+        setModalPage(params.page);
+        
+        // Clear any existing timeout
+        if (searchTimeoutRef.current) {
+            clearTimeout(searchTimeoutRef.current);
+        }
+        
+        // If search is empty, clear results immediately
+        if (params.search.trim() === "") {
+            setModalSearchResults([]);
+            setModalTotalRecords(0);
+            return {
+                success: true,
+                data: [],
+                totalRecords: 0
+            };
+        }
+        
+        // Return a promise that resolves with the search results
+        return new Promise<{ success: boolean; data: Individual[]; totalRecords: number }>((resolve) => {
+            searchTimeoutRef.current = setTimeout(async () => {
+                try {
+                    const { IndividualService } = await import("@/services/individualService");
+                    const response = await IndividualService.getIndividuals({
+                        search: params.search,
+                        page: params.page,
+                        limit: params.limit,
+                        sortBy: "last_name",
+                        sortOrder: "asc",
+                    });
+                    
+                    if (response.success && response.data) {
+                        const results = response.data.results || [];
+                        const total = response.data.pagination?.total_items || 0;
+                        
+                        setModalSearchResults(results);
+                        setModalTotalRecords(total);
+                        resolve({
+                            success: true,
+                            data: results,
+                            totalRecords: total
+                        });
+                    } else {
+                        resolve({
+                            success: false,
+                            data: [],
+                            totalRecords: 0
+                        });
+                    }
+                } catch (error) {
+                    console.error("Search failed:", error);
+                    resolve({
+                        success: false,
+                        data: [],
+                        totalRecords: 0
+                    });
+                }
+            }, 500);
+        });
+    };
+
+
+    // HANDLE PAGE CHANGE SEPARATELY (no debounce needed for page changes)
+    const handleModalPageChange = (page: number) => {
+        setModalPage(page);
+        
+        // Clear any pending search timeout
+        if (searchTimeoutRef.current) {
+            clearTimeout(searchTimeoutRef.current);
+            searchTimeoutRef.current = null;
+        }
+        
+        // Immediate search for page change
+        if (modalSearchQuery.trim() === "") {
+            setModalSearchResults([]);
+            setModalTotalRecords(0);
+        } else {
+            performSearch(modalSearchQuery, page);
+        }
     };
 
     return (
@@ -229,6 +428,12 @@ export function CheckInModal({ isOpen, onClose, onSuccess, defaultCenterId }: Ch
                         <IndividualSearchTable
                             onSelectIndividual={handleIndividualSelect}
                             selectedIndividuals={selectedIndividuals}
+                            // Modal provides a custom search function. Let the table manage its own input state
+                            onSearch={handleModalSearch}
+                            modalPage={modalPage}
+                            onModalPageChange={handleModalPageChange}
+                            isLoading={modalSearchLoading}
+                            errorMessage={''}
                         />
                     </div>
 

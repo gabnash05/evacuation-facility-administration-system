@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { AidDistributionTable } from "@/components/features/aid-allocation/AidAllocationTable";
 import { AidDistributionToolbar } from "@/components/features/aid-allocation/AidAllocationToolbar";
 import { AidAllocationForm } from "@/components/features/aid-allocation/AidAllocationForm";
+import { EditAllocationForm } from "@/components/features/aid-allocation/EditAllocationForm"; // Add this import
 import { TablePagination } from "@/components/common/TablePagination";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
 import { SuccessToast } from "@/components/common/SuccessToast";
@@ -27,6 +28,7 @@ export function CityAdminAidAllocationPage() {
         setSortConfig,
         fetchAllocations,
         createAllocation,
+        updateAllocation, // Make sure this exists in your store
         deleteAllocation,
         pagination,
     } = useAidAllocationStore();
@@ -37,6 +39,8 @@ export function CityAdminAidAllocationPage() {
     
     // Form State
     const [showAllocationForm, setShowAllocationForm] = useState(false);
+    const [showEditForm, setShowEditForm] = useState(false);
+    const [selectedAllocation, setSelectedAllocation] = useState<any>(null);
     
     // Success toast
     const [successToast, setSuccessToast] = useState({
@@ -49,7 +53,7 @@ export function CityAdminAidAllocationPage() {
     // Fetch allocations when any filter/search/sort changes
     useEffect(() => {
         const handler = setTimeout(() => {
-            fetchAllocations(); // This should include searchQuery in its params
+            fetchAllocations();
         }, 300);
 
         return () => clearTimeout(handler);
@@ -78,7 +82,22 @@ export function CityAdminAidAllocationPage() {
     };
 
     const handleEditAllocation = (allocation: any) => {
-        console.log("Edit allocation:", allocation);
+        setSelectedAllocation(allocation);
+        setShowEditForm(true);
+    };
+
+    const handleUpdateAllocation = async (id: number, data: any) => {
+        try {
+            await updateAllocation(id, data);
+            showSuccessToast("Allocation updated successfully");
+            setShowEditForm(false);
+            setSelectedAllocation(null);
+            fetchAllocations();
+        } catch (error: any) {
+            console.error("Error updating allocation:", error);
+            // Throw so that EditAllocationForm can display the error inline
+            throw error;
+        }
     };
 
     const handleDeleteAllocation = async (allocation: any) => {
@@ -95,6 +114,25 @@ export function CityAdminAidAllocationPage() {
             });
         } finally {
             setIsDeleting(false);
+        }
+    };
+
+    // NEW: Cancel action for City Admin (does not open edit modal)
+    const handleCancelAllocation = async (allocation: any) => {
+        if (!allocation) return;
+        // Only proceed if allocation is active
+        if (allocation.status?.toLowerCase() !== "active" && allocation.status?.toLowerCase() !== "depleted") return;
+
+        try {
+            await updateAllocation(allocation.allocation_id, { status: "cancelled" });
+            showSuccessToast("Allocation cancelled");
+            fetchAllocations();
+        } catch (error: any) {
+            console.error("Error cancelling allocation:", error);
+            setSuccessToast({
+                isOpen: true,
+                message: error.message || "Failed to cancel allocation"
+            });
         }
     };
 
@@ -133,7 +171,8 @@ export function CityAdminAidAllocationPage() {
         { key: "status", label: "Status", sortable: true },
     ];
 
-    // Determine if delete should be enabled based on user role
+    // Determine if edit/delete should be enabled based on user role
+    const canEdit = userRole === "super_admin"; // ONLY super_admin can edit
     const canDelete = userRole === "super_admin";
 
     return (
@@ -182,13 +221,14 @@ export function CityAdminAidAllocationPage() {
                                 ) : (
                                     <AidDistributionTable
                                         columns={allocationColumns}
-                                        data={allocations} // Use the allocations directly from store
+                                        data={allocations}
                                         onSort={handleSort}
                                         sortColumn={sortConfig?.key}
                                         sortDirection={sortConfig?.direction || undefined}
-                                        onEdit={handleEditAllocation}
+                                        onEdit={canEdit ? handleEditAllocation : undefined}
                                         onDelete={canDelete ? handleDeleteAllocation : undefined}
                                         onDistribute={handleDistribute}
+                                        onCancel={userRole === "city_admin" ? handleCancelAllocation : undefined} // NEW
                                         showActions={true}
                                         deleteLoading={isDeleting}
                                         userRole={userRole}
@@ -210,7 +250,7 @@ export function CityAdminAidAllocationPage() {
                 </Tabs>
             </div>
 
-            {/* Allocation Form Modal */}
+            {/* Create Allocation Form Modal */}
             <AidAllocationForm
                 isOpen={showAllocationForm}
                 onClose={() => setShowAllocationForm(false)}
@@ -218,6 +258,22 @@ export function CityAdminAidAllocationPage() {
                 title="Allocate Aid to Center"
                 submitText="Allocate"
             />
+
+            {/* Edit Allocation Form Modal */}
+            {selectedAllocation && (
+                <EditAllocationForm
+                    isOpen={showEditForm}
+                    onClose={() => {
+                        setShowEditForm(false);
+                        setSelectedAllocation(null);
+                    }}
+                    onSubmit={handleUpdateAllocation}
+                    allocation={selectedAllocation}
+                    title={userRole === "city_admin" ? "Cancel Allocation" : "Edit Allocation"}
+                    submitText={userRole === "city_admin" ? "Confirm Cancellation" : "Update Allocation"}
+                    userRole={userRole} // Pass user role (optional)
+                />
+            )}
 
             <SuccessToast
                 isOpen={successToast.isOpen}

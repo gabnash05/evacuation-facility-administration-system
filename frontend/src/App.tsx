@@ -4,18 +4,18 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-d
 import { CityAdminDashboard } from "./pages/city-admin/CityAdminDashboard";
 import { CityAdminCentersPage } from "@/pages/city-admin/CityAdminCentersPage";
 import { CityAdminHouseholdsPage } from "./pages/city-admin/CityAdminHouseholdsPage";
-import { CityAdminAttendancePage } from "./pages/city-admin/CityAdminAttendancePage";
+import { CityAdminAttendancePage } from "./pages/city-admin/CityAdminAttendancePageV2";
 import { CityAdminDistributionPage } from "@/pages/city-admin/CityAdminDistributionPage";
 import { CityAdminAidAllocationPage } from "./pages/city-admin/CityAdminAidAllocationPage";
 
 import { CenterAdminDashboard } from "@/pages/center-admin/CenterAdminDashboard";
 import { CenterAdminHouseholdsPage } from "./pages/center-admin/CenterAdminHouseholds";
-import { CenterAdminAttendancePage } from "./pages/center-admin/CenterAdminAttendancePage";
+import { CenterAdminAttendancePage } from "./pages/center-admin/CenterAdminAttendancePageV2";
 import { CenterAdminAidAllocationPage } from "./pages/center-admin/CenterAdminAidAllocationPage";
 
 import { VolunteerDashboard } from "@/pages/volunteer/VolunteerDashboard";
 import { VolunteerHouseholdsPage } from "./pages/volunteer/VolunteerHouseholdsPage";
-import { VolunteerAttendancePage } from "./pages/volunteer/VolunteerAttendancePage";
+import { VolunteerAttendancePage } from "./pages/volunteer/VolunteerAttendancePageV2";
 import VolunteerDistributeAidPage from "@/pages/volunteer/VolunteerDistributeAidPage";
 
 import MainLayout from "@/layouts/MainLayout";

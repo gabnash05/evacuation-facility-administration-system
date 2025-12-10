@@ -1,5 +1,5 @@
 // components/individuals/IndividualSearchTable.tsx
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Search, Check, X } from "lucide-react";
@@ -10,62 +10,154 @@ import type { Individual } from "@/types/individual";
 interface IndividualSearchTableProps {
     onSelectIndividual: (individual: Individual) => void;
     selectedIndividuals: Individual[];
+    modalSearchQuery?: string;
+    onModalSearchChange?: (query: string) => void;
+    modalPage?: number;
+    onModalPageChange?: (page: number) => void;
+    // NEW: Optional function to perform search (for modal context)
+    onSearch?: (params: {
+        search: string;
+        page: number;
+        limit: number;
+    }) => Promise<{ success: boolean; data: Individual[]; totalRecords: number }>;
+    // NEW: Optional loading and error states for modal context
+    isLoading?: boolean;
+    errorMessage?: string;
 }
 
 export function IndividualSearchTable({
     onSelectIndividual,
     selectedIndividuals,
+    modalSearchQuery,
+    onModalSearchChange,
+    modalPage,
+    onModalPageChange,
+    onSearch,
+    isLoading,
+    errorMessage,
 }: IndividualSearchTableProps) {
-    const {
+    // Determine if we're in modal context
+    const isModalContext = onSearch !== undefined;
+    
+    // Store reference for modal context
+    const { 
         paginatedIndividuals,
         totalRecords,
         currentPage,
         searchQuery,
         loading,
         error,
-        searchIndividuals,
-        clearSearch,
+        searchIndividuals: storeSearchIndividuals,
+        clearSearch: storeClearSearch,
     } = useIndividualStore();
 
-    const [localSearchQuery, setLocalSearchQuery] = useState("");
-    const [page, setPage] = useState(1);
+    // Local state for BOTH contexts - this is the key fix
+    const [localSearchQuery, setLocalSearchQuery] = useState<string>("");
+    const [localPage, setLocalPage] = useState<number>(1);
+    const [localSearchResults, setLocalSearchResults] = useState<Individual[]>([]);
+    const [localTotalRecords, setLocalTotalRecords] = useState<number>(0);
+    const [isSearching, setIsSearching] = useState<boolean>(false);
+    
     const limit = 10;
+    const searchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    // Initialize from props when they change, but only update local state
+    // when the incoming prop actually differs from the current local value.
 
-    // Safe array access
-    const safePaginatedIndividuals = paginatedIndividuals || [];
+    const displayData = isModalContext ? localSearchResults : (paginatedIndividuals || []);
+    const displayTotalRecords = isModalContext ? localTotalRecords : totalRecords;
+    const displayLoading = isModalContext ? (isLoading || isSearching) : loading;
+    const displayError = isModalContext ? errorMessage : error;
 
-    // Debounced search
+    // Debounced effect to perform searches based on local state.
     useEffect(() => {
-        const timeoutId = setTimeout(() => {
-            if (localSearchQuery !== searchQuery || page !== currentPage) {
-                searchIndividuals({
-                    search: localSearchQuery,
-                    page,
-                    limit,
-                    sort_by: "last_name",
-                    sort_order: "asc",
-                });
+        const cleanup = () => {
+            if (searchTimeoutRef.current) {
+                clearTimeout(searchTimeoutRef.current);
+                searchTimeoutRef.current = null;
             }
-        }, 300);
+        };
 
-        return () => clearTimeout(timeoutId);
-    }, [localSearchQuery, page, searchQuery, currentPage, searchIndividuals, limit]);
+        // Modal context: call provided `onSearch` function
+        if (isModalContext && onSearch) {
+            // If search is empty and on first page, clear results
+            if (localSearchQuery.trim() === "" && localPage === 1) {
+                setLocalSearchResults([]);
+                setLocalTotalRecords(0);
+                return cleanup;
+            }
 
-    const totalPages = Math.ceil(totalRecords / limit);
+            setIsSearching(true);
+            // Debounce typing
+            searchTimeoutRef.current = setTimeout(async () => {
+                try {
+                    const result = await onSearch({
+                        search: localSearchQuery,
+                        page: localPage,
+                        limit,
+                    });
+
+                    if (result && result.success) {
+                        setLocalSearchResults(result.data || []);
+                        setLocalTotalRecords(result.totalRecords || 0);
+                    } else {
+                        setLocalSearchResults([]);
+                        setLocalTotalRecords(0);
+                    }
+                } catch (err) {
+                    console.error("Modal search failed:", err);
+                    setLocalSearchResults([]);
+                    setLocalTotalRecords(0);
+                } finally {
+                    setIsSearching(false);
+                }
+            }, 500);
+
+            return cleanup;
+        }
+
+        // Page context: call store search
+        if (!isModalContext) {
+            searchTimeoutRef.current = setTimeout(async () => {
+                try {
+                    await storeSearchIndividuals({
+                        search: localSearchQuery,
+                        page: localPage,
+                        limit,
+                        sortBy: "last_name",
+                        sortOrder: "asc",
+                    });
+                } catch (err) {
+                    console.error("Page search failed:", err);
+                }
+            }, 300);
+            return cleanup;
+        }
+
+        return cleanup;
+    // We only need to run when localSearchQuery/localPage change or when the
+    // search function reference changes.
+    }, [localSearchQuery, localPage, isModalContext, onSearch, limit, storeSearchIndividuals]);
+
+    const totalPages = Math.ceil(displayTotalRecords / limit);
 
     const handleSearchChange = (value: string) => {
         setLocalSearchQuery(value);
-        setPage(1); // Reset to first page on new search
+        setLocalPage(1); // Reset to first page on new search
     };
 
     const handlePageChange = (newPage: number) => {
-        setPage(newPage);
+        setLocalPage(newPage);
     };
 
     const handleClearSearch = () => {
         setLocalSearchQuery("");
-        setPage(1);
-        clearSearch();
+        setLocalPage(1);
+        if (isModalContext) {
+            setLocalSearchResults([]);
+            setLocalTotalRecords(0);
+        } else {
+            storeClearSearch();
+        }
     };
 
     const isIndividualSelected = (individualId: number) => {
@@ -97,16 +189,16 @@ export function IndividualSearchTable({
                 </div>
 
                 <div className="border rounded-lg">
-                    {loading ? (
+                    {displayLoading ? (
                         <div className="p-8 text-center text-muted-foreground">
                             <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary mx-auto mb-2"></div>
                             Searching individuals...
                         </div>
-                    ) : error ? (
+                    ) : displayError ? (
                         <div className="p-4 text-center text-destructive">
-                            Error loading individuals: {error}
+                            Error loading individuals: {displayError}
                         </div>
-                    ) : safePaginatedIndividuals.length === 0 ? (
+                    ) : displayData.length === 0 ? (
                         <div className="p-8 text-center text-muted-foreground">
                             {localSearchQuery
                                 ? "No individuals match your search"
@@ -115,7 +207,7 @@ export function IndividualSearchTable({
                     ) : (
                         <>
                             <div className="max-h-60 overflow-y-auto divide-y">
-                                {safePaginatedIndividuals.map(individual => {
+                                {displayData.map(individual => {
                                     const isSelected = isIndividualSelected(individual.individual_id);
                                     return (
                                         <button
@@ -162,11 +254,11 @@ export function IndividualSearchTable({
                             {/* Pagination */}
                             {totalPages > 1 && (
                                 <IndividualTablePagination
-                                    currentPage={page}
+                                    currentPage={localPage}
                                     totalPages={totalPages}
-                                    totalRecords={totalRecords}
+                                    totalRecords={displayTotalRecords}
                                     onPageChange={handlePageChange}
-                                    loading={loading}
+                                    loading={displayLoading}
                                     pageSize={limit}
                                 />
                             )}
