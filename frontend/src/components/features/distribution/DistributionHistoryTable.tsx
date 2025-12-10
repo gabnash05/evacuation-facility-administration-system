@@ -42,7 +42,7 @@ export function DistributionHistoryTable({ data, loading, userRole, onEdit, onDe
                         <TableHead>Household Name</TableHead>
                         <TableHead>Aid Type</TableHead>
                         <TableHead>Quantity</TableHead>
-                        <TableHead>Volunteer</TableHead>
+                        <TableHead>Distributed By</TableHead>
                         {isSuperAdmin && <TableHead className="w-[80px]"></TableHead>}
                     </TableRow>
                 </TableHeader>

@@ -63,5 +63,16 @@ export const DistributionService = {
         } catch (error) {
             throw new Error(handleApiError(error));
         }
+    },
+
+    async update(id: number, payload: { household_id: number; allocation_id: number; quantity: number }) {
+        try {
+            const response = await api.put(`/distributions/${id}`, payload, {
+                withCredentials: true,
+            });
+            return response.data;
+        } catch (error) {
+            throw new Error(handleApiError(error));
+        }
     }
 };
