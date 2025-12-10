@@ -287,7 +287,7 @@ export function EventsTable({
         },
         {
             key: "max_occupancy",
-            label: "Max Occupancy",
+            label: "Occupancy",
             sortable: true,
             width: columnWidths.max_occupancy,
         },
