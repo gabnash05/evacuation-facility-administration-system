@@ -59,8 +59,8 @@ def get_allocations_route() -> Tuple:
         if limit < 1 or limit > 100:
             return jsonify({"success": False, "message": "Limit must be between 1 and 100"}), 400
 
-        # Center Admin: Can only view allocations for their center
-        if current_user.role == "center_admin" and current_user.center_id:
+        # Center Admin & Volunteer: Can only view allocations for their assigned center
+        if current_user.role in ["center_admin", "volunteer"] and current_user.center_id:
             # Override any center_id filter - they can only see their center
             center_id = current_user.center_id
         elif current_user.role == "volunteer":
