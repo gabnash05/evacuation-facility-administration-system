@@ -21,15 +21,16 @@ export interface DistributionRecord {
     distribution_date: string;
     center_id: number;
     
-    // IDs are needed for Editing
     household_id: number;
     allocation_id: number; 
 
-    // Display names
     household_name: string;
     category_name: string;
     resource_name: string; 
     quantity: number;
     volunteer_name: string;
     formatted_items: string; 
+
+    // NEW STATUS FIELD
+    status: 'completed' | 'voided';
 }

@@ -27,21 +27,16 @@ def get_history():
         params = schema.load(request.args)
         if user.role in ['volunteer', 'center_admin']:
             params['center_id'] = user.center_id
-            
-        # Call the service and get both result and status
+        
         service_result = DistributionService.get_history(params)
         
-        # The service returns a tuple (result_dict, status_code)
         if isinstance(service_result, tuple) and len(service_result) == 2:
             result, status = service_result
             return jsonify(result), status
-        else:
-            # Handle case where service doesn't return tuple
-            return jsonify(service_result), 200
+        return jsonify(service_result), 200
             
     except Exception as e:
         return jsonify({"success": False, "message": str(e)}), 400
-
 
 @bp.route("/distributions/<int:id>", methods=["PUT"])
 @jwt_required()
@@ -66,4 +61,11 @@ def delete_distribution(id):
         return jsonify({"success": False, "message": "Forbidden"}), 403
 
     result, status = DistributionService.delete_distribution(id)
+    return jsonify(result), status
+
+# NEW ROUTE
+@bp.route("/distributions/<int:id>/status", methods=["PATCH"])
+@jwt_required()
+def toggle_status(id):
+    result, status = DistributionService.toggle_status(id)
     return jsonify(result), status

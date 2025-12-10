@@ -205,6 +205,7 @@ CREATE TABLE IF NOT EXISTS distributions (
     allocation_id INTEGER NOT NULL,
     quantity_distributed INTEGER NOT NULL CHECK (quantity_distributed > 0),
     distribution_notes TEXT NULL,
+    status VARCHAR(20) NOT NULL DEFAULT 'completed' CHECK (status IN ('completed', 'voided')),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     
     -- Foreign key constraints
