@@ -1,4 +1,3 @@
-// distributionStore.ts - Fixed version
 import { create } from "zustand";
 import type { Allocation, HouseholdOption, DistributionRecord } from "@/types/distribution";
 import { HouseholdService } from "@/services/householdService";
@@ -6,6 +5,7 @@ import { DistributionService } from "@/services/distributionService";
 import { EvacuationCenterService } from "@/services/evacuationCenterService";
 import { useAuthStore } from "./authStore";
 import type { EvacuationCenter } from "@/types/center";
+import { api } from "@/services/api";
 
 // Type for the update payload
 interface DistributionUpdatePayload {
@@ -54,8 +54,9 @@ interface DistributionState {
 
     deleteDistribution: (id: number) => Promise<{ success: boolean; error?: string }>;
     updateDistribution: (id: number, updates: DistributionUpdatePayload) => Promise<{ success: boolean; error?: string }>;
+    toggleStatus: (id: number) => Promise<void>;
     
-    // Helper to get center-specific allocations
+    // --- THIS WAS MISSING IN YOUR INTERFACE ---
     getCenterAllocations: (centerId: number) => Allocation[];
     
     // Reset
@@ -129,7 +130,7 @@ export const useDistributionStore = create<DistributionState>((set, get) => ({
                 })) || [];
             } catch (err) { 
                 console.error("Failed to fetch households:", err);
-                set({ error: "Failed to load households. Please try again." });
+                // Don't block UI, just show empty
             }
 
             // History - Server-side pagination
@@ -146,7 +147,6 @@ export const useDistributionStore = create<DistributionState>((set, get) => ({
                     sort_order: sortDirection || "desc",
                 });
                 
-                // IMPORTANT: Assuming your API response has this structure
                 realHistory = historyResponse.data?.results || historyResponse.data || [];
                 paginationData = historyResponse.data?.pagination || {
                     current_page: currentPage,
@@ -157,7 +157,6 @@ export const useDistributionStore = create<DistributionState>((set, get) => ({
                 
             } catch (err) { 
                 console.error("Failed to fetch history:", err);
-                set({ error: "Failed to load distribution history. Please try again." });
             }
 
             // Allocations - fetch all, filtering will be done in components
@@ -167,7 +166,6 @@ export const useDistributionStore = create<DistributionState>((set, get) => ({
                                 (Array.isArray(allocationResponse.data) ? allocationResponse.data : []);
             } catch (err) { 
                 console.error("Failed to fetch allocations:", err);
-                set({ error: "Failed to load aid allocations. Please try again." });
             }
             
             set({
@@ -286,6 +284,22 @@ export const useDistributionStore = create<DistributionState>((set, get) => ({
         }
     },
 
+    toggleStatus: async (id) => {
+        set({ isLoading: true });
+        try {
+            const response = await api.patch(`/distributions/${id}/status`);
+            if (response.data.success) {
+                await get().fetchData();
+            } else {
+                throw new Error(response.data.message);
+            }
+        } catch (error) {
+            console.error("Status toggle failed:", error);
+            set({ isLoading: false, error: "Failed to update status" });
+        }
+    },
+
+    // --- IMPLEMENTATION OF THE HELPER FUNCTION ---
     getCenterAllocations: (centerId) => {
         const { allocations } = get();
         return allocations.filter(alloc => alloc.center_id === centerId);

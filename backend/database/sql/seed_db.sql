@@ -672,82 +672,83 @@ ON CONFLICT DO NOTHING;
 -- ========================
 -- 11. DISTRIBUTIONS
 -- ========================
-INSERT INTO distributions (session_id, allocation_id, quantity_distributed, distribution_notes) VALUES
+INSERT INTO distributions (session_id, allocation_id, quantity_distributed, distribution_notes, status) VALUES
 -- Session 1 distributions (Smith Family)
-(1, 1, 1, '7-day food pack for family of 4'),
-(1, 8, 16, '4 water bottles per person x 4 people'),
-(1, 15, 1, 'Family first aid kit'),
-(1, 18, 1, 'Household hygiene kit'),
-(1, 23, 2, 'Two blankets for family'),
-(1, 28, 1, 'Phone charger for communication'),
+(1, 1, 1, '7-day food pack for family of 4', 'completed'),
+(1, 8, 16, '4 water bottles per person x 4 people', 'completed'),
+(1, 15, 1, 'Family first aid kit', 'completed'),
+(1, 18, 1, 'Household hygiene kit', 'completed'),
+(1, 23, 2, 'Two blankets for family', 'completed'),
+(1, 28, 1, 'Phone charger for communication', 'completed'),
 
 -- Session 2 distributions (Johnson Family)
-(2, 1, 1, '7-day food pack for elderly couple'),
-(2, 8, 8, '4 water bottles per person x 2 people'),
-(2, 15, 1, 'First aid kit with extra meds'),
-(2, 18, 1, 'Hygiene kit with senior products'),
-(2, 23, 3, 'Extra blanket requested for warmth'),
+(2, 1, 1, '7-day food pack for elderly couple', 'completed'),
+(2, 8, 8, '4 water bottles per person x 2 people', 'completed'),
+(2, 15, 1, 'First aid kit with extra meds', 'completed'),
+(2, 18, 1, 'Hygiene kit with senior products', 'completed'),
+(2, 23, 3, 'Extra blanket requested for warmth', 'completed'),
 
 -- Session 3 distributions (Garcia Family)
-(3, 3, 9, '3 meals x 3 people'),
-(3, 10, 1, '5-gallon water container'),
-(3, 19, 10, 'Sanitary pads for mother'),
-(3, 24, 1, 'Sleeping mat'),
-(3, 5, 2, 'Infant formula supply'),
+(3, 3, 9, '3 meals x 3 people', 'completed'),
+(3, 10, 1, '5-gallon water container', 'completed'),
+(3, 19, 10, 'Sanitary pads for mother', 'completed'),
+(3, 24, 1, 'Sleeping mat', 'completed'),
+(3, 5, 2, 'Infant formula supply', 'completed'),
 
 -- Session 4 distributions (Chen Family)
-(4, 3, 9, '3 meals x 3 people'),
-(4, 10, 1, 'Water container'),
-(4, 18, 1, 'Hygiene kit with translation cards'),
-(4, 24, 3, 'Sleeping mats for family'),
+(4, 3, 9, '3 meals x 3 people', 'completed'),
+(4, 10, 1, 'Water container', 'completed'),
+(4, 19, 15, 'Sanitary pads for non-English speaking mother', 'completed'),
+(4, 18, 1, 'Hygiene kit with translation cards', 'completed'),
+(4, 24, 3, 'Sleeping mats for family', 'completed'),
 
 -- Session 5 distributions (Williams Family)
-(5, 5, 4, 'Formula for children'),
-(5, 11, 4, 'Water pouches for 2 people'),
-(5, 25, 4, 'Clothing for couple'),
-(5, 26, 1, 'Tent for privacy'),
+(5, 5, 4, 'Formula for children','completed'),
+(5, 11, 4, 'Water pouches for 2 people', 'completed'),
+(5, 25, 4, 'Clothing for couple', 'completed'),
+(5, 26, 1, 'Tent for privacy', 'completed'),
 
 -- Session 15 distributions (Winter Storm - White Family)
-(15, 2, 4, 'Winter meal kits for 2 people'),
-(15, 9, 1, 'Hot water container'),
-(15, 24, 2, 'Winter clothing sets'),
-(15, 29, 1, 'Emergency radio'),
+(15, 2, 4, 'Winter meal kits for 2 people', 'completed'),
+(15, 9, 1, 'Hot water container', 'completed'),
+(15, 24, 2, 'Winter clothing sets', 'completed'),
+(15, 29, 1, 'Emergency radio', 'completed'),
 
 -- Session 11 distributions (Chemical Spill - Thompson)
-(11, 7, 1, 'Medical diet pack'),
-(11, 12, 1, 'Sterile water'),
-(11, 13, 1, 'Chemical exposure kit'),
-(11, 14, 2, 'Respiratory masks'),
-(11, 27, 1, 'Protective clothing'),
+(11, 7, 1, 'Medical diet pack','completed'),
+(11, 12, 1, 'Sterile water', 'completed'),
+(11, 13, 1, 'Chemical exposure kit', 'completed'),
+(11, 14, 2, 'Respiratory masks', 'completed'),
+(11, 27, 1, 'Protective clothing', 'completed'),
 
 -- Session 12 distributions (Chemical Spill - Lee Family)
-(12, 7, 2, 'Medical diet packs for pregnant woman'),
-(12, 12, 2, 'Sterile water'),
-(12, 13, 1, 'Chemical exposure kit'),
-(12, 14, 2, 'Respiratory masks'),
-(12, 18, 1, 'Decontamination kit'),
+(12, 7, 2, 'Medical diet packs for pregnant woman', 'completed'),
+(12, 12, 2, 'Sterile water', 'completed'),
+(12, 13, 1, 'Chemical exposure kit', 'completed'),
+(12, 14, 2, 'Respiratory masks', 'completed'),
+(12, 18, 1, 'Decontamination kit', 'completed'),
 
 -- Previous event distributions
-(6, 31, 4, 'Snack packs for grandmother and grandchild'),
-(6, 32, 4, 'Emergency water pouches'),
+(6, 31, 4, 'Snack packs for grandmother and grandchild','completed'),
+(6, 32, 4, 'Emergency water pouches', 'completed'),
 
 -- Wildfire distributions
-(10, 6, 6, 'Wildfire emergency meals'),
-(10, 21, 1, 'Ash cleanup kit'),
-(10, 27, 1, 'Air purifier'),
+(10, 6, 6, 'Wildfire emergency meals', 'completed'),
+(10, 21, 1, 'Ash cleanup kit', 'completed'),
+(10, 27, 1, 'Air purifier', 'completed'),
 
 -- Volcano distributions
-(9, 33, 1, 'Volcano respiratory kit (last ones)'),
-(9, 8, 6, 'Water for transferred family'),
+(9, 33, 1, 'Volcano respiratory kit (last ones)', 'completed'),
+(9, 8, 6, 'Water for transferred family', 'completed'),
 
 -- Various other distributions
-(13, 28, 1, 'Phone charger for transfer case'),
-(14, 21, 1, 'Decontamination for smoke case'),
-(16, 4, 1, 'Urban flood rations'),
-(17, 6, 3, 'Wildfire meals'),
-(18, 1, 1, 'Basic food pack'),
-(19, 31, 2, 'Snack packs for flood victim'),
-(20, 7, 1, 'Medical diet for chemical zone')
+(13, 28, 1, 'Phone charger for transfer case', 'completed'),
+(14, 21, 1, 'Decontamination for smoke case', 'completed'),
+(16, 4, 1, 'Urban flood rations', 'completed'),
+(17, 6, 3, 'Wildfire meals', 'completed'),
+(18, 1, 1, 'Basic food pack', 'completed'),
+(19, 31, 2, 'Snack packs for flood victim', 'completed'),
+(20, 7, 1, 'Medical diet for chemical zone', 'completed')
 ON CONFLICT DO NOTHING;
 
 -- ========================

@@ -2,9 +2,6 @@ from sqlalchemy import text
 from app.models import db
 
 class DistributionSession(db.Model):
-    """
-    Model for creating distribution sessions (a single visit to a household).
-    """
     __tablename__ = "distribution_sessions"
 
     session_id = db.Column(db.Integer, primary_key=True)
@@ -37,34 +34,29 @@ class DistributionSession(db.Model):
         db.session.execute(sql, {"household_id": household_id, "session_id": session_id})
 
 class Distribution(db.Model):
-    """
-    Model for creating and viewing individual distribution line items.
-    """
     __tablename__ = "distributions"
 
     distribution_id = db.Column(db.Integer, primary_key=True)
     session_id = db.Column(db.Integer, db.ForeignKey("distribution_sessions.session_id"))
     allocation_id = db.Column(db.Integer, db.ForeignKey("allocations.allocation_id"))
     quantity_distributed = db.Column(db.Integer, nullable=False)
+    status = db.Column(db.String(20), nullable=False, default='completed')
 
     @classmethod
     def get_history_paginated(cls, center_id=None, search=None, page=1, limit=10, sort_by="distribution_date", sort_order="desc"):
         offset = (page - 1) * limit
         
-        # Map frontend column names to database fields
         sort_column_mapping = {
             "distribution_date": "ds.created_at",
             "household_name": "h.household_name",
             "category_name": "ac.category_name",
             "resource_name": "a.resource_name",
             "quantity": "d.quantity_distributed",
-            "volunteer_name": "u.email"
+            "volunteer_name": "u.email",
+            "status": "d.status"
         }
         
-        # Get the actual database column for sorting
         db_sort_column = sort_column_mapping.get(sort_by, "ds.created_at")
-        
-        # Validate sort_order
         db_sort_order = "DESC" if sort_order.lower() == "desc" else "ASC"
         
         base_query = """
@@ -90,7 +82,6 @@ class Distribution(db.Model):
         count_sql = text(f"SELECT COUNT(*) {base_query}")
         total_count = db.session.execute(count_sql, params).scalar() or 0
 
-        # Updated ORDER BY clause with dynamic sorting
         data_sql = text(f"""
             SELECT 
                 d.distribution_id, 
@@ -101,7 +92,9 @@ class Distribution(db.Model):
                 a.resource_name,
                 ac.category_name,
                 a.allocation_id,
-                d.quantity_distributed as quantity
+                d.quantity_distributed as quantity,
+                d.status,
+                ds.center_id -- Added center_id for frontend filtering
             {base_query}
             ORDER BY {db_sort_column} {db_sort_order}, d.distribution_id DESC
             LIMIT :limit OFFSET :offset
@@ -121,19 +114,22 @@ class Distribution(db.Model):
                 "resource_name": row_dict.get("resource_name"),
                 "category_name": row_dict.get("category_name"),
                 "allocation_id": row_dict.get("allocation_id"),
-                "quantity": row_dict.get("quantity")
+                "quantity": row_dict.get("quantity"),
+                "status": row_dict.get("status"),
+                "center_id": row_dict.get("center_id")
             })
         
         return {
             "data": data,
             "total": total_count,
         }
-    
+
     @classmethod
     def add_item(cls, session_id, allocation_id, quantity):
         sql = text("""
-            INSERT INTO distributions (session_id, allocation_id, quantity_distributed)
-            VALUES (:session_id, :allocation_id, :quantity) RETURNING distribution_id
+            INSERT INTO distributions (session_id, allocation_id, quantity_distributed, status)
+            VALUES (:session_id, :allocation_id, :quantity, 'completed') 
+            RETURNING distribution_id
         """)
         params = {"session_id": session_id, "allocation_id": allocation_id, "quantity": quantity}
         result = db.session.execute(sql, params).fetchone()
@@ -142,7 +138,7 @@ class Distribution(db.Model):
     @classmethod
     def get_by_id(cls, distribution_id):
         sql = text("""
-            SELECT d.*, ds.household_id 
+            SELECT d.*, ds.household_id, ds.session_id 
             FROM distributions d
             JOIN distribution_sessions ds ON d.session_id = ds.session_id
             WHERE d.distribution_id = :id
@@ -162,3 +158,8 @@ class Distribution(db.Model):
         result = db.session.execute(sql, {"id": distribution_id}).fetchone()
         db.session.commit()
         return result is not None
+
+    @classmethod
+    def update_status(cls, distribution_id, new_status):
+        sql = text("UPDATE distributions SET status = :status WHERE distribution_id = :id")
+        db.session.execute(sql, {"status": new_status, "id": distribution_id})
