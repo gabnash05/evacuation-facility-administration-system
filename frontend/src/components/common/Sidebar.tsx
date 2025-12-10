@@ -77,9 +77,9 @@ export function AppSidebar({ role, roleLabel, userEmail }: AppSidebarProps) {
                         icon: <Users className="w-4 h-4" />,
                     },
                     {
-                        key: "aid-distribution",
-                        label: "Aid Distribution",
-                        href: "/city-admin/aid-distribution",
+                        key: "aid-allocation",
+                        label: "Aid Allocation",
+                        href: "/city-admin/aid-allocation",
                         icon: <Package className="w-4 h-4" />,
                     },
                     {
@@ -116,9 +116,9 @@ export function AppSidebar({ role, roleLabel, userEmail }: AppSidebarProps) {
                         icon: <Users className="w-4 h-4" />,
                     },
                     {
-                        key: "aid-distribution",
-                        label: "Aid Distribution",
-                        href: "/center-admin/aid-distribution",
+                        key: "aid-allocation",
+                        label: "Aid Allocation",
+                        href: "/center-admin/aid-allocation",
                         icon: <Package className="w-4 h-4" />,
                     },
                     {
