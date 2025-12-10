@@ -229,13 +229,82 @@ class Stats:
         center_id: Optional[int] = None,
     ) -> Dict[str, Any]:
         try:
-            # TODO: Implement once allocations and distributions tables are ready
-            logger.warning("Aid distribution stats not yet implemented")
+            # Single query version
+            if center_id:
+                query = text("""
+                    WITH allocation_summary AS (
+                        SELECT 
+                            COALESCE(SUM(total_quantity), 0) as total_allocated,
+                            COALESCE(SUM(remaining_quantity), 0) as remaining
+                        FROM allocations 
+                        WHERE center_id = :center_id 
+                        AND status IN ('active', 'depleted')
+                    ),
+                    distribution_summary AS (
+                        SELECT COALESCE(SUM(d.quantity_distributed), 0) as total_distributed
+                        FROM distributions d
+                        JOIN allocations a ON d.allocation_id = a.allocation_id
+                        WHERE a.center_id = :center_id
+                        AND a.status IN ('active', 'depleted')
+                    )
+                    SELECT 
+                        a.total_allocated,
+                        a.remaining,
+                        d.total_distributed,
+                        CASE 
+                            WHEN a.total_allocated > 0 THEN 
+                                (d.total_distributed / a.total_allocated) * 100
+                            ELSE 0
+                        END as percentage
+                    FROM allocation_summary a, distribution_summary d
+                """)
+                params = {"center_id": center_id}
+            else:
+                query = text("""
+                    WITH allocation_summary AS (
+                        SELECT 
+                            COALESCE(SUM(total_quantity), 0) as total_allocated,
+                            COALESCE(SUM(remaining_quantity), 0) as remaining
+                        FROM allocations 
+                        WHERE status IN ('active', 'depleted')
+                    ),
+                    distribution_summary AS (
+                        SELECT COALESCE(SUM(d.quantity_distributed), 0) as total_distributed
+                        FROM distributions d
+                        JOIN allocations a ON d.allocation_id = a.allocation_id
+                        WHERE a.status IN ('active', 'depleted')
+                    )
+                    SELECT 
+                        a.total_allocated,
+                        a.remaining,
+                        d.total_distributed,
+                        CASE 
+                            WHEN a.total_allocated > 0 THEN 
+                                (d.total_distributed / a.total_allocated) * 100
+                            ELSE 0
+                        END as percentage
+                    FROM allocation_summary a, distribution_summary d
+                """)
+                params = {}
+
+            result = db.session.execute(query, params).fetchone()
+            
+            if result:
+                total_allocated = float(result[0])
+                remaining = float(result[1])
+                total_distributed = float(result[2])
+                percentage = float(result[3])
+            else:
+                total_allocated = 0
+                remaining = 0
+                total_distributed = 0
+                percentage = 0
             
             return {
-                "total_distributed": 0,
-                "total_allocated": 0,
-                "percentage": 0
+                "total_distributed": total_distributed,
+                "total_allocated": total_allocated,
+                "remaining": remaining,
+                "percentage": round(percentage, 2)
             }
             
         except Exception as error:
@@ -243,6 +312,7 @@ class Stats:
             return {
                 "total_distributed": 0,
                 "total_allocated": 0,
+                "remaining": 0,
                 "percentage": 0
             }
 
