@@ -44,7 +44,7 @@ def create_app(config_class=Config):
         expose_headers=["Set-Cookie"],
         allow_credentials=True)
 
-    # Register API blueprints FIRST (before catch-all route)
+    # Register API blueprints FIRST (before catch-all route)    
     from app.routes.auth import auth_bp
     from app.routes.evacuation_centers import evacuation_center_bp
     from app.routes.events import event_bp
@@ -53,7 +53,8 @@ def create_app(config_class=Config):
     from app.routes.user import user_bp
     from app.routes.attendance_records import attendance_record_bp
     from app.routes.distribution import bp as distribution_bp
-    from app.routes.aid_allocation import aid_allocation_bp  
+    from app.routes.aid_allocation import aid_allocation_bp
+    from app.routes.stats_routes import stats_bp
 
 
     app.register_blueprint(auth_bp, url_prefix="/api")
@@ -64,7 +65,8 @@ def create_app(config_class=Config):
     app.register_blueprint(user_bp, url_prefix="/api")
     app.register_blueprint(attendance_record_bp, url_prefix="/api")
     app.register_blueprint(distribution_bp, url_prefix="/api")
-    app.register_blueprint(aid_allocation_bp, url_prefix="/api") # << ADD THIS
+    app.register_blueprint(aid_allocation_bp, url_prefix="/api") 
+    app.register_blueprint(stats_bp, url_prefix="/api/stats")
 
 
     
