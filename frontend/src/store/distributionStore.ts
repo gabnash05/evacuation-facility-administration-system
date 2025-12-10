@@ -1,7 +1,8 @@
 import { create } from "zustand";
 import type { Allocation, HouseholdOption, DistributionRecord } from "@/types/distribution";
 import { HouseholdService } from "@/services/householdService";
-import { DistributionService } from "@/services/distributionService"; // Import the new service
+import { DistributionService } from "@/services/distributionService";
+import { useAuthStore } from "./authStore";
 
 interface DistributionState {
     allocations: Allocation[];
@@ -42,46 +43,70 @@ export const useDistributionStore = create<DistributionState>((set, get) => ({
 
     fetchData: async () => {
         set({ isLoading: true });
+        
+        const { user } = useAuthStore.getState();
+
+        let realHouseholds: HouseholdOption[] = [];
+        let realHistory: DistributionRecord[] = [];
+        let realAllocations: Allocation[] = [];
+
         try {
-            const { searchQuery, currentPage, entriesPerPage } = get();
-
             // 1. Fetch Real Households
-            const householdResponse = await HouseholdService.getHouseholds({ limit: 100 });
-            const rawHouseholds = householdResponse.data?.results || [];
-            
-            const realHouseholds: HouseholdOption[] = rawHouseholds.map((h: any) => ({
-                household_id: h.household_id,
-                household_name: h.household_name,
-                member_count: h.member_count ?? (h.individuals?.length || 0),
-                family_head: h.household_head 
-                    ? `${h.household_head.first_name} ${h.household_head.last_name}` 
-                    : "No Head Assigned"
-            }));
+            try {
+                // FIX: Convert null to undefined
+                const centerId = user?.center_id ?? undefined;
+                const householdResponse = await HouseholdService.getHouseholds({ limit: 100, centerId: centerId });
+                const rawHouseholds = householdResponse.data?.results || [];
+                
+                realHouseholds = rawHouseholds.map((h: any) => ({
+                    household_id: h.household_id,
+                    household_name: h.household_name,
+                    member_count: h.member_count ?? (h.individuals?.length || 0),
+                    family_head: h.household_head 
+                        ? `${h.household_head.first_name} ${h.household_head.last_name}` 
+                        : "No Head Assigned"
+                }));
+            } catch (err) {
+                console.error("Error fetching households:", err);
+            }
 
-            // 2. Fetch Real Distribution History
-            const historyResponse = await DistributionService.getHistory({
-                search: searchQuery,
-                page: currentPage,
-                limit: entriesPerPage
-            });
+            // 2. Fetch Distribution History
+            try {
+                const { searchQuery, currentPage, entriesPerPage } = get();
+                const historyResponse = await DistributionService.getHistory({
+                    search: searchQuery,
+                    page: currentPage,
+                    limit: entriesPerPage
+                });
+                realHistory = historyResponse.data || [];
+            } catch (err) {
+                console.error("Error fetching history:", err);
+            }
 
-            // 3. Fetch Allocations (Inventory)
-            // If your groupmate hasn't finished the endpoint, this might return empty.
-            // You might need to temporarily keep MOCK_ALLOCATIONS here if the API 404s.
-            const allocationResponse = await DistributionService.getAllocations();
-            
-            // NOTE: If allocationResponse.data is empty/undefined, the dropdown will be empty.
-            // If you ran the SQL above, you should see data here assuming the endpoint exists.
-            
+            // 3. Fetch Allocations (Real Inventory)
+            try {
+                // FIX: Convert null to undefined
+                const centerId = user?.center_id ?? undefined;
+                const allocationResponse = await DistributionService.getAllocations(centerId);
+                
+                if (allocationResponse.data && Array.isArray(allocationResponse.data.results)) {
+                    realAllocations = allocationResponse.data.results;
+                } else if (Array.isArray(allocationResponse.data)) {
+                    realAllocations = allocationResponse.data;
+                }
+            } catch (err) {
+                console.error("Error fetching allocations:", err);
+            }
+
             set({
                 households: realHouseholds,
-                history: historyResponse.data || [], 
-                allocations: allocationResponse.data || [], 
+                history: realHistory,
+                allocations: realAllocations,
                 isLoading: false
             });
 
         } catch (error) {
-            console.error("Failed to fetch data:", error);
+            console.error("Critical error in fetchData:", error);
             set({ isLoading: false });
         }
     },
@@ -89,7 +114,6 @@ export const useDistributionStore = create<DistributionState>((set, get) => ({
     submitDistribution: async (householdId, items) => {
         set({ isLoading: true });
         try {
-            // Map store format to API payload format
             const payload = {
                 household_id: householdId,
                 items: items.map(i => ({
@@ -99,8 +123,6 @@ export const useDistributionStore = create<DistributionState>((set, get) => ({
             };
 
             await DistributionService.create(payload);
-            
-            // Refresh data to show new record and updated stock
             await get().fetchData(); 
             
         } catch (error) {
@@ -114,7 +136,6 @@ export const useDistributionStore = create<DistributionState>((set, get) => ({
         set({ isLoading: true });
         try {
             await DistributionService.delete(id);
-            // Remove locally to update UI immediately
             const { history } = get();
             set({
                 history: history.filter(h => h.distribution_id !== id),
@@ -126,10 +147,8 @@ export const useDistributionStore = create<DistributionState>((set, get) => ({
         }
     },
 
-    // Note: Update Logic requires a backend endpoint we haven't built yet (PUT).
-    // For now, we can leave this as a mock or implement the PUT endpoint.
     updateDistribution: async (id, quantity) => {
-        console.warn("Update feature not fully connected to backend yet.");
+        console.warn(`Update feature not connected to backend. Attempted to update ID: ${id} with Quantity: ${quantity}`);
         set({ isLoading: false });
     }
 }));
