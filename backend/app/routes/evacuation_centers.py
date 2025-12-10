@@ -90,8 +90,6 @@ def get_centers_route() -> Tuple:
         if not result["success"]:
             return jsonify(result), 400
 
-        print(result)
-
         return jsonify(result), 200
 
     except Exception as error:

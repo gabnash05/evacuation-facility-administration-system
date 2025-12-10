@@ -580,8 +580,6 @@ class AttendanceRecord(db.Model):
                     })
                     continue
 
-                print(f"Processing record_id {record_id}: status={current_record.status}, check_out_time={current_record.check_out_time}")
-                
                 # Check if individual is currently checked in
                 if current_record.status != 'checked_in' or current_record.check_out_time is not None:
                     failed_checkouts.append({
