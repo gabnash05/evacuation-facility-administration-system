@@ -3,6 +3,7 @@ import type { Allocation, HouseholdOption, DistributionRecord } from "@/types/di
 import { HouseholdService } from "@/services/householdService";
 import { DistributionService } from "@/services/distributionService";
 import { EvacuationCenterService } from "@/services/evacuationCenterService";
+import { AidAllocationService } from "@/services/aidAllocationService";
 import { useAuthStore } from "./authStore";
 import type { EvacuationCenter } from "@/types/center";
 import { api } from "@/services/api";
@@ -56,10 +57,11 @@ interface DistributionState {
     updateDistribution: (id: number, updates: DistributionUpdatePayload) => Promise<{ success: boolean; error?: string }>;
     toggleStatus: (id: number) => Promise<void>;
     
-    // --- THIS WAS MISSING IN YOUR INTERFACE ---
-    getCenterAllocations: (centerId: number) => Allocation[];
+    // Helper to get center-specific allocations - NOW FETCHES FROM BACKEND
+    getCenterAllocations: (centerId: number) => Promise<Allocation[]>;
     
     // Reset
+    resetSelectedCenter: () => void;
     resetState: () => void;
 }
 
@@ -156,14 +158,24 @@ export const useDistributionStore = create<DistributionState>((set, get) => ({
                 };
                 
             } catch (err) { 
-                console.error("Failed to fetch history:", err);
+                set({ error: "Failed to load distribution history. Please try again." });
             }
 
-            // Allocations - fetch all, filtering will be done in components
+            // Allocations - Use backend filtering when center is selected
             try {
-                const allocationResponse = await DistributionService.getAllocations();
-                realAllocations = allocationResponse.data?.results || 
-                                (Array.isArray(allocationResponse.data) ? allocationResponse.data : []);
+                if (selectedCenterId) {
+                    // Fetch only allocations for the selected center from backend
+                    const allocationResponse = await AidAllocationService.getCenterAllocations(selectedCenterId, {
+                        status: 'active', // Only show active allocations by default
+                        limit: 100 // Get enough for the distribution form
+                    });
+                    realAllocations = allocationResponse.data?.results || [];
+                } else {
+                    // If no center selected, fetch all allocations (for city/super admin)
+                    const allocationResponse = await DistributionService.getAllocations();
+                    realAllocations = allocationResponse.data?.results || 
+                                    (Array.isArray(allocationResponse.data) ? allocationResponse.data : []);
+                }
             } catch (err) { 
                 console.error("Failed to fetch allocations:", err);
             }
@@ -299,11 +311,30 @@ export const useDistributionStore = create<DistributionState>((set, get) => ({
         }
     },
 
-    // --- IMPLEMENTATION OF THE HELPER FUNCTION ---
-    getCenterAllocations: (centerId) => {
-        const { allocations } = get();
-        return allocations.filter(alloc => alloc.center_id === centerId);
+    getCenterAllocations: async (centerId) => {
+        try {
+            // Don't set loading state here to avoid React render issues
+            // This method should be pure - only fetch data
+            const response = await AidAllocationService.getCenterAllocations(centerId, {
+                status: 'active', // Only active allocations for distribution
+                limit: 100 // Get enough for dropdowns
+            });
+            
+            if (!response.success) {
+                throw new Error(response.message || "Failed to fetch center allocations");
+            }
+            
+            const allocations = response.data?.results || [];
+            return allocations;
+        } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : "Failed to fetch center allocations";
+            console.error("Error fetching center allocations:", error);
+            // Don't set error state here to avoid React render issues
+            return [];
+        }
     },
+    
+    resetSelectedCenter: () => set({ selectedCenterId: null }),
     
     resetState: () => set(initialState),
 }));

@@ -88,7 +88,10 @@ class DistributionService:
             new_quantity = update_data['quantity']
             new_household_id = update_data['household_id']
 
-            with db.session.begin():
+            # REMOVED: with db.session.begin(): 
+            # Don't use context manager since model methods manage their own transactions
+            
+            try:
                 # 2. Return old stock
                 Allocation.update_quantity(original_allocation_id, original_quantity, 'add')
                 # 3. Take new stock
@@ -98,9 +101,19 @@ class DistributionService:
                     DistributionSession.update_household(original_dist['session_id'], new_household_id)
                 # 5. Update record
                 Distribution.update(distribution_id, update_data)
+                
+                # Manually commit at the end
+                db.session.commit()
+                
+            except Exception as e:
+                # Rollback if any of the operations fail
+                db.session.rollback()
+                raise e
 
             return {"success": True, "message": "Record updated successfully"}, 200
+            
         except ValueError as ve:
+            # Don't need rollback here since model methods handle their own rollback
             return {"success": False, "message": str(ve)}, 400
         except Exception as e:
             logger.error(f"Update distribution error: {str(e)}")
@@ -114,7 +127,7 @@ class DistributionService:
                 return {"success": False, "message": "Record not found"}, 404
             return {"success": True, "message": "Record deleted successfully"}, 200
         except Exception as e:
-            db.session.rollback()
+            # Don't need rollback here since model methods handle their own rollback
             return {"success": False, "message": str(e)}, 500
 
     @staticmethod
@@ -128,36 +141,35 @@ class DistributionService:
             current_status = record['status']
             allocation_id = record['allocation_id']
             quantity = record['quantity_distributed']
-
-            # --- LOGIC CHANGE START ---
-            # We removed 'with db.session.begin():' to prevent transaction errors.
             
-            if current_status == 'completed':
-                # VOID: Return stock, set status to voided
-                Allocation.update_quantity(allocation_id, quantity, 'add')
-                Distribution.update_status(distribution_id, 'voided')
-                msg = "Record voided successfully. Stock returned."
+            try:
+                if current_status == 'completed':
+                    # VOID: Return stock, set status to voided
+                    Allocation.update_quantity(allocation_id, quantity, 'add')
+                    Distribution.update_status(distribution_id, 'voided')
+                    msg = "Record voided successfully. Stock returned."
+                    
+                elif current_status == 'voided':
+                    # RESTORE: Deduct stock, set status to completed
+                    # This will raise ValueError if stock is insufficient
+                    Allocation.update_quantity(allocation_id, quantity, 'subtract')
+                    Distribution.update_status(distribution_id, 'completed')
+                    msg = "Record restored successfully. Stock deducted."
                 
-            elif current_status == 'voided':
-                # RESTORE: Deduct stock, set status to completed
-                # This will raise ValueError if stock is insufficient
-                Allocation.update_quantity(allocation_id, quantity, 'subtract')
-                Distribution.update_status(distribution_id, 'completed')
-                msg = "Record restored successfully. Stock deducted."
-            
-            else:
-                return {"success": False, "message": "Invalid status state"}, 400
+                else:
+                    return {"success": False, "message": "Invalid status state"}, 400
 
-            # Manually commit the transaction
-            db.session.commit()
-            # --- LOGIC CHANGE END ---
+                # Manually commit the transaction
+                db.session.commit()
+                
+            except Exception as e:
+                db.session.rollback()
+                raise e
 
             return {"success": True, "message": msg}, 200
 
         except ValueError as ve:
-            db.session.rollback()
             return {"success": False, "message": str(ve)}, 400
         except Exception as e:
-            db.session.rollback()
             logger.error(f"Toggle status error: {str(e)}")
             return {"success": False, "message": "An unexpected error occurred."}, 500

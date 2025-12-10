@@ -80,6 +80,7 @@ export const DistributionService = {
             throw new Error(handleApiError(error));
         }
     },
+    
 
     async update(id: number, payload: { household_id: number; allocation_id: number; quantity: number }) {
         try {

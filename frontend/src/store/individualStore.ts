@@ -140,22 +140,6 @@ export const useIndividualStore = create<IndividualState>((set, get) => ({
                 center_id: params.center_id ?? currentFilters.center_id,
             });
 
-            console.log(`Parameters for fetching individuals:`, {
-                search,
-                page,
-                limit,
-                sortBy: params.sortBy,
-                sortOrder: params.sortOrder,
-                household_id: params.household_id ?? currentFilters.household_id,
-                status: params.status ?? currentFilters.status as any,
-                gender
-            : params.gender ?? currentFilters.gender as any,
-                age_group: params.age_group ?? currentFilters.age_group as any,
-                center_id: params.center_id ?? currentFilters.center_id,
-            });
-            
-            console.log("Fetch Individuals Response:", response);
-
             if (!response.success) {
                 throw new Error(response.message);
             }

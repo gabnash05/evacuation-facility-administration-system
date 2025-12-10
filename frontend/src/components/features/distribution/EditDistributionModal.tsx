@@ -12,7 +12,7 @@ import { useDistributionStore } from "@/store/distributionStore";
 import { useAuthStore } from "@/store/authStore";
 import { Search } from "lucide-react";
 import { cn } from "@/lib/utils";
-import type { DistributionRecord } from "@/types/distribution";
+import type { DistributionRecord, Allocation as AllocationType } from "@/types/distribution";
 
 interface Props {
     isOpen: boolean;
@@ -40,13 +40,16 @@ export function EditDistributionModal({ isOpen, onClose, record }: Props) {
         selectedCenterId,
         setSelectedCenterId,
         getCenterAllocations,
-        clearError
+        clearError,
+        resetSelectedCenter,
     } = useDistributionStore();
     
     const [householdSearch, setHouseholdSearch] = useState("");
     const [selectedHouseholdId, setSelectedHouseholdId] = useState<number | null>(null);
     const [selection, setSelection] = useState<SelectedItemState>({});
     const [operationError, setOperationError] = useState<string | null>(null);
+    const [centerAllocations, setCenterAllocations] = useState<AllocationType[]>([]);
+    const [loadingAllocations, setLoadingAllocations] = useState(false);
 
     // Clear all form data when modal closes
     useEffect(() => {
@@ -55,9 +58,11 @@ export function EditDistributionModal({ isOpen, onClose, record }: Props) {
             setSelectedHouseholdId(null);
             setSelection({});
             setOperationError(null);
+            setCenterAllocations([]);
             clearError();
+            resetSelectedCenter(); // Add this line
         }
-    }, [isOpen, clearError]);
+    }, [isOpen, clearError, resetSelectedCenter]);
 
     // Pre-fill form when record opens - FIXED VERSION
     useEffect(() => {
@@ -87,12 +92,38 @@ export function EditDistributionModal({ isOpen, onClose, record }: Props) {
         }
     }, [record, isOpen, setSelectedCenterId]);
 
-    // Auto-select center for restricted users
     useEffect(() => {
         if (user?.center_id && (user.role === 'center_admin' || user.role === 'volunteer')) {
             setSelectedCenterId(user.center_id);
+        } else if (!isOpen) {
+            resetSelectedCenter();
         }
-    }, [user, setSelectedCenterId]);
+    }, [user, setSelectedCenterId, isOpen, resetSelectedCenter]);
+
+    // Fetch allocations when center changes
+    useEffect(() => {
+        const fetchCenterAllocations = async () => {
+            if (!selectedCenterId) {
+                setCenterAllocations([]);
+                return;
+            }
+
+            setLoadingAllocations(true);
+            try {
+                const allocations = await getCenterAllocations(selectedCenterId);
+                setCenterAllocations(allocations);
+            } catch (err) {
+                console.error("Failed to fetch center allocations:", err);
+                setCenterAllocations([]);
+            } finally {
+                setLoadingAllocations(false);
+            }
+        };
+
+        if (isOpen && selectedCenterId) {
+            fetchCenterAllocations();
+        }
+    }, [isOpen, selectedCenterId, getCenterAllocations]);
 
     // Clear operation error when form changes
     useEffect(() => {
@@ -105,12 +136,6 @@ export function EditDistributionModal({ isOpen, onClose, record }: Props) {
         return households.filter(h => h.center_id === selectedCenterId);
     }, [households, selectedCenterId]);
 
-    // Filter allocations by selected center
-    const centerAllocations = useMemo(() => {
-        if (!selectedCenterId) return [];
-        return getCenterAllocations(selectedCenterId);
-    }, [selectedCenterId, getCenterAllocations]);
-
     const filteredHouseholds = useMemo(() => {
         if (!householdSearch) return [];
         return centerHouseholds.filter(h => 
@@ -121,7 +146,7 @@ export function EditDistributionModal({ isOpen, onClose, record }: Props) {
 
     const selectedHousehold = centerHouseholds.find(h => h.household_id === selectedHouseholdId);
 
-    const handleToggleItem = (allocId: number, maxQty: number) => {
+    const handleToggleItem = (allocId: number) => {
         setSelection(prev => {
             const isSelected = !!prev[allocId]?.selected;
             if (isSelected) {
@@ -213,7 +238,7 @@ export function EditDistributionModal({ isOpen, onClose, record }: Props) {
         centerAllocations.find(a => a.allocation_id === Number(selectedAllocationId)) : null;
 
     // Calculate max quantity including the currently allocated quantity - FIXED
-    const calculateMaxQuantity = (allocation: any) => {
+    const calculateMaxQuantity = (allocation: AllocationType | null | undefined) => {
         if (!allocation) return 0;
         
         // If this is the same allocation being edited, add back the current quantity
@@ -414,9 +439,13 @@ export function EditDistributionModal({ isOpen, onClose, record }: Props) {
                         <div className="flex justify-between items-center">
                             <Label>Select Relief Item</Label>
                             <span className="text-xs text-muted-foreground">
-                                {selectedCenterId 
-                                    ? `${centerAllocations.filter((a: any) => a.status === 'active').length} types available at this center`
-                                    : "Select a center to view available items"}
+                                {loadingAllocations ? (
+                                    "Loading items..."
+                                ) : selectedCenterId ? (
+                                    `${centerAllocations.filter((a: any) => a.status === 'active').length} types available at this center`
+                                ) : (
+                                    "Select a center to view available items"
+                                )}
                             </span>
                         </div>
 
@@ -424,7 +453,14 @@ export function EditDistributionModal({ isOpen, onClose, record }: Props) {
                             "h-[250px] border rounded-md p-2 overflow-y-auto",
                             !selectedCenterId || !selectedHousehold ? "bg-muted/30" : ""
                         )}>
-                            {!selectedCenterId ? (
+                            {loadingAllocations ? (
+                                <div className="h-full flex flex-col items-center justify-center text-muted-foreground p-4">
+                                    <p className="text-sm mb-2">Loading items...</p>
+                                    <p className="text-xs text-center">
+                                        Fetching available aid items from the center.
+                                    </p>
+                                </div>
+                            ) : !selectedCenterId ? (
                                 <div className="h-full flex flex-col items-center justify-center text-muted-foreground p-4">
                                     <p className="text-sm mb-2">Select a center first</p>
                                     <p className="text-xs text-center">
@@ -469,7 +505,7 @@ export function EditDistributionModal({ isOpen, onClose, record }: Props) {
                                                 <Checkbox 
                                                     id={`item-${alloc.allocation_id}`}
                                                     checked={isSelected}
-                                                    onCheckedChange={() => handleToggleItem(alloc.allocation_id, alloc.remaining_quantity)}
+                                                    onCheckedChange={() => handleToggleItem(alloc.allocation_id)}
                                                     disabled={isOutOfStock || !selectedHousehold}
                                                 />
                                                 
@@ -536,7 +572,7 @@ export function EditDistributionModal({ isOpen, onClose, record }: Props) {
                     <Button variant="outline" onClick={onClose}>Cancel</Button>
                     <Button 
                         onClick={handleSubmit} 
-                        disabled={isLoading || !selectedHouseholdId || !selectedCenterId || totalItemsSelected === 0}
+                        disabled={isLoading || !selectedHouseholdId || !selectedCenterId || totalItemsSelected === 0 || loadingAllocations}
                     >
                         {isLoading ? "Saving..." : `Update Distribution`}
                     </Button>

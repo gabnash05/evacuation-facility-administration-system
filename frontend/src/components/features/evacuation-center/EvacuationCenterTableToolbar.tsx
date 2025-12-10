@@ -3,7 +3,7 @@
 import { useRef, useEffect, memo } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Search } from "lucide-react";
+import { Search, Plus } from "lucide-react";
 import {
     Select,
     SelectTrigger,
@@ -58,6 +58,7 @@ function EvacuationCenterTableToolbarComponent({
                     />
                 </div>
                 <Button onClick={onAddCenter} disabled={loading}>
+                    <Plus className="h-4 w-4" />
                     Add Center
                 </Button>
             </div>
