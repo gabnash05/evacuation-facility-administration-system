@@ -37,7 +37,7 @@ export const DistributionService = {
         }
     },
 
-    // Delete a record (Super Admin only)
+    // Delete a record
     async delete(id: number) {
         try {
             const response = await api.delete(`/distributions/${id}`, {
@@ -49,20 +49,19 @@ export const DistributionService = {
         }
     },
 
-    // Fetch allocations (Inventory) for the dropdown
-    // Note: If your groupmate hasn't built this endpoint yet, this part might fail or return empty.
+    // Fetch allocations (Real Inventory)
+    // FIX: Using the URL from aid_allocation.py
     async getAllocations(center_id?: number) {
         try {
-            // Assuming your groupmate will build this route. 
-            // If it doesn't exist yet, we might need to keep the mock data for this specific part.
             const response = await api.get("/allocations", {
                 params: { center_id },
                 withCredentials: true
             });
-            return response.data;
+            // The route returns { success: true, data: { results: [...] } }
+            // So we need to return response.data.data.results
+            return response.data; 
         } catch (error) {
-            console.warn("Could not fetch allocations (Backend might not be ready)", error);
-            return { data: [] };
+            throw new Error(handleApiError(error));
         }
     }
 };

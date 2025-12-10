@@ -59,7 +59,7 @@ def get_allocations(
         params: Dict[str, Any] = {}
 
         # Apply role-based filtering
-        if user_role == "center_admin" and user_center_id:
+        if user_role in ["center_admin", "volunteer"] and user_center_id: 
             query += " AND a.center_id = :user_center_id"
             params["user_center_id"] = user_center_id
         elif center_id:
