@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import type { Allocation, HouseholdOption, DistributionRecord } from "@/types/distribution";
 import { HouseholdService } from "@/services/householdService";
+import { DistributionService } from "@/services/distributionService"; // Import the new service
 
 interface DistributionState {
     allocations: Allocation[];
@@ -23,35 +24,8 @@ interface DistributionState {
     ) => Promise<void>;
 
     deleteDistribution: (id: number) => Promise<void>;
-    
-    // UPDATED: Now accepts full update object
-    updateDistribution: (
-        id: number, 
-        updates: { household_id: number; allocation_id: number; quantity: number }
-    ) => Promise<void>;
+    updateDistribution: (id: number, quantity: number) => Promise<void>;
 }
-
-// --- MOCK DATA ---
-const MOCK_ALLOCATIONS: Allocation[] = [
-    { allocation_id: 1, resource_name: "Family Food Packs", total_quantity: 500, remaining_quantity: 450, category_name: "Food", status: "active" },
-    { allocation_id: 2, resource_name: "Bottled Water (500ml)", total_quantity: 1000, remaining_quantity: 800, category_name: "Water", status: "active" },
-    { allocation_id: 3, resource_name: "Hygiene Kits", total_quantity: 200, remaining_quantity: 50, category_name: "Hygiene", status: "active" },
-    { allocation_id: 4, resource_name: "Sleeping Mats", total_quantity: 150, remaining_quantity: 0, category_name: "Shelter", status: "depleted" },
-];
-
-const MOCK_HISTORY: DistributionRecord[] = [
-    { 
-        distribution_id: 1, 
-        distribution_date: new Date().toISOString(), 
-        household_id: 101, // Mock ID
-        household_name: "Dela Cruz Family", 
-        allocation_id: 1,
-        resource_name: "Family Food Packs", 
-        quantity: 1, 
-        volunteer_name: "Volunteer One",
-        formatted_items: "Family Food Packs (1)"
-    }
-];
 
 export const useDistributionStore = create<DistributionState>((set, get) => ({
     allocations: [],
@@ -69,10 +43,12 @@ export const useDistributionStore = create<DistributionState>((set, get) => ({
     fetchData: async () => {
         set({ isLoading: true });
         try {
-            // Fetch Real Households
-            const response = await HouseholdService.getHouseholds({ limit: 100 });
-            const rawHouseholds = response.data?.results || [];
+            const { searchQuery, currentPage, entriesPerPage } = get();
 
+            // 1. Fetch Real Households
+            const householdResponse = await HouseholdService.getHouseholds({ limit: 100 });
+            const rawHouseholds = householdResponse.data?.results || [];
+            
             const realHouseholds: HouseholdOption[] = rawHouseholds.map((h: any) => ({
                 household_id: h.household_id,
                 household_name: h.household_name,
@@ -82,93 +58,78 @@ export const useDistributionStore = create<DistributionState>((set, get) => ({
                     : "No Head Assigned"
             }));
 
+            // 2. Fetch Real Distribution History
+            const historyResponse = await DistributionService.getHistory({
+                search: searchQuery,
+                page: currentPage,
+                limit: entriesPerPage
+            });
+
+            // 3. Fetch Allocations (Inventory)
+            // If your groupmate hasn't finished the endpoint, this might return empty.
+            // You might need to temporarily keep MOCK_ALLOCATIONS here if the API 404s.
+            const allocationResponse = await DistributionService.getAllocations();
+            
+            // NOTE: If allocationResponse.data is empty/undefined, the dropdown will be empty.
+            // If you ran the SQL above, you should see data here assuming the endpoint exists.
+            
             set({
                 households: realHouseholds,
-                allocations: MOCK_ALLOCATIONS,
-                history: MOCK_HISTORY,
+                history: historyResponse.data || [], 
+                allocations: allocationResponse.data || [], 
                 isLoading: false
             });
 
         } catch (error) {
-            console.error("Failed to fetch distribution data:", error);
-            set({ 
-                households: [], 
-                allocations: MOCK_ALLOCATIONS, 
-                history: MOCK_HISTORY,
-                isLoading: false 
-            });
+            console.error("Failed to fetch data:", error);
+            set({ isLoading: false });
         }
     },
 
     submitDistribution: async (householdId, items) => {
         set({ isLoading: true });
-        setTimeout(() => {
-            const { allocations, households, history } = get();
-            const targetHousehold = households.find(h => h.household_id === householdId);
-            if (!targetHousehold) return;
+        try {
+            // Map store format to API payload format
+            const payload = {
+                household_id: householdId,
+                items: items.map(i => ({
+                    allocation_id: i.allocationId,
+                    quantity: i.quantity
+                }))
+            };
 
-            const newLogs: DistributionRecord[] = items.map(item => {
-                const allocDetails = allocations.find(a => a.allocation_id === item.allocationId);
-                return {
-                    distribution_id: Math.random(),
-                    distribution_date: new Date().toISOString(),
-                    household_id: targetHousehold.household_id, // Store ID
-                    household_name: targetHousehold.household_name,
-                    allocation_id: item.allocationId, // Store ID
-                    resource_name: allocDetails?.resource_name || "Unknown",
-                    quantity: item.quantity,
-                    volunteer_name: "Current User", 
-                    formatted_items: `${allocDetails?.resource_name} (${item.quantity})`
-                };
-            });
-
-            set({
-                history: [...newLogs, ...history], 
-                isLoading: false
-            });
-        }, 800);
+            await DistributionService.create(payload);
+            
+            // Refresh data to show new record and updated stock
+            await get().fetchData(); 
+            
+        } catch (error) {
+            console.error("Distribution failed:", error);
+            alert(error instanceof Error ? error.message : "Failed to record distribution");
+            set({ isLoading: false });
+        }
     },
 
     deleteDistribution: async (id) => {
         set({ isLoading: true });
-        setTimeout(() => {
+        try {
+            await DistributionService.delete(id);
+            // Remove locally to update UI immediately
             const { history } = get();
             set({
                 history: history.filter(h => h.distribution_id !== id),
                 isLoading: false
             });
-        }, 600);
+        } catch (error) {
+            console.error("Delete failed:", error);
+            set({ isLoading: false });
+        }
     },
 
-    // UPDATED: Handle Full Updates
-    updateDistribution: async (id, updates) => {
-        set({ isLoading: true });
-        
-        setTimeout(() => {
-            const { history, households, allocations } = get();
-            
-            // Find related objects to update names
-            const newHousehold = households.find(h => h.household_id === updates.household_id);
-            const newAlloc = allocations.find(a => a.allocation_id === updates.allocation_id);
-
-            const updatedHistory = history.map(h => {
-                if (h.distribution_id === id) {
-                    return { 
-                        ...h, 
-                        quantity: updates.quantity,
-                        household_id: updates.household_id,
-                        household_name: newHousehold ? newHousehold.household_name : h.household_name,
-                        allocation_id: updates.allocation_id,
-                        resource_name: newAlloc ? newAlloc.resource_name : h.resource_name
-                    };
-                }
-                return h;
-            });
-
-            set({
-                history: updatedHistory,
-                isLoading: false
-            });
-        }, 600);
+    // Note: Update Logic requires a backend endpoint we haven't built yet (PUT).
+    // For now, we can leave this as a mock or implement the PUT endpoint.
+    updateDistribution: async (id, quantity) => {
+        console.warn("Update feature not fully connected to backend yet.");
+        set({ isLoading: false });
     }
 }));
