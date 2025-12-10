@@ -8,6 +8,7 @@ import { TransferIndividualModal } from "@/components/features/transfer/Transfer
 import { SuccessToast } from "@/components/common/SuccessToast";
 import { useIndividualStore } from "@/store/individualStore";
 import { useAttendanceStore } from "@/store/attendanceRecordsStore";
+import { useEvacuationCenterStore } from "@/store/evacuationCenterStore";
 import { debounce } from "@/utils/helpers";
 import { useAuthStore } from "@/store/authStore";
 
@@ -36,14 +37,17 @@ export function CityAdminAttendancePage() {
         transferMultipleIndividuals,
     } = useAttendanceStore();
 
+    // Use the evacuation center store
+    const { 
+        centers: allCenters, 
+        fetchAllCenters,
+        loading: centersLoading 
+    } = useEvacuationCenterStore();
+
     // Get current user and role
     const { user } = useAuthStore();
     const userRole = user?.role;
     const userCenterId = user?.center_id;
-
-    // Remove centers from store since it doesn't exist
-    // For now, use empty array
-    const centers: Array<{ center_id: number; center_name: string }> = [];
 
     const [isCheckInModalOpen, setIsCheckInModalOpen] = useState(false);
     const [isCheckOutModalOpen, setIsCheckOutModalOpen] = useState(false);
@@ -67,6 +71,21 @@ export function CityAdminAttendancePage() {
         key: string;
         direction: "asc" | "desc";
     } | null>(null);
+
+    // Fetch centers when component mounts
+    useEffect(() => {
+        fetchAllCenters();
+    }, [fetchAllCenters]);
+
+    // Filter centers based on user role
+    const centers = useMemo(() => {
+        if (userRole === "center_admin" && userCenterId) {
+            // Center admins only see their own center
+            return allCenters.filter(center => center.center_id === userCenterId);
+        }
+        // City admins and super admins see all active centers
+        return allCenters.filter(center => center.status === "active");
+    }, [allCenters, userRole, userCenterId]);
 
     const debouncedFetchIndividuals = useMemo(
         () => debounce(() => fetchIndividuals(), 500),
@@ -159,7 +178,6 @@ export function CityAdminAttendancePage() {
         // Reset sorting when filters change significantly
         setSortConfig(null);
     }, [searchQuery, statusFilter, genderFilter, ageGroupFilter, centerFilter]);
-
 
     const handleOpenCheckOutModal = (individualId: number, recordId?: number) => {
         setSelectedIndividualId(individualId);
@@ -362,7 +380,7 @@ export function CityAdminAttendancePage() {
                             }}
                             entriesPerPage={entriesPerPage}
                             onEntriesPerPageChange={handleEntriesPerPageChange}
-                            loading={loading}
+                            loading={loading || centersLoading}
                             // Add filter controls
                             filters={{
                                 status: statusFilter,
@@ -374,7 +392,6 @@ export function CityAdminAttendancePage() {
                             onClearFilters={handleClearFilters}
                             centers={centers}
                             userRole={userRole}
-                            // FIX 1: Convert null to undefined for userCenterId
                             userCenterId={userCenterId || undefined}
                         />
                     </div>
@@ -406,7 +423,7 @@ export function CityAdminAttendancePage() {
                                         handleOpenTransferModal(individual.individual_id, recordId);
                                     }
                                 }}
-                                onCheckIn={handleOpenCheckInModal} // ADD THIS
+                                onCheckIn={handleOpenCheckInModal}
                                 onDelete={handleDelete}
                                 loading={loading}
                                 userRole={userRole}
@@ -432,7 +449,7 @@ export function CityAdminAttendancePage() {
                                     return {
                                         canCheckOut: individual?.can_check_out || false,
                                         canTransfer: individual?.can_transfer || false,
-                                        canCheckIn: canCheckIn, // Add this
+                                        canCheckIn: canCheckIn,
                                     };
                                 }}
                             />
@@ -465,9 +482,8 @@ export function CityAdminAttendancePage() {
                     fetchIndividuals();
                 }}
                 defaultCenterId={centerFilter}
-                individualToCheckIn={individualToCheckIn} // ADD THIS PROP
+                individualToCheckIn={individualToCheckIn}
             />
-
 
             <CheckOutModal
                 isOpen={isCheckOutModalOpen}

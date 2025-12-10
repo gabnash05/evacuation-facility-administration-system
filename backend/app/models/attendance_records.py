@@ -855,6 +855,27 @@ class AttendanceRecord(db.Model):
 
 
     @classmethod
+    def get_most_recent_record_by_individual_id(cls, individual_id: int) -> Optional["AttendanceRecord"]:
+        """Get the most recent attendance record for an individual by their ID."""
+        result = db.session.execute(
+            text("""
+                SELECT * FROM attendance_records 
+                WHERE individual_id = :individual_id 
+                ORDER BY 
+                    CASE 
+                        WHEN check_in_time IS NOT NULL THEN check_in_time
+                        WHEN transfer_time IS NOT NULL THEN transfer_time
+                        ELSE created_at
+                    END DESC,
+                    record_id DESC
+                LIMIT 1
+            """),
+            {"individual_id": individual_id},
+        ).fetchone()
+
+        return cls._row_to_record(result)
+
+    @classmethod
     def get_individual_attendance_history(cls, individual_id: int) -> List["AttendanceRecord"]:
         """Get complete attendance history for an individual."""
         results = db.session.execute(

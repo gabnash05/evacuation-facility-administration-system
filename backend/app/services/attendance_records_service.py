@@ -92,6 +92,8 @@ def get_attendance_record_by_id(record_id: int) -> Dict[str, Any]:
     try:
         record = AttendanceRecord.get_by_id(record_id)
 
+        print(record_id)
+
         if not record:
             return {"success": False, "message": "Attendance record not found"}
 
@@ -101,6 +103,45 @@ def get_attendance_record_by_id(record_id: int) -> Dict[str, Any]:
         logger.error("Error fetching attendance record %s: %s", record_id, str(error))
         return {"success": False, "message": "Failed to fetch attendance record"}
 
+
+def get_attendance_record_by_individual_id(individual_id: int) -> Dict[str, Any]:
+    """
+    Get the most recent attendance record for an individual by their ID.
+
+    Args:
+        individual_id: Individual ID
+
+    Returns:
+        Dictionary with record data or error message
+    """
+    try:
+        # Get the most recent record for this individual
+        record = AttendanceRecord.get_most_recent_record_by_individual_id(individual_id)
+
+        if not record:
+            return {
+                "success": False, 
+                "message": "No attendance record found for this individual",
+                "data": None
+            }
+
+        return {
+            "success": True, 
+            "data": record.to_dict()
+        }
+
+    except Exception as error:
+        logger.error(
+            "Error fetching attendance record for individual %s: %s", 
+            individual_id, 
+            str(error)
+        )
+        return {
+            "success": False, 
+            "message": f"Failed to fetch attendance record: {str(error)}",
+            "data": None
+        }
+    
 
 def check_in_individual(
     individual_id: int,
