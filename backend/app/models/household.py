@@ -31,14 +31,65 @@ class Household(db.Model):
         sql = text(
             """
             SELECT 
-                h.household_id, h.household_name, h.address, 
-                h.center_id, h.household_head_id,
-                h.created_at, h.updated_at
-            FROM households h WHERE h.household_id = :id
-        """
+                h.household_id, 
+                h.household_name, 
+                h.address, 
+                h.center_id, 
+                h.household_head_id,
+                h.created_at, 
+                h.updated_at,
+                -- Center details
+                ec.center_id,
+                ec.center_name,
+                ec.address,
+                ec.coordinates,
+                ec.capacity,
+                ec.status,
+                ec.current_occupancy,
+                ec.photo_data,
+                ec.created_at,
+                ec.updated_at
+            FROM households h
+            LEFT JOIN evacuation_centers ec ON h.center_id = ec.center_id
+            WHERE h.household_id = :id
+            """
         )
         result = db.session.execute(sql, {"id": household_id}).fetchone()
-        return result._asdict() if result else None
+        
+        if not result:
+            return None
+        
+        data = result._asdict()
+        
+        # Extract center data
+        center_data = {}
+        if data['center_id']:  # The ec.center_id from the JOIN
+            center_data = {
+                'center_id': data['center_id'],
+                'center_name': data['center_name'],
+                'address': data['address'],  # This is center address, note: same column name as household address
+                'coordinates': data['coordinates'],
+                'capacity': data['capacity'],
+                'status': data['status'],
+                'current_occupancy': data['current_occupancy'],
+                'photo_data': data['photo_data'],
+                'created_at': data['created_at'],  # This is center created_at
+                'updated_at': data['updated_at']   # This is center updated_at
+            }
+        
+        # Clean household data
+        household_data = {
+            'household_id': data['household_id'],
+            'household_name': data['household_name'],
+            'address': data['address'],  # This is household address
+            'center_id': data['center_id'],
+            'household_head_id': data['household_head_id'],
+            'created_at': data['created_at'],  # This is household created_at
+            'updated_at': data['updated_at'],  # This is household updated_at
+            'center': center_data if center_data else None
+        }
+        
+        return household_data
 
     @classmethod
     def get_by_name(cls, name: str):

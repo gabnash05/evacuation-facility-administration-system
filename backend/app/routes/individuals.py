@@ -90,8 +90,6 @@ def get_all_individuals() -> Tuple:
         # Get individuals from service
         result = IndividualService.get_all_individuals(params)
 
-        print(result)
-
         if not result["success"]:
             return jsonify(result), 400
 

@@ -1,5 +1,5 @@
 // components/features/transfer/TransferIndividualModal.tsx
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import {
@@ -80,6 +80,15 @@ export function TransferIndividualModal({
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [processingRecords, setProcessingRecords] = useState(false);
 
+    // ADD LOCAL STATE FOR MODAL SEARCH (like CheckInModal)
+    const [modalSearchQuery, setModalSearchQuery] = useState("");
+    const [modalPage, setModalPage] = useState(1);
+    const [modalSearchResults, setModalSearchResults] = useState<Individual[]>([]);
+    const [modalTotalRecords, setModalTotalRecords] = useState(0);
+    const [modalSearchLoading, setModalSearchLoading] = useState(false);
+    
+    const searchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
     // NEW: Helper to get center names
     const getCenterNameById = (centerId?: number | null) => {
         if (!centerId) return undefined;
@@ -140,6 +149,18 @@ export function TransferIndividualModal({
         setNotes("");
         setError(null);
         setProcessingRecords(false);
+        
+        // Reset modal search state
+        setModalSearchQuery("");
+        setModalPage(1);
+        setModalSearchResults([]);
+        setModalTotalRecords(0);
+        
+        // Clear any pending search timeout
+        if (searchTimeoutRef.current) {
+            clearTimeout(searchTimeoutRef.current);
+            searchTimeoutRef.current = null;
+        }
     };
 
     const handleClose = () => {
@@ -231,6 +252,109 @@ export function TransferIndividualModal({
 
     const handleClearAllIndividuals = () => {
         setSelectedIndividuals([]);
+    };
+
+    const handleModalSearch = async (params: {
+        search: string;
+        page: number;
+        limit: number;
+    }): Promise<{ success: boolean; data: Individual[]; totalRecords: number }> => {
+        console.log("TransferModal search called with:", params);
+        
+        // Don't update state if nothing changed
+        if (modalSearchQuery === params.search && modalPage === params.page) {
+            return {
+                success: true,
+                data: modalSearchResults,
+                totalRecords: modalTotalRecords
+            };
+        }
+        
+        // Update local state
+        setModalSearchQuery(params.search);
+        setModalPage(params.page);
+        
+        // Clear any existing timeout
+        if (searchTimeoutRef.current) {
+            clearTimeout(searchTimeoutRef.current);
+        }
+        
+        // If search is empty, clear results immediately
+        if (params.search.trim() === "") {
+            setModalSearchResults([]);
+            setModalTotalRecords(0);
+            return {
+                success: true,
+                data: [],
+                totalRecords: 0
+            };
+        }
+        
+        // Return a promise that resolves with the search results (EXACTLY like CheckInModal)
+        return new Promise<{ success: boolean; data: Individual[]; totalRecords: number }>((resolve) => {
+            searchTimeoutRef.current = setTimeout(async () => {
+                try {
+                    const { IndividualService } = await import("@/services/individualService");
+                    const response = await IndividualService.getIndividuals({
+                        search: params.search,
+                        page: params.page,
+                        limit: params.limit,
+                        sortBy: "last_name",
+                        sortOrder: "asc",
+                    });
+                    
+                    if (response.success && response.data) {
+                        const results = response.data.results || [];
+                        const total = response.data.pagination?.total_items || 0;
+                        
+                        setModalSearchResults(results);
+                        setModalTotalRecords(total);
+                        resolve({
+                            success: true,
+                            data: results,
+                            totalRecords: total
+                        });
+                    } else {
+                        resolve({
+                            success: false,
+                            data: [],
+                            totalRecords: 0
+                        });
+                    }
+                } catch (error) {
+                    console.error("Transfer modal search failed:", error);
+                    resolve({
+                        success: false,
+                        data: [],
+                        totalRecords: 0
+                    });
+                }
+            }, 500); // IMPORTANT: Same 500ms debounce as CheckInModal
+        });
+    };
+
+    // HANDLE PAGE CHANGE (EXACTLY LIKE CheckInModal)
+    const handleModalPageChange = (page: number) => {
+        setModalPage(page);
+        
+        // Clear any pending search timeout
+        if (searchTimeoutRef.current) {
+            clearTimeout(searchTimeoutRef.current);
+            searchTimeoutRef.current = null;
+        }
+        
+        // Immediate search for page change
+        if (modalSearchQuery.trim() === "") {
+            setModalSearchResults([]);
+            setModalTotalRecords(0);
+        } else {
+            // Use the existing performSearch function or call handleModalSearch directly
+            handleModalSearch({
+                search: modalSearchQuery,
+                page: page,
+                limit: 10,
+            });
+        }
     };
 
     const handleSubmit = async () => {
@@ -499,6 +623,12 @@ export function TransferIndividualModal({
                         <IndividualSearchTable
                             onSelectIndividual={handleSelectIndividual}
                             selectedIndividuals={selectedIndividuals.map(ind => ind.individual)}
+                            // Modal provides a custom search function. Let the table manage its own input state
+                            onSearch={handleModalSearch}
+                            modalPage={modalPage}
+                            onModalPageChange={handleModalPageChange}
+                            isLoading={modalSearchLoading}
+                            errorMessage={''}
                         />
 
                         <div className="text-sm text-muted-foreground">

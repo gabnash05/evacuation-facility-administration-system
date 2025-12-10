@@ -92,10 +92,16 @@ export function AttendanceTable({
         null
     );
 
+    // Update getSortIcon function to properly show active sort
     const getSortIcon = (key: string) => {
-        if (!sortConfig || sortConfig.key !== key || !sortConfig.direction)
+        if (!sortConfig || sortConfig.key !== key || sortConfig.direction === null) {
             return <ChevronsUpDown className="h-4 w-4 text-muted-foreground" />;
-        if (sortConfig.direction === "asc") return <ChevronUp className="h-4 w-4" />;
+        }
+        
+        if (sortConfig.direction === "asc") {
+            return <ChevronUp className="h-4 w-4" />;
+        }
+        
         return <ChevronDown className="h-4 w-4" />;
     };
 
