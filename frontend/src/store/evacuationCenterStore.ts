@@ -1,6 +1,10 @@
 import { create } from "zustand";
 import { EvacuationCenterService } from "@/services/evacuationCenterService";
-import type { EvacuationCenter, CentersResponse } from "@/types/center";
+import type { 
+    EvacuationCenter, 
+    CentersResponse, 
+    CitySummary 
+} from "@/types/center";
 
 interface EvacuationCenterState {
     centers: EvacuationCenter[];
@@ -19,6 +23,9 @@ interface EvacuationCenterState {
         total_items: number;
         limit: number;
     } | null;
+    citySummary: CitySummary | null;
+    mapCenters: EvacuationCenter[]; // Centers for map display
+    nearbyCenters: (EvacuationCenter & { distance_km?: number })[]; // Centers with distance info
 
     // Actions
     setSearchQuery: (query: string) => void;
@@ -34,10 +41,23 @@ interface EvacuationCenterState {
         id: number,
         updates: Partial<EvacuationCenter>,
         photo?: File | "remove"
-    ) => Promise<void>; // Update this line
+    ) => Promise<void>;
     deleteCenter: (id: number) => Promise<void>;
     resetState: () => void;
     fetchAllCenters: () => Promise<void>;
+    fetchCitySummary: () => Promise<void>;
+    fetchCentersByProximity: (
+        latitude: number,
+        longitude: number,
+        radius?: number,
+        limit?: number
+    ) => Promise<void>;
+    fetchCentersInBounds: (
+        bounds: { north: number; south: number; east: number; west: number },
+        status?: string
+    ) => Promise<void>;
+    fetchCenterById: (id: number) => Promise<EvacuationCenter | null>;
+    fetchCenterEvents: (centerId: number) => Promise<any[]>; // Replace 'any' with your Event type
 }
 
 const initialState = {
@@ -49,6 +69,9 @@ const initialState = {
     entriesPerPage: 10,
     sortConfig: null,
     pagination: null,
+    citySummary: null,
+    mapCenters: [],
+    nearbyCenters: [],
 };
 
 export const useEvacuationCenterStore = create<EvacuationCenterState>((set, get) => ({
@@ -104,7 +127,18 @@ export const useEvacuationCenterStore = create<EvacuationCenterState>((set, get)
         photo?: File
     ) => {
         try {
-            await EvacuationCenterService.createCenter(center, photo);
+            // Convert to CreateCenterFormData format
+            const centerData = {
+                center_name: center.center_name,
+                address: center.address,
+                latitude: center.latitude,
+                longitude: center.longitude,
+                capacity: center.capacity,
+                current_occupancy: center.current_occupancy || 0,
+                status: center.status || "active",
+            };
+            
+            await EvacuationCenterService.createCenter(centerData, photo);
             await get().fetchCenters(); // Refresh the list
         } catch (error) {
             throw new Error(error instanceof Error ? error.message : "Failed to add center");
@@ -117,8 +151,18 @@ export const useEvacuationCenterStore = create<EvacuationCenterState>((set, get)
         photo?: File | "remove"
     ) => {
         try {
-            await EvacuationCenterService.updateCenter(id, updates, photo);
-            await get().fetchCenters(); // Refresh the list
+            // Convert to UpdateCenterFormData format
+            const updateData: any = {};
+            if (updates.center_name !== undefined) updateData.center_name = updates.center_name;
+            if (updates.address !== undefined) updateData.address = updates.address;
+            if (updates.latitude !== undefined) updateData.latitude = updates.latitude;
+            if (updates.longitude !== undefined) updateData.longitude = updates.longitude;
+            if (updates.capacity !== undefined) updateData.capacity = updates.capacity;
+            if (updates.current_occupancy !== undefined) updateData.current_occupancy = updates.current_occupancy;
+            if (updates.status !== undefined) updateData.status = updates.status;
+            
+            await EvacuationCenterService.updateCenter(id, updateData, photo);
+            await get().fetchCenters();
         } catch (error) {
             throw new Error(error instanceof Error ? error.message : "Failed to update center");
         }
@@ -151,6 +195,7 @@ export const useEvacuationCenterStore = create<EvacuationCenterState>((set, get)
 
             set({
                 centers: response.data,
+                mapCenters: response.data, // Also store for map use
                 loading: false,
                 pagination: null,
             });
@@ -159,8 +204,152 @@ export const useEvacuationCenterStore = create<EvacuationCenterState>((set, get)
                 error: error instanceof Error ? error.message : "Failed to fetch centers",
                 loading: false,
                 centers: [],
+                mapCenters: [],
                 pagination: null,
             });
+        }
+    },
+
+    fetchCitySummary: async () => {
+        set({ loading: true, error: null });
+
+        try {
+            const response = await EvacuationCenterService.getCitySummary();
+            
+            if (response.success) {
+                set({
+                    citySummary: response.data,
+                    loading: false,
+                });
+            } else {
+                set({
+                    error: "Failed to fetch city summary",
+                    loading: false,
+                });
+            }
+        } catch (error) {
+            set({
+                error: error instanceof Error ? error.message : "Failed to fetch city summary",
+                loading: false,
+                citySummary: null,
+            });
+        }
+    },
+
+    fetchCentersByProximity: async (
+        latitude: number,
+        longitude: number,
+        radius: number = 10.0,
+        limit: number = 10
+    ) => {
+        set({ loading: true, error: null });
+
+        try {
+            const response = await EvacuationCenterService.getCentersByProximity(
+                latitude,
+                longitude,
+                radius,
+                limit
+            );
+            
+            if (response.success) {
+                set({
+                    nearbyCenters: response.data,
+                    loading: false,
+                });
+            } else {
+                set({
+                    error: response.message || "Failed to fetch nearby centers",
+                    loading: false,
+                    nearbyCenters: [],
+                });
+            }
+        } catch (error) {
+            set({
+                error: error instanceof Error ? error.message : "Failed to fetch nearby centers",
+                loading: false,
+                nearbyCenters: [],
+            });
+        }
+    },
+
+    fetchCentersInBounds: async (
+        bounds: { north: number; south: number; east: number; west: number },
+        status: string = "active"
+    ) => {
+        set({ loading: true, error: null });
+
+        try {
+            const response = await EvacuationCenterService.getCentersInBounds(bounds, status);
+            
+            if (response.success) {
+                set({
+                    mapCenters: response.data,
+                    loading: false,
+                });
+            } else {
+                set({
+                    error: response.message || "Failed to fetch centers in bounds",
+                    loading: false,
+                    mapCenters: [],
+                });
+            }
+        } catch (error) {
+            set({
+                error: error instanceof Error ? error.message : "Failed to fetch centers in bounds",
+                loading: false,
+                mapCenters: [],
+            });
+        }
+    },
+
+    fetchCenterById: async (id: number): Promise<EvacuationCenter | null> => {
+        set({ loading: true, error: null });
+
+        try {
+            const response = await EvacuationCenterService.getCenterById(id);
+            
+            if (response.success) {
+                set({ loading: false });
+                return response.data;
+            } else {
+                set({
+                    error: "Failed to fetch center",
+                    loading: false,
+                });
+                return null;
+            }
+        } catch (error) {
+            set({
+                error: error instanceof Error ? error.message : "Failed to fetch center",
+                loading: false,
+            });
+            return null;
+        }
+    },
+
+    fetchCenterEvents: async (centerId: number): Promise<any[]> => {
+        set({ loading: true, error: null });
+
+        try {
+            const response = await EvacuationCenterService.getCenterEvents(centerId);
+            
+            if (response.success) {
+                set({ loading: false });
+                return response.data;
+            } else {
+                set({
+                    error: "Failed to fetch center events",
+                    loading: false,
+                });
+                return [];
+            }
+        } catch (error) {
+            set({
+                error: error instanceof Error ? error.message : "Failed to fetch center events",
+                loading: false,
+            });
+            return [];
         }
     },
 

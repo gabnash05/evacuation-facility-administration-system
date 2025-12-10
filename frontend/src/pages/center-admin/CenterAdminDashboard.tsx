@@ -1,11 +1,12 @@
 import { useState, useMemo, useEffect } from "react";
 import { EventDetailsModal } from "@/components/features/dashboard/EventDetailsModal";
 import { MapPanel } from "@/components/features/dashboard/MapPanel";
-import { StatsRow } from "@/components/features/dashboard/StatsRow";
+import { StatsRow } from "@/components/features/dashboard/StatsRow"; // Updated import
 import { EventHistoryTable } from "@/components/features/dashboard/EventHistoryTable";
 import { ErrorAlert } from "@/components/features/dashboard/ErrorAlert";
 import { useEventStore } from "@/store/eventStore";
 import { EvacuationCenterService } from "@/services/evacuationCenterService";
+import { useEvacuationCenterStore } from "@/store/evacuationCenterStore";
 import { useAuth } from "@/hooks/useAuth";
 import { formatDate } from "@/utils/formatters";
 import type { Event, EventDetails } from "@/types/event";
@@ -16,6 +17,8 @@ interface SelectedCenter {
     status: "active" | "inactive" | "closed";
     capacity: number;
     current_occupancy: number;
+    latitude?: number;
+    longitude?: number;
 }
 
 export function CenterAdminDashboard() {
@@ -25,6 +28,14 @@ export function CenterAdminDashboard() {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [selectedCenter, setSelectedCenter] = useState<SelectedCenter | null>(null);
     const [isLoadingCenter, setIsLoadingCenter] = useState(true);
+
+    // Use evacuation center store to get all centers
+    const {
+        centers: evacuationCenters,
+        mapCenters,
+        loading: isLoadingCenters,
+        fetchAllCenters,
+    } = useEvacuationCenterStore();
 
     // Use event store
     const {
@@ -44,8 +55,18 @@ export function CenterAdminDashboard() {
         getEventDetails,
     } = useEventStore();
 
-    // Stats loading state
-    const [isLoadingStats] = useState(false);
+    // Fetch all evacuation centers using the store
+    useEffect(() => {
+        const fetchAllCentersData = async () => {
+            try {
+                await fetchAllCenters();
+            } catch (error) {
+                console.error("Failed to fetch evacuation centers:", error);
+            }
+        };
+
+        fetchAllCentersData();
+    }, [fetchAllCenters]);
 
     // Fetch the logged-in center admin's evacuation center
     useEffect(() => {
@@ -66,6 +87,8 @@ export function CenterAdminDashboard() {
                         status: response.data.status,
                         capacity: response.data.capacity,
                         current_occupancy: response.data.current_occupancy,
+                        latitude: response.data.latitude,
+                        longitude: response.data.longitude,
                     });
                 }
             } catch (error) {
@@ -128,20 +151,12 @@ export function CenterAdminDashboard() {
             }
         }
 
-        // Set the new sort config - this will trigger the useEffect to refetch
         setSortConfig(newDirection ? { key: column, direction: newDirection } : null);
     };
 
     const handleEntriesPerPageChange = (entries: number) => {
         setEntriesPerPage(entries);
     };
-
-    const statsData = [
-        { label: "Total Checked In", value: "300", max: "1000", percentage: 30 },
-        { label: "Total Checked Out", value: "271", max: "500", percentage: 54 },
-        { label: "Total Missing", value: "5", max: "", percentage: 0 },
-        { label: "Total Unaccounted", value: "429", max: "1000", percentage: 43 },
-    ];
 
     // Format events for display
     const formattedEvents = useMemo(() => {
@@ -170,9 +185,11 @@ export function CenterAdminDashboard() {
                     isPanelVisible={isPanelVisible}
                     setIsPanelVisible={setIsPanelVisible}
                     selectedCenter={selectedCenter}
-                    isLoadingCenter={isLoadingCenter}
+                    isLoadingCenter={isLoadingCenter || isLoadingCenters}
                     getCenterStatusStyles={getCenterStatusStyles}
                     getUsageColor={getUsageColor}
+                    centers={mapCenters.length > 0 ? mapCenters : evacuationCenters}
+                    highlightCenterId={user?.center_id!}
                 />
             ) : (
                 <div className="relative w-full h-[43vh] border-b border-border flex items-center justify-center bg-muted/30 text-muted-foreground">
@@ -184,7 +201,8 @@ export function CenterAdminDashboard() {
                 </div>
             )}
 
-            <StatsRow statsData={statsData} isLoadingStats={isLoadingStats} />
+            {/* UPDATED: Use new StatsRow with filters - WITH centerId for center admin */}
+            <StatsRow centerId={user?.center_id ?? undefined} />
 
             <EventHistoryTable
                 paginatedData={paginatedData}
@@ -200,6 +218,7 @@ export function CenterAdminDashboard() {
                 onRowClick={handleRowClick}
                 onSort={handleSort}
                 sortConfig={sortConfig}
+                // Remove CRUD props for read-only table
             />
 
             <EventDetailsModal
