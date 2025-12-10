@@ -6,10 +6,12 @@ import { CityAdminCentersPage } from "@/pages/city-admin/CityAdminCentersPage";
 import { CityAdminHouseholdsPage } from "./pages/city-admin/CityAdminHouseholdsPage";
 import { CityAdminAttendancePage } from "./pages/city-admin/CityAdminAttendancePage";
 import { CityAdminDistributionPage } from "@/pages/city-admin/CityAdminDistributionPage";
+import { CityAdminAidAllocationPage } from "./pages/city-admin/CityAdminAidAllocationPage";
 
 import { CenterAdminDashboard } from "@/pages/center-admin/CenterAdminDashboard";
 import { CenterAdminHouseholdsPage } from "./pages/center-admin/CenterAdminHouseholds";
 import { CenterAdminAttendancePage } from "./pages/center-admin/CenterAdminAttendancePage";
+import { CenterAdminAidAllocationPage } from "./pages/center-admin/CenterAdminAidAllocationPage";
 
 import { VolunteerDashboard } from "@/pages/volunteer/VolunteerDashboard";
 import { VolunteerHouseholdsPage } from "./pages/volunteer/VolunteerHouseholdsPage";
@@ -59,8 +61,8 @@ function App() {
                                         element={<CityAdminAttendancePage />}
                                     />
                                     <Route
-                                        path="aid-distribution"
-                                        element={<div>Aid Distribution Page</div>}
+                                        path="aid-allocation"
+                                        element={<CityAdminAidAllocationPage />}
                                     />{" "}
                                     {/* replace with actual page when available */}
                                     <Route
@@ -109,8 +111,8 @@ function App() {
                                     />{" "}
                                     {/* replace with actual page when available */}
                                     <Route
-                                        path="aid-distribution"
-                                        element={<div>Aid Distribution Page</div>}
+                                        path="aid-allocation"
+                                        element={<CenterAdminAidAllocationPage />}
                                     />{" "}
                                     {/* replace with actual page when available */}
                                     <Route

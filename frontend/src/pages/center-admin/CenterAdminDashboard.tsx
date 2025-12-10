@@ -1,12 +1,12 @@
 import { useState, useMemo, useEffect } from "react";
 import { EventDetailsModal } from "@/components/features/dashboard/EventDetailsModal";
 import { MapPanel } from "@/components/features/dashboard/MapPanel";
-import { StatsRow } from "@/components/features/dashboard/StatsRow";
+import { StatsRow } from "@/components/features/dashboard/StatsRow"; // Updated import
 import { EventHistoryTable } from "@/components/features/dashboard/EventHistoryTable";
 import { ErrorAlert } from "@/components/features/dashboard/ErrorAlert";
 import { useEventStore } from "@/store/eventStore";
 import { EvacuationCenterService } from "@/services/evacuationCenterService";
-import { useEvacuationCenterStore } from "@/store/evacuationCenterStore"; // Add this import
+import { useEvacuationCenterStore } from "@/store/evacuationCenterStore";
 import { useAuth } from "@/hooks/useAuth";
 import { formatDate } from "@/utils/formatters";
 import type { Event, EventDetails } from "@/types/event";
@@ -30,12 +30,12 @@ export function CenterAdminDashboard() {
     const [isLoadingCenter, setIsLoadingCenter] = useState(true);
 
     // Use evacuation center store to get all centers
-    const { 
-        centers: evacuationCenters, 
+    const {
+        centers: evacuationCenters,
         mapCenters,
         loading: isLoadingCenters,
-        fetchAllCenters 
-    } = useEvacuationCenterStore(); // Add this
+        fetchAllCenters,
+    } = useEvacuationCenterStore();
 
     // Use event store
     const {
@@ -55,9 +55,6 @@ export function CenterAdminDashboard() {
         getEventDetails,
     } = useEventStore();
 
-    // Stats loading state
-    const [isLoadingStats] = useState(false);
-
     // Fetch all evacuation centers using the store
     useEffect(() => {
         const fetchAllCentersData = async () => {
@@ -69,7 +66,7 @@ export function CenterAdminDashboard() {
         };
 
         fetchAllCentersData();
-    }, [fetchAllCenters]); // Add this useEffect
+    }, [fetchAllCenters]);
 
     // Fetch the logged-in center admin's evacuation center
     useEffect(() => {
@@ -154,20 +151,12 @@ export function CenterAdminDashboard() {
             }
         }
 
-        // Set the new sort config - this will trigger the useEffect to refetch
         setSortConfig(newDirection ? { key: column, direction: newDirection } : null);
     };
 
     const handleEntriesPerPageChange = (entries: number) => {
         setEntriesPerPage(entries);
     };
-
-    const statsData = [
-        { label: "Total Checked In", value: "300", max: "1000", percentage: 30 },
-        { label: "Total Checked Out", value: "271", max: "500", percentage: 54 },
-        { label: "Total Missing", value: "5", max: "", percentage: 0 },
-        { label: "Total Unaccounted", value: "429", max: "1000", percentage: 43 },
-    ];
 
     // Format events for display
     const formattedEvents = useMemo(() => {
@@ -212,7 +201,8 @@ export function CenterAdminDashboard() {
                 </div>
             )}
 
-            <StatsRow statsData={statsData} isLoadingStats={isLoadingStats} />
+            {/* UPDATED: Use new StatsRow with filters - WITH centerId for center admin */}
+            <StatsRow centerId={user?.center_id ?? undefined} />
 
             <EventHistoryTable
                 paginatedData={paginatedData}
