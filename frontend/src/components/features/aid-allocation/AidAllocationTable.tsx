@@ -16,7 +16,7 @@ import {
     DropdownMenuItem,
     DropdownMenuTrigger 
 } from "@/components/ui/dropdown-menu";
-import { MoreVertical, Trash2, Edit } from "lucide-react";
+import { MoreVertical, Trash2, Edit, AlertCircle } from "lucide-react";
 import { useState } from "react";
 import { DeleteAidDialog } from "@/components/features/aid-allocation/DeleteAidDialog";
 
@@ -39,6 +39,7 @@ interface AidDistributionTableProps {
     onEdit?: (row: any) => void;
     onDelete?: (row: any) => void;
     onDistribute?: (row: any) => void;
+    onCancel?: (row: any) => void; // NEW: cancel action for city_admin
     showActions?: boolean;
     showTitle?: boolean;
     deleteLoading?: boolean;
@@ -57,6 +58,7 @@ export function AidDistributionTable({
     renderCell,
     onEdit,
     onDelete, 
+    onCancel, // NEW
     showActions = true,
     showTitle = true,
     deleteLoading = false,
@@ -304,7 +306,8 @@ export function AidDistributionTable({
                                                     </Button>
                                                 </DropdownMenuTrigger>
                                                 <DropdownMenuContent align="end">
-                                                    {onEdit && (
+                                                    {/* Show Edit only for super_admin */}
+                                                    {userRole === "super_admin" && onEdit && (
                                                         <DropdownMenuItem 
                                                             onClick={(e) => {
                                                                 e.stopPropagation();
@@ -316,8 +319,24 @@ export function AidDistributionTable({
                                                             Edit
                                                         </DropdownMenuItem>
                                                     )}
+                                                    
+                                                    {/* Show Cancel for city_admin (when status is active)
+                                                        NOTE: Cancel should call onCancel (does not open edit modal) */}
+                                                    {userRole === "city_admin" && onCancel && (row.status?.toLowerCase() === "active" || row.status?.toLowerCase() === "depleted") && (
+                                                        <DropdownMenuItem 
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                onCancel(row);
+                                                            }}
+                                                            className="flex items-center gap-2 text-destructive focus:text-destructive"
+                                                        >
+                                                            <AlertCircle className="h-4 w-4" />
+                                                            Cancel
+                                                        </DropdownMenuItem>
+                                                    )}
+                                                    
                                                     {/* Only show delete for super_admin */}
-                                                    {showDeleteButton && onDelete && (
+                                                    {userRole === "super_admin" && onDelete && (
                                                         <DropdownMenuItem 
                                                             onClick={(e) => handleOpenDeleteDialog(row, e)}
                                                             className="flex items-center gap-2 text-destructive focus:text-destructive"

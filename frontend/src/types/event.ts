@@ -60,4 +60,5 @@ export interface GetEventsParams {
     sortBy?: string;
     sortOrder?: string;
     center_id?: number;
+    status?: string;
 }
