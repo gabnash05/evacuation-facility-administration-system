@@ -114,6 +114,10 @@ function App() {
                                         path="aid-allocation"
                                         element={<CenterAdminAidAllocationPage />}
                                     />{" "}
+                                    <Route
+                                        path="aid-distribution"
+                                        element={<VolunteerDistributeAidPage />}
+                                    />{" "}
                                     {/* replace with actual page when available */}
                                     <Route
                                         path="reports-and-analytics"

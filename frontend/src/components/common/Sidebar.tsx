@@ -83,17 +83,18 @@ export function AppSidebar({ role, roleLabel, userEmail }: AppSidebarProps) {
                         icon: <Package className="w-4 h-4" />,
                     },
                     {
-                        key: "reports-and-analytics",
-                        label: "Reports and Analytics",
-                        href: "/city-admin/reports-and-analytics",
-                        icon: <BarChart3 className="w-4 h-4" />,
-                    },
-                    {
                     key: "distribution-records", // Unique key
                     label: "Distribution Records", // Slightly different label to distinguish
                     href: "/city-admin/distribution-records", // Points to your new route
                     icon: <Package className="w-4 h-4" />,
                     },
+                    {
+                        key: "reports-and-analytics",
+                        label: "Reports and Analytics",
+                        href: "/city-admin/reports-and-analytics",
+                        icon: <BarChart3 className="w-4 h-4" />,
+                    },
+                    
                 ];
             case "center_admin":
                 return [
@@ -126,6 +127,12 @@ export function AppSidebar({ role, roleLabel, userEmail }: AppSidebarProps) {
                         label: "Aid Allocation",
                         href: "/center-admin/aid-allocation",
                         icon: <Package className="w-4 h-4" />,
+                    },
+                    {
+                    key: "distribution-records", // Unique key
+                    label: "Distribution Records", // Slightly different label to distinguish
+                    href: "/city-admin/distribution-records", // Points to your new route
+                    icon: <Package className="w-4 h-4" />,
                     },
                     {
                         key: "reports-and-analytics",
