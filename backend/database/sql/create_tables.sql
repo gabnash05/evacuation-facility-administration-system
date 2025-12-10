@@ -92,6 +92,7 @@ CREATE TABLE IF NOT EXISTS individuals (
     date_of_birth DATE NULL,
     gender VARCHAR(10) NULL CHECK (gender IN ('Male', 'Female', 'Other')),
     relationship_to_head VARCHAR(50) NOT NULL,
+    current_status VARCHAR(20) NULL CHECK (current_status IN ('checked_in', 'checked_out', 'transferred', NULL)),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     
@@ -527,6 +528,137 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+
+-- ========================
+-- UPDATE INDIVIDUAL STATUS TRIGGER AND FUNCTION
+-- ========================
+CREATE OR REPLACE FUNCTION update_individual_current_status()
+RETURNS TRIGGER AS $$
+BEGIN
+    -- Handle INSERT (new attendance record)
+    IF TG_OP = 'INSERT' THEN
+        -- Update individual's status based on the new record
+        IF NEW.status = 'checked_in' THEN
+            UPDATE individuals 
+            SET current_status = 'checked_in',
+                updated_at = CURRENT_TIMESTAMP
+            WHERE individual_id = NEW.individual_id;
+            
+        ELSIF NEW.status = 'checked_out' THEN
+            -- Check if there are any other active check-ins
+            IF NOT EXISTS (
+                SELECT 1 FROM attendance_records 
+                WHERE individual_id = NEW.individual_id 
+                AND status = 'checked_in' 
+                AND check_out_time IS NULL
+                AND record_id != NEW.record_id
+            ) THEN
+                UPDATE individuals 
+                SET current_status = 'checked_out',
+                    updated_at = CURRENT_TIMESTAMP
+                WHERE individual_id = NEW.individual_id;
+            END IF;
+            
+        ELSIF NEW.status = 'transferred' THEN
+            UPDATE individuals 
+            SET current_status = 'transferred',
+                updated_at = CURRENT_TIMESTAMP
+            WHERE individual_id = NEW.individual_id;
+        END IF;
+        
+    -- Handle UPDATE (status change in attendance record)
+    ELSIF TG_OP = 'UPDATE' THEN
+        -- If status changed
+        IF OLD.status != NEW.status THEN
+            IF NEW.status = 'checked_in' THEN
+                UPDATE individuals 
+                SET current_status = 'checked_in',
+                    updated_at = CURRENT_TIMESTAMP
+                WHERE individual_id = NEW.individual_id;
+                    
+            ELSIF NEW.status = 'checked_out' THEN
+                -- Check if there are any other active check-ins
+                IF NOT EXISTS (
+                    SELECT 1 FROM attendance_records 
+                    WHERE individual_id = NEW.individual_id 
+                    AND status = 'checked_in' 
+                    AND check_out_time IS NULL
+                    AND record_id != NEW.record_id
+                ) THEN
+                    UPDATE individuals 
+                    SET current_status = 'checked_out',
+                        updated_at = CURRENT_TIMESTAMP
+                    WHERE individual_id = NEW.individual_id;
+                END IF;
+                
+            ELSIF NEW.status = 'transferred' THEN
+                UPDATE individuals 
+                SET current_status = 'transferred',
+                    updated_at = CURRENT_TIMESTAMP
+                WHERE individual_id = NEW.individual_id;
+            END IF;
+        END IF;
+        
+    -- Handle DELETE (removing an attendance record)
+    ELSIF TG_OP = 'DELETE' THEN
+        -- If deleted record was the last active check-in
+        IF OLD.status = 'checked_in' AND OLD.check_out_time IS NULL THEN
+            -- Check if there are any other active check-ins
+            IF NOT EXISTS (
+                SELECT 1 FROM attendance_records 
+                WHERE individual_id = OLD.individual_id 
+                AND status = 'checked_in' 
+                AND check_out_time IS NULL
+            ) THEN
+                UPDATE individuals 
+                SET current_status = 'checked_out',
+                    updated_at = CURRENT_TIMESTAMP
+                WHERE individual_id = OLD.individual_id;
+            END IF;
+        END IF;
+    END IF;
+    
+    RETURN COALESCE(NEW, OLD);
+END;
+$$ LANGUAGE plpgsql;
+
+
+-- Function to recalculate all individual statuses
+CREATE OR REPLACE FUNCTION recalculate_all_individual_statuses()
+RETURNS TABLE(individual_id INTEGER, old_status VARCHAR, new_status VARCHAR) AS $$
+BEGIN
+    RETURN QUERY
+    WITH latest_status AS (
+        SELECT 
+            i.individual_id,
+            i.current_status as old_status,
+            CASE 
+                WHEN EXISTS (
+                    SELECT 1 FROM attendance_records ar
+                    WHERE ar.individual_id = i.individual_id
+                    AND ar.status = 'checked_in'
+                    AND ar.check_out_time IS NULL
+                ) THEN 'checked_in'
+                WHEN EXISTS (
+                    SELECT 1 FROM attendance_records ar
+                    WHERE ar.individual_id = i.individual_id
+                    AND ar.status = 'transferred'
+                ) THEN 'transferred'
+                ELSE 'checked_out'
+            END as calculated_status
+        FROM individuals i
+    )
+    UPDATE individuals i
+    SET current_status = ls.calculated_status,
+        updated_at = CURRENT_TIMESTAMP
+    FROM latest_status ls
+    WHERE i.individual_id = ls.individual_id
+    AND (i.current_status IS DISTINCT FROM ls.calculated_status)
+    RETURNING i.individual_id, ls.old_status, ls.calculated_status;
+END;
+$$ LANGUAGE plpgsql;
+
+
 -- ========================
 -- CREATE TRIGGERS
 -- ========================
@@ -557,6 +689,22 @@ CREATE TRIGGER update_allocation_on_distribution_delete
     AFTER DELETE ON distributions
     FOR EACH ROW
     EXECUTE FUNCTION update_allocation_quantity();
+
+-- Triggers for updating individual status on attendance changes
+CREATE TRIGGER update_individual_status_on_insert
+    AFTER INSERT ON attendance_records
+    FOR EACH ROW
+    EXECUTE FUNCTION update_individual_current_status();
+
+CREATE TRIGGER update_individual_status_on_update
+    AFTER UPDATE ON attendance_records
+    FOR EACH ROW
+    EXECUTE FUNCTION update_individual_current_status();
+
+CREATE TRIGGER update_individual_status_on_delete
+    AFTER DELETE ON attendance_records
+    FOR EACH ROW
+    EXECUTE FUNCTION update_individual_current_status();
 
 -- Create triggers for all tables with updated_at
 CREATE TRIGGER update_users_updated_at BEFORE UPDATE ON users FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
@@ -774,6 +922,69 @@ JOIN evacuation_centers ec ON h.center_id = ec.center_id
 GROUP BY h.household_id, h.household_name, ec.center_name
 ORDER BY last_distribution_date DESC;
 
+
+-- ========================
+-- VIEW: Enhanced individual view with current status and center info
+-- ========================
+CREATE OR REPLACE VIEW individual_status_view AS
+SELECT 
+    i.individual_id,
+    i.first_name,
+    i.last_name,
+    i.date_of_birth,
+    i.gender,
+    i.relationship_to_head,
+    i.current_status,
+    i.created_at,
+    i.updated_at,
+    
+    -- Household info
+    h.household_id,
+    h.household_name,
+    h.address as household_address,
+    
+    -- Current center info (if checked in)
+    CASE 
+        WHEN i.current_status = 'checked_in' THEN 
+            (SELECT center_id FROM attendance_records 
+             WHERE individual_id = i.individual_id 
+             AND status = 'checked_in' 
+             AND check_out_time IS NULL 
+             LIMIT 1)
+        ELSE NULL
+    END as current_center_id,
+    
+    CASE 
+        WHEN i.current_status = 'checked_in' THEN 
+            (SELECT ec.center_name FROM attendance_records ar
+             JOIN evacuation_centers ec ON ar.center_id = ec.center_id
+             WHERE ar.individual_id = i.individual_id 
+             AND ar.status = 'checked_in' 
+             AND ar.check_out_time IS NULL 
+             LIMIT 1)
+        ELSE NULL
+    END as current_center_name,
+    
+    -- Last check-in time
+    (SELECT MAX(check_in_time) FROM attendance_records 
+     WHERE individual_id = i.individual_id 
+     AND status = 'checked_in') as last_check_in_time,
+     
+    -- Age (calculated)
+    EXTRACT(YEAR FROM AGE(CURRENT_DATE, i.date_of_birth)) as age,
+    
+    -- Age group
+    CASE 
+        WHEN EXTRACT(YEAR FROM AGE(CURRENT_DATE, i.date_of_birth)) < 18 THEN 'Children'
+        WHEN EXTRACT(YEAR FROM AGE(CURRENT_DATE, i.date_of_birth)) BETWEEN 18 AND 34 THEN 'Young Adult'
+        WHEN EXTRACT(YEAR FROM AGE(CURRENT_DATE, i.date_of_birth)) BETWEEN 35 AND 59 THEN 'Middle Aged'
+        WHEN EXTRACT(YEAR FROM AGE(CURRENT_DATE, i.date_of_birth)) >= 60 THEN 'Senior'
+        ELSE 'Unknown'
+    END as age_group
+
+FROM individuals i
+JOIN households h ON i.household_id = h.household_id;
+
 -- ========================
 -- CREATE FUNCTIONS FOR COMMON OPERATIONS
 -- ========================
@@ -894,3 +1105,6 @@ INSERT INTO aid_categories (category_name, description) VALUES
 ('Shelter', 'Shelter and bedding materials'),
 ('Other', 'Other types of aid')
 ON CONFLICT (category_name) DO NOTHING;
+
+
+

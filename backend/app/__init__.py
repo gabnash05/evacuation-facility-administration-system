@@ -38,7 +38,7 @@ def create_app(config_class=Config):
     # Configure CORS for all environments
     CORS(app, 
         origins=app.config.get("CORS_ORIGINS", ["http://localhost:5173", "http://localhost:5000", "http://127.0.0.1:5000"]),
-        methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+        methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
         allow_headers=["Content-Type", "Authorization"],
         supports_credentials=True,
         expose_headers=["Set-Cookie"],
@@ -49,6 +49,7 @@ def create_app(config_class=Config):
     from app.routes.evacuation_centers import evacuation_center_bp
     from app.routes.events import event_bp
     from app.routes.households import households_bp
+    from app.routes.individuals import individuals_bp
     from app.routes.user import user_bp
     from app.routes.attendance_records import attendance_record_bp
     from app.routes.distribution import bp as distribution_bp
@@ -57,6 +58,7 @@ def create_app(config_class=Config):
 
     app.register_blueprint(auth_bp, url_prefix="/api")
     app.register_blueprint(households_bp, url_prefix="/api")
+    app.register_blueprint(individuals_bp, url_prefix="/api")
     app.register_blueprint(event_bp, url_prefix="/api")
     app.register_blueprint(evacuation_center_bp, url_prefix="/api")
     app.register_blueprint(user_bp, url_prefix="/api")
