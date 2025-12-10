@@ -201,3 +201,40 @@
     0%, 100% { transform: scale(1); opacity: 0.3; }
     50% { transform: scale(1.2); opacity: 0.1; }
 }
+
+.static-map .leaflet-container {
+    pointer-events: none !important;
+}
+
+.static-map .custom-marker {
+    pointer-events: none !important;
+    cursor: default !important;
+}
+
+.static-map .leaflet-control-zoom {
+    pointer-events: none !important;
+    opacity: 0.5 !important;
+}
+
+.static-map .leaflet-tooltip {
+    pointer-events: none !important;
+}
+
+/* Prevent any hover effects */
+.static-map .custom-marker .group:hover {
+    transform: none !important;
+}
+
+/* Optional: Add a subtle overlay to indicate it's static */
+.static-map::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 1000;
+    pointer-events: none;
+    /* Uncomment if you want a subtle overlay */
+    /* background: linear-gradient(45deg, rgba(0,0,0,0.01) 0%, rgba(0,0,0,0.01) 100%); */
+}

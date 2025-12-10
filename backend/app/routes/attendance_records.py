@@ -23,6 +23,7 @@ from app.services.attendance_records_service import (
     recalculate_center_occupancy,
     recalculate_all_center_occupancies,
     delete_attendance_record,
+    get_attendance_record_by_individual_id,
 )
 from app.services.user_service import get_current_user
 
@@ -674,14 +675,16 @@ def check_out_individual_route(record_id: int) -> Tuple:
 
         # Only enforce center restrictions for roles that are tied to a specific center
         if current_user.role in ["center_admin", "volunteer"] and current_user.center_id is not None:
-            record_result = get_attendance_record_by_id(record_id)
+            record_result = get_attendance_record_by_individual_id(record_id)
 
             if not record_result.get("success"):
-                # Preserve existing 404 behaviour when record is not found
                 return jsonify(record_result), 404
 
             record_data = record_result.get("data") or {}
             record_center_id = record_data.get("center_id")
+
+            print(f"Record ID: {record_id}")
+            print(f"Record center ID: {record_center_id}, User center ID: {current_user.center_id}")
 
             if record_center_id != current_user.center_id:
                 return (
@@ -693,8 +696,6 @@ def check_out_individual_route(record_id: int) -> Tuple:
                     ),
                     403,
                 )
-
-        logger.info("Checking out individual from record: %s", record_id)
 
         result = check_out_individual(
             record_id=record_id,
