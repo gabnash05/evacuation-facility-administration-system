@@ -12,7 +12,7 @@ import { CenterAdminAttendancePage } from "./pages/center-admin/CenterAdminAtten
 
 import { VolunteerDashboard } from "@/pages/volunteer/VolunteerDashboard";
 import { VolunteerHouseholdsPage } from "./pages/volunteer/VolunteerHouseholdsPage";
-import { VolunteerAttendancePage } from "./pages/volunteer/VolunteerAttendancePage";
+import { VolunteerAttendancePage } from "./pages/volunteer/VolunteerAttendancePageV2.tsx";
 
 import MainLayout from "@/layouts/MainLayout";
 import LoginPage from "@/pages/auth/LoginPage";
