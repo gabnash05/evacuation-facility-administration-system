@@ -250,7 +250,7 @@ export function CityAdminUserManagementPage() {
                             entriesPerPage={entriesPerPage}
                             onEntriesPerPageChange={handleEntriesPerPageChange}
                             loading={loading}
-                            searchPlaceholder="Search by email..."
+                            searchPlaceholder="Search by email"
                             addButtonText="Add User"
                         />
                     </div>

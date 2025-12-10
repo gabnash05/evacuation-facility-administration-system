@@ -23,11 +23,13 @@ export class EvacuationCenterService {
     // FIXED: getCenterById returns a single center, not paginated response
     static async getCenterById(id: number): Promise<{
         success: boolean;
+        message: string;
         data: EvacuationCenter;
     }> {
         try {
             const response = await api.get<{
                 success: boolean;
+                message: string;
                 data: EvacuationCenter;
             }>(`/evacuation_centers/${id}`, {
                 withCredentials: true,

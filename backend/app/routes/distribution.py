@@ -27,8 +27,18 @@ def get_history():
         params = schema.load(request.args)
         if user.role in ['volunteer', 'center_admin']:
             params['center_id'] = user.center_id
-        result, status = DistributionService.get_history(params)
-        return jsonify(result), status
+            
+        # Call the service and get both result and status
+        service_result = DistributionService.get_history(params)
+        
+        # The service returns a tuple (result_dict, status_code)
+        if isinstance(service_result, tuple) and len(service_result) == 2:
+            result, status = service_result
+            return jsonify(result), status
+        else:
+            # Handle case where service doesn't return tuple
+            return jsonify(service_result), 200
+            
     except Exception as e:
         return jsonify({"success": False, "message": str(e)}), 400
 
