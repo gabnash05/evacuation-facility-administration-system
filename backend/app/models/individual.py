@@ -201,10 +201,10 @@ class Individual(db.Model):
         sort_by: str = "last_name",
         sort_direction: str = "asc",
         household_id: int = None,
-        status: str = None,  # NEW: Filter by current_status
-        gender: str = None,  # NEW: Filter by gender
-        age_group: str = None,  # NEW: Filter by age group
-        center_id: int = None,  # NEW: Filter by current center
+        status: str = None,
+        gender: str = None,
+        age_group: str = None,
+        center_id: int = None,
     ):
         """Get paginated individuals with filtering and sorting, including real-time status."""
         search_query = f"%{search}%" if search else ""
@@ -223,7 +223,7 @@ class Individual(db.Model):
             "last_check_in_time": "last_check_in_time",
             "created_at": "i.created_at",
             "updated_at": "i.updated_at",
-            "age": "age",  # NEW: Sort by calculated age
+            "age": "age",
         }
         
         # Validate and set sort column
@@ -258,14 +258,35 @@ class Individual(db.Model):
             if age_group in age_conditions:
                 conditions.append(age_conditions[age_group])
 
+        # MODIFIED: Center filter - show individuals with center_id OR currently checked into center
         if center_id:
             conditions.append("""
-                EXISTS (
-                    SELECT 1 FROM attendance_records ar
-                    WHERE ar.individual_id = i.individual_id
-                    AND ar.status = 'checked_in'
-                    AND ar.check_out_time IS NULL
-                    AND ar.center_id = :center_id
+                (
+                    -- Individuals currently checked into this center
+                    EXISTS (
+                        SELECT 1 FROM attendance_records ar
+                        WHERE ar.individual_id = i.individual_id
+                        AND ar.status = 'checked_in'
+                        AND ar.check_out_time IS NULL
+                        AND ar.center_id = :center_id
+                    )
+                    -- OR individuals associated with a household registered to this center
+                    OR h.center_id = :center_id
+                    -- NEW: OR individuals transferred FROM this center AND NOT checked into the destination center yet
+                    OR EXISTS (
+                        SELECT 1 FROM attendance_records ar_transfer
+                        WHERE ar_transfer.individual_id = i.individual_id
+                        AND ar_transfer.status = 'transferred'
+                        AND ar_transfer.transfer_from_center_id = :center_id
+                        -- Ensure they haven't been checked into the destination center since transfer
+                        AND NOT EXISTS (
+                            SELECT 1 FROM attendance_records ar_checkin
+                            WHERE ar_checkin.individual_id = i.individual_id
+                            AND ar_checkin.status = 'checked_in'
+                            AND ar_checkin.check_out_time IS NULL
+                            AND ar_checkin.center_id = ar_transfer.transfer_to_center_id
+                        )
+                    )
                 )
             """)
             params["center_id"] = center_id
@@ -314,7 +335,7 @@ class Individual(db.Model):
                         ELSE NULL
                     END as current_center_name,
                     
-                    -- Last check-in time (FIXED: Get most recent non-null check_in_time)
+                    -- Last check-in time
                     (SELECT check_in_time FROM attendance_records 
                     WHERE individual_id = i.individual_id 
                     AND check_in_time IS NOT NULL
@@ -351,7 +372,7 @@ class Individual(db.Model):
         except Exception as e:
             logger.error(f"Error fetching paginated individuals: {str(e)}")
             return []
-
+        
     @classmethod
     def get_count(
         cls, 

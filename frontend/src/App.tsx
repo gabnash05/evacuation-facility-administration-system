@@ -8,7 +8,7 @@ import { CityAdminAttendancePage } from "./pages/city-admin/CityAdminAttendanceP
 
 import { CenterAdminDashboard } from "@/pages/center-admin/CenterAdminDashboard";
 import { CenterAdminHouseholdsPage } from "./pages/center-admin/CenterAdminHouseholds";
-import { CenterAdminAttendancePage } from "./pages/center-admin/CenterAdminAttendancePage";
+import { CenterAdminAttendancePage } from "./pages/center-admin/CenterAdminAttendancePageV2";
 
 import { VolunteerDashboard } from "@/pages/volunteer/VolunteerDashboard";
 import { VolunteerHouseholdsPage } from "./pages/volunteer/VolunteerHouseholdsPage";

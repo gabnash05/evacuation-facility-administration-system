@@ -85,7 +85,16 @@ const initialState = {
 export const useIndividualStore = create<IndividualState>((set, get) => ({
     ...initialState,
 
-    setSearchQuery: (q: string) => set({ searchQuery: q, currentPage: 1 }),
+    setSearchQuery: (q: string) => {
+        set(state => ({
+            searchQuery: q,
+            currentPage: 1,
+            appliedFilters: {
+                ...state.appliedFilters,
+                search: q
+            }
+        }));
+    },
 
     setCurrentPage: (p: number) => set({ currentPage: p }),
 
@@ -130,6 +139,22 @@ export const useIndividualStore = create<IndividualState>((set, get) => ({
                 age_group: params.age_group ?? currentFilters.age_group as any,
                 center_id: params.center_id ?? currentFilters.center_id,
             });
+
+            console.log(`Parameters for fetching individuals:`, {
+                search,
+                page,
+                limit,
+                sortBy: params.sortBy,
+                sortOrder: params.sortOrder,
+                household_id: params.household_id ?? currentFilters.household_id,
+                status: params.status ?? currentFilters.status as any,
+                gender
+            : params.gender ?? currentFilters.gender as any,
+                age_group: params.age_group ?? currentFilters.age_group as any,
+                center_id: params.center_id ?? currentFilters.center_id,
+            });
+            
+            console.log("Fetch Individuals Response:", response);
 
             if (!response.success) {
                 throw new Error(response.message);
@@ -212,13 +237,13 @@ export const useIndividualStore = create<IndividualState>((set, get) => ({
 
     clearSearch: () => {
         set(state => ({
-            paginatedIndividuals: [],  // Clear displayed data only
-            searchQuery: "",           // Clear search query
-            currentPage: 1,            // Reset to page 1
-            totalRecords: 0,           // Reset count
+            paginatedIndividuals: [],  
+            searchQuery: "",           
+            currentPage: 1,            
+            totalRecords: 0,           
             appliedFilters: {
-                ...state.appliedFilters,  // KEEP ALL EXISTING FILTERS
-                search: "",               // Only clear the search text
+                ...state.appliedFilters, 
+                search: "",               
             },
             error: null,
         }));

@@ -86,6 +86,32 @@ export function HouseholdDetailsModal({
         return individuals.filter(ind => ind.individual_id !== household.household_head_id);
     };
 
+    // Function to calculate age from date of birth
+    const calculateAge = (dateOfBirth: string | undefined): string => {
+        if (!dateOfBirth) return "N/A";
+        
+        try {
+            const birthDate = new Date(dateOfBirth);
+            const today = new Date();
+            
+            // Check if the date is valid
+            if (isNaN(birthDate.getTime())) return "Invalid Date";
+            
+            let age = today.getFullYear() - birthDate.getFullYear();
+            const monthDifference = today.getMonth() - birthDate.getMonth();
+            
+            // Adjust age if birthday hasn't occurred this year yet
+            if (monthDifference < 0 || (monthDifference === 0 && today.getDate() < birthDate.getDate())) {
+                age--;
+            }
+            
+            return age.toString();
+        } catch {
+            return "N/A";
+        }
+    };
+
+    // Function to format date (kept in case you need it elsewhere)
     const formatDate = (dateString: string | undefined) => {
         if (!dateString) return "N/A";
         try {
@@ -181,10 +207,10 @@ export function HouseholdDetailsModal({
                                             </div>
                                             <div className="space-y-2">
                                                 <Label className="text-sm font-medium text-muted-foreground">
-                                                    Date of Birth
+                                                    Age
                                                 </Label>
                                                 <div className="text-sm">
-                                                    {formatDate(householdHead.date_of_birth!)}
+                                                    {calculateAge(householdHead.date_of_birth!)}
                                                 </div>
                                             </div>
                                             <div className="space-y-2">
@@ -216,7 +242,7 @@ export function HouseholdDetailsModal({
                                                     <TableRow>
                                                         <TableHead>First Name</TableHead>
                                                         <TableHead>Last Name</TableHead>
-                                                        <TableHead>Date of Birth</TableHead>
+                                                        <TableHead>Age</TableHead>
                                                         <TableHead>Gender</TableHead>
                                                         <TableHead>Relationship</TableHead>
                                                     </TableRow>
@@ -234,7 +260,7 @@ export function HouseholdDetailsModal({
                                                                 {individual.last_name}
                                                             </TableCell>
                                                             <TableCell className="py-3">
-                                                                {formatDate(individual.date_of_birth!)}
+                                                                {calculateAge(individual.date_of_birth!)}
                                                             </TableCell>
                                                             <TableCell className="py-3">
                                                                 {individual.gender || "N/A"}
