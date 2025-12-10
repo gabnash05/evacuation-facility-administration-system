@@ -9,7 +9,7 @@ import { CityAdminAidAllocationPage } from "./pages/city-admin/CityAdminAidAlloc
 
 import { CenterAdminDashboard } from "@/pages/center-admin/CenterAdminDashboard";
 import { CenterAdminHouseholdsPage } from "./pages/center-admin/CenterAdminHouseholds";
-import { CenterAdminAttendancePage } from "./pages/center-admin/CenterAdminAttendancePage";
+import { CenterAdminAttendancePage } from "./pages/center-admin/CenterAdminAttendancePageV2";
 import { CenterAdminAidAllocationPage } from "./pages/center-admin/CenterAdminAidAllocationPage";
 
 import { VolunteerDashboard } from "@/pages/volunteer/VolunteerDashboard";

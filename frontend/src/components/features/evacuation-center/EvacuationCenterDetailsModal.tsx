@@ -43,6 +43,27 @@ const formatDateForDisplay = (dateString: string): string => {
     return `${day}/${month}/${year}`;
 };
 
+
+// Helper function to calculate age from date of birth
+const calculateAge = (dateOfBirth: string): string => {
+    if (!dateOfBirth) return "N/A";
+    
+    const birthDate = new Date(dateOfBirth);
+    if (isNaN(birthDate.getTime())) return "N/A";
+    
+    const today = new Date();
+    let age = today.getFullYear() - birthDate.getFullYear();
+    const monthDiff = today.getMonth() - birthDate.getMonth();
+    
+    // Adjust age if birthday hasn't occurred yet this year
+    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+        age--;
+    }
+    
+    return age.toString();
+};
+
+
 // Helper function to capitalize status for display
 const capitalizeStatus = (status: string): string => {
     const statusMap: Record<string, string> = {
@@ -595,8 +616,8 @@ export function EvacuationCenterDetailsModal({
                             <TableHead className="font-semibold min-w-[120px]">
                                 Household
                             </TableHead>
-                            <TableHead className="font-semibold min-w-[120px]">
-                                Date of Birth
+                            <TableHead className="font-semibold min-w-[100px]">
+                                Age
                             </TableHead>
                             <TableHead className="font-semibold min-w-[100px]">
                                 Gender
@@ -651,11 +672,8 @@ export function EvacuationCenterDetailsModal({
                                         <TableCell className="min-w-[120px]">
                                             {attendee.household_name || "N/A"}
                                         </TableCell>
-                                        <TableCell className="min-w-[120px]">
-                                            {/* Date of Birth is not available in AttendanceRecord - showing check-in time instead */}
-                                            {attendee.check_in_time 
-                                                ? formatDateForDisplay(attendee.check_in_time)
-                                                : "N/A"}
+                                        <TableCell className="min-w-[100px]">
+                                            {attendee.date_of_birth ? calculateAge(attendee.date_of_birth) : "N/A"}
                                         </TableCell>
                                         <TableCell className="min-w-[100px]">
                                             {attendee.gender || "N/A"}

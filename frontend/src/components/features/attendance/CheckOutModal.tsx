@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import {
@@ -10,9 +10,8 @@ import {
     DialogClose,
 } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
-import { X } from "lucide-react";
+import { X, Home } from "lucide-react";
 import { useAttendanceStore } from "@/store/attendanceRecordsStore";
-import { useIndividualStore } from "@/store/individualStore";
 import { useEvacuationCenterStore } from "@/store/evacuationCenterStore";
 import { IndividualSearchTable } from "@/components/features/attendance/IndividualSearchTable";
 import type { Individual } from "@/types/individual";
@@ -28,7 +27,7 @@ interface CheckOutModalProps {
         record_id: number;
         notes?: string;
     }>) => Promise<void>;
-    defaultCenterId?: number; // NEW: Add defaultCenterId prop to restrict checkouts
+    defaultCenterId?: number;
 }
 
 export function CheckOutModal({ 
@@ -38,7 +37,7 @@ export function CheckOutModal({
     recordId, 
     onCheckOut, 
     onBatchCheckOut,
-    defaultCenterId // NEW: Destructure defaultCenterId
+    defaultCenterId
 }: CheckOutModalProps) {
     const { checkOutIndividual, checkOutMultipleIndividuals, fetchIndividualAttendanceHistory } = useAttendanceStore();
     const { centers, fetchAllCenters } = useEvacuationCenterStore();
@@ -47,8 +46,17 @@ export function CheckOutModal({
     const [error, setError] = useState<string | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [selectedIndividuals, setSelectedIndividuals] = useState<Individual[]>([]);
-    const [resolvedRecords, setResolvedRecords] = useState<Array<{individual: Individual, record_id: number, center_id?: number}>>([]); // NEW: Add center_id
+    const [resolvedRecords, setResolvedRecords] = useState<Array<{individual: Individual, record_id: number, center_id?: number}>>([]);
     const [findingRecords, setFindingRecords] = useState(false);
+    
+    // ADD LOCAL STATE FOR MODAL SEARCH (same as CheckInModal)
+    const [modalSearchQuery, setModalSearchQuery] = useState("");
+    const [modalPage, setModalPage] = useState(1);
+    const [modalSearchResults, setModalSearchResults] = useState<Individual[]>([]);
+    const [modalTotalRecords, setModalTotalRecords] = useState(0);
+    const [modalSearchLoading, setModalSearchLoading] = useState(false);
+    
+    const searchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
     // Reset form when modal opens/closes & load centers for name lookups
     useEffect(() => {
@@ -59,8 +67,29 @@ export function CheckOutModal({
             setSelectedIndividuals([]);
             setResolvedRecords([]);
             setFindingRecords(false);
+            
+            // Reset modal search state
+            setModalSearchQuery("");
+            setModalPage(1);
+            setModalSearchResults([]);
+            setModalTotalRecords(0);
+            
+            // Clear any pending search timeout
+            if (searchTimeoutRef.current) {
+                clearTimeout(searchTimeoutRef.current);
+                searchTimeoutRef.current = null;
+            }
         }
     }, [isOpen, fetchAllCenters]);
+
+    // Cleanup timeout on unmount
+    useEffect(() => {
+        return () => {
+            if (searchTimeoutRef.current) {
+                clearTimeout(searchTimeoutRef.current);
+            }
+        };
+    }, []);
 
     const resetForm = () => {
         setNotes("");
@@ -68,6 +97,21 @@ export function CheckOutModal({
         setSelectedIndividuals([]);
         setResolvedRecords([]);
         setFindingRecords(false);
+        setModalSearchQuery("");
+        setModalPage(1);
+        setModalSearchResults([]);
+        setModalTotalRecords(0);
+        
+        // Clear timeout
+        if (searchTimeoutRef.current) {
+            clearTimeout(searchTimeoutRef.current);
+            searchTimeoutRef.current = null;
+        }
+    };
+
+    const handleClose = () => {
+        resetForm();
+        onClose();
     };
 
     const getCenterNameById = (centerId?: number) => {
@@ -80,11 +124,6 @@ export function CheckOutModal({
         if (!centerId) return "";
         const name = getCenterNameById(centerId);
         return name || `Center #${centerId}`;
-    };
-
-    const handleClose = () => {
-        resetForm();
-        onClose();
     };
 
     const handleSubmit = async () => {
@@ -170,7 +209,7 @@ export function CheckOutModal({
             const active = (history as any[]).find(r => r.status === "checked_in" && !r.check_out_time);
             
             if (active) {
-                // NEW: Check if individual is in the default center (if defaultCenterId is provided)
+                // Check if individual is in the default center (if defaultCenterId is provided)
                 const isInDefaultCenter = !defaultCenterId || active.center_id === defaultCenterId;
                 
                 if (isInDefaultCenter) {
@@ -213,6 +252,110 @@ export function CheckOutModal({
         setResolvedRecords([]);
     };
 
+    // MODAL SEARCH FUNCTION (same pattern as CheckInModal)
+    const handleModalSearch = async (params: {
+        search: string;
+        page: number;
+        limit: number;
+    }): Promise<{ success: boolean; data: Individual[]; totalRecords: number }> => {
+        console.log("handleModalSearch called with:", params);
+        
+        // Don't update state if nothing changed
+        if (modalSearchQuery === params.search && modalPage === params.page) {
+            return {
+                success: true,
+                data: modalSearchResults,
+                totalRecords: modalTotalRecords
+            };
+        }
+        
+        // Update local state
+        setModalSearchQuery(params.search);
+        setModalPage(params.page);
+        
+        // Clear any existing timeout
+        if (searchTimeoutRef.current) {
+            clearTimeout(searchTimeoutRef.current);
+        }
+        
+        // If search is empty, clear results immediately
+        if (params.search.trim() === "") {
+            setModalSearchResults([]);
+            setModalTotalRecords(0);
+            return {
+                success: true,
+                data: [],
+                totalRecords: 0
+            };
+        }
+        
+        // Return a promise that resolves with the search results
+        return new Promise<{ success: boolean; data: Individual[]; totalRecords: number }>((resolve) => {
+            searchTimeoutRef.current = setTimeout(async () => {
+                try {
+                    const { IndividualService } = await import("@/services/individualService");
+                    const response = await IndividualService.getIndividuals({
+                        search: params.search,
+                        page: params.page,
+                        limit: params.limit,
+                        sortBy: "last_name",
+                        sortOrder: "asc",
+                    });
+                    
+                    if (response.success && response.data) {
+                        const results = response.data.results || [];
+                        const total = response.data.pagination?.total_items || 0;
+                        
+                        setModalSearchResults(results);
+                        setModalTotalRecords(total);
+                        resolve({
+                            success: true,
+                            data: results,
+                            totalRecords: total
+                        });
+                    } else {
+                        resolve({
+                            success: false,
+                            data: [],
+                            totalRecords: 0
+                        });
+                    }
+                } catch (error) {
+                    console.error("Search failed:", error);
+                    resolve({
+                        success: false,
+                        data: [],
+                        totalRecords: 0
+                    });
+                }
+            }, 500);
+        });
+    };
+
+    // HANDLE PAGE CHANGE
+    const handleModalPageChange = (page: number) => {
+        setModalPage(page);
+        
+        // Clear any pending search timeout
+        if (searchTimeoutRef.current) {
+            clearTimeout(searchTimeoutRef.current);
+            searchTimeoutRef.current = null;
+        }
+        
+        // If search is empty, clear results immediately
+        if (modalSearchQuery.trim() === "") {
+            setModalSearchResults([]);
+            setModalTotalRecords(0);
+        } else {
+            // Trigger search with new page
+            handleModalSearch({
+                search: modalSearchQuery,
+                page: page,
+                limit: 10
+            });
+        }
+    };
+
     const getSubmitButtonText = () => {
         if (recordId) {
             return isSubmitting ? "Checking Out..." : "Check Out";
@@ -224,7 +367,7 @@ export function CheckOutModal({
         }
     };
 
-    // NEW: Info message about center restriction (using center name when available)
+    // Info message about center restriction
     const centerRestrictionInfo = defaultCenterId ? (
         <div className="bg-blue-50 dark:bg-blue-950 text-blue-700 dark:text-blue-300 p-3 rounded-md text-sm border border-blue-200 dark:border-blue-800 mb-4">
             <div className="font-medium">Check-out Restriction:</div>
@@ -237,7 +380,7 @@ export function CheckOutModal({
 
     return (
         <Dialog open={isOpen} onOpenChange={handleClose}>
-            <DialogContent className="!max-w-[600px] w-[95vw] max-h-[90vh] overflow-y-auto">
+            <DialogContent className="!max-w-[800px] w-[95vw] max-h-[90vh] overflow-y-auto">
                 <DialogHeader>
                     <DialogTitle className="text-lg font-semibold">
                         {recordId ? "Check Out Individual" : "Check Out Individuals"}
@@ -275,9 +418,9 @@ export function CheckOutModal({
                             </div>
                         </div>
                     ) : (
-                        // Batch checkout UI (similar to check-in modal)
-                        <div className="space-y-4">
-                            {/* Selected Individuals Display */}
+                        // Batch checkout UI (following CheckInModal pattern)
+                        <div className="space-y-6">
+                            {/* Selected Individuals Display - Similar to CheckInModal */}
                             {selectedIndividuals.length > 0 && (
                                 <div className="space-y-3 border-b pb-6">
                                     <div className="flex justify-between items-center">
@@ -312,11 +455,18 @@ export function CheckOutModal({
                                                         </div>
                                                         <div className="text-sm text-muted-foreground">
                                                             ID: {individual.individual_id}
-                                                            {record?.center_id && ` • Center: ${formatCenterDisplay(record.center_id)}`}
+                                                            {individual.gender && ` • ${individual.gender}`}
+                                                            {individual.date_of_birth &&
+                                                                ` • DOB: ${new Date(individual.date_of_birth).toLocaleDateString()}`}
+                                                        </div>
+                                                        <div className="flex items-center gap-1 mt-1 text-sm">
+                                                            <Home className="h-3 w-3" />
+                                                            Household ID: {individual.household_id}
                                                         </div>
                                                         {record ? (
                                                             <div className="text-sm text-green-600 mt-1">
                                                                 ✓ Ready to check out (Record #{record.record_id})
+                                                                {record.center_id && ` • Center: ${formatCenterDisplay(record.center_id)}`}
                                                             </div>
                                                         ) : (
                                                             <div className="text-sm text-yellow-600 mt-1">
@@ -339,15 +489,20 @@ export function CheckOutModal({
                                 </div>
                             )}
 
-                            {/* Individual Search and Selection */}
-                            <div className="space-y-4">
+                            {/* Individual Search and Selection - Using same pattern as CheckInModal */}
+                            <div className="space-y-4 border-b pb-6">
                                 <Label className="text-base font-semibold">
-                                    Search and Select Individuals to Check Out
+                                    Search and Select Individuals to Check Out *
                                 </Label>
 
                                 <IndividualSearchTable
                                     onSelectIndividual={handleIndividualSelect}
                                     selectedIndividuals={selectedIndividuals}
+                                    onSearch={handleModalSearch}
+                                    modalPage={modalPage}
+                                    onModalPageChange={handleModalPageChange}
+                                    isLoading={modalSearchLoading}
+                                    errorMessage={''}
                                 />
 
                                 {findingRecords && (

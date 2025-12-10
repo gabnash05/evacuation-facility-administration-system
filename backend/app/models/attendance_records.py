@@ -747,6 +747,7 @@ class AttendanceRecord(db.Model):
                 ar.record_id,
                 CONCAT(i.first_name, ' ', i.last_name) as individual_name,
                 i.gender,
+                i.date_of_birth,  -- ADDED: Include date_of_birth
                 ec.center_name,
                 e.event_name,
                 h.household_name,
@@ -776,7 +777,8 @@ class AttendanceRecord(db.Model):
                 "transfer_time": "ar.transfer_time",
                 "checkInTime": "ar.check_in_time",
                 "checkOutTime": "ar.check_out_time", 
-                "transferTime": "ar.transfer_time"
+                "transferTime": "ar.transfer_time",
+                "date_of_birth": "i.date_of_birth",
             }
             
             if sort_by in sort_mapping:
@@ -803,6 +805,7 @@ class AttendanceRecord(db.Model):
                 "record_id": row.record_id,
                 "individual_name": row.individual_name or "Unknown",
                 "gender": row.gender or "Unknown",
+                "date_of_birth": row.date_of_birth.isoformat() if row.date_of_birth else "",
                 "center_name": row.center_name or "Unknown Center",
                 "event_name": row.event_name or "Unknown Event", 
                 "household_name": row.household_name or "Unknown Household",

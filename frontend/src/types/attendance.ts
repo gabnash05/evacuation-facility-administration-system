@@ -7,6 +7,7 @@ export interface AttendanceRecord {
     individual_id: number;
     individual_name?: string;
     gender?: string;
+    date_of_birth?: string;
     center_id: number;
     center_name?: string;
     transfer_from_center_id?: number | null;

@@ -8,7 +8,8 @@ import { useAuth } from "@/hooks/useAuth";
 import { loginSchema } from "@/schemas/auth";
 import type { LoginFormData } from "@/schemas/auth";
 import { useAuthStore } from "@/store/authStore";
-import { StaticMap } from "@/components/features/map/StaticMap"; // Import the StaticMap
+import { StaticMap } from "@/components/features/map/StaticMap";
+import efasLogo from "@/assets/logo/efas-logo.png"; // Import the logo
 
 export default function LoginPage() {
     const navigate = useNavigate();
@@ -86,6 +87,14 @@ export default function LoginPage() {
             <div className="flex-1 flex items-center justify-center p-8">
                 <Card className="w-full max-w-md shadow-sm dark:shadow-md">
                     <CardHeader className="space-y-1">
+                        {/* Add the logo here */}
+                        <div className="flex justify-center">
+                            <img 
+                                src={efasLogo} 
+                                alt="EFAS Logo" 
+                                className="h-40 w-auto"
+                            />
+                        </div>
                         <CardTitle className="text-2xl font-bold text-center">
                             Welcome Back
                         </CardTitle>
