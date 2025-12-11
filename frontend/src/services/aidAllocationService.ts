@@ -25,7 +25,6 @@ export class AidAllocationService {
     // ============ ALLOCATIONS ============
     static async getAllocations(params: GetAllocationsParams = {}): Promise<AllocationsResponse> {
         try {
-            console.log("Fetching allocations with params:", params);
             const response = await api.get<AllocationsResponse>("/allocations", {
                 params: {
                     ...params,
@@ -34,7 +33,6 @@ export class AidAllocationService {
                 },
                 withCredentials: true,
             });
-            console.log("API Response:", response);
             return response.data;
         } catch (error) {
             console.error("API Error:", error);
@@ -101,8 +99,10 @@ export class AidAllocationService {
             const response = await api.get<AllocationsResponse>(`/allocations/center/${centerId}`, {
                 params: {
                     ...params,
-                    sort_by: params.sortBy,  // ADD THIS TRANSFORMATION
-                    sort_order: params.sortOrder,  // ADD THIS TRANSFORMATION
+                    sort_by: params.sortBy,
+                    sort_order: params.sortOrder,
+                    ...(params.sortBy && { sortBy: undefined }),
+                    ...(params.sortOrder && { sortOrder: undefined }),
                 },
                 withCredentials: true,
             });

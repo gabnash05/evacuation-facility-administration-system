@@ -5,9 +5,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { Badge } from "@/components/ui/badge"; // ADDED: For location badge
 import { useEvacuationCenterStore } from "@/store/evacuationCenterStore";
 import { DuplicateCenterDialog } from "./DuplicateCenterDialog";
-import { ChevronUp, ChevronDown, X, MapPin } from "lucide-react";
+import { ChevronUp, ChevronDown, X, MapPin, CheckCircle } from "lucide-react"; // ADDED: CheckCircle
 import MapLocationPicker from "../map/MapLocationPicker";
 
 // Define the form data type that matches what the store expects
@@ -316,7 +317,7 @@ export function AddEvacuationCenterForm({
                                     type="button"
                                     onClick={handleCloseMapPicker}
                                     disabled={!formData.latitude || !formData.longitude}
-                                    className="bg-blue-600 text-white hover:bg-blue-700"
+                                    className="bg-primary text-primary-foreground hover:bg-primary/90"
                                 >
                                     Confirm Location
                                 </Button>
@@ -365,38 +366,50 @@ export function AddEvacuationCenterForm({
                                     </Label>
                                     <div className="space-y-3">
                                         {formData.latitude && formData.longitude ? (
-                                            <div className="p-4 border border-green-200 bg-green-50 rounded-md">
+                                            <div className="p-4 border border-input bg-card rounded-lg shadow-sm">
                                                 <div className="flex items-start justify-between">
                                                     <div className="space-y-2">
                                                         <div className="flex items-center gap-2">
-                                                            <MapPin className="h-4 w-4 text-green-600" />
-                                                            <span className="font-medium text-green-700">
-                                                                Location Selected
-                                                            </span>
-                                                        </div>
-                                                        <div className="text-sm space-y-1">
-                                                            <div>
-                                                                <span className="text-muted-foreground">Latitude: </span>
-                                                                <span className="font-mono">{formData.latitude.toFixed(6)}°</span>
+                                                            <div className="p-1 bg-primary/10 rounded-full">
+                                                                <CheckCircle className="h-4 w-4 text-primary" />
                                                             </div>
                                                             <div>
-                                                                <span className="text-muted-foreground">Longitude: </span>
-                                                                <span className="font-mono">{formData.longitude.toFixed(6)}°</span>
+                                                                <Badge variant="outline" className="bg-primary/10 text-primary hover:bg-primary/20 border-primary/20">
+                                                                    Location Selected
+                                                                </Badge>
+                                                            </div>
+                                                        </div>
+                                                        <div className="text-sm space-y-1 pl-7">
+                                                            <div className="flex items-center gap-2">
+                                                                <span className="text-muted-foreground">Latitude:</span>
+                                                                <code className="px-2 py-1 bg-muted rounded text-xs font-mono">
+                                                                    {formData.latitude.toFixed(6)}°
+                                                                </code>
+                                                            </div>
+                                                            <div className="flex items-center gap-2">
+                                                                <span className="text-muted-foreground">Longitude:</span>
+                                                                <code className="px-2 py-1 bg-muted rounded text-xs font-mono">
+                                                                    {formData.longitude.toFixed(6)}°
+                                                                </code>
                                                             </div>
                                                         </div>
                                                     </div>
-                                                    <button
+                                                    <Button
                                                         type="button"
+                                                        variant="outline"
+                                                        size="sm"
                                                         onClick={handleOpenMapPicker}
-                                                        className="px-3 py-1 text-sm border border-input rounded-md hover:bg-accent transition-colors"
+                                                        className="h-8"
                                                     >
                                                         Change
-                                                    </button>
+                                                    </Button>
                                                 </div>
                                             </div>
                                         ) : (
-                                            <div className="p-6 border-2 border-dashed border-muted-foreground/25 rounded-lg text-center cursor-pointer hover:border-muted-foreground/50 transition-colors bg-background"
-                                                onClick={handleOpenMapPicker}>
+                                            <div 
+                                                className="p-6 border-2 border-dashed border-border rounded-lg text-center cursor-pointer hover:border-primary/50 transition-colors bg-background hover:bg-accent/50"
+                                                onClick={handleOpenMapPicker}
+                                            >
                                                 <div className="space-y-3">
                                                     <div className="text-muted-foreground">
                                                         <MapPin className="mx-auto h-12 w-12" />
@@ -476,7 +489,7 @@ export function AddEvacuationCenterForm({
                                     ) : (
                                         // Empty State
                                         <div
-                                            className="border-2 border-dashed border-muted-foreground/25 rounded-lg p-6 text-center cursor-pointer hover:border-muted-foreground/50 transition-colors bg-background"
+                                            className="border-2 border-dashed border-border rounded-lg p-6 text-center cursor-pointer hover:border-primary/50 transition-colors bg-background hover:bg-accent/50"
                                             onDrop={handleDrop}
                                             onDragOver={handleDragOver}
                                             onClick={() => fileInputRef.current?.click()}
@@ -524,7 +537,7 @@ export function AddEvacuationCenterForm({
                                     <Button
                                         type="submit"
                                         disabled={loading || !formData.latitude || !formData.longitude} // NEW: Disable if no location
-                                        className="bg-blue-600 text-white hover:bg-blue-700 px-4 py-2 text-sm font-medium"
+                                        className="px-4 py-2 text-sm font-medium"
                                     >
                                         {loading ? "Adding..." : "+ Add Center"}
                                     </Button>
