@@ -1,0 +1,98 @@
+"use client";
+
+import { useRef, useEffect, memo } from "react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import {
+    Select,
+    SelectTrigger,
+    SelectValue,
+    SelectContent,
+    SelectItem,
+} from "@/components/ui/select";
+
+interface AttendanceTableToolbarProps {
+    searchQuery: string;
+    onSearchChange: (query: string) => void;
+    onCheckIn: () => void;
+    onOpenCheckOut?: () => void;
+    onOpenTransfer?: () => void;
+    entriesPerPage: number;
+    onEntriesPerPageChange: (entries: number) => void;
+    loading: boolean;
+}
+
+/**
+ * Toolbar for Attendance Table
+ * Includes search input, entries per page selector, and Check In button.
+ * Optimized with React.memo to prevent re-renders and preserve focus even after data refresh.
+ */
+function AttendanceTableToolbarComponent({
+    searchQuery,
+    onSearchChange,
+    onCheckIn,
+    onOpenCheckOut,
+    onOpenTransfer,
+    entriesPerPage,
+    onEntriesPerPageChange,
+    loading,
+}: AttendanceTableToolbarProps) {
+    const inputRef = useRef<HTMLInputElement>(null);
+
+    useEffect(() => {
+        if (document.activeElement === inputRef.current) {
+            inputRef.current?.focus();
+        }
+    }, [loading]);
+
+    return (
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+            {/* Search Bar */}
+            <div className="flex items-center gap-2 w-full md:w-auto">
+                <Input
+                    ref={inputRef}
+                    type="text"
+                    placeholder="Search attendance records..."
+                    value={searchQuery}
+                    onChange={e => onSearchChange(e.target.value)}
+                    className="w-full md:w-64"
+                />
+                <div className="flex items-center gap-2">
+                    <Button onClick={onCheckIn} disabled={loading}>
+                        Check In
+                    </Button>
+                    <Button onClick={() => onOpenCheckOut && onOpenCheckOut()} disabled={loading}>
+                        Check Out
+                    </Button>
+                    <Button onClick={() => onOpenTransfer && onOpenTransfer()} disabled={loading}>
+                        Transfer
+                    </Button>
+                </div>
+            </div>
+
+            {/* Entries per page selector */}
+            <div className="flex items-center gap-2">
+                <span className="text-sm text-muted-foreground">Show</span>
+                <Select
+                    value={entriesPerPage.toString()}
+                    onValueChange={(val: string) => onEntriesPerPageChange(Number(val))}
+                    disabled={loading}
+                >
+                    <SelectTrigger className="w-20">
+                        <SelectValue placeholder="Entries" />
+                    </SelectTrigger>
+                    <SelectContent>
+                        {[10, 20, 50, 100].map(count => (
+                            <SelectItem key={count} value={count.toString()}>
+                                {count}
+                            </SelectItem>
+                        ))}
+                    </SelectContent>
+                </Select>
+                <span className="text-sm text-muted-foreground">entries</span>
+            </div>
+        </div>
+    );
+}
+
+export const AttendanceTableToolbar = memo(AttendanceTableToolbarComponent);

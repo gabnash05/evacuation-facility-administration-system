@@ -152,11 +152,6 @@ export function CityAdminCentersPage() {
 
                 {/* Main Table Card */}
                 <div className="border border-border rounded-lg">
-                    {/* Card Header */}
-                    <div className="bg-card border-b border-border p-4">
-                        <h3 className="font-semibold text-base text-foreground">Center List</h3>
-                    </div>
-
                     {/* Controls Bar */}
                     <div className="bg-card border-b border-border p-4">
                         <EvacuationCenterTableToolbar

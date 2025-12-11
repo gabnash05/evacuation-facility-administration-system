@@ -15,7 +15,7 @@ import {
     DropdownMenuItem,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { DeleteHouseholdDialog } from "./DeleteHouseholdDialog"; // Import the dialog
+import { DeleteHouseholdDialog } from "./DeleteHouseholdDialog";
 import { cn } from "@/lib/utils";
 
 export interface Household {
@@ -38,6 +38,7 @@ interface HouseholdTableProps {
     onSort: (key: string) => void;
     onEdit: (id: number) => void;
     onDelete: (id: number) => void;
+    onRowClick: (id: number) => void;
     loading?: boolean;
     userRole?: string;
 }
@@ -49,6 +50,7 @@ export function HouseholdTable({
     onSort,
     onEdit,
     onDelete,
+    onRowClick,
     loading,
     userRole,
 }: HouseholdTableProps) {
@@ -86,7 +88,13 @@ export function HouseholdTable({
     };
 
     // Check if user can delete (only super_admin)
-    const canDelete = userRole === "super_admin" || userRole === "city_admin" || userRole === "center_admin";
+    const canDelete =
+        userRole === "super_admin" || userRole === "city_admin" || userRole === "center_admin";
+
+    const handleDropdownClick = (e: React.MouseEvent, householdId: number) => {
+        e.stopPropagation();
+        onRowClick(householdId);
+    };
 
     if (data.length === 0 && !loading) {
         return (
@@ -139,22 +147,27 @@ export function HouseholdTable({
                                 <TableRow
                                     key={row.household_id}
                                     className={cn(
-                                        "hover:bg-muted/50",
+                                        "hover:bg-muted/50 cursor-pointer", // Added cursor-pointer
                                         index % 2 === 1 && "bg-muted/30"
                                     )}
+                                    onClick={() => onRowClick(row.household_id)} // Added row click handler
                                 >
                                     {headers.map(header => (
                                         <TableCell key={header.key} className="py-3">
                                             {row[header.key as keyof Household]}
                                         </TableCell>
                                     ))}
-                                    <TableCell className="text-right">
+                                    <TableCell 
+                                        className="text-right"
+                                        onClick={(e) => e.stopPropagation()} // Prevent row click when clicking actions
+                                    >
                                         <DropdownMenu>
                                             <DropdownMenuTrigger asChild>
                                                 <Button
                                                     variant="ghost"
                                                     size="icon"
                                                     className="h-8 w-8"
+                                                    onClick={(e) => e.stopPropagation()} // Prevent row click
                                                 >
                                                     <MoreVertical className="h-4 w-4" />
                                                 </Button>
@@ -167,7 +180,7 @@ export function HouseholdTable({
                                                     <Edit className="h-4 w-4" />
                                                     Edit
                                                 </DropdownMenuItem>
-                                                {canDelete && ( // Only show delete button for super_admin
+                                                {canDelete && (
                                                     <DropdownMenuItem
                                                         onClick={() => handleDeleteClick(row)}
                                                         className="flex items-center gap-2 text-destructive focus:text-destructive"

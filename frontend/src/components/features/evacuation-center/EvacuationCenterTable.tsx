@@ -31,7 +31,7 @@ interface EvacuationCenterTableProps {
     onShowSuccessToast?: (message: string) => void;
     onRowClick?: (center: EvacuationCenter) => void;
     onItemDeleted?: () => void;
-    userRole?: string; 
+    userRole?: string;
 }
 
 // Custom dropdown component with theme support and proper positioning

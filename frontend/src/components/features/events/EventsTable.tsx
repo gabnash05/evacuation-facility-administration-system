@@ -287,7 +287,7 @@ export function EventsTable({
         },
         {
             key: "max_occupancy",
-            label: "Max Occupancy",
+            label: "Occupancy",
             sortable: true,
             width: columnWidths.max_occupancy,
         },
@@ -394,7 +394,9 @@ export function EventsTable({
                                         className="py-3 align-middle text-left"
                                         style={{ width: columnWidths.end_date }}
                                     >
-                                        {event.end_date ? formatDateForDisplay(event.end_date) : "NA"}
+                                        {event.end_date
+                                            ? formatDateForDisplay(event.end_date)
+                                            : "NA"}
                                     </TableCell>
                                     {/* Capacity and Occupancy Columns */}
                                     <TableCell

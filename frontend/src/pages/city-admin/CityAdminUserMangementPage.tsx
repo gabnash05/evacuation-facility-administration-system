@@ -12,6 +12,10 @@ import {
     SelectItem,
 } from "@/components/ui/select";
 import { useAuthStore } from "@/store/authStore";
+import { AddEditUserModal } from "@/components/features/user-management/AddEditUserModal";
+import { DeleteConfirmationModal } from "@/components/features/user-management/DeleteConfirmationModal";
+import type { User } from "@/types/user";
+import { DeactivateConfirmationModal } from "@/components/features/user-management/DeactivateConfirmationModal";
 
 export function CityAdminUserManagementPage() {
     const {
@@ -28,20 +32,25 @@ export function CityAdminUserManagementPage() {
         setEntriesPerPage,
         setSortConfig,
         fetchUsers,
+        deleteUser,
+        deactivateUser,
+        reactivateUser,
     } = useUserStore();
 
-    // Get current user and role
     const { user } = useAuthStore();
     const userRole = user?.role;
 
-    // Local state for role filter
+    const [isAddEditModalOpen, setIsAddEditModalOpen] = useState(false);
+    const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+    const [isDeactivateModalOpen, setIsDeactivateModalOpen] = useState(false);
+    const [selectedUser, setSelectedUser] = useState<User | null>(null);
+    
+
     const [roleFilter, setRoleFilter] = useState<string>("all");
     const [statusFilter, setStatusFilter] = useState<string>("all");
 
-    // Create debounced fetch function
     const debouncedFetchUsers = useMemo(() => debounce(() => fetchUsers(), 500), [fetchUsers]);
 
-    // Fetch users when dependencies change
     useEffect(() => {
         if (
             searchQuery ||
@@ -83,11 +92,60 @@ export function CityAdminUserManagementPage() {
                 break;
         }
     };
-
+    
     const handleAddUser = () => {
-        console.log("Add User clicked");
-        // Implementation for adding a new user
-        // This would typically open a modal or navigate to a form
+        setSelectedUser(null);
+        setIsAddEditModalOpen(true);
+    };
+
+    const handleEditUser = (userToEdit: User) => {
+        setSelectedUser(userToEdit);
+        setIsAddEditModalOpen(true);
+    };
+    
+    const handleDeleteUser = (userToDelete: User) => {
+        setSelectedUser(userToDelete);
+        setIsDeleteModalOpen(true);
+    };
+
+    const handleConfirmDelete = () => {
+        if (!selectedUser) return;
+        (async () => {
+            try {
+                await deleteUser(selectedUser.user_id);
+                setIsDeleteModalOpen(false);
+                setSelectedUser(null);
+            } catch (err) {
+                // store.error will be set by the action; keep modal open for retry
+                setIsDeleteModalOpen(false);
+                setSelectedUser(null);
+                alert(err instanceof Error ? err.message : "Failed to delete user");
+            }
+        })();
+    };
+
+    const handleDeactivate = (userToToggle: User) => {
+        setSelectedUser(userToToggle);
+        setIsDeactivateModalOpen(true);
+    };
+
+    const handleConfirmDeactivate = () => {
+        if (!selectedUser) return;
+        (async () => {
+            try {
+                if (selectedUser.is_active) {
+                    await deactivateUser(selectedUser.user_id);
+                } else {
+                    await reactivateUser(selectedUser.user_id);
+                }
+                setIsDeactivateModalOpen(false);
+                setSelectedUser(null);
+            } catch (err) {
+                setIsDeactivateModalOpen(false);
+                setSelectedUser(null);
+                alert(err instanceof Error ? err.message : "Failed to change user status");
+            }
+        })();
     };
 
     const handleEntriesPerPageChange = (entries: number) => {
@@ -104,15 +162,14 @@ export function CityAdminUserManagementPage() {
 
     const handleRoleFilterChange = (role: string) => {
         setRoleFilter(role);
-        setCurrentPage(1); // Reset to first page when filter changes
+        setCurrentPage(1);
     };
 
     const handleStatusFilterChange = (status: string) => {
         setStatusFilter(status);
-        setCurrentPage(1); // Reset to first page when filter changes
+        setCurrentPage(1);
     };
 
-    // Build additional filters component
     const additionalFilters = (
         <>
             <Select value={roleFilter} onValueChange={handleRoleFilterChange} disabled={loading}>
@@ -147,8 +204,28 @@ export function CityAdminUserManagementPage() {
 
     return (
         <div className="w-full min-w-0 bg-background flex flex-col relative p-6">
+            <AddEditUserModal
+                isOpen={isAddEditModalOpen}
+                onClose={() => setIsAddEditModalOpen(false)}
+                currentUserRole={userRole}
+                userToEdit={selectedUser}
+            />
+            <DeleteConfirmationModal
+                isOpen={isDeleteModalOpen}
+                onClose={() => setIsDeleteModalOpen(false)}
+                onConfirm={handleConfirmDelete}
+                title="Delete User"
+                description={`Are you sure you want to permanently delete the user "${selectedUser?.email}"? This action cannot be undone.`}
+            />
+            <DeactivateConfirmationModal
+                isOpen={isDeactivateModalOpen}
+                onClose={() => setIsDeactivateModalOpen(false)}
+                onConfirm={handleConfirmDeactivate}
+                title={selectedUser?.is_active ? "Deactivate User" : "Reactivate User"}
+                description={selectedUser?.is_active ? `Are you sure you want to deactivate ${selectedUser?.email}?` : `Are you sure you want to reactivate ${selectedUser?.email}?`}
+            />
+
             <div className="space-y-6">
-                {/* Page Header */}
                 <div>
                     <h1 className="text-2xl font-bold tracking-tight">User Management</h1>
                     <p className="text-muted-foreground">
@@ -156,7 +233,6 @@ export function CityAdminUserManagementPage() {
                     </p>
                 </div>
 
-                {/* Error Display */}
                 {error && (
                     <div className="bg-destructive/15 text-destructive p-4 rounded-md">
                         <div className="flex items-center gap-2">
@@ -165,14 +241,7 @@ export function CityAdminUserManagementPage() {
                     </div>
                 )}
 
-                {/* Main Table Card */}
                 <div className="border border-border rounded-lg">
-                    {/* Card Header */}
-                    <div className="bg-card border-b border-border p-4">
-                        <h3 className="font-semibold text-base text-foreground">User List</h3>
-                    </div>
-
-                    {/* Controls Bar */}
                     <div className="bg-card border-b border-border p-4">
                         <TableToolbar
                             searchQuery={searchQuery}
@@ -181,13 +250,11 @@ export function CityAdminUserManagementPage() {
                             entriesPerPage={entriesPerPage}
                             onEntriesPerPageChange={handleEntriesPerPageChange}
                             loading={loading}
-                            searchPlaceholder="Search by email..."
+                            searchPlaceholder="Search by email"
                             addButtonText="Add User"
-                            additionalFilters={additionalFilters}
                         />
                     </div>
 
-                    {/* Table Section */}
                     <div className="border-b border-border">
                         {loading ? (
                             <div className="p-8 text-center">
@@ -198,13 +265,15 @@ export function CityAdminUserManagementPage() {
                                 data={users}
                                 sortConfig={sortConfig}
                                 onSort={handleSort}
+                                onEdit={handleEditUser}
+                                onDelete={handleDeleteUser}
+                                onDeactivate={handleDeactivate}
                                 loading={loading}
                                 userRole={userRole}
                             />
                         )}
                     </div>
 
-                    {/* Pagination Section */}
                     <div className="bg-card p-4">
                         <TablePagination
                             currentPage={currentPage}

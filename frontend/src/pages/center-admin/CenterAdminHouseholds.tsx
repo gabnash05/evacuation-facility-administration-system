@@ -4,6 +4,7 @@ import { HouseholdTableToolbar } from "@/components/features/household/Household
 import { TablePagination } from "@/components/common/TablePagination";
 import { AddHouseholdModal } from "@/components/features/household/AddHouseholdModal";
 import { EditHouseholdModal } from "@/components/features/household/EditHouseholdModal";
+import { HouseholdDetailsModal } from "@/components/features/household/HouseholdDetailsModal";
 import { SuccessToast } from "@/components/common/SuccessToast";
 import { useHouseholdStore } from "@/store/householdStore";
 import { debounce } from "@/utils/helpers";
@@ -34,6 +35,8 @@ export function CenterAdminHouseholdsPage() {
         isOpen: false,
         message: "",
     });
+    const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
+    const [selectedHouseholdForDetails, setSelectedHouseholdForDetails] = useState<number | null>(null);
 
     const { user } = useAuthStore();
     const centerId = user?.center_id;
@@ -73,6 +76,11 @@ export function CenterAdminHouseholdsPage() {
                 setSortConfig({ key, direction: "asc" });
                 break;
         }
+    };
+
+    const handleViewDetails = (id: number) => {
+        setSelectedHouseholdForDetails(id);
+        setIsDetailsModalOpen(true);
     };
 
     const handleOpenEditModal = (id: number) => {
@@ -180,6 +188,7 @@ export function CenterAdminHouseholdsPage() {
                                 onSort={handleSort}
                                 onEdit={handleOpenEditModal}
                                 onDelete={handleDelete}
+                                onRowClick={handleViewDetails}
                                 loading={loading}
                                 userRole={userRole}
                             />
@@ -218,6 +227,11 @@ export function CenterAdminHouseholdsPage() {
                 }}
                 isCenterAdminView={true}
             />
+            <HouseholdDetailsModal
+                householdId={selectedHouseholdForDetails}
+                isOpen={isDetailsModalOpen}
+                onClose={() => setIsDetailsModalOpen(false)}
+            />
             <SuccessToast
                 isOpen={successToast.isOpen}
                 message={successToast.message}
@@ -225,4 +239,4 @@ export function CenterAdminHouseholdsPage() {
             />
         </div>
     );
-}   
+}

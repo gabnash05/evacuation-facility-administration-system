@@ -8,6 +8,8 @@ import { useAuth } from "@/hooks/useAuth";
 import { loginSchema } from "@/schemas/auth";
 import type { LoginFormData } from "@/schemas/auth";
 import { useAuthStore } from "@/store/authStore";
+import { StaticMap } from "@/components/features/map/StaticMap";
+import efasLogo from "@/assets/logo/efas-logo.png"; // Import the logo
 
 export default function LoginPage() {
     const navigate = useNavigate();
@@ -53,7 +55,7 @@ export default function LoginPage() {
 
             // Get the user from the auth store after login
             const { user } = useAuthStore.getState();
-            
+
             if (!user) {
                 throw new Error("User data not available after login");
             }
@@ -85,8 +87,16 @@ export default function LoginPage() {
             <div className="flex-1 flex items-center justify-center p-8">
                 <Card className="w-full max-w-md shadow-sm dark:shadow-md">
                     <CardHeader className="space-y-1">
+                        {/* Add the logo here */}
+                        <div className="flex justify-center">
+                            <img 
+                                src={efasLogo} 
+                                alt="EFAS Logo" 
+                                className="h-40 w-auto"
+                            />
+                        </div>
                         <CardTitle className="text-2xl font-bold text-center">
-                            Welcome Back
+                            EFAS
                         </CardTitle>
                         <CardDescription className="text-center">
                             Enter your credentials to access the EFAS system
@@ -160,30 +170,13 @@ export default function LoginPage() {
                 </Card>
             </div>
 
-            {/* Right side - Map/Image Space */}
+            {/* Right side - Static Map */}
             <div className="flex-1 bg-muted hidden lg:flex items-center justify-center p-8">
-                <div className="w-full h-full max-w-2xl bg-gradient-to-br from-blue-500/10 to-purple-500/10 rounded-lg border-2 border-dashed border-muted-foreground/25 flex items-center justify-center">
-                    <div className="text-center space-y-4 text-muted-foreground">
-                        <div className="w-16 h-16 mx-auto bg-muted-foreground/20 rounded-full flex items-center justify-center">
-                            <svg
-                                className="w-8 h-8"
-                                fill="none"
-                                stroke="currentColor"
-                                viewBox="0 0 24 24"
-                            >
-                                <path
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    strokeWidth={1.5}
-                                    d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"
-                                />
-                            </svg>
-                        </div>
-                        <div>
-                            <p className="font-medium">Evacuation Facility Map</p>
-                            <p className="text-sm mt-1">System overview and facility locations</p>
-                        </div>
-                    </div>
+                <div className="w-full h-full max-w-2xl rounded-lg overflow-hidden shadow-lg">
+                    <StaticMap 
+                        center={[8.230205, 124.249607]}
+                        zoom={13}
+                    />
                 </div>
             </div>
         </div>

@@ -61,6 +61,7 @@ export function EditHouseholdModal({
     const [headLastName, setHeadLastName] = useState("");
     const [headDob, setHeadDob] = useState<Date>();
     const [headGender, setHeadGender] = useState("Male");
+    const [headIndividualId, setHeadIndividualId] = useState<number | null>(null);
     const [individuals, setIndividuals] = useState<Omit<CreateIndividualData, "household_id">[]>(
         []
     );
@@ -86,6 +87,7 @@ export function EditHouseholdModal({
                     setHouseholdName(household.household_name);
                     setAddress(household.address || "");
                     setCenterId(String(household.center_id));
+                    
                     const headIndividual = individualsResult.find(
                         (ind: any) => ind.individual_id === household.household_head_id
                     );
@@ -93,15 +95,19 @@ export function EditHouseholdModal({
                         setHeadFirstName(headIndividual.first_name);
                         setHeadLastName(headIndividual.last_name);
                         setHeadGender(headIndividual.gender || "Male");
+                        setHeadIndividualId(headIndividual.individual_id);
                         if (headIndividual.date_of_birth) {
                             setHeadDob(new Date(headIndividual.date_of_birth));
                         }
+                        console.log(headIndividual)
                     }
+                    
+                    // Filter out the head from other individuals
                     const otherIndividuals = individualsResult.filter(
                         (ind: any) => ind.individual_id !== household.household_head_id
                     );
                     const formattedIndividuals = otherIndividuals.map((ind: any) => ({
-                        individual_id: ind.individual_id,
+                        individual_id: ind.individual_id, // Make sure to include individual_id
                         first_name: ind.first_name,
                         last_name: ind.last_name,
                         date_of_birth: ind.date_of_birth || undefined,
@@ -125,6 +131,7 @@ export function EditHouseholdModal({
         setCenterId(undefined);
         setHeadFirstName("");
         setHeadLastName("");
+        setHeadIndividualId(null); // Reset the ID
         setHeadDob(undefined);
         setHeadGender("Male");
         setIndividuals([]);
@@ -138,7 +145,9 @@ export function EditHouseholdModal({
 
     const handleAddIndividual = (newIndividual: Omit<CreateIndividualData, "household_id">) => {
         if (newIndividual.relationship_to_head.toLowerCase().trim() === "head") {
-            alert("Error: The primary household head is defined above. Use that section for the head.");
+            alert(
+                "Error: The primary household head is defined above. Use that section for the head."
+            );
             return;
         }
         setIndividuals(prev => [...prev, newIndividual]);
@@ -178,6 +187,7 @@ export function EditHouseholdModal({
                 center_id: Number(centerId),
                 individuals: [
                     {
+                        individual_id: headIndividualId || undefined, // Include head's ID if it exists
                         first_name: headFirstName,
                         last_name: headLastName,
                         date_of_birth: headDob ? format(headDob, "yyyy-MM-dd") : undefined,
@@ -382,12 +392,42 @@ export function EditHouseholdModal({
                                                     <TableBody>
                                                         {individuals.map((ind, index) => (
                                                             <TableRow key={index}>
-                                                                <TableCell>{ind.first_name}</TableCell>
-                                                                <TableCell>{ind.last_name}</TableCell>
-                                                                <TableCell>{ind.date_of_birth ? format(new Date(ind.date_of_birth), "PPP") : "N/A"}</TableCell>
-                                                                <TableCell>{ind.gender || "N/A"}</TableCell>
-                                                                <TableCell>{ind.relationship_to_head}</TableCell>
-                                                                <TableCell><Button variant="ghost" size="icon" onClick={() => handleRemoveIndividual(index)} className="h-8 w-8 text-destructive"><Trash2 className="h-4 w-4" /></Button></TableCell>
+                                                                <TableCell>
+                                                                    {ind.first_name}
+                                                                </TableCell>
+                                                                <TableCell>
+                                                                    {ind.last_name}
+                                                                </TableCell>
+                                                                <TableCell>
+                                                                    {ind.date_of_birth
+                                                                        ? format(
+                                                                              new Date(
+                                                                                  ind.date_of_birth
+                                                                              ),
+                                                                              "PPP"
+                                                                          )
+                                                                        : "N/A"}
+                                                                </TableCell>
+                                                                <TableCell>
+                                                                    {ind.gender || "N/A"}
+                                                                </TableCell>
+                                                                <TableCell>
+                                                                    {ind.relationship_to_head}
+                                                                </TableCell>
+                                                                <TableCell>
+                                                                    <Button
+                                                                        variant="ghost"
+                                                                        size="icon"
+                                                                        onClick={() =>
+                                                                            handleRemoveIndividual(
+                                                                                index
+                                                                            )
+                                                                        }
+                                                                        className="h-8 w-8 text-destructive"
+                                                                    >
+                                                                        <Trash2 className="h-4 w-4" />
+                                                                    </Button>
+                                                                </TableCell>
                                                             </TableRow>
                                                         ))}
                                                     </TableBody>

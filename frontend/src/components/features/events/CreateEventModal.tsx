@@ -111,7 +111,7 @@ export function CreateEventModal({
 
     const handleAddEvent = async () => {
         setError(null); // Clear previous errors
-        
+
         if (!isFormValid) {
             setError("Please fill in all required fields");
             return;

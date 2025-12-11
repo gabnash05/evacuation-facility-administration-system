@@ -2,17 +2,13 @@
 
 import { useState, useMemo, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import {
-    UserRoundCheck,
-    Ambulance,
-    HousePlus,
-    HandHeart,
-} from "lucide-react";
+import { UserRoundCheck, Ambulance, HousePlus, HandHeart } from "lucide-react";
 import { EventsTable } from "@/components/features/events/EventsTable";
 import { useEventStore } from "@/store/eventStore";
 import { formatDate } from "@/utils/formatters";
 import type { Event } from "@/types/event";
 import { useAuthStore } from "@/store/authStore";
+import { useEvacuationCenterStore } from "@/store/evacuationCenterStore"; // Import the center store
 
 export function VolunteerDashboard() {
     const navigate = useNavigate();
@@ -34,10 +30,23 @@ export function VolunteerDashboard() {
         getEventDetails,
     } = useEventStore();
 
+    // Use evacuation center store
+    const {
+        centers,
+        loading: isLoadingCenters,
+        fetchAllCenters,
+        fetchCenterById,
+    } = useEvacuationCenterStore();
+
     // Get current user and role
     const { user } = useAuthStore();
     const userRole = user?.role;
     const userCenterId = user?.center_id;
+
+    // Fetch all centers to get center names
+    useEffect(() => {
+        fetchAllCenters();
+    }, [fetchAllCenters]);
 
     // Fetch events filtered by the volunteer's center_id
     useEffect(() => {
@@ -48,11 +57,17 @@ export function VolunteerDashboard() {
         }
     }, [fetchEvents, searchQuery, currentPage, entriesPerPage, sortConfig, userCenterId]);
 
+    // Function to get center name by center_id
+    const getCenterName = (centerId: number): string => {
+        const center = centers.find(c => c.center_id === centerId);
+        return center?.center_name || `Center #${centerId}`;
+    };
+
     const handleSort = (column: string): void => {
         const currentSortConfig = sortConfig;
 
         let newDirection: "asc" | "desc" | null = "asc";
-        
+
         if (currentSortConfig?.key === column) {
             if (currentSortConfig.direction === "asc") {
                 newDirection = "desc";
@@ -60,7 +75,7 @@ export function VolunteerDashboard() {
                 newDirection = null;
             }
         }
-        
+
         setSortConfig(newDirection ? { key: column, direction: newDirection } : null);
     };
 
@@ -88,12 +103,8 @@ export function VolunteerDashboard() {
     };
 
     // Handle button clicks
-    const handleCheckInClick = () => {
-        navigate("/volunteer/check-in");
-    };
-
-    const handleTransferClick = () => {
-        navigate("/volunteer/transfer-individual");
+    const handleAttendanceClick = () => {
+        navigate("/volunteer/attendance");
     };
 
     const handleHouseholdClick = () => {
@@ -114,7 +125,14 @@ export function VolunteerDashboard() {
             max_occupancy: event.max_occupancy || 0,
             usage_percentage: event.overall_usage_percentage || 0,
         }));
-    }, [events]);
+    }, [events, centers]);
+
+    const volunteerCenterName = useMemo(() => {
+        if (userCenterId) {
+            return getCenterName(userCenterId);
+        }
+        return "No Center Assigned";
+    }, [userCenterId, centers]);
 
     const totalPages = pagination?.total_pages || 1;
 
@@ -125,33 +143,39 @@ export function VolunteerDashboard() {
         <div className="w-full min-w-0 bg-background flex flex-col">
             {/* Quick Action Section */}
             <div className="p-none mt-12">
+                {/* Display Volunteer's Center Information */}
+                <div className="mb-6 p-4 bg-primary/5 border border-primary/20 rounded-lg">
+                    <h3 className="text-sm text-muted-foreground mb-2">
+                        Your Assigned Evacuation Center
+                    </h3>
+                    <div className="flex items-center gap-4">
+                        <div className="text-2xl font-bold text-primary">
+                            {volunteerCenterName}
+                        </div>
+                    </div>
+                </div>
+
                 <h2 className="text-2xl font-semibold text-center mb-8">Quick Action</h2>
 
                 <div className="flex justify-center gap-6 mb-12">
                     {[
-                        { 
-                            label: "Check-in Evacuee", 
-                            color: "bg-blue-500", 
+                        {
+                            label: "Attendance",
+                            color: "bg-blue-500",
                             icon: UserRoundCheck,
-                            onClick: handleCheckInClick 
+                            onClick: handleAttendanceClick,
                         },
-                        { 
-                            label: "Transfer Individual", 
-                            color: "bg-red-500", 
-                            icon: Ambulance,
-                            onClick: handleTransferClick 
-                        },
-                        { 
-                            label: "Register Household", 
-                            color: "bg-orange-500", 
+                        {
+                            label: "Register Household",
+                            color: "bg-orange-500",
                             icon: HousePlus,
-                            onClick: handleHouseholdClick 
+                            onClick: handleHouseholdClick,
                         },
-                        { 
-                            label: "Distribute Relief", 
-                            color: "bg-green-500", 
+                        {
+                            label: "Distribute Relief",
+                            color: "bg-green-500",
                             icon: HandHeart,
-                            onClick: handleReliefClick 
+                            onClick: handleReliefClick,
                         },
                     ].map((action, i) => (
                         <div key={i} className="flex flex-col items-center gap-2">
@@ -169,11 +193,12 @@ export function VolunteerDashboard() {
                 {/* Active Events Section */}
                 <div className="border border-border py-4 text-center mb-0">
                     <h2 className="text-2xl font-semibold">
-                        Active Events {userCenterId && `for Your Center`}
+                        Active Events {userCenterId && `for ${volunteerCenterName}`}
                     </h2>
                 </div>
 
                 {/* EventsTable Component */}
+                {/* Note: You may need to update your EventsTable component to handle the center_name field */}
                 <EventsTable
                     data={paginatedData}
                     sortConfig={sortConfig}
@@ -183,6 +208,7 @@ export function VolunteerDashboard() {
                     onDelete={handleDeleteEvent}
                     onRowClick={handleRowClick}
                     userRole={userRole}
+                    // Add center name to the table data if the EventsTable supports it
                 />
             </div>
         </div>
