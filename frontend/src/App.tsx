@@ -12,11 +12,12 @@ import { CenterAdminDashboard } from "@/pages/center-admin/CenterAdminDashboard"
 import { CenterAdminHouseholdsPage } from "./pages/center-admin/CenterAdminHouseholds";
 import { CenterAdminAttendancePage } from "./pages/center-admin/CenterAdminAttendancePageV2";
 import { CenterAdminAidAllocationPage } from "./pages/center-admin/CenterAdminAidAllocationPage";
+import { CenterAdminDistributionPage } from "./pages/center-admin/CenterAdminDistributionPage";
 
 import { VolunteerDashboard } from "@/pages/volunteer/VolunteerDashboard";
 import { VolunteerHouseholdsPage } from "./pages/volunteer/VolunteerHouseholdsPage";
 import { VolunteerAttendancePage } from "./pages/volunteer/VolunteerAttendancePageV2";
-import VolunteerDistributeAidPage from "@/pages/volunteer/VolunteerDistributeAidPage";
+import { VolunteerDistributionPage } from "@/pages/volunteer/VolunteerDistributionPage";
 
 import MainLayout from "@/layouts/MainLayout";
 import LoginPage from "@/pages/auth/LoginPage";
@@ -64,7 +65,6 @@ function App() {
                                         path="aid-allocation"
                                         element={<CityAdminAidAllocationPage />}
                                     />{" "}
-                                    {/* replace with actual page when available */}
                                     <Route
                                         path="reports-and-analytics"
                                         element={<div>Reports and Analytics Page</div>}
@@ -109,12 +109,14 @@ function App() {
                                         path="user-management"
                                         element={<CenterAdminUserManagementPage />}
                                     />{" "}
-                                    {/* replace with actual page when available */}
                                     <Route
                                         path="aid-allocation"
                                         element={<CenterAdminAidAllocationPage />}
                                     />{" "}
-                                    {/* replace with actual page when available */}
+                                    <Route
+                                        path="aid-distribution"
+                                        element={<CenterAdminDistributionPage />}
+                                    />{" "}
                                     <Route
                                         path="reports-and-analytics"
                                         element={<div>Reports and Analytics Page</div>}
@@ -147,7 +149,7 @@ function App() {
                                     />
                                     <Route
                                         path="aid-distribution"
-                                        element={<VolunteerDistributeAidPage />}
+                                        element={<VolunteerDistributionPage />}
                                     />{" "}
                                     {/* replace with actual page when available */}
                                     <Route path="*" element={<Navigate to="dashboard" replace />} />

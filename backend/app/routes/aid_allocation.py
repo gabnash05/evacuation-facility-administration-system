@@ -142,7 +142,7 @@ def get_center_allocations_route(center_id: int) -> Tuple:
 
         logger.info("Fetching allocations for center: %s", center_id)
 
-        # Get center allocations from service
+        # Get center allocations from service with user context
         result = get_center_allocations(
             center_id=center_id,
             category_id=category_id,
@@ -152,6 +152,8 @@ def get_center_allocations_route(center_id: int) -> Tuple:
             limit=limit,
             sort_by=sort_by,
             sort_order=sort_order,
+            user_role=current_user.role,  # Pass user role
+            user_center_id=current_user.center_id,  # Pass user center
         )
 
         if not result["success"]:

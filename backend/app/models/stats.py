@@ -229,13 +229,74 @@ class Stats:
         center_id: Optional[int] = None,
     ) -> Dict[str, Any]:
         try:
-            # TODO: Implement once allocations and distributions tables are ready
-            logger.warning("Aid distribution stats not yet implemented")
+            # Get allocation-based statistics
+            if center_id:
+                allocation_query = text("""
+                    SELECT 
+                        COALESCE(SUM(total_quantity), 0) as total_allocated,
+                        COALESCE(SUM(remaining_quantity), 0) as remaining,
+                        COALESCE(SUM(total_quantity - remaining_quantity), 0) as calculated_distributed
+                    FROM allocations 
+                    WHERE center_id = :center_id 
+                    AND status IN ('active', 'depleted')
+                """)
+                params = {"center_id": center_id}
+            else:
+                allocation_query = text("""
+                    SELECT 
+                        COALESCE(SUM(total_quantity), 0) as total_allocated,
+                        COALESCE(SUM(remaining_quantity), 0) as remaining,
+                        COALESCE(SUM(total_quantity - remaining_quantity), 0) as calculated_distributed
+                    FROM allocations 
+                    WHERE status IN ('active', 'depleted')
+                """)
+                params = {}
+
+            allocation_result = db.session.execute(allocation_query, params).fetchone()
+            
+            # Get distribution-based statistics for verification
+            if center_id:
+                distribution_query = text("""
+                    SELECT COALESCE(SUM(d.quantity_distributed), 0) as total_from_distributions
+                    FROM distributions d
+                    JOIN allocations a ON d.allocation_id = a.allocation_id
+                    WHERE a.center_id = :center_id
+                    AND a.status IN ('active', 'depleted')
+                """)
+                dist_params = {"center_id": center_id}
+            else:
+                distribution_query = text("""
+                    SELECT COALESCE(SUM(d.quantity_distributed), 0) as total_from_distributions
+                    FROM distributions d
+                    JOIN allocations a ON d.allocation_id = a.allocation_id
+                    WHERE a.status IN ('active', 'depleted')
+                """)
+                dist_params = {}
+
+            distribution_result = db.session.execute(distribution_query, dist_params).fetchone()
+            
+            if allocation_result:
+                total_allocated = float(allocation_result[0])
+                remaining = float(allocation_result[1])
+                calculated_distributed = float(allocation_result[2])
+            else:
+                total_allocated = 0
+                remaining = 0
+                calculated_distributed = 0
+            
+            # Use the distributions table value as the primary source of truth
+            total_distributed = float(distribution_result[0]) if distribution_result else calculated_distributed
+            
+            # Calculate percentage
+            percentage = 0.0
+            if total_allocated > 0:
+                percentage = (total_distributed / total_allocated) * 100
             
             return {
-                "total_distributed": 0,
-                "total_allocated": 0,
-                "percentage": 0
+                "total_distributed": int(total_distributed),
+                "total_allocated": int(total_allocated),
+                "remaining": int(remaining),
+                "percentage": round(percentage, 2)
             }
             
         except Exception as error:
@@ -243,6 +304,7 @@ class Stats:
             return {
                 "total_distributed": 0,
                 "total_allocated": 0,
+                "remaining": 0,
                 "percentage": 0
             }
 

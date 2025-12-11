@@ -541,3 +541,37 @@ def update_center_allocation_stats(center_id: Optional[int]) -> None:
     except Exception:
         logger.exception("Error updating center allocation stats (ignored)")
         return
+
+
+def get_center_allocations(
+    center_id: int,
+    category_id: Optional[int] = None,
+    status: Optional[str] = None,
+    search: Optional[str] = None,
+    page: int = 1,
+    limit: int = 10,
+    sort_by: Optional[str] = None,
+    sort_order: Optional[str] = None,
+    user_role: Optional[str] = None,  # Added parameter
+    user_center_id: Optional[int] = None  # Added parameter
+) -> Dict[str, Any]:
+    """
+    Convenience wrapper for get_allocations that forces a center_id.
+    Now includes user_role and user_center_id for proper access control.
+    """
+    try:
+        return get_allocations(
+            center_id=center_id,
+            category_id=category_id,
+            status=status,
+            search=search,
+            page=page,
+            limit=limit,
+            sort_by=sort_by,
+            sort_order=sort_order,
+            user_role=user_role,  # Pass through user role
+            user_center_id=user_center_id,  # Pass through user center
+        )
+    except Exception as error:
+        logger.exception("Error fetching center allocations")
+        return {"success": False, "message": f"Failed to fetch center allocations: {str(error)}"}

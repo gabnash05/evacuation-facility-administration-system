@@ -166,6 +166,7 @@ export function CityAdminAidAllocationPage() {
     const allocationColumns = [
         { key: "created_at", label: "Date", sortable: true },
         { key: "center_name", label: "Center", sortable: true },
+        { key: "category_name", label: "Category", sortable: true},
         { key: "resource_name", label: "Relief Type", sortable: true },
         { key: "remaining_quantity", label: "Quantity", sortable: true },
         { key: "status", label: "Status", sortable: true },
@@ -205,7 +206,7 @@ export function CityAdminAidAllocationPage() {
                                     entriesPerPage={entriesPerPage}
                                     onEntriesPerPageChange={handleEntriesPerPageChange}
                                     loading={loading}
-                                    searchPlaceholder="Search allocations..."
+                                    searchPlaceholder="Search allocations"
                                     addButtonText="Allocate Aid"
                                     showCenterFilter={false}
                                     showCategoryFilter={false}

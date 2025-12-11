@@ -258,7 +258,7 @@ export function CenterAdminUserManagementPage() {
                             entriesPerPage={entriesPerPage}
                             onEntriesPerPageChange={handleEntriesPerPageChange}
                             loading={loading}
-                            searchPlaceholder="Search volunteers..."
+                            searchPlaceholder="Search by email"
                             addButtonText="Add Volunteer"
                             // FIX: Pass filters as a prop, not as children
                             additionalFilters={additionalFilters} 

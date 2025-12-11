@@ -52,6 +52,7 @@ interface AidAllocationState {
 
     // Reset
     resetAllocationState: () => void;
+    resetState: () => void; // Added for compatibility
 }
 
 const initialState = {
@@ -108,9 +109,7 @@ export const useAidAllocationStore = create<AidAllocationState>((set, get) => ({
                 sortOrder: sortConfig?.direction || undefined,
             };
 
-            console.log("Fetching allocations with params:", params);
             const response: AllocationsResponse = await AidAllocationService.getAllocations(params);
-            console.log("Allocations response:", response);
 
             set({
                 allocations: response.data.results,
@@ -235,4 +234,5 @@ export const useAidAllocationStore = create<AidAllocationState>((set, get) => ({
     },
 
     resetAllocationState: () => set(initialState),
+    resetState: () => set(initialState), // Added alias for compatibility
 }));
