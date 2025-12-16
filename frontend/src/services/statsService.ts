@@ -21,6 +21,9 @@ export class StatsService {
             if (filters?.center_id) {
                 params.center_id = filters.center_id;
             }
+            if (filters?.event_id) {  // NEW
+                params.event_id = filters.event_id;
+            }
 
             const response = await api.get<DashboardStatsResponse>("/stats/dashboard-stats", {
                 params,
@@ -45,6 +48,9 @@ export class StatsService {
             }
             if (filters?.center_id) {
                 params.center_id = filters.center_id;
+            }
+            if (filters?.event_id) {  // NEW
+                params.event_id = filters.event_id;
             }
 
             const response = await api.get<OccupancyStatsResponse>("/stats/occupancy-stats", {
@@ -73,6 +79,9 @@ export class StatsService {
             if (filters?.center_id) {
                 params.center_id = filters.center_id;
             }
+            if (filters?.event_id) {  // NEW
+                params.event_id = filters.event_id;
+            }
 
             const response = await api.get<RegistrationStatsResponse>(
                 "/stats/registration-stats",
@@ -89,13 +98,17 @@ export class StatsService {
     }
 
     static async getAidDistributionStats(
-        centerId?: number
+        centerId?: number,
+        eventId?: number  // NEW
     ): Promise<AidDistributionStatsResponse> {
         try {
             const params: Record<string, any> = {};
 
             if (centerId) {
                 params.center_id = centerId;
+            }
+            if (eventId) {  // NEW
+                params.event_id = eventId;
             }
 
             const response = await api.get<AidDistributionStatsResponse>(

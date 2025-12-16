@@ -18,6 +18,7 @@ interface StatsState {
     setFilters: (filters: StatsFilter) => void;
     setGenderFilter: (gender: Gender | null) => void;
     setAgeGroupFilter: (ageGroup: AgeGroup | null) => void;
+    setEventFilter: (eventId: number | null) => void; // NEW
     fetchStats: (centerId?: number) => Promise<void>;
     resetFilters: () => void;
     getStatsForDisplay: () => StatDisplay[];
@@ -31,6 +32,7 @@ const initialState = {
         gender: null,
         age_group: null,
         center_id: null,
+        event_id: null, // NEW
     },
 };
 
@@ -61,6 +63,17 @@ export const useStatsStore = create<StatsState>((set, get) => ({
         });
     },
 
+    // NEW: Set event filter
+    setEventFilter: (eventId: number | null) => {
+        const currentFilters = get().filters;
+        set({
+            filters: {
+                ...currentFilters,
+                event_id: eventId,
+            },
+        });
+    },
+
     fetchStats: async (centerId?: number) => {
         const { filters } = get();
 
@@ -71,6 +84,7 @@ export const useStatsStore = create<StatsState>((set, get) => ({
                 gender: filters.gender,
                 age_group: filters.age_group,
                 center_id: centerId || filters.center_id,
+                event_id: filters.event_id, // NEW
             };
 
             const response = await StatsService.getDashboardStats(filterParams);
@@ -100,6 +114,7 @@ export const useStatsStore = create<StatsState>((set, get) => ({
                 gender: null,
                 age_group: null,
                 center_id: null,
+                event_id: null, // NEW
             },
         });
     },
