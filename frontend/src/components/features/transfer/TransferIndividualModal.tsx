@@ -1,5 +1,5 @@
 // components/features/transfer/TransferIndividualModal.tsx
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import {
@@ -17,6 +17,7 @@ import { Badge } from "@/components/ui/badge";
 import { useAttendanceStore } from "@/store/attendanceRecordsStore";
 import { useEvacuationCenterStore } from "@/store/evacuationCenterStore";
 import { useIndividualStore } from "@/store/individualStore";
+import { useEventStore } from "@/store/eventStore"; // ADDED: Import event store
 import { IndividualSearchTable } from "@/components/features/attendance/IndividualSearchTable";
 import { EvacuationCentersList } from "@/components/features/transfer/EvacuationCentersList";
 import { TransferReasonSelect } from "@/components/features/transfer/TransferReasonSelect";
@@ -71,6 +72,7 @@ export function TransferIndividualModal({
     const [centerSearchQuery, setCenterSearchQuery] = useState("");
     const { centers, fetchAllCenters, loading: centersLoading } = useEvacuationCenterStore();
     const { clearSearch, fetchIndividualById } = useIndividualStore();
+    const { activeEvent, fetchActiveEvent } = useEventStore(); // ADDED: Use event store
     
     const [selectedIndividuals, setSelectedIndividuals] = useState<ProcessedIndividual[]>([]);
     const [selectedCenterId, setSelectedCenterId] = useState<number | null>(null);
@@ -79,6 +81,7 @@ export function TransferIndividualModal({
     const [error, setError] = useState<string | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [processingRecords, setProcessingRecords] = useState(false);
+    const [validationError, setValidationError] = useState<string | null>(null); // ADDED: For center validation
 
     // ADD LOCAL STATE FOR MODAL SEARCH (like CheckInModal)
     const [modalSearchQuery, setModalSearchQuery] = useState("");
@@ -109,9 +112,15 @@ export function TransferIndividualModal({
         ? centers.filter(center => center.center_id !== sourceCenterId)
         : centers;
 
+    // Filter only active centers for destination selection
+    const activeCenters = filteredCenters.filter(center => center.status === "active");
+
     // Reset form when modal opens/closes and prefill individual if provided
     useEffect(() => {
         const initializeModal = async () => {
+            // Fetch active event when modal opens
+            await fetchActiveEvent();
+            
             // Fetch current attendees from the source center if provided
             if (sourceCenterId) {
                 await fetchCurrentAttendees({
@@ -139,7 +148,34 @@ export function TransferIndividualModal({
         } else {
             resetForm();
         }
-    }, [isOpen, sourceCenterId, defaultCenterId, initialIndividualId, fetchCurrentAttendees, fetchAllCenters, fetchIndividualById]);
+    }, [isOpen, sourceCenterId, defaultCenterId, initialIndividualId, fetchCurrentAttendees, fetchAllCenters, fetchIndividualById, fetchActiveEvent]);
+
+    // Validate destination center conditions when selected
+    useEffect(() => {
+        if (isOpen && selectedCenterId) {
+            const validateDestinationCenter = async () => {
+                try {
+                    // Check if center is active
+                    const destinationCenter = centers.find(c => c.center_id === selectedCenterId);
+                    if (!destinationCenter || destinationCenter.status !== "active") {
+                        setValidationError("Destination center is not active");
+                        return;
+                    }
+                    
+                    // Check if there's an active event
+                    if (!activeEvent) {
+                        setValidationError("No active event found. An event must be active to transfer individuals.");
+                        return;
+                    }
+                    
+                    setValidationError(null);
+                } catch (err) {
+                    setValidationError("Failed to validate destination center");
+                }
+            };
+            validateDestinationCenter();
+        }
+    }, [isOpen, selectedCenterId, centers, activeEvent]);
 
     const resetForm = () => {
         setCenterSearchQuery("");
@@ -148,6 +184,7 @@ export function TransferIndividualModal({
         setTransferReason("");
         setNotes("");
         setError(null);
+        setValidationError(null);
         setProcessingRecords(false);
         
         // Reset modal search state
@@ -163,6 +200,15 @@ export function TransferIndividualModal({
         }
     };
 
+    // Cleanup timeout on unmount
+    useEffect(() => {
+        return () => {
+            if (searchTimeoutRef.current) {
+                clearTimeout(searchTimeoutRef.current);
+            }
+        };
+    }, []);
+
     const handleClose = () => {
         resetForm();
         onClose();
@@ -171,6 +217,12 @@ export function TransferIndividualModal({
     const handleSelectIndividual = async (individual: Individual) => {
         // Check if individual is already selected
         if (selectedIndividuals.find(ind => ind.individual.individual_id === individual.individual_id)) {
+            return;
+        }
+
+        // Check if there's an active event
+        if (!activeEvent) {
+            setError("No active event found. An event must be active to transfer individuals.");
             return;
         }
 
@@ -187,7 +239,10 @@ export function TransferIndividualModal({
         try {
             const history = await fetchIndividualAttendanceHistory(individual.individual_id);
             const activeRecord = (history as any[]).find(
-                (record: AttendanceRecord) => record.status === "checked_in" && !record.check_out_time
+                (record: AttendanceRecord) => 
+                    record.status === "checked_in" && 
+                    !record.check_out_time &&
+                    record.event_id === activeEvent.event_id // Check if record belongs to active event
             );
             
             if (activeRecord) {
@@ -223,7 +278,7 @@ export function TransferIndividualModal({
                             ? {
                                 ...ind,
                                 status: "error",
-                                error: "No active check-in record"
+                                error: "No active check-in record for current event"
                             }
                             : ind
                     )
@@ -254,12 +309,44 @@ export function TransferIndividualModal({
         setSelectedIndividuals([]);
     };
 
+    // ACTUAL SEARCH FUNCTION (updated to match CheckInModal pattern)
+    const performSearch = useCallback(async (search: string, page: number) => {
+        setModalSearchLoading(true);
+        try {
+            const { IndividualService } = await import("@/services/individualService");
+            
+            const response = await IndividualService.getIndividuals({
+                search: search,
+                page: page,
+                limit: 10,
+                sortBy: "last_name",
+                sortOrder: "asc",
+            });
+            
+            console.log("TransferModal performing search with:", { search, page });
+            console.log("TransferModal search response:", response);
+
+            if (response.success && response.data) {
+                setModalSearchResults(response.data.results || []);
+                setModalTotalRecords(response.data.pagination?.total_items || 0);
+            } else {
+                throw new Error(response.message || "Search failed");
+            }
+        } catch (error) {
+            console.error("TransferModal search failed:", error);
+            setModalSearchResults([]);
+            setModalTotalRecords(0);
+        } finally {
+            setModalSearchLoading(false);
+        }
+    }, []);
+
     const handleModalSearch = async (params: {
         search: string;
         page: number;
         limit: number;
     }): Promise<{ success: boolean; data: Individual[]; totalRecords: number }> => {
-        console.log("TransferModal search called with:", params);
+        console.log("TransferModal handleModalSearch called with:", params);
         
         // Don't update state if nothing changed
         if (modalSearchQuery === params.search && modalPage === params.page) {
@@ -348,16 +435,18 @@ export function TransferIndividualModal({
             setModalSearchResults([]);
             setModalTotalRecords(0);
         } else {
-            // Use the existing performSearch function or call handleModalSearch directly
-            handleModalSearch({
-                search: modalSearchQuery,
-                page: page,
-                limit: 10,
-            });
+            // Use the performSearch function for page changes
+            performSearch(modalSearchQuery, page);
         }
     };
 
     const handleSubmit = async () => {
+        // Check if there's an active event
+        if (!activeEvent) {
+            setError("No active event found. An event must be active to transfer individuals.");
+            return;
+        }
+
         // Validate ready individuals (only those with "ready" status)
         const readyIndividuals = selectedIndividuals.filter(ind => ind.status === "ready");
         const readyCount = readyIndividuals.length;
@@ -372,6 +461,13 @@ export function TransferIndividualModal({
             return;
         }
 
+        // Check if destination center is active
+        const destinationCenter = centers.find(c => c.center_id === selectedCenterId);
+        if (!destinationCenter || destinationCenter.status !== "active") {
+            setError("Destination center is not active");
+            return;
+        }
+
         // NEW: Prevent transferring to the same center
         if (sourceCenterId && selectedCenterId === sourceCenterId) {
             setError("Cannot transfer individuals to the same center they are currently in.");
@@ -380,6 +476,12 @@ export function TransferIndividualModal({
 
         if (!transferReason) {
             setError("Please select a reason for transfer");
+            return;
+        }
+
+        // Check validation errors
+        if (validationError) {
+            setError(validationError);
             return;
         }
 
@@ -485,6 +587,9 @@ export function TransferIndividualModal({
         </div>
     ) : null;
 
+    // Check if we can transfer
+    const canTransfer = !validationError && activeEvent && selectedCenterId && activeCenters.length > 0;
+
     return (
         <Dialog open={isOpen} onOpenChange={handleClose}>
             <DialogContent className="!max-w-[900px] w-[95vw] max-h-[90vh] overflow-y-auto">
@@ -501,6 +606,42 @@ export function TransferIndividualModal({
                 </DialogHeader>
 
                 <div className="space-y-6 py-4">
+                    {/* Active Event Display */}
+                    {activeEvent ? (
+                        <div className="bg-blue-50 dark:bg-blue-950/30 p-4 rounded-lg border border-blue-200 dark:border-blue-800">
+                            <div className="flex items-start gap-3">
+                                <div className="flex-1">
+                                    <div className="font-semibold text-blue-900 dark:text-blue-100">
+                                        Active Event: {activeEvent.event_name}
+                                    </div>
+                                    <div className="text-sm text-blue-700 dark:text-blue-300 mt-1">
+                                        Transfers will be recorded under this event
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    ) : (
+                        <div className="bg-yellow-50 dark:bg-yellow-950/30 p-4 rounded-lg border border-yellow-200 dark:border-yellow-800">
+                            <div className="flex items-start gap-3">
+                                <div className="flex-1">
+                                    <div className="font-semibold text-yellow-900 dark:text-yellow-100">
+                                        No Active Event
+                                    </div>
+                                    <div className="text-sm text-yellow-700 dark:text-yellow-300 mt-1">
+                                        An event must be active to transfer individuals.
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Center Status Validation */}
+                    {validationError && (
+                        <div className="bg-destructive/15 text-destructive p-3 rounded-md text-sm">
+                            {validationError}
+                        </div>
+                    )}
+
                     {error && (
                         <div className="bg-destructive/15 text-destructive p-3 rounded-md text-sm">
                             {error}
@@ -632,7 +773,7 @@ export function TransferIndividualModal({
                         />
 
                         <div className="text-sm text-muted-foreground">
-                            Note: Only individuals with active check-in records
+                            Note: Only individuals with active check-in records for the current event
                             {sourceCenterId && ` in ${formatCenterDisplay(sourceCenterId)} `}
                             can be transferred
                         </div>
@@ -650,14 +791,21 @@ export function TransferIndividualModal({
                             value={centerSearchQuery}
                             onChange={e => setCenterSearchQuery(e.target.value)}
                             className="w-full"
+                            disabled={!activeEvent}
                         />
                         
                         <EvacuationCentersList
-                            centers={filteredCenters} // Use filtered centers
+                            centers={activeCenters} // Use only active centers
                             selectedCenterId={selectedCenterId}
                             onCenterSelect={setSelectedCenterId}
                             searchQuery={centerSearchQuery}
                         />
+                        
+                        {activeCenters.length === 0 && !centersLoading && activeEvent && (
+                            <p className="text-sm text-muted-foreground">
+                                No active centers available. Centers must be active to transfer individuals.
+                            </p>
+                        )}
                         
                         {sourceCenterId && (
                             <div className="text-sm text-muted-foreground">
@@ -672,6 +820,7 @@ export function TransferIndividualModal({
                         <TransferReasonSelect
                             value={transferReason}
                             onChange={val => setTransferReason(val as TransferReason | "")}
+                            disabled={!activeEvent}
                         />
                     </div>
 
@@ -684,6 +833,7 @@ export function TransferIndividualModal({
                             placeholder="Additional notes (optional)"
                             className="w-full min-h-[80px]"
                             maxLength={100}
+                            disabled={!activeEvent}
                         />
                         <p className="text-xs text-muted-foreground">{notes.length}/100 characters</p>
                     </div>
@@ -695,7 +845,7 @@ export function TransferIndividualModal({
                     </DialogClose>
                     <Button
                         onClick={handleSubmit}
-                        disabled={readyCount === 0 || !selectedCenterId || !transferReason || isSubmitting}
+                        disabled={readyCount === 0 || !selectedCenterId || !transferReason || isSubmitting || !canTransfer || centersLoading}
                         className="bg-green-600 hover:bg-green-700 px-6"
                     >
                         {getSubmitButtonText()}

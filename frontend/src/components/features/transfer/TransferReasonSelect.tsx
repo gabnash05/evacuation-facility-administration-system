@@ -9,6 +9,7 @@ import {
 interface TransferReasonSelectProps {
     value: string;
     onChange: (value: string) => void;
+    disabled?: boolean;
 }
 
 const transferReasons = [
@@ -21,11 +22,11 @@ const transferReasons = [
     { value: "other", label: "Other" },
 ];
 
-export function TransferReasonSelect({ value, onChange }: TransferReasonSelectProps) {
+export function TransferReasonSelect({ value, onChange, disabled }: TransferReasonSelectProps) {
     return (
         <div className="max-w-md">
-            <Select value={value} onValueChange={onChange}>
-                <SelectTrigger className="w-full">
+            <Select value={value} onValueChange={onChange} disabled={disabled}>
+                <SelectTrigger className="w-full" aria-disabled={disabled}>
                     <SelectValue placeholder="Choose all that applies" />
                 </SelectTrigger>
                 <SelectContent>
