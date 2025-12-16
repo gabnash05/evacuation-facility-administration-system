@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import {
     Select,
     SelectContent,
@@ -11,6 +11,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { RotateCcw } from "lucide-react";
 import { useStatsStore } from "@/store/statsStore";
+import { useEventStore } from "@/store/eventStore";
 import { AGE_GROUP_LABELS, GENDER_LABELS } from "@/schemas/stats";
 import type { Gender, AgeGroup } from "@/types/stats";
 
@@ -25,15 +26,35 @@ export function StatsRow({ centerId }: StatsRowProps) {
         filters,
         setGenderFilter,
         setAgeGroupFilter,
+        setEventFilter,  // NEW
         fetchStats,
         resetFilters,
         getStatsForDisplay,
     } = useStatsStore();
 
+    // NEW: Fetch events for the event filter
+    const { events, fetchEvents } = useEventStore();
+    const [loadingEvents, setLoadingEvents] = useState(false);
+
+    // Fetch events on mount - filter by centerId for center admin
+    useEffect(() => {
+        const loadEvents = async () => {
+            setLoadingEvents(true);
+            try {
+                await fetchEvents(centerId);
+            } catch (error) {
+                console.error("Failed to fetch events for stats filter:", error);
+            } finally {
+                setLoadingEvents(false);
+            }
+        };
+        loadEvents();
+    }, [centerId, fetchEvents]);
+
     // Fetch stats on mount and when filters change
     useEffect(() => {
         fetchStats(centerId);
-    }, [filters.gender, filters.age_group, centerId]);
+    }, [filters.gender, filters.age_group, filters.event_id, centerId]);
 
     const statsData = getStatsForDisplay();
 
@@ -53,11 +74,23 @@ export function StatsRow({ centerId }: StatsRowProps) {
         }
     };
 
+    // NEW: Handle event filter change
+    const handleEventChange = (value: string) => {
+        if (value === "all") {
+            setEventFilter(null);
+        } else {
+            setEventFilter(parseInt(value));
+        }
+    };
+
     const handleResetFilters = () => {
         resetFilters();
     };
 
-    const hasActiveFilters = filters.gender !== null || filters.age_group !== null;
+    const hasActiveFilters = 
+        filters.gender !== null || 
+        filters.age_group !== null || 
+        filters.event_id !== null;  // NEW
 
     return (
         <div className="w-full bg-card border-b border-border">
@@ -95,6 +128,25 @@ export function StatsRow({ centerId }: StatsRowProps) {
                     </SelectContent>
                 </Select>
 
+                {/* NEW: Event Filter */}
+                <Select 
+                    value={filters.event_id?.toString() || "all"} 
+                    onValueChange={handleEventChange}
+                    disabled={loadingEvents}
+                >
+                    <SelectTrigger className="w-[200px] h-8">
+                        <SelectValue placeholder="Event" />
+                    </SelectTrigger>
+                    <SelectContent>
+                        <SelectItem value="all">All Events</SelectItem>
+                        {events.map((event) => (
+                            <SelectItem key={event.event_id} value={event.event_id.toString()}>
+                                {event.event_name} ({event.status})
+                            </SelectItem>
+                        ))}
+                    </SelectContent>
+                </Select>
+
                 {/* Reset Button */}
                 {hasActiveFilters && (
                     <Button
@@ -123,8 +175,12 @@ export function StatsRow({ centerId }: StatsRowProps) {
                 <div className="flex justify-around py-4 text-center">
                     {statsData.map((stat, i) => {
                         // Determine if filters should affect this stat
-                        const isFiltered =
-                            hasActiveFilters && (i === 0 || i === 1); // Only stats 1 and 2
+                        // Stats 0 and 1: affected by gender, age, and event filters
+                        // Stat 2 (aid distribution): affected by event filter only
+                        const isFiltered = 
+                            (i === 0 || i === 1) ? hasActiveFilters :
+                            (i === 2) ? filters.event_id !== null :
+                            false;
 
                         return (
                             <div key={i} className="flex flex-col items-center gap-1">

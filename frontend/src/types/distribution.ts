@@ -6,6 +6,7 @@ export interface Allocation {
     category_name: string;
     center_id?: number;
     status: 'active' | 'depleted' | 'cancelled';
+    distribution_type: 'per_household' | 'per_individual'; // ADDED THIS LINE
 }
 
 export interface HouseholdOption {

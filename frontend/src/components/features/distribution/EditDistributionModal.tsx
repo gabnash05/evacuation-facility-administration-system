@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { AlertCircle } from "lucide-react";
+import { AlertCircle, Users } from "lucide-react";
 import { useDistributionStore } from "@/store/distributionStore";
 import { useAuthStore } from "@/store/authStore";
 import { Search } from "lucide-react";
@@ -51,7 +51,6 @@ export function EditDistributionModal({ isOpen, onClose, record }: Props) {
     const [centerAllocations, setCenterAllocations] = useState<AllocationType[]>([]);
     const [loadingAllocations, setLoadingAllocations] = useState(false);
 
-    // Clear all form data when modal closes
     useEffect(() => {
         if (!isOpen) {
             setHouseholdSearch("");
@@ -60,21 +59,16 @@ export function EditDistributionModal({ isOpen, onClose, record }: Props) {
             setOperationError(null);
             setCenterAllocations([]);
             clearError();
-            resetSelectedCenter(); // Add this line
+            resetSelectedCenter();
         }
     }, [isOpen, clearError, resetSelectedCenter]);
 
-    // Pre-fill form when record opens - FIXED VERSION
     useEffect(() => {
         if (record && isOpen) {
-            // Set center - check all possible property names
             const centerId = record.center_id || (record as any)?.center?.center_id || null;
             setSelectedCenterId(centerId);
-            
-            // Set household - check all possible property names
             setSelectedHouseholdId(record.household_id);
             
-            // IMPORTANT FIX: Pre-select ONLY the specific item being edited
             setSelection({
                 [record.allocation_id]: {
                     selected: true,
@@ -84,10 +78,8 @@ export function EditDistributionModal({ isOpen, onClose, record }: Props) {
                 }
             });
             
-            // Pre-fill household search with the household name
             const householdName = record.household_name || "";
             setHouseholdSearch(householdName);
-            
             setOperationError(null);
         }
     }, [record, isOpen, setSelectedCenterId]);
@@ -100,7 +92,6 @@ export function EditDistributionModal({ isOpen, onClose, record }: Props) {
         }
     }, [user, setSelectedCenterId, isOpen, resetSelectedCenter]);
 
-    // Fetch allocations when center changes
     useEffect(() => {
         const fetchCenterAllocations = async () => {
             if (!selectedCenterId) {
@@ -125,12 +116,10 @@ export function EditDistributionModal({ isOpen, onClose, record }: Props) {
         }
     }, [isOpen, selectedCenterId, getCenterAllocations]);
 
-    // Clear operation error when form changes
     useEffect(() => {
         setOperationError(null);
     }, [selectedCenterId, selectedHouseholdId, selection]);
 
-    // Filter households by selected center
     const centerHouseholds = useMemo(() => {
         if (!selectedCenterId) return [];
         return households.filter(h => h.center_id === selectedCenterId);
@@ -146,6 +135,25 @@ export function EditDistributionModal({ isOpen, onClose, record }: Props) {
 
     const selectedHousehold = centerHouseholds.find(h => h.household_id === selectedHouseholdId);
 
+    // Calculate max quantity based on distribution type
+    const calculateMaxQuantity = (allocation: AllocationType | null | undefined) => {
+        if (!allocation) return 0;
+        
+        const stockLimit = allocation.allocation_id === record?.allocation_id 
+            ? allocation.remaining_quantity + record!.quantity 
+            : allocation.remaining_quantity;
+        
+        if (!selectedHousehold) return stockLimit;
+        
+        if (allocation.distribution_type === 'per_household') {
+            return Math.min(1, stockLimit);
+        } else if (allocation.distribution_type === 'per_individual') {
+            return Math.min(selectedHousehold.member_count, stockLimit);
+        }
+        
+        return stockLimit;
+    };
+
     const handleToggleItem = (allocId: number) => {
         setSelection(prev => {
             const isSelected = !!prev[allocId]?.selected;
@@ -154,20 +162,19 @@ export function EditDistributionModal({ isOpen, onClose, record }: Props) {
                 delete newState[allocId];
                 return newState;
             } else {
-                // Only allow selecting one item at a time for editing
                 const newState = Object.keys(prev).reduce((acc, key) => {
                     acc[Number(key)] = { ...prev[Number(key)], selected: false };
                     return acc;
                 }, {} as SelectedItemState);
                 
-                // Find the allocation details
                 const allocation = centerAllocations.find(a => a.allocation_id === allocId);
+                const maxQty = allocation ? calculateMaxQuantity(allocation) : 1;
                 
                 return {
                     ...newState,
                     [allocId]: { 
                         selected: true, 
-                        quantity: 1,
+                        quantity: Math.min(1, maxQty),
                         resource_name: allocation?.resource_name,
                         category_name: allocation?.category_name
                     }
@@ -176,16 +183,18 @@ export function EditDistributionModal({ isOpen, onClose, record }: Props) {
         });
     };
 
-    const handleQuantityChange = (allocId: number, qty: string, max: number) => {
+    const handleQuantityChange = (allocId: number, qty: string, allocation: AllocationType) => {
         const numQty = parseInt(qty);
         if (isNaN(numQty) || numQty < 1) return;
+        
+        const maxQty = calculateMaxQuantity(allocation);
         
         setSelection(prev => ({
             ...prev,
             [allocId]: { 
                 ...prev[allocId],
                 selected: true, 
-                quantity: Math.min(numQty, max) 
+                quantity: Math.min(numQty, maxQty) 
             }
         }));
     };
@@ -205,7 +214,6 @@ export function EditDistributionModal({ isOpen, onClose, record }: Props) {
             return;
         }
 
-        // For edit, we only update one item at a time
         const item = itemsToUpdate[0];
         
         const result = await updateDistribution(record.distribution_id, {
@@ -216,7 +224,6 @@ export function EditDistributionModal({ isOpen, onClose, record }: Props) {
         });
         
         if (result.success) {
-            // Reset form on successful submission
             setSelection({});
             setSelectedHouseholdId(null);
             setHouseholdSearch("");
@@ -228,42 +235,11 @@ export function EditDistributionModal({ isOpen, onClose, record }: Props) {
     };
 
     const totalItemsSelected = Object.values(selection).filter(s => s.selected).length;
-    
-    // Check if user is restricted to a specific center
     const isCenterRestricted = user?.center_id && (user.role === 'center_admin' || user.role === 'volunteer');
 
-    // Get the currently selected allocation for quantity validation
     const selectedAllocationId = Object.keys(selection).find(key => selection[Number(key)]?.selected);
     const selectedAllocation = selectedAllocationId ? 
         centerAllocations.find(a => a.allocation_id === Number(selectedAllocationId)) : null;
-
-    // Calculate max quantity including the currently allocated quantity - FIXED
-    const calculateMaxQuantity = (allocation: AllocationType | null | undefined) => {
-        if (!allocation) return 0;
-        
-        // If this is the same allocation being edited, add back the current quantity
-        if (allocation.allocation_id === record?.allocation_id) {
-            return allocation.remaining_quantity + record!.quantity;
-        }
-        
-        // Otherwise just use the remaining quantity
-        return allocation.remaining_quantity;
-    };
-
-    // Get the record's allocation details for display
-    const recordAllocationDetails = useMemo(() => {
-        if (!record) return null;
-        const allocation = centerAllocations.find(a => a.allocation_id === record.allocation_id);
-        if (allocation) return allocation;
-        
-        // If not found in current allocations, use record data
-        return {
-            allocation_id: record.allocation_id,
-            resource_name: record.resource_name,
-            category_name: record.category_name,
-            remaining_quantity: 0 // Unknown since not in current allocations
-        };
-    }, [record, centerAllocations]);
 
     return (
         <Dialog open={isOpen} onOpenChange={onClose}>
@@ -276,7 +252,6 @@ export function EditDistributionModal({ isOpen, onClose, record }: Props) {
                 </DialogHeader>
 
                 <div className="flex flex-col gap-6 py-4 overflow-y-auto">
-                    {/* Error Display */}
                     {(error || operationError) && (
                         <Alert variant="destructive">
                             <AlertCircle className="h-4 w-4" />
@@ -286,7 +261,6 @@ export function EditDistributionModal({ isOpen, onClose, record }: Props) {
                         </Alert>
                     )}
                     
-                    {/* Display current record info */}
                     {record && (
                         <div className="p-3 bg-muted/30 rounded-md border">
                             <h4 className="font-semibold mb-2">Current Record</h4>
@@ -313,7 +287,6 @@ export function EditDistributionModal({ isOpen, onClose, record }: Props) {
                         </div>
                     )}
                     
-                    {/* Center Selection (only for non-restricted users) */}
                     {!isCenterRestricted && (
                         <div className="space-y-3">
                             <Label htmlFor="center-select">Select Center</Label>
@@ -321,7 +294,6 @@ export function EditDistributionModal({ isOpen, onClose, record }: Props) {
                                 value={selectedCenterId ? String(selectedCenterId) : ""}
                                 onValueChange={(value) => {
                                     setSelectedCenterId(value ? Number(value) : null);
-                                    // Clear dependent selections when center changes
                                     setSelectedHouseholdId(null);
                                     setHouseholdSearch("");
                                     setSelection({});
@@ -339,25 +311,15 @@ export function EditDistributionModal({ isOpen, onClose, record }: Props) {
                                     ))}
                                 </SelectContent>
                             </Select>
-                            {selectedCenterId && (
-                                <div className="text-xs text-muted-foreground flex items-center gap-2">
-                                    <Badge variant="outline" className="text-[10px] h-5">
-                                        Selected
-                                    </Badge>
-                                    <span>{centers.find((c: any) => c.center_id === selectedCenterId)?.center_name}</span>
-                                </div>
-                            )}
                         </div>
                     )}
 
                     {isCenterRestricted && selectedCenterId && (
                         <div className="p-3 border border-border bg-muted/30 rounded-md">
                             <div className="font-bold text-foreground">Center: {centers.find((c: any) => c.center_id === selectedCenterId)?.center_name}</div>
-                            <div className="text-xs text-muted-foreground">You can only edit distributions from your assigned center.</div>
                         </div>
                     )}
 
-                    {/* Household Selection */}
                     <div className="space-y-3">
                         <Label htmlFor="household-search">Find Household</Label>
                         <div className="relative">
@@ -375,19 +337,11 @@ export function EditDistributionModal({ isOpen, onClose, record }: Props) {
                             />
                         </div>
 
-                        {!selectedCenterId && (
-                            <div className="text-xs text-muted-foreground bg-muted/30 p-2 rounded-md">
-                                Please select a center first to search for households.
-                            </div>
-                        )}
-
                         {selectedCenterId && householdSearch && !selectedHousehold && (
                             <div className="border rounded-md divide-y bg-background shadow-sm">
                                 {filteredHouseholds.length === 0 ? (
                                     <div className="p-3 text-sm text-muted-foreground text-center">
-                                        {centerHouseholds.length === 0 ? 
-                                            "No households registered in this center." : 
-                                            "No families found."}
+                                        No families found.
                                     </div>
                                 ) : (
                                     filteredHouseholds.map((h: any) => (
@@ -400,10 +354,16 @@ export function EditDistributionModal({ isOpen, onClose, record }: Props) {
                                             }}
                                             className="w-full text-left p-3 hover:bg-muted text-sm flex justify-between items-center"
                                         >
-                                            <span className="font-medium">{h.household_name}</span>
-                                            <span className="text-muted-foreground text-xs">
-                                                Head: {h.family_head}
-                                            </span>
+                                            <div className="flex flex-col">
+                                                <span className="font-medium">{h.household_name}</span>
+                                                <span className="text-xs text-muted-foreground">
+                                                    Head: {h.family_head}
+                                                </span>
+                                            </div>
+                                            <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                                                <Users className="h-3 w-3" />
+                                                <span>{h.member_count} members</span>
+                                            </div>
                                         </button>
                                     ))
                                 )}
@@ -415,7 +375,7 @@ export function EditDistributionModal({ isOpen, onClose, record }: Props) {
                                 <div>
                                     <div className="font-bold text-card-foreground">{selectedHousehold.household_name}</div>
                                     <div className="text-xs text-muted-foreground">
-                                        Head of Family: {selectedHousehold.family_head}
+                                        Head: {selectedHousehold.family_head} • {selectedHousehold.member_count} members
                                     </div>
                                 </div>
                                 <Button 
@@ -434,19 +394,9 @@ export function EditDistributionModal({ isOpen, onClose, record }: Props) {
                         )}
                     </div>
 
-                    {/* Aid Items Section */}
                     <div className="space-y-3">
                         <div className="flex justify-between items-center">
                             <Label>Select Relief Item</Label>
-                            <span className="text-xs text-muted-foreground">
-                                {loadingAllocations ? (
-                                    "Loading items..."
-                                ) : selectedCenterId ? (
-                                    `${centerAllocations.filter((a: any) => a.status === 'active').length} types available at this center`
-                                ) : (
-                                    "Select a center to view available items"
-                                )}
-                            </span>
                         </div>
 
                         <div className={cn(
@@ -456,30 +406,10 @@ export function EditDistributionModal({ isOpen, onClose, record }: Props) {
                             {loadingAllocations ? (
                                 <div className="h-full flex flex-col items-center justify-center text-muted-foreground p-4">
                                     <p className="text-sm mb-2">Loading items...</p>
-                                    <p className="text-xs text-center">
-                                        Fetching available aid items from the center.
-                                    </p>
-                                </div>
-                            ) : !selectedCenterId ? (
-                                <div className="h-full flex flex-col items-center justify-center text-muted-foreground p-4">
-                                    <p className="text-sm mb-2">Select a center first</p>
-                                    <p className="text-xs text-center">
-                                        Choose an evacuation center to view available aid items.
-                                    </p>
                                 </div>
                             ) : !selectedHousehold ? (
                                 <div className="h-full flex flex-col items-center justify-center text-muted-foreground p-4">
                                     <p className="text-sm mb-2">Select a household first</p>
-                                    <p className="text-xs text-center">
-                                        Choose a household to distribute aid items to.
-                                    </p>
-                                </div>
-                            ) : centerAllocations.length === 0 ? (
-                                <div className="h-full flex flex-col items-center justify-center text-muted-foreground p-4">
-                                    <p className="text-sm mb-2">No aid items allocated to this center.</p>
-                                    <p className="text-xs text-center">
-                                        Please allocate aid items to this center before editing.
-                                    </p>
                                 </div>
                             ) : (
                                 <div className="space-y-1">
@@ -487,9 +417,8 @@ export function EditDistributionModal({ isOpen, onClose, record }: Props) {
                                         const isSelected = !!selection[alloc.allocation_id]?.selected;
                                         const currentQty = selection[alloc.allocation_id]?.quantity || 1;
                                         const isOutOfStock = alloc.remaining_quantity === 0;
-                                        
-                                        // Highlight if this is the allocation from the record being edited
                                         const isCurrentRecordAllocation = record?.allocation_id === alloc.allocation_id;
+                                        const maxQty = calculateMaxQuantity(alloc);
 
                                         return (
                                             <div 
@@ -498,24 +427,20 @@ export function EditDistributionModal({ isOpen, onClose, record }: Props) {
                                                     "flex items-center gap-3 p-3 rounded-md border transition-colors",
                                                     isSelected ? "border-primary bg-primary/5" : "border-transparent hover:bg-muted",
                                                     isCurrentRecordAllocation && !isSelected && "border-amber-300 bg-amber-50",
-                                                    isOutOfStock && "opacity-60 pointer-events-none",
-                                                    !selectedHousehold && "opacity-50 pointer-events-none"
+                                                    isOutOfStock && "opacity-60 pointer-events-none"
                                                 )}
                                             >
                                                 <Checkbox 
                                                     id={`item-${alloc.allocation_id}`}
                                                     checked={isSelected}
                                                     onCheckedChange={() => handleToggleItem(alloc.allocation_id)}
-                                                    disabled={isOutOfStock || !selectedHousehold}
+                                                    disabled={isOutOfStock}
                                                 />
                                                 
                                                 <div className="flex-1 grid gap-1">
                                                     <Label 
                                                         htmlFor={`item-${alloc.allocation_id}`} 
-                                                        className={cn(
-                                                            "font-medium",
-                                                            selectedHousehold ? "cursor-pointer" : "cursor-not-allowed"
-                                                        )}
+                                                        className="font-medium cursor-pointer"
                                                     >
                                                         {alloc.resource_name}
                                                         {isCurrentRecordAllocation && (
@@ -524,14 +449,23 @@ export function EditDistributionModal({ isOpen, onClose, record }: Props) {
                                                             </span>
                                                         )}
                                                     </Label>
-                                                    <div className="flex gap-2 text-xs text-muted-foreground">
-                                                        <Badge variant="outline" className="text-[10px] h-5">{alloc.category_name}</Badge>
+                                                    <div className="flex gap-2 text-xs text-muted-foreground items-center flex-wrap">
+                                                        <Badge variant="outline" className="text-[10px] h-5">
+                                                            {alloc.category_name}
+                                                        </Badge>
+                                                        <Badge 
+                                                            variant={alloc.distribution_type === 'per_household' ? 'default' : 'secondary'}
+                                                            className="text-[10px] h-5"
+                                                        >
+                                                            {alloc.distribution_type === 'per_household' ? 'Per Household' : 'Per Individual'}
+                                                        </Badge>
                                                         <span>Stock: {alloc.remaining_quantity}</span>
                                                         {isCurrentRecordAllocation && (
                                                             <span className="text-amber-600">
-                                                                + {record?.quantity} currently allocated
+                                                                + {record?.quantity} allocated
                                                             </span>
                                                         )}
+                                                        <span>Max: {maxQty}</span>
                                                     </div>
                                                 </div>
 
@@ -545,10 +479,10 @@ export function EditDistributionModal({ isOpen, onClose, record }: Props) {
                                                             onChange={(e) => handleQuantityChange(
                                                                 alloc.allocation_id, 
                                                                 e.target.value, 
-                                                                calculateMaxQuantity(alloc)
+                                                                alloc
                                                             )}
                                                             min={1}
-                                                            max={calculateMaxQuantity(alloc)}
+                                                            max={maxQty}
                                                         />
                                                     </div>
                                                 )}
@@ -559,10 +493,14 @@ export function EditDistributionModal({ isOpen, onClose, record }: Props) {
                             )}
                         </div>
                         
-                        {selectedAllocation && record && (
+                        {selectedAllocation && selectedHousehold && (
                             <div className="text-xs text-muted-foreground p-2 bg-muted/30 rounded-md">
-                                <p>Note: You can allocate up to {calculateMaxQuantity(selectedAllocation)} units (current stock: {selectedAllocation.remaining_quantity} + currently allocated: {record.quantity}).</p>
-                                <p>Changing the quantity will adjust the stock accordingly.</p>
+                                <p>
+                                    <strong>Distribution Type:</strong> {selectedAllocation.distribution_type === 'per_household' ? 'Per Household (Max: 1)' : `Per Individual (Max: ${selectedHousehold.member_count})`}
+                                </p>
+                                <p className="mt-1">
+                                    You can allocate up to {calculateMaxQuantity(selectedAllocation)} units based on stock and distribution type.
+                                </p>
                             </div>
                         )}
                     </div>
