@@ -4,6 +4,13 @@
 -- ========================
 
 -- ========================
+-- Disable triggers for seeding
+-- ========================
+ALTER TABLE events DISABLE TRIGGER prevent_event_update_on_resolved_trigger;
+ALTER TABLE events DISABLE TRIGGER ensure_single_active_event_trigger;
+ALTER TABLE events DISABLE TRIGGER deactivate_centers_on_event_resolved_trigger;
+
+-- ========================
 -- 1. EVACUATION_CENTERS (must be first due to foreign keys)
 -- ========================
 INSERT INTO evacuation_centers (center_name, address, coordinates, capacity, status, current_occupancy, photo_data) VALUES
@@ -23,16 +30,16 @@ ON CONFLICT DO NOTHING;
 -- 2. EVENTS
 -- ========================
 INSERT INTO events (event_name, event_type, date_declared, end_date, status, capacity, max_occupancy, usage_percentage) VALUES
-('Typhoon Ruby 2024', 'typhoon', '2024-08-15 14:30:00', NULL, 'active', 1200, 0, 0.00),
-('River Flood Alert', 'flood', '2024-09-02 08:15:00', '2024-09-10 18:00:00', 'resolved', 800, 0, 0.00),
-('Earthquake Response', 'earthquake', '2024-07-20 10:45:00', NULL, 'monitoring', 1500, 0, 0.00),
-('Wildfire Evacuation', 'wildfire', '2024-10-05 16:20:00', NULL, 'active', 600, 0, 0.00),
-('Monsoon Season Prep', 'monsoon', '2024-06-01 09:00:00', '2024-09-30 17:00:00', 'resolved', 1000, 0, 0.00),
-('Urban Flood Watch', 'urban_flood', '2024-11-12 13:10:00', NULL, 'active', 900, 0, 0.00),
-('Winter Storm Alert', 'winter_storm', '2024-12-01 07:00:00', NULL, 'active', 700, 0, 0.00),
-('Volcano Activity Warning', 'volcano', '2024-05-15 11:30:00', '2024-07-15 12:00:00', 'resolved', 550, 0, 0.00),
-('Chemical Spill Emergency', 'chemical', '2024-11-05 09:45:00', NULL, 'active', 400, 0, 0.00),
-('Power Grid Failure', 'infrastructure', '2024-10-20 18:30:00', '2024-10-25 10:00:00', 'resolved', 850, 0, 0.00)
+('Typhoon Ruby 2025', 'typhoon', '2025-08-15 14:30:00', NULL, 'active', 1200, 0, 0.00),  -- Only ONE active
+('River Flood Alert', 'flood', '2025-09-02 08:15:00', '2025-09-10 18:00:00', 'resolved', 800, 0, 0.00),
+('Earthquake Response', 'earthquake', '2025-07-20 10:45:00', NULL, 'monitoring', 1500, 0, 0.00),
+('Wildfire Evacuation', 'wildfire', '2025-10-05 16:20:00', NULL, 'monitoring', 600, 0, 0.00), 
+('Monsoon Season Prep', 'monsoon', '2025-06-01 09:00:00', '2025-09-30 17:00:00', 'resolved', 1000, 0, 0.00),
+('Urban Flood Watch', 'urban_flood', '2025-11-12 13:10:00', NULL, 'monitoring', 900, 0, 0.00),
+('Winter Storm Alert', 'winter_storm', '2025-12-01 07:00:00', NULL, 'monitoring', 700, 0, 0.00),
+('Volcano Activity Warning', 'volcano', '2025-05-15 11:30:00', '2025-07-15 12:00:00', 'resolved', 550, 0, 0.00),
+('Chemical Spill Emergency', 'chemical', '2025-11-05 09:45:00', NULL, 'monitoring', 400, 0, 0.00),
+('Power Grid Failure', 'infrastructure', '2025-10-20 18:30:00', '2025-10-25 10:00:00', 'resolved', 850, 0, 0.00)
 ON CONFLICT DO NOTHING;
 
 -- ========================
@@ -412,7 +419,8 @@ UPDATE households SET household_head_id = 59 WHERE household_id = 15 AND househo
 -- 7. EVENT_CENTERS (junction table)
 -- ========================
 INSERT INTO event_centers (event_id, center_id) VALUES
-(1, 1), (1, 2), (1, 3), (1, 4),  -- Typhoon Ruby affects multiple centers
+-- Link ALL centers that have attendance records to event 1 (the active event)
+(1, 1), (1, 2), (1, 3), (1, 4), (1, 5), (1, 6), (1, 7), (1, 8), (1, 9), (1, 10),  -- All centers to event 1
 (2, 2), (2, 3), (2, 6),          -- River Flood affects riverside and southside
 (3, 1), (3, 4), (3, 5), (3, 7),  -- Earthquake affects various centers
 (4, 4), (4, 5), (4, 9),          -- Wildfire affects westgate, old town, greenwood
@@ -428,77 +436,39 @@ ON CONFLICT DO NOTHING;
 -- 8. ATTENDANCE_RECORDS
 -- ========================
 INSERT INTO attendance_records (individual_id, center_id, event_id, household_id, status, check_in_time, recorded_by_user_id, check_out_time, transfer_from_center_id, transfer_to_center_id, transfer_time, notes) VALUES
--- Current check-ins for Typhoon Ruby at Northside High School
-(1, 1, 1, 1, 'checked_in', '2024-08-15 16:30:00', 3, NULL, NULL, NULL, NULL, 'Family of 4 arrived together'),
-(2, 1, 1, 1, 'checked_in', '2024-08-15 16:30:00', 3, NULL, NULL, NULL, NULL, NULL),
-(3, 1, 1, 1, 'checked_in', '2024-08-15 16:30:00', 3, NULL, NULL, NULL, NULL, NULL),
-(4, 1, 1, 1, 'checked_in', '2024-08-15 16:30:00', 3, NULL, NULL, NULL, NULL, NULL),
-(5, 1, 1, 2, 'checked_in', '2024-08-15 17:15:00', 3, NULL, NULL, NULL, NULL, 'Elderly couple'),
-(6, 1, 1, 2, 'checked_in', '2024-08-15 17:15:00', 3, NULL, NULL, NULL, NULL, NULL),
-(43, 1, 1, 1, 'checked_in', '2024-08-16 09:15:00', 3, NULL, NULL, NULL, NULL, 'Grandparents arrived separately'),
-(44, 1, 1, 1, 'checked_in', '2024-08-16 09:15:00', 3, NULL, NULL, NULL, NULL, NULL),
-(45, 1, 1, 2, 'checked_in', '2024-08-15 19:30:00', 3, NULL, NULL, NULL, NULL, 'College student returned home'),
-(46, 2, 1, 4, 'checked_in', '2024-08-15 18:45:00', 4, NULL, NULL, NULL, NULL, 'Toddler with parents'),
-(47, 2, 1, 5, 'checked_in', '2024-08-16 10:00:00', 4, NULL, NULL, NULL, NULL, 'School-aged child'),
-(48, 3, 1, 6, 'checked_in', '2024-08-15 21:15:00', 5, NULL, NULL, NULL, NULL, 'Infant with family'),
-(49, 3, 1, 7, 'checked_in', '2024-08-16 08:30:00', 5, NULL, NULL, NULL, NULL, 'Newborn baby'),
+-- Check-ins for Winter Storm (change event_id from 7 to 1)
+(53, 1, 1, 10, 'checked_in', '2024-12-03 14:00:00', 3, NULL, NULL, NULL, NULL, 'Young family - Nguyen'),
+(54, 1, 1, 10, 'checked_in', '2024-12-03 14:00:00', 3, NULL, NULL, NULL, NULL, NULL),
+(55, 1, 1, 10, 'checked_in', '2024-12-03 14:00:00', 3, NULL, NULL, NULL, NULL, NULL),
 
--- Check-ins at Community Center
-(11, 2, 1, 4, 'checked_in', '2024-08-15 15:45:00', 4, NULL, NULL, NULL, NULL, 'Young family with infant'),
-(12, 2, 1, 4, 'checked_in', '2024-08-15 15:45:00', 4, NULL, NULL, NULL, NULL, NULL),
-(13, 2, 1, 4, 'checked_in', '2024-08-15 15:45:00', 4, NULL, NULL, NULL, NULL, NULL),
-(14, 2, 1, 5, 'checked_in', '2024-08-15 16:20:00', 4, NULL, NULL, NULL, NULL, 'Non-English speaking'),
-(15, 2, 1, 5, 'checked_in', '2024-08-15 16:20:00', 4, NULL, NULL, NULL, NULL, NULL),
-(16, 2, 1, 5, 'checked_in', '2024-08-15 16:20:00', 4, NULL, NULL, NULL, NULL, NULL),
-(50, 2, 1, 4, 'checked_in', '2024-08-16 11:20:00', 4, NULL, NULL, NULL, NULL, 'New arrival - Rodriguez family'),
-(51, 2, 1, 4, 'checked_in', '2024-08-16 11:20:00', 4, NULL, NULL, NULL, NULL, NULL),
-(52, 2, 1, 4, 'checked_in', '2024-08-16 11:20:00', 4, NULL, NULL, NULL, NULL, NULL),
+-- Check-ins for Urban Flood (change event_id from 6 to 1)
+(56, 2, 1, 12, 'checked_in', '2024-11-13 16:45:00', 4, NULL, NULL, NULL, NULL, 'Clark family - basement flooded'),
+(57, 2, 1, 12, 'checked_in', '2024-11-13 16:45:00', 4, NULL, NULL, NULL, NULL, NULL),
+(58, 2, 1, 12, 'checked_in', '2024-11-13 16:45:00', 4, NULL, NULL, NULL, NULL, NULL),
 
--- Check-ins for Winter Storm
-(53, 1, 7, 10, 'checked_in', '2024-12-03 14:00:00', 3, NULL, NULL, NULL, NULL, 'Young family - Nguyen'),
-(54, 1, 7, 10, 'checked_in', '2024-12-03 14:00:00', 3, NULL, NULL, NULL, NULL, NULL),
-(55, 1, 7, 10, 'checked_in', '2024-12-03 14:00:00', 3, NULL, NULL, NULL, NULL, NULL),
+-- Check-ins at University Arena for Earthquake (change event_id from 3 to 1)
+(59, 7, 1, 15, 'checked_in', '2024-07-21 09:30:00', 8, NULL, NULL, NULL, NULL, 'Lewis family - structural damage'),
+(60, 7, 1, 15, 'checked_in', '2024-07-21 09:30:00', 8, NULL, NULL, NULL, NULL, NULL),
 
+-- Winter Storm check-ins (change event_id from 7 to 1)
+(35, 1, 1, 15, 'checked_in', '2024-12-02 09:30:00', 3, NULL, NULL, NULL, NULL, 'Lost power at home'),
+(36, 1, 1, 15, 'checked_in', '2024-12-02 09:30:00', 3, NULL, NULL, NULL, NULL, NULL),
 
--- Check-ins for Urban Flood
-(56, 2, 6, 12, 'checked_in', '2024-11-13 16:45:00', 4, NULL, NULL, NULL, NULL, 'Clark family - basement flooded'),
-(57, 2, 6, 12, 'checked_in', '2024-11-13 16:45:00', 4, NULL, NULL, NULL, NULL, NULL),
-(58, 2, 6, 12, 'checked_in', '2024-11-13 16:45:00', 4, NULL, NULL, NULL, NULL, NULL),
+-- Chemical spill emergency (change event_id from 9 to 1)
+(39, 10, 1, 18, 'checked_in', '2024-11-05 11:00:00', 10, NULL, NULL, NULL, NULL, 'Elderly with respiratory issues'),
+(41, 10, 1, 20, 'checked_in', '2024-11-05 11:30:00', 10, NULL, NULL, NULL, NULL, 'Pregnant woman'),
+(42, 10, 1, 20, 'checked_in', '2024-11-05 11:30:00', 10, NULL, NULL, NULL, NULL, NULL),
 
--- Check-ins at University Arena for Earthquake
-(59, 7, 3, 15, 'checked_in', '2024-07-21 09:30:00', 8, NULL, NULL, NULL, NULL, 'Lewis family - structural damage'),
-(60, 7, 3, 15, 'checked_in', '2024-07-21 09:30:00', 8, NULL, NULL, NULL, NULL, NULL),
+-- Completed check-outs from previous events (these are 'checked_out' so should be okay)
+-- (22, 2, 2, 8, 'checked_out', ...),  -- Event 2 is 'resolved' - this is okay for check-outs
+-- (23, 2, 2, 8, 'checked_out', ...),  -- Event 2 is 'resolved'
 
--- Check-ins at Riverside Elementary
-(20, 3, 1, 7, 'checked_in', '2024-08-15 14:50:00', 5, NULL, NULL, NULL, NULL, 'Working couple'),
-(21, 3, 1, 7, 'checked_in', '2024-08-15 14:50:00', 5, NULL, NULL, NULL, NULL, NULL),
-
--- Winter Storm check-ins
-(35, 1, 7, 15, 'checked_in', '2024-12-02 09:30:00', 3, NULL, NULL, NULL, NULL, 'Lost power at home'),
-(36, 1, 7, 15, 'checked_in', '2024-12-02 09:30:00', 3, NULL, NULL, NULL, NULL, NULL),
-
--- Chemical spill emergency (hospital annex)
-(39, 10, 9, 18, 'checked_in', '2024-11-05 11:00:00', 10, NULL, NULL, NULL, NULL, 'Elderly with respiratory issues'),
-(41, 10, 9, 20, 'checked_in', '2024-11-05 11:30:00', 10, NULL, NULL, NULL, NULL, 'Pregnant woman'),
-(42, 10, 9, 20, 'checked_in', '2024-11-05 11:30:00', 10, NULL, NULL, NULL, NULL, NULL),
-
--- Completed check-outs from previous events
-(22, 2, 2, 8, 'checked_out', '2024-09-02 10:30:00', 4, '2024-09-08 14:00:00', NULL, NULL, NULL, 'Returned home after flood warning lifted'),
-(23, 2, 2, 8, 'checked_out', '2024-09-02 10:30:00', 4, '2024-09-08 14:00:00', NULL, NULL, NULL, NULL),
-(28, 4, 4, 10, 'checked_out', '2024-10-06 08:15:00', 6, '2024-10-12 16:30:00', NULL, NULL, NULL, 'Wildfire evacuation ended'),
-(29, 4, 4, 10, 'checked_out', '2024-10-06 08:15:00', 6, '2024-10-12 16:30:00', NULL, NULL, NULL, NULL),
-
--- Transfers between centers
-(24, 4, 3, 9, 'transferred', NULL, 6, NULL, 4, 5, '2024-07-21 11:20:00', 'Transferred due to overcrowding'),
-(31, 5, 8, 12, 'transferred', NULL, 7, NULL, 5, 1, '2024-05-16 14:45:00', 'Volcano evacuation zone expanded'),
-(37, 8, 10, 16, 'transferred', NULL, 9, NULL, 8, 2, '2024-10-21 19:30:00', 'Power failure at convention center'),
-(38, 9, 4, 17, 'transferred', NULL, 10, NULL, 9, 10, '2024-10-07 10:15:00', 'Smoke inhalation concerns'),
-(26, 5, 3, 10, 'transferred', NULL, 7, NULL, 5, 1, '2024-07-22 13:15:00', 'Medical needs - transferred to hospital center'),
-(29, 1, 4, 11, 'transferred', NULL, 3, NULL, 1, 4, '2024-10-08 11:30:00', 'Reunited with extended family'),
-
--- Check-outs
-(23, 2, 2, 8, 'checked_out', '2024-09-03 08:00:00', 4, '2024-09-09 10:00:00', NULL, NULL, NULL, 'Additional family members arrived later'),
-(24, 3, 3, 9, 'checked_out', '2024-07-25 14:00:00', 5, '2024-07-30 16:00:00', NULL, NULL, NULL, 'Building inspection cleared')
+-- Transfers (change event_ids to 1 where needed)
+(24, 4, 1, 9, 'transferred', NULL, 6, NULL, 4, 5, '2024-07-21 11:20:00', 'Transferred due to overcrowding'),
+(31, 5, 1, 12, 'transferred', NULL, 7, NULL, 5, 1, '2024-05-16 14:45:00', 'Volcano evacuation zone expanded'),
+(37, 8, 1, 16, 'transferred', NULL, 9, NULL, 8, 2, '2024-10-21 19:30:00', 'Power failure at convention center'),
+(26, 5, 1, 10, 'transferred', NULL, 7, NULL, 5, 1, '2024-07-22 13:15:00', 'Medical needs - transferred to hospital center'),
+(29, 1, 1, 11, 'transferred', NULL, 3, NULL, 1, 4, '2024-10-08 11:30:00', 'Reunited with extended family')
 ON CONFLICT DO NOTHING;
 
 -- ========================
@@ -587,10 +557,10 @@ INSERT INTO allocations (category_id, center_id, event_id, resource_name, descri
 (7, 10, 9, 'Communication Devices', 'Emergency communication', 30, 28, 'per_individual', 1, 'active', 2, 'Staff coordination'),
 
 -- Depleted allocations (for previous events)
-(1, 1, 2, 'Snack Packs', 'Energy bars and snacks', 200, 10, 'per_individual', 2, 'depleted', 2, 'Fully distributed during flood'),
-(2, 2, 2, 'Emergency Water', '250ml emergency pouches', 500, 10, 'per_individual', 2, 'depleted', 2, 'Event completed'),
-(3, 5, 8, 'Volcano Respiratory Kits', 'Ash protection masks', 150, 10, 'per_individual', 1, 'depleted', 2, 'Volcano event resolved'),
-(6, 4, 5, 'Monsoon Tarps', 'Waterproof tarpaulins', 100, 10, 'per_household', 1, 'depleted', 2, 'Monsoon season ended')
+(1, 1, 2, 'Snack Packs', 'Energy bars and snacks', 200, 1, 'per_individual', 2, 'active', 2, 'Fully distributed during flood'),
+(2, 2, 2, 'Emergency Water', '250ml emergency pouches', 500, 1, 'per_individual', 2, 'active', 2, 'Event completed'),
+(3, 5, 8, 'Volcano Respiratory Kits', 'Ash protection masks', 150, 1, 'per_individual', 1, 'active', 2, 'Volcano event resolved'),
+(6, 4, 5, 'Monsoon Tarps', 'Waterproof tarpaulins', 100, 1, 'per_household', 1, 'active', 2, 'Monsoon season ended')
 ON CONFLICT DO NOTHING;
 
 -- ========================
@@ -827,3 +797,11 @@ SELECT
 FROM events
 WHERE status IN ('active', 'monitoring')
 ORDER BY date_declared DESC;
+
+
+-- ========================
+-- Enable triggers again
+-- ========================
+ALTER TABLE events ENABLE TRIGGER prevent_event_update_on_resolved_trigger;
+ALTER TABLE events ENABLE TRIGGER ensure_single_active_event_trigger;
+ALTER TABLE events ENABLE TRIGGER deactivate_centers_on_event_resolved_trigger;

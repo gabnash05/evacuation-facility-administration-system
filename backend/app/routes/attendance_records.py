@@ -24,6 +24,7 @@ from app.services.attendance_records_service import (
     recalculate_all_center_occupancies,
     delete_attendance_record,
     get_attendance_record_by_individual_id,
+    check_in_multiple_individuals,
 )
 from app.services.user_service import get_current_user
 
@@ -85,6 +86,18 @@ def get_attendance_records_route() -> Tuple:
                 ),
                 400,
             )
+
+        # Get current user for role-based access control
+        current_user_id = get_jwt_identity()
+        current_user = get_current_user(current_user_id)
+        
+        if current_user and current_user.role in ['center_admin', 'volunteer'] and current_user.center_id:
+            if center_id and center_id != current_user.center_id:
+                return jsonify({
+                    "success": False, 
+                    "message": "Access denied: Cannot view attendance records for other centers"
+                }), 403
+            center_id = current_user.center_id  # Force filter by user's center
 
         logger.info(
             "Fetching attendance records - search: %s, center_id: %s, event_id: %s, status: %s, page: %s, limit: %s, sort_by: %s, sort_order: %s",
@@ -166,6 +179,18 @@ def get_current_attendees_route() -> Tuple:
                 ),
                 400,
             )
+
+        # Get current user for role-based access control
+        current_user_id = get_jwt_identity()
+        current_user = get_current_user(current_user_id)
+        
+        if current_user and current_user.role in ['center_admin', 'volunteer'] and current_user.center_id:
+            if center_id and center_id != current_user.center_id:
+                return jsonify({
+                    "success": False, 
+                    "message": "Access denied: Cannot view current attendees for other centers"
+                }), 403
+            center_id = current_user.center_id  # Force filter by user's center
 
         if center_id:
             # Get current evacuees for specific center
@@ -256,6 +281,18 @@ def get_event_attendance_route(event_id: int) -> Tuple:
                 400,
             )
 
+        # Get current user for role-based access control
+        current_user_id = get_jwt_identity()
+        current_user = get_current_user(current_user_id)
+        
+        if current_user and current_user.role in ['center_admin', 'volunteer'] and current_user.center_id:
+            if center_id and center_id != current_user.center_id:
+                return jsonify({
+                    "success": False, 
+                    "message": "Access denied: Cannot view event attendance for other centers"
+                }), 403
+            center_id = current_user.center_id  # Force filter by user's center
+
         logger.info("Fetching attendance records for event: %s", event_id)
 
         # Get event attendance records
@@ -326,6 +363,18 @@ def get_transfer_records_route() -> Tuple:
                 400,
             )
 
+        # Get current user for role-based access control
+        current_user_id = get_jwt_identity()
+        current_user = get_current_user(current_user_id)
+        
+        if current_user and current_user.role in ['center_admin', 'volunteer'] and current_user.center_id:
+            if center_id and center_id != current_user.center_id:
+                return jsonify({
+                    "success": False, 
+                    "message": "Access denied: Cannot view transfer records for other centers"
+                }), 403
+            center_id = current_user.center_id  # Force filter by user's center
+
         logger.info("Fetching transfer records - center_id: %s", center_id)
 
         # Get transfer records
@@ -364,8 +413,6 @@ def check_in_individual_route() -> Tuple:
     Request Body (JSON):
         individual_id (integer) - Individual ID
         center_id (integer) - Center ID
-        event_id (integer) - Event ID
-        household_id (integer) - Household ID
         recorded_by_user_id (integer, optional) - User ID who recorded the check-in (defaults to current user)
         check_in_time (string, optional) - Check-in time (ISO format, defaults to current time)
         notes (string, optional) - Additional notes
@@ -387,10 +434,28 @@ def check_in_individual_route() -> Tuple:
             data["recorded_by_user_id"] = current_user_id
 
         # Validate required fields
-        required_fields = ["individual_id", "center_id", "event_id", "household_id"]
+        required_fields = ["individual_id", "center_id"]
         for field in required_fields:
             if field not in data:
                 return jsonify({"success": False, "message": f"Missing required field: {field}"}), 400
+
+        # Check if center is active and has an active event
+        from app.models.attendance_records import AttendanceRecord
+        if not AttendanceRecord.validate_attendance_conditions(data["center_id"]):
+            return jsonify({
+                "success": False, 
+                "message": "Cannot take attendance. Center must be active and have an active event."
+            }), 400
+
+        # Get current user for role-based access control
+        current_user = get_current_user(current_user_id)
+        
+        if current_user and current_user.role in ['center_admin', 'volunteer'] and current_user.center_id:
+            if data["center_id"] != current_user.center_id:
+                return jsonify({
+                    "success": False, 
+                    "message": "Access denied: Cannot check in individuals to other centers"
+                }), 403
 
         logger.info("Checking in individual %s to center %s", 
                    data.get("individual_id"), data.get("center_id"))
@@ -398,8 +463,6 @@ def check_in_individual_route() -> Tuple:
         result = check_in_individual(
             individual_id=data["individual_id"],
             center_id=data["center_id"],
-            event_id=data["event_id"],
-            household_id=data["household_id"],
             recorded_by_user_id=data["recorded_by_user_id"],
             check_in_time=data.get("check_in_time"),
             notes=data.get("notes")
@@ -434,8 +497,6 @@ def check_in_multiple_individuals_route() -> Tuple:
             {
                 "individual_id": integer,      # Individual ID
                 "center_id": integer,          # Center ID
-                "event_id": integer,           # Event ID
-                "household_id": integer,       # Household ID
                 "recorded_by_user_id": integer, # User ID (optional, defaults to current user)
                 "check_in_time": string,       # Check-in time (ISO format, optional)
                 "notes": string                # Additional notes (optional)
@@ -473,9 +534,12 @@ def check_in_multiple_individuals_route() -> Tuple:
         # Get current user ID from JWT token
         current_user_id = get_jwt_identity()
         
+        # Get current user for role-based access control
+        current_user = get_current_user(current_user_id)
+        
         # Validate and prepare check-in data
         validated_data = []
-        required_fields = ["individual_id", "center_id", "event_id", "household_id"]
+        required_fields = ["individual_id", "center_id"]
         
         for i, item in enumerate(data):
             if not isinstance(item, dict):
@@ -498,11 +562,19 @@ def check_in_multiple_individuals_route() -> Tuple:
 
             validated_data.append(item)
 
+        # Check role-based access control
+        if current_user and current_user.role in ['center_admin', 'volunteer'] and current_user.center_id:
+            for i, item in enumerate(validated_data):
+                if item["center_id"] != current_user.center_id:
+                    return jsonify({
+                        "success": False, 
+                        "message": f"Access denied: Cannot check in individuals to other centers (item at index {i})"
+                    }), 403
+
         logger.info(
-            "Batch checking in %s individuals to center %s for event %s", 
+            "Batch checking in %s individuals to center %s", 
             len(validated_data),
-            validated_data[0].get("center_id"),  # All should have same center/event in typical use
-            validated_data[0].get("event_id")
+            validated_data[0].get("center_id")  # All should have same center in typical use
         )
 
         # Process batch check-in
@@ -511,11 +583,19 @@ def check_in_multiple_individuals_route() -> Tuple:
         
         for i, check_in_data in enumerate(validated_data):
             try:
+                # Check if center is active and has an active event
+                from app.models.attendance_records import AttendanceRecord
+                if not AttendanceRecord.validate_attendance_conditions(check_in_data["center_id"]):
+                    errors.append({
+                        "index": i,
+                        "individual_id": check_in_data["individual_id"],
+                        "error": f"Cannot take attendance at center {check_in_data['center_id']}. Center must be active and have an active event."
+                    })
+                    continue
+
                 result = check_in_individual(
                     individual_id=check_in_data["individual_id"],
                     center_id=check_in_data["center_id"],
-                    event_id=check_in_data["event_id"],
-                    household_id=check_in_data["household_id"],
                     recorded_by_user_id=check_in_data["recorded_by_user_id"],
                     check_in_time=check_in_data.get("check_in_time"),
                     notes=check_in_data.get("notes")
@@ -673,19 +753,25 @@ def check_out_individual_route(record_id: int) -> Tuple:
                 401,
             )
 
+        # Get the attendance record to check its center
+        record_result = get_attendance_record_by_id(record_id)
+        if not record_result.get("success"):
+            return jsonify(record_result), 404
+
+        record_data = record_result.get("data") or {}
+        record_center_id = record_data.get("center_id")
+
+        # Check if the center is still active (for resolved events)
+        from app.models.evacuation_center import EvacuationCenter
+        center = EvacuationCenter.get_by_id(record_center_id)
+        if center and center.status != 'active':
+            return jsonify({
+                "success": False,
+                "message": "Cannot check out from an inactive center. The associated event may be resolved."
+            }), 400
+
         # Only enforce center restrictions for roles that are tied to a specific center
         if current_user.role in ["center_admin", "volunteer"] and current_user.center_id is not None:
-            record_result = get_attendance_record_by_individual_id(record_id)
-
-            if not record_result.get("success"):
-                return jsonify(record_result), 404
-
-            record_data = record_result.get("data") or {}
-            record_center_id = record_data.get("center_id")
-
-            print(f"Record ID: {record_id}")
-            print(f"Record center ID: {record_center_id}, User center ID: {current_user.center_id}")
-
             if record_center_id != current_user.center_id:
                 return (
                     jsonify(
@@ -909,16 +995,24 @@ def transfer_individual_route(record_id: int) -> Tuple:
                 401,
             )
 
+        # Get the current record to check its center
+        record_result = get_attendance_record_by_id(record_id)
+        if not record_result.get("success"):
+            return jsonify(record_result), 404
+
+        record_data = record_result.get("data") or {}
+        record_center_id = record_data.get("center_id")
+
+        # Check if destination center is active and has an active event
+        from app.models.attendance_records import AttendanceRecord
+        if not AttendanceRecord.validate_attendance_conditions(data["transfer_to_center_id"]):
+            return jsonify({
+                "success": False, 
+                "message": "Cannot transfer to destination center. Center must be active and have an active event."
+            }), 400
+
         # Enforce center restriction for center-bound roles: record must belong to user's center
         if current_user.role in ["center_admin", "volunteer"] and current_user.center_id is not None:
-            record_result = get_attendance_record_by_id(record_id)
-
-            if not record_result.get("success"):
-                return jsonify(record_result), 404
-
-            record_data = record_result.get("data") or {}
-            record_center_id = record_data.get("center_id")
-
             if record_center_id != current_user.center_id:
                 return (
                     jsonify(
@@ -1052,6 +1146,14 @@ def transfer_multiple_individuals_route() -> Tuple:
                         "message": f"Missing required field '{field}' for transfer at index {i}"
                     }), 400
 
+            # Check if destination center is active and has an active event
+            from app.models.attendance_records import AttendanceRecord
+            if not AttendanceRecord.validate_attendance_conditions(transfer_item["transfer_to_center_id"]):
+                return jsonify({
+                    "success": False, 
+                    "message": f"Cannot transfer to center {transfer_item['transfer_to_center_id']}. Center must be active and have an active event."
+                }), 400
+
             # Set default recorded_by_user_id if not provided
             if "recorded_by_user_id" not in transfer_item:
                 transfer_item["recorded_by_user_id"] = current_user_id_int
@@ -1133,6 +1235,24 @@ def get_attendance_record_route(record_id: int) -> Tuple:
             - HTTP status code
     """
     try:
+        # Get current user for role-based access control
+        current_user_id = get_jwt_identity()
+        current_user = get_current_user(current_user_id)
+        
+        if current_user and current_user.role in ['center_admin', 'volunteer'] and current_user.center_id:
+            record_result = get_attendance_record_by_id(record_id)
+            if not record_result.get("success"):
+                return jsonify(record_result), 404
+            
+            record_data = record_result.get("data") or {}
+            record_center_id = record_data.get("center_id")
+            
+            if record_center_id != current_user.center_id:
+                return jsonify({
+                    "success": False, 
+                    "message": "Access denied: Cannot view attendance records for other centers"
+                }), 403
+
         logger.info("Fetching attendance record: %s", record_id)
 
         result = get_attendance_record_by_id(record_id)
@@ -1173,6 +1293,17 @@ def get_attendance_summary_route(center_id: int) -> Tuple:
             - HTTP status code
     """
     try:
+        # Get current user for role-based access control
+        current_user_id = get_jwt_identity()
+        current_user = get_current_user(current_user_id)
+        
+        if current_user and current_user.role in ['center_admin', 'volunteer'] and current_user.center_id:
+            if center_id != current_user.center_id:
+                return jsonify({
+                    "success": False, 
+                    "message": "Access denied: Cannot view attendance summary for other centers"
+                }), 403
+
         event_id = request.args.get("event_id", type=int)
 
         logger.info("Fetching attendance summary for center: %s", center_id)
@@ -1249,6 +1380,17 @@ def recalculate_center_occupancy_route(center_id: int) -> Tuple:
             - HTTP status code
     """
     try:
+        # Get current user for role-based access control
+        current_user_id = get_jwt_identity()
+        current_user = get_current_user(current_user_id)
+        
+        # Only super_admin can recalculate occupancy
+        if not current_user or current_user.role != 'super_admin':
+            return jsonify({
+                "success": False, 
+                "message": "Access denied: Only super_admin can recalculate occupancy"
+            }), 403
+
         logger.info("Recalculating occupancy for center: %s", center_id)
 
         result = recalculate_center_occupancy(center_id)
@@ -1283,6 +1425,17 @@ def recalculate_all_center_occupancies_route() -> Tuple:
             - HTTP status code
     """
     try:
+        # Get current user for role-based access control
+        current_user_id = get_jwt_identity()
+        current_user = get_current_user(current_user_id)
+        
+        # Only super_admin can recalculate all occupancies
+        if not current_user or current_user.role != 'super_admin':
+            return jsonify({
+                "success": False, 
+                "message": "Access denied: Only super_admin can recalculate all occupancies"
+            }), 403
+
         logger.info("Recalculating occupancy for all centers")
 
         result = recalculate_all_center_occupancies()
@@ -1320,6 +1473,17 @@ def delete_attendance_record_route(record_id: int) -> Tuple:
             - HTTP status code
     """
     try:
+        # Get current user for role-based access control
+        current_user_id = get_jwt_identity()
+        current_user = get_current_user(current_user_id)
+        
+        # Only super_admin can delete attendance records
+        if not current_user or current_user.role != 'super_admin':
+            return jsonify({
+                "success": False, 
+                "message": "Access denied: Only super_admin can delete attendance records"
+            }), 403
+
         logger.info("Deleting attendance record: %s", record_id)
 
         result = delete_attendance_record(record_id)
