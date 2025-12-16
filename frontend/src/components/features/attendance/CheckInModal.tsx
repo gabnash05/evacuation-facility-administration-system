@@ -18,7 +18,7 @@ import {
     SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { User, Home, Calendar, X } from "lucide-react";
+import { User, Home, Calendar, X, AlertCircle } from "lucide-react";
 import { useAttendanceStore } from "@/store/attendanceRecordsStore";
 import { useEvacuationCenterStore } from "@/store/evacuationCenterStore";
 import { useEventStore } from "@/store/eventStore";
@@ -41,16 +41,20 @@ export function CheckInModal({
     defaultCenterId,
     individualToCheckIn
 }: CheckInModalProps) {
-    const { checkInMultipleIndividuals } = useAttendanceStore();
+    const { 
+        checkInMultipleIndividuals, 
+        validateAttendanceConditions,
+        attendanceValidation 
+    } = useAttendanceStore();
     const { centers, fetchAllCenters, loading: centersLoading } = useEvacuationCenterStore();
-    const { events, fetchEvents, loading: eventsLoading } = useEventStore();
+    const { activeEvent, fetchActiveEvent, loading: eventsLoading } = useEventStore();
 
     const [selectedIndividuals, setSelectedIndividuals] = useState<Individual[]>([]);
     const [centerId, setCenterId] = useState<string>("");
-    const [eventId, setEventId] = useState<string>("");
     const [notes, setNotes] = useState("");
     const [error, setError] = useState<string | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [validationError, setValidationError] = useState<string | null>(null);
     
     // ADD LOCAL STATE FOR MODAL SEARCH
     const [modalSearchQuery, setModalSearchQuery] = useState("");
@@ -60,20 +64,44 @@ export function CheckInModal({
     const [modalSearchLoading, setModalSearchLoading] = useState(false);
 
     const safeCenters = centers || [];
-    const safeEvents = events || [];
-    const filteredEvents = safeEvents.filter(event => event?.status === "active");
+    // Filter only active centers
+    const activeCenters = safeCenters.filter(center => center.status === "active");
 
     // Use refs for debounce timeout
     const searchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-    // Reset form when modal opens/closes
+    // Fetch active event when modal opens
     useEffect(() => {
         if (isOpen) {
+            fetchActiveEvent();
             if (!defaultCenterId) {
                 fetchAllCenters();
             }
-            fetchEvents();
+        }
+    }, [isOpen, fetchActiveEvent, fetchAllCenters, defaultCenterId]);
 
+    // Validate attendance conditions when center is selected
+    useEffect(() => {
+        if (isOpen && centerId) {
+            const validateCenter = async () => {
+                try {
+                    const validation = await validateAttendanceConditions(Number(centerId));
+                    if (!validation.canTakeAttendance) {
+                        setValidationError(validation.message || "Cannot take attendance at this center");
+                    } else {
+                        setValidationError(null);
+                    }
+                } catch (err) {
+                    setValidationError("Failed to validate attendance conditions");
+                }
+            };
+            validateCenter();
+        }
+    }, [isOpen, centerId, validateAttendanceConditions]);
+
+    // Reset form when modal opens/closes
+    useEffect(() => {
+        if (isOpen) {
             if (defaultCenterId) {
                 setCenterId(String(defaultCenterId));
             } else {
@@ -81,10 +109,10 @@ export function CheckInModal({
             }
             
             // Reset other fields
-            setEventId("");
             setNotes("");
             setSelectedIndividuals([]);
             setError(null);
+            setValidationError(null);
             
             // Reset modal search state
             setModalSearchQuery("");
@@ -110,9 +138,9 @@ export function CheckInModal({
             }
         } else {
             setSelectedIndividuals([]);
-            setEventId("");
             setNotes("");
             setError(null);
+            setValidationError(null);
             setModalSearchQuery("");
             setModalPage(1);
             setModalSearchResults([]);
@@ -124,7 +152,7 @@ export function CheckInModal({
                 searchTimeoutRef.current = null;
             }
         }
-    }, [isOpen, fetchAllCenters, fetchEvents, defaultCenterId, individualToCheckIn]);
+    }, [isOpen, defaultCenterId, individualToCheckIn]);
 
     // Cleanup timeout on unmount
     useEffect(() => {
@@ -138,9 +166,9 @@ export function CheckInModal({
     const resetForm = () => {
         setSelectedIndividuals([]);
         setCenterId(defaultCenterId ? String(defaultCenterId) : "");
-        setEventId("");
         setNotes("");
         setError(null);
+        setValidationError(null);
         setModalSearchQuery("");
         setModalPage(1);
         setModalSearchResults([]);
@@ -159,8 +187,19 @@ export function CheckInModal({
     };
 
     const handleSubmit = async () => {
-        if (selectedIndividuals.length === 0 || !centerId || !eventId) {
-            setError("At least one individual, Evacuation Center, and Event are required.");
+        // Validation checks
+        if (selectedIndividuals.length === 0) {
+            setError("Please select at least one individual.");
+            return;
+        }
+
+        if (!centerId) {
+            setError("Please select an evacuation center.");
+            return;
+        }
+
+        if (!activeEvent) {
+            setError("No active event found. An event must be active to take attendance.");
             return;
         }
 
@@ -173,24 +212,36 @@ export function CheckInModal({
             return;
         }
 
+        // Check validation
+        if (validationError) {
+            setError(validationError);
+            return;
+        }
+
         setIsSubmitting(true);
         setError(null);
 
         try {
+            // Use the active event's ID automatically
             const checkInData: CreateAttendanceData[] = selectedIndividuals.map(individual => ({
                 individual_id: individual.individual_id,
                 center_id: Number(centerId),
-                event_id: Number(eventId),
+                event_id: activeEvent.event_id, // Automatically use active event
                 household_id: individual.household_id!,
                 notes: notes || undefined,
             }));
 
-            await checkInMultipleIndividuals(checkInData);
-            onSuccess();
-            resetForm();
-            onClose();
+            const result = await checkInMultipleIndividuals(checkInData);
+            
+            if (result.success) {
+                onSuccess();
+                resetForm();
+                onClose();
+            } else {
+                setError(result.message || "Failed to check in individuals");
+            }
         } catch (err: any) {
-            setError(err.message);
+            setError(err.message || "An error occurred during check-in");
         } finally {
             setIsSubmitting(false);
         }
@@ -213,13 +264,13 @@ export function CheckInModal({
 
     const handleCenterChange = (value: string) => {
         setCenterId(value);
+        setValidationError(null); // Clear validation error when changing center
     };
 
     // ACTUAL SEARCH FUNCTION
     const performSearch = useCallback(async (search: string, page: number) => {
         setModalSearchLoading(true);
         try {
-            // Import the service directly instead of using the store
             const { IndividualService } = await import("@/services/individualService");
             
             const response = await IndividualService.getIndividuals({
@@ -248,9 +299,6 @@ export function CheckInModal({
         }
     }, []);
 
-    // REMOVED: Unused debouncedSearch function
-
-    // FIXED: Properly typed handleModalSearch function
     const handleModalSearch = async (params: {
         search: string;
         page: number;
@@ -258,7 +306,6 @@ export function CheckInModal({
     }): Promise<{ success: boolean; data: Individual[]; totalRecords: number }> => {
         console.log("handleModalSearch called with:", params);
         
-        // Don't update state if nothing changed
         if (modalSearchQuery === params.search && modalPage === params.page) {
             return {
                 success: true,
@@ -267,16 +314,13 @@ export function CheckInModal({
             };
         }
         
-        // Update local state
         setModalSearchQuery(params.search);
         setModalPage(params.page);
         
-        // Clear any existing timeout
         if (searchTimeoutRef.current) {
             clearTimeout(searchTimeoutRef.current);
         }
         
-        // If search is empty, clear results immediately
         if (params.search.trim() === "") {
             setModalSearchResults([]);
             setModalTotalRecords(0);
@@ -287,7 +331,6 @@ export function CheckInModal({
             };
         }
         
-        // Return a promise that resolves with the search results
         return new Promise<{ success: boolean; data: Individual[]; totalRecords: number }>((resolve) => {
             searchTimeoutRef.current = setTimeout(async () => {
                 try {
@@ -330,18 +373,14 @@ export function CheckInModal({
         });
     };
 
-
-    // HANDLE PAGE CHANGE SEPARATELY (no debounce needed for page changes)
     const handleModalPageChange = (page: number) => {
         setModalPage(page);
         
-        // Clear any pending search timeout
         if (searchTimeoutRef.current) {
             clearTimeout(searchTimeoutRef.current);
             searchTimeoutRef.current = null;
         }
         
-        // Immediate search for page change
         if (modalSearchQuery.trim() === "") {
             setModalSearchResults([]);
             setModalTotalRecords(0);
@@ -349,6 +388,9 @@ export function CheckInModal({
             performSearch(modalSearchQuery, page);
         }
     };
+
+    // Check if we can take attendance
+    const canTakeAttendance = !validationError && activeEvent && centerId && activeCenters.length > 0;
 
     return (
         <Dialog open={isOpen} onOpenChange={handleClose}>
@@ -360,6 +402,49 @@ export function CheckInModal({
                     </DialogTitle>
                 </DialogHeader>
                 <div className="space-y-6 py-4">
+                    {/* Active Event Display */}
+                    {activeEvent ? (
+                        <div className="bg-blue-50 dark:bg-blue-950/30 p-4 rounded-lg border border-blue-200 dark:border-blue-800">
+                            <div className="flex items-start gap-3">
+                                <Calendar className="h-5 w-5 text-blue-600 dark:text-blue-400 mt-0.5" />
+                                <div className="flex-1">
+                                    <div className="font-semibold text-blue-900 dark:text-blue-100">
+                                        Active Event: {activeEvent.event_name}
+                                    </div>
+                                    <div className="text-sm text-blue-700 dark:text-blue-300 mt-1">
+                                        {activeEvent.event_type} • Declared on{" "}
+                                        {new Date(activeEvent.date_declared).toLocaleDateString()}
+                                    </div>
+                                    <div className="text-xs text-blue-600 dark:text-blue-400 mt-2">
+                                        Attendance will be automatically linked to this event
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    ) : (
+                        <div className="bg-yellow-50 dark:bg-yellow-950/30 p-4 rounded-lg border border-yellow-200 dark:border-yellow-800">
+                            <div className="flex items-start gap-3">
+                                <AlertCircle className="h-5 w-5 text-yellow-600 dark:text-yellow-400 mt-0.5" />
+                                <div className="flex-1">
+                                    <div className="font-semibold text-yellow-900 dark:text-yellow-100">
+                                        No Active Event
+                                    </div>
+                                    <div className="text-sm text-yellow-700 dark:text-yellow-300 mt-1">
+                                        An event must be active to take attendance. Please create and activate an event first.
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Center Status Validation */}
+                    {validationError && (
+                        <div className="bg-destructive/15 text-destructive p-3 rounded-md text-sm flex items-start gap-2">
+                            <AlertCircle className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                            <div>{validationError}</div>
+                        </div>
+                    )}
+
                     {error && (
                         <div className="bg-destructive/15 text-destructive p-3 rounded-md text-sm">
                             {error}
@@ -428,7 +513,6 @@ export function CheckInModal({
                         <IndividualSearchTable
                             onSelectIndividual={handleIndividualSelect}
                             selectedIndividuals={selectedIndividuals}
-                            // Modal provides a custom search function. Let the table manage its own input state
                             onSearch={handleModalSearch}
                             modalPage={modalPage}
                             onModalPageChange={handleModalPageChange}
@@ -447,19 +531,23 @@ export function CheckInModal({
                             <Select
                                 value={centerId}
                                 onValueChange={handleCenterChange}
-                                disabled={!!defaultCenterId || centersLoading}
+                                disabled={!!defaultCenterId || centersLoading || !activeEvent}
                             >
                                 <SelectTrigger className="w-full">
                                     <SelectValue
                                         placeholder={
                                             centersLoading
                                                 ? "Loading centers..."
+                                                : !activeEvent
+                                                ? "No active event - cannot select center"
+                                                : activeCenters.length === 0
+                                                ? "No active centers available"
                                                 : "Select a center"
                                         }
                                     />
                                 </SelectTrigger>
                                 <SelectContent>
-                                    {safeCenters.map(center => (
+                                    {activeCenters.map(center => (
                                         <SelectItem
                                             key={center.center_id}
                                             value={String(center.center_id)}
@@ -469,51 +557,9 @@ export function CheckInModal({
                                     ))}
                                 </SelectContent>
                             </Select>
-                        </div>
-
-                        <div className="space-y-2">
-                            <Label className="text-sm font-medium flex items-center gap-2">
-                                <Calendar className="h-4 w-4" />
-                                Event *
-                            </Label>
-                            <Select
-                                value={eventId}
-                                onValueChange={setEventId}
-                                disabled={eventsLoading}
-                            >
-                                <SelectTrigger className="w-full">
-                                    <SelectValue
-                                        placeholder={
-                                            eventsLoading
-                                                ? "Loading events..."
-                                                : filteredEvents.length === 0
-                                                  ? "No active events available"
-                                                  : "Select an event"
-                                        }
-                                    />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    {filteredEvents.map(event => (
-                                        <SelectItem
-                                            key={event.event_id}
-                                            value={String(event.event_id)}
-                                        >
-                                            <div className="flex flex-col">
-                                                <span>{event.event_name}</span>
-                                                <span className="text-xs text-muted-foreground">
-                                                    {event.event_type} •{" "}
-                                                    {new Date(
-                                                        event.date_declared
-                                                    ).toLocaleDateString()}
-                                                </span>
-                                            </div>
-                                        </SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
-                            {filteredEvents.length === 0 && !eventsLoading && (
+                            {activeCenters.length === 0 && !centersLoading && activeEvent && (
                                 <p className="text-sm text-muted-foreground">
-                                    No active events available. Please create an event first.
+                                    No active centers available. Centers must be active to take attendance.
                                 </p>
                             )}
                         </div>
@@ -543,7 +589,7 @@ export function CheckInModal({
                             isSubmitting ||
                             selectedIndividuals.length === 0 ||
                             !centerId ||
-                            !eventId ||
+                            !canTakeAttendance ||
                             centersLoading ||
                             eventsLoading
                         }
