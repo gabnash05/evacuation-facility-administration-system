@@ -334,6 +334,157 @@ END;
 $$ language 'plpgsql';
 
 -- ========================
+-- NEW FUNCTIONS FOR EVENT AND ATTENDANCE VALIDATIONS
+-- ========================
+
+-- Function to prevent updates to resolved events
+CREATE OR REPLACE FUNCTION prevent_event_update_on_resolved()
+RETURNS TRIGGER AS $$
+BEGIN
+    IF OLD.status = 'resolved' AND OLD.event_id = NEW.event_id THEN
+        RAISE EXCEPTION 'Cannot modify a resolved event (event_id: %)', OLD.event_id;
+    END IF;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Function to ensure only one active event at a time
+CREATE OR REPLACE FUNCTION ensure_single_active_event()
+RETURNS TRIGGER AS $$
+DECLARE
+    active_event_count INTEGER;
+BEGIN
+    -- Only check for new active events
+    IF NEW.status = 'active' THEN
+        SELECT COUNT(*) INTO active_event_count
+        FROM events
+        WHERE status = 'active'
+          AND event_id != COALESCE(NEW.event_id, 0);
+        
+        IF active_event_count > 0 THEN
+            RAISE EXCEPTION 'There is already an active event. Only one event can be active at a time.';
+        END IF;
+    END IF;
+    
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Function to validate attendance recording conditions
+CREATE OR REPLACE FUNCTION validate_attendance_conditions()
+RETURNS TRIGGER AS $$
+DECLARE
+    v_event_status VARCHAR(20);
+    v_center_status VARCHAR(20);
+    v_event_active BOOLEAN;
+BEGIN
+    -- Get event status
+    SELECT status INTO v_event_status
+    FROM events
+    WHERE event_id = NEW.event_id;
+    
+    -- Get center status
+    SELECT status INTO v_center_status
+    FROM evacuation_centers
+    WHERE center_id = NEW.center_id;
+    
+    -- Check if there's an active event for this center
+    SELECT EXISTS(
+        SELECT 1 FROM event_centers ec
+        JOIN events e ON ec.event_id = e.event_id
+        WHERE ec.center_id = NEW.center_id
+          AND e.status = 'active'
+    ) INTO v_event_active;
+    
+    -- Validate conditions
+    IF v_event_status != 'active' THEN
+        RAISE EXCEPTION 'Cannot record attendance for a non-active event (Event ID: %, Status: %)', 
+            NEW.event_id, v_event_status;
+    END IF;
+    
+    IF v_center_status != 'active' THEN
+        RAISE EXCEPTION 'Cannot record attendance for a non-active center (Center ID: %, Status: %)', 
+            NEW.center_id, v_center_status;
+    END IF;
+    
+    IF NOT v_event_active THEN
+        RAISE EXCEPTION 'Center (ID: %) is not associated with an active event', NEW.center_id;
+    END IF;
+    
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Function to get the current active event for a center
+CREATE OR REPLACE FUNCTION get_current_event_for_center(p_center_id INTEGER)
+RETURNS INTEGER AS $$
+DECLARE
+    v_event_id INTEGER;
+BEGIN
+    SELECT ec.event_id INTO v_event_id
+    FROM event_centers ec
+    JOIN events e ON ec.event_id = e.event_id
+    WHERE ec.center_id = p_center_id
+      AND e.status = 'active'
+    LIMIT 1;
+    
+    RETURN v_event_id;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Function to automatically link attendance to current event
+CREATE OR REPLACE FUNCTION auto_link_attendance_to_current_event()
+RETURNS TRIGGER AS $$
+DECLARE
+    v_current_event_id INTEGER;
+BEGIN
+    -- Get the current active event for this center
+    v_current_event_id := get_current_event_for_center(NEW.center_id);
+    
+    IF v_current_event_id IS NOT NULL THEN
+        NEW.event_id := v_current_event_id;
+    ELSE
+        RAISE EXCEPTION 'No active event found for center ID: %', NEW.center_id;
+    END IF;
+    
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Function to deactivate centers when an event is resolved
+CREATE OR REPLACE FUNCTION deactivate_centers_on_event_resolved()
+RETURNS TRIGGER AS $$
+BEGIN
+    -- When an event is marked as resolved, deactivate all associated centers
+    IF NEW.status = 'resolved' AND OLD.status != 'resolved' THEN
+        UPDATE evacuation_centers ec
+        SET status = 'inactive',
+            updated_at = CURRENT_TIMESTAMP
+        WHERE ec.center_id IN (
+            SELECT center_id 
+            FROM event_centers 
+            WHERE event_id = NEW.event_id
+        );
+    END IF;
+    
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Function to check if an event can be edited
+CREATE OR REPLACE FUNCTION check_event_editable()
+RETURNS TRIGGER AS $$
+BEGIN
+    -- Only allow updates if event is not resolved
+    IF OLD.status = 'resolved' THEN
+        RAISE EXCEPTION 'Cannot edit a resolved event';
+    END IF;
+    
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- ========================
 -- AID ALLOCATION TRIGGERS AND FUNCTIONS
 -- ========================
 
@@ -387,7 +538,27 @@ CREATE OR REPLACE FUNCTION create_distribution_session(
 ) RETURNS INTEGER AS $$
 DECLARE
     v_session_id INTEGER;
+    v_event_status VARCHAR(20);
+    v_center_status VARCHAR(20);
 BEGIN
+    -- Check event status
+    SELECT status INTO v_event_status
+    FROM events
+    WHERE event_id = p_event_id;
+    
+    IF v_event_status != 'active' THEN
+        RAISE EXCEPTION 'Cannot create distribution for a non-active event';
+    END IF;
+    
+    -- Check center status
+    SELECT status INTO v_center_status
+    FROM evacuation_centers
+    WHERE center_id = p_center_id;
+    
+    IF v_center_status != 'active' THEN
+        RAISE EXCEPTION 'Cannot create distribution for a non-active center';
+    END IF;
+    
     -- Create distribution session
     INSERT INTO distribution_sessions (
         household_id, distributed_by_user_id, center_id, event_id, session_notes
@@ -409,9 +580,11 @@ CREATE OR REPLACE FUNCTION add_distribution_to_session(
 DECLARE
     v_distribution_id INTEGER;
     v_remaining_quantity INTEGER;
+    v_event_status VARCHAR(20);
+    v_allocation_event_id INTEGER;
 BEGIN
     -- Check if allocation exists and has sufficient quantity
-    SELECT remaining_quantity INTO v_remaining_quantity
+    SELECT remaining_quantity, event_id INTO v_remaining_quantity, v_allocation_event_id
     FROM allocations 
     WHERE allocation_id = p_allocation_id 
       AND status = 'active';
@@ -423,6 +596,15 @@ BEGIN
     IF v_remaining_quantity < p_quantity_distributed THEN
         RAISE EXCEPTION 'Insufficient quantity in allocation. Requested: %, Available: %', 
             p_quantity_distributed, v_remaining_quantity;
+    END IF;
+    
+    -- Check if the allocation's event is active
+    SELECT status INTO v_event_status
+    FROM events
+    WHERE event_id = v_allocation_event_id;
+    
+    IF v_event_status != 'active' THEN
+        RAISE EXCEPTION 'Cannot distribute from an allocation for a non-active event';
     END IF;
     
     -- Insert distribution (trigger will handle quantity update)
@@ -487,13 +669,21 @@ CREATE OR REPLACE FUNCTION recalculate_center_occupancy(p_center_id INTEGER)
 RETURNS INTEGER AS $$
 DECLARE
     v_actual_occupancy INTEGER;
+    v_center_status VARCHAR(20);
 BEGIN
-    -- Count current checked-in individuals for this center
+    -- Check if center is active
+    SELECT status INTO v_center_status
+    FROM evacuation_centers
+    WHERE center_id = p_center_id;
+    
+    -- Count current checked-in individuals for this center (only for active events)
     SELECT COUNT(*) INTO v_actual_occupancy
-    FROM attendance_records 
-    WHERE center_id = p_center_id 
-      AND status = 'checked_in' 
-      AND check_out_time IS NULL;
+    FROM attendance_records ar
+    JOIN events e ON ar.event_id = e.event_id
+    WHERE ar.center_id = p_center_id 
+      AND ar.status = 'checked_in' 
+      AND ar.check_out_time IS NULL
+      AND e.status = 'active';
     
     -- Update the center's occupancy
     UPDATE evacuation_centers 
@@ -519,6 +709,8 @@ BEGIN
         LEFT JOIN attendance_records ar ON ec.center_id = ar.center_id 
             AND ar.status = 'checked_in'
             AND ar.check_out_time IS NULL
+        LEFT JOIN events e ON ar.event_id = e.event_id
+            AND e.status = 'active'
         GROUP BY ec.center_id, ec.center_name, ec.current_occupancy
     )
     UPDATE evacuation_centers ec
@@ -664,6 +856,36 @@ $$ LANGUAGE plpgsql;
 -- CREATE TRIGGERS
 -- ========================
 
+-- Prevent updates to resolved events
+CREATE TRIGGER prevent_event_update_on_resolved_trigger
+    BEFORE UPDATE ON events
+    FOR EACH ROW
+    EXECUTE FUNCTION prevent_event_update_on_resolved();
+
+-- Ensure only one active event at a time
+CREATE TRIGGER ensure_single_active_event_trigger
+    BEFORE INSERT OR UPDATE ON events
+    FOR EACH ROW
+    EXECUTE FUNCTION ensure_single_active_event();
+
+-- Deactivate centers when event is resolved
+CREATE TRIGGER deactivate_centers_on_event_resolved_trigger
+    AFTER UPDATE ON events
+    FOR EACH ROW
+    EXECUTE FUNCTION deactivate_centers_on_event_resolved();
+
+-- Validate attendance recording conditions
+CREATE TRIGGER validate_attendance_conditions_trigger
+    BEFORE INSERT ON attendance_records
+    FOR EACH ROW
+    EXECUTE FUNCTION validate_attendance_conditions();
+
+-- Automatically link attendance to current event
+CREATE TRIGGER auto_link_attendance_to_current_event_trigger
+    BEFORE INSERT ON attendance_records
+    FOR EACH ROW
+    EXECUTE FUNCTION auto_link_attendance_to_current_event();
+
 -- Triggers for automatic occupancy tracking
 CREATE TRIGGER update_occupancy_on_insert
     AFTER INSERT ON attendance_records
@@ -728,6 +950,8 @@ CREATE INDEX IF NOT EXISTS idx_attendance_check_in_time ON attendance_records(ch
 CREATE INDEX IF NOT EXISTS idx_attendance_event_center ON attendance_records(event_id, center_id);
 CREATE INDEX IF NOT EXISTS idx_attendance_current_occupancy ON attendance_records(center_id, status) WHERE status = 'checked_in';
 CREATE INDEX IF NOT EXISTS idx_attendance_transfer_time ON attendance_records(transfer_time);
+CREATE INDEX IF NOT EXISTS idx_attendance_event_status ON attendance_records(event_id, status);
+CREATE INDEX IF NOT EXISTS idx_attendance_center_event_active ON attendance_records(center_id, event_id, status) WHERE status = 'checked_in';
 
 -- Indexes for individuals and households
 CREATE INDEX IF NOT EXISTS idx_individuals_household_id ON individuals(household_id);
@@ -743,6 +967,8 @@ CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
 CREATE INDEX IF NOT EXISTS idx_events_status ON events(status);
 CREATE INDEX IF NOT EXISTS idx_events_date ON events(date_declared);
 CREATE INDEX IF NOT EXISTS idx_evacuation_centers_status ON evacuation_centers(status);
+CREATE INDEX IF NOT EXISTS idx_events_active ON events(status) WHERE status = 'active';
+CREATE INDEX IF NOT EXISTS idx_evacuation_centers_active ON evacuation_centers(status) WHERE status = 'active';
 
 -- Indexes for aid allocation system
 CREATE INDEX IF NOT EXISTS idx_allocations_center_status ON allocations(center_id, status);
@@ -754,6 +980,10 @@ CREATE INDEX IF NOT EXISTS idx_distributions_allocation ON distributions(allocat
 CREATE INDEX IF NOT EXISTS idx_distribution_sessions_household ON distribution_sessions(household_id);
 CREATE INDEX IF NOT EXISTS idx_distribution_sessions_center_date ON distribution_sessions(center_id, created_at);
 CREATE INDEX IF NOT EXISTS idx_aid_categories_active ON aid_categories(is_active) WHERE is_active = TRUE;
+
+-- Indexes for event_centers junction table
+CREATE INDEX IF NOT EXISTS idx_event_centers_center ON event_centers(center_id);
+CREATE INDEX IF NOT EXISTS idx_event_centers_event ON event_centers(event_id);
 
 -- ========================
 -- CREATE HELPER VIEWS FOR REPORTING
@@ -767,13 +997,16 @@ SELECT
     ec.capacity,
     ec.current_occupancy,
     COUNT(ar.individual_id) AS calculated_occupancy,
-    ROUND((COUNT(ar.individual_id) * 100.0 / ec.capacity), 2) AS occupancy_percentage
+    ROUND((COUNT(ar.individual_id) * 100.0 / ec.capacity), 2) AS occupancy_percentage,
+    ec.status as center_status
 FROM evacuation_centers ec
 LEFT JOIN attendance_records ar ON ec.center_id = ar.center_id 
     AND ar.status = 'checked_in'
     AND ar.check_out_time IS NULL
+LEFT JOIN events e ON ar.event_id = e.event_id
+    AND e.status = 'active'
 WHERE ec.status = 'active'
-GROUP BY ec.center_id, ec.center_name, ec.capacity, ec.current_occupancy;
+GROUP BY ec.center_id, ec.center_name, ec.capacity, ec.current_occupancy, ec.status;
 
 -- View for individual attendance history
 CREATE OR REPLACE VIEW individual_attendance_history AS
@@ -785,6 +1018,9 @@ SELECT
     h.household_name,
     ar.center_id,
     ec.center_name,
+    e.event_id,
+    e.event_name,
+    e.status as event_status,
     ar.status,
     ar.check_in_time,
     ar.check_out_time,
@@ -796,6 +1032,7 @@ FROM individuals i
 JOIN households h ON i.household_id = h.household_id
 JOIN attendance_records ar ON i.individual_id = ar.individual_id
 JOIN evacuation_centers ec ON ar.center_id = ec.center_id
+JOIN events e ON ar.event_id = e.event_id
 JOIN users u ON ar.recorded_by_user_id = u.user_id
 ORDER BY ar.check_in_time DESC;
 
@@ -810,6 +1047,7 @@ SELECT
     ec_from.center_name AS from_center,
     ec_to.center_id AS to_center_id,
     ec_to.center_name AS to_center,
+    e.event_name,
     ar.transfer_time,
     u.email as transferred_by,
     u.user_id as transferred_by_user_id,
@@ -819,6 +1057,7 @@ JOIN individuals i ON ar.individual_id = i.individual_id
 JOIN households h ON i.household_id = h.household_id
 JOIN evacuation_centers ec_from ON ar.transfer_from_center_id = ec_from.center_id
 JOIN evacuation_centers ec_to ON ar.transfer_to_center_id = ec_to.center_id
+JOIN events e ON ar.event_id = e.event_id
 JOIN users u ON ar.recorded_by_user_id = u.user_id
 WHERE ar.status = 'transferred'
 ORDER BY ar.transfer_time DESC;
@@ -836,6 +1075,8 @@ SELECT
     h.household_name,
     ec.center_id,
     ec.center_name,
+    e.event_id,
+    e.event_name,
     ar.check_in_time,
     ar.recorded_by_user_id,
     u.email as checked_in_by
@@ -843,9 +1084,12 @@ FROM attendance_records ar
 JOIN individuals i ON ar.individual_id = i.individual_id
 JOIN households h ON i.household_id = h.household_id
 JOIN evacuation_centers ec ON ar.center_id = ec.center_id
+JOIN events e ON ar.event_id = e.event_id
 JOIN users u ON ar.recorded_by_user_id = u.user_id
 WHERE ar.status = 'checked_in' 
   AND ar.check_out_time IS NULL
+  AND e.status = 'active'
+  AND ec.status = 'active'
 ORDER BY ar.check_in_time DESC;
 
 -- ========================
@@ -863,10 +1107,13 @@ SELECT
     a.remaining_quantity,
     a.distribution_type,
     a.suggested_amount,
-    a.status,
+    a.status as allocation_status,
     ec.center_id,
     ec.center_name,
+    ec.status as center_status,
+    e.event_id,
     e.event_name,
+    e.status as event_status,
     u.email as allocated_by,
     a.created_at
 FROM allocations a
@@ -874,7 +1121,7 @@ JOIN aid_categories ac ON a.category_id = ac.category_id
 JOIN evacuation_centers ec ON a.center_id = ec.center_id
 JOIN events e ON a.event_id = e.event_id
 JOIN users u ON a.allocated_by_user_id = u.user_id
-WHERE a.status = 'active'
+WHERE e.status = 'active'
 ORDER BY ec.center_name, ac.category_name, a.resource_name;
 
 -- View for distribution history
@@ -887,7 +1134,9 @@ SELECT
     u_dist.email as distributed_by,
     ec.center_id,
     ec.center_name,
+    e.event_id,
     e.event_name,
+    e.status as event_status,
     d.distribution_id,
     a.resource_name,
     ac.category_name,
@@ -966,6 +1215,18 @@ SELECT
         ELSE NULL
     END as current_center_name,
     
+    -- Current event info (if checked in)
+    CASE 
+        WHEN i.current_status = 'checked_in' THEN 
+            (SELECT e.event_id FROM attendance_records ar
+             JOIN events e ON ar.event_id = e.event_id
+             WHERE ar.individual_id = i.individual_id 
+             AND ar.status = 'checked_in' 
+             AND ar.check_out_time IS NULL 
+             LIMIT 1)
+        ELSE NULL
+    END as current_event_id,
+    
     -- Last check-in time
     (SELECT MAX(check_in_time) FROM attendance_records 
      WHERE individual_id = i.individual_id 
@@ -990,17 +1251,18 @@ JOIN households h ON i.household_id = h.household_id;
 -- CREATE FUNCTIONS FOR COMMON OPERATIONS
 -- ========================
 
--- Function to check in an individual
+-- Function to check in an individual with validation
 CREATE OR REPLACE FUNCTION check_in_individual(
     p_individual_id INTEGER,
     p_center_id INTEGER,
-    p_event_id INTEGER,
     p_recorded_by_user_id INTEGER,
     p_notes TEXT DEFAULT NULL
 ) RETURNS INTEGER AS $$
 DECLARE
     v_household_id INTEGER;
     v_record_id INTEGER;
+    v_current_event_id INTEGER;
+    v_center_status VARCHAR(20);
 BEGIN
     -- Get household_id from individual
     SELECT household_id INTO v_household_id 
@@ -1011,12 +1273,28 @@ BEGIN
         RAISE EXCEPTION 'Individual not found';
     END IF;
     
+    -- Get current active event for this center
+    v_current_event_id := get_current_event_for_center(p_center_id);
+    
+    IF v_current_event_id IS NULL THEN
+        RAISE EXCEPTION 'No active event found for center ID: %', p_center_id;
+    END IF;
+    
+    -- Check center status
+    SELECT status INTO v_center_status
+    FROM evacuation_centers
+    WHERE center_id = p_center_id;
+    
+    IF v_center_status != 'active' THEN
+        RAISE EXCEPTION 'Center is not active (Center ID: %, Status: %)', p_center_id, v_center_status;
+    END IF;
+    
     -- Insert attendance record (triggers will handle occupancy update)
     INSERT INTO attendance_records (
         individual_id, center_id, event_id, household_id,
         status, check_in_time, recorded_by_user_id, notes
     ) VALUES (
-        p_individual_id, p_center_id, p_event_id, v_household_id,
+        p_individual_id, p_center_id, v_current_event_id, v_household_id,
         'checked_in', CURRENT_TIMESTAMP, p_recorded_by_user_id, p_notes
     ) RETURNING record_id INTO v_record_id;
     
@@ -1033,7 +1311,15 @@ CREATE OR REPLACE FUNCTION check_out_individual(
 ) RETURNS BOOLEAN AS $$
 DECLARE
     v_updated_count INTEGER;
+    v_current_event_id INTEGER;
 BEGIN
+    -- Get current active event for this center
+    v_current_event_id := get_current_event_for_center(p_center_id);
+    
+    IF v_current_event_id IS NULL THEN
+        RAISE EXCEPTION 'No active event found for center ID: %', p_center_id;
+    END IF;
+    
     -- Update attendance record (triggers will handle occupancy update)
     UPDATE attendance_records 
     SET status = 'checked_out', 
@@ -1043,6 +1329,7 @@ BEGIN
         updated_at = CURRENT_TIMESTAMP
     WHERE individual_id = p_individual_id 
       AND center_id = p_center_id 
+      AND event_id = v_current_event_id
       AND status = 'checked_in'
       AND check_out_time IS NULL;
     
@@ -1052,17 +1339,19 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+-- Updated transfer function with event validation
 CREATE OR REPLACE FUNCTION transfer_individual(
     p_individual_id INTEGER,
     p_from_center_id INTEGER,
     p_to_center_id INTEGER,
-    p_event_id INTEGER,
     p_recorded_by_user_id INTEGER,
     p_notes TEXT DEFAULT NULL
 ) RETURNS INTEGER AS $$
 DECLARE
     v_household_id INTEGER;
     v_record_id INTEGER;
+    v_from_event_id INTEGER;
+    v_to_event_id INTEGER;
 BEGIN
     -- Get household_id from individual
     SELECT household_id INTO v_household_id 
@@ -1073,23 +1362,63 @@ BEGIN
         RAISE EXCEPTION 'Individual not found';
     END IF;
     
+    -- Get current active event for from center
+    v_from_event_id := get_current_event_for_center(p_from_center_id);
+    
+    IF v_from_event_id IS NULL THEN
+        RAISE EXCEPTION 'No active event found for from center ID: %', p_from_center_id;
+    END IF;
+    
+    -- Get current active event for to center
+    v_to_event_id := get_current_event_for_center(p_to_center_id);
+    
+    IF v_to_event_id IS NULL THEN
+        RAISE EXCEPTION 'No active event found for to center ID: %', p_to_center_id;
+    END IF;
+    
     -- Check out from current center
     PERFORM check_out_individual(p_individual_id, p_from_center_id, p_recorded_by_user_id, 'Transferred out');
     
-    -- Insert transfer record (represents the move between centers)
-    -- NOTE: This does NOT automatically check the individual in to the destination center.
-    -- A separate explicit check-in must be performed once arrival is confirmed.
+    -- Insert transfer record
     INSERT INTO attendance_records (
         individual_id, center_id, event_id, household_id,
         status, transfer_from_center_id, transfer_to_center_id,
         transfer_time, recorded_by_user_id, notes
     ) VALUES (
-        p_individual_id, p_to_center_id, p_event_id, v_household_id,
+        p_individual_id, p_to_center_id, v_to_event_id, v_household_id,
         'transferred', p_from_center_id, p_to_center_id,
         CURRENT_TIMESTAMP, p_recorded_by_user_id, p_notes
     ) RETURNING record_id INTO v_record_id;
     
     RETURN v_record_id;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Function to get current active event summary
+CREATE OR REPLACE FUNCTION get_current_active_event()
+RETURNS TABLE(
+    event_id INTEGER,
+    event_name VARCHAR,
+    event_type VARCHAR,
+    date_declared TIMESTAMP,
+    center_count BIGINT,
+    total_occupancy BIGINT
+) AS $$
+BEGIN
+    RETURN QUERY
+    SELECT 
+        e.event_id,
+        e.event_name,
+        e.event_type,
+        e.date_declared,
+        COUNT(DISTINCT ec.center_id) as center_count,
+        SUM(ec2.current_occupancy) as total_occupancy
+    FROM events e
+    LEFT JOIN event_centers ec ON e.event_id = ec.event_id
+    LEFT JOIN evacuation_centers ec2 ON ec.center_id = ec2.center_id
+    WHERE e.status = 'active'
+    GROUP BY e.event_id, e.event_name, e.event_type, e.date_declared
+    LIMIT 1;
 END;
 $$ LANGUAGE plpgsql;
 
@@ -1106,6 +1435,3 @@ INSERT INTO aid_categories (category_name, description) VALUES
 ('Shelter', 'Shelter and bedding materials'),
 ('Other', 'Other types of aid')
 ON CONFLICT (category_name) DO NOTHING;
-
-
-

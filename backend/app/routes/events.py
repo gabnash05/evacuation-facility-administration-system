@@ -4,7 +4,7 @@ import logging
 from typing import Tuple
 
 from flask import Blueprint, jsonify, request
-from flask_jwt_extended import jwt_required, get_jwt
+from flask_jwt_extended import jwt_required, get_jwt_identity
 
 from app.services.event_service import (
     create_event,
@@ -13,6 +13,7 @@ from app.services.event_service import (
     get_events,
     update_event,
 )
+from app.services.user_service import get_current_user
 
 # Configure logger for this module
 logger = logging.getLogger(__name__)
@@ -50,20 +51,18 @@ def get_all_events() -> Tuple:
         sort_by = request.args.get("sortBy", type=str)
         sort_order = request.args.get("sortOrder", type=str)
 
-        # For center-specific roles, automatically filter by their center_id
-        # This ensures security - users can only see events for their assigned centers
-        current_user = get_jwt()
-        user_role = current_user.get('role')
-        user_center_id = current_user.get('center_id')
+        # Get current user for role-based access control
+        current_user_id = get_jwt_identity()
+        current_user = get_current_user(current_user_id)
         
         # If user is center_admin or volunteer, restrict to their center
-        if user_role in ['center_admin', 'volunteer'] and user_center_id:
-            if center_id and center_id != user_center_id:
+        if current_user and current_user.role in ['center_admin', 'volunteer'] and current_user.center_id:
+            if center_id and center_id != current_user.center_id:
                 return jsonify({
                     "success": False, 
                     "message": "Access denied: Cannot view events for other centers"
                 }), 403
-            center_id = user_center_id  # Force filter by user's center
+            center_id = current_user.center_id  # Force filter by user's center
 
         # Validate pagination parameters
         if page < 1:
@@ -87,7 +86,7 @@ def get_all_events() -> Tuple:
             center_id,
             page,
             limit,
-            user_role,
+            current_user.role if current_user else 'unknown',
         )
 
         # Get events from service
@@ -134,21 +133,15 @@ def get_event(event_id: int) -> Tuple:
             - HTTP status code
     """
     try:
-        # For center-specific roles, verify they have access to this event
-        from app.models.user import User
+        # Get current user for role-based access control
+        current_user_id = get_jwt_identity()
+        current_user = get_current_user(current_user_id)
         
-        jwt_claims = get_jwt()
-        user_id = jwt_claims.get('sub')
-        user = User.get_by_id(int(user_id)) if user_id else None
-        
-        user_role = user.role if user else None
-        user_center_id = user.center_id if user else None
-        
-        if user_role in ['center_admin', 'volunteer'] and user_center_id:
+        if current_user and current_user.role in ['center_admin', 'volunteer'] and current_user.center_id:
             from app.models.event import EventCenter
             # Check if event is associated with user's center
             event_centers = EventCenter.get_centers_by_event(event_id)
-            user_has_access = any(center['center_id'] == user_center_id for center in event_centers)
+            user_has_access = any(center['center_id'] == current_user.center_id for center in event_centers)
             
             if not user_has_access:
                 return jsonify({
@@ -198,33 +191,30 @@ def create_new_event() -> Tuple:
             - HTTP status code
     """
     try:
-        # For center-specific roles, restrict which centers they can add
-        from app.models.user import User
+        # Get current user for role-based access control
+        current_user_id = get_jwt_identity()
+        current_user = get_current_user(current_user_id)
         
-        jwt_claims = get_jwt()
-        user_id = jwt_claims.get('sub')
-        user = User.get_by_id(int(user_id)) if user_id else None
+        # Only super_admin can create events
+        if not current_user or current_user.role != 'super_admin':
+            return jsonify({
+                "success": False, 
+                "message": "Access denied: Only super_admin can create events"
+            }), 403
         
-        user_role = user.role if user else None
-        user_center_id = user.center_id if user else None
-        
+        # Check if there's already an active event
+        from app.models.event import Event
+        active_events = Event.get_all(status='active')
+        if active_events["total_count"] > 0:
+            return jsonify({
+                "success": False,
+                "message": "Cannot create new event: There is already an active event. Resolve the current event first."
+            }), 400
+
         data = request.get_json()
 
         if not data:
             return jsonify({"success": False, "message": "No data provided"}), 400
-
-        # Center admins and volunteers can only create events for their own center
-        if user_role in ['center_admin', 'volunteer'] and user_center_id:
-            if 'center_ids' in data:
-                # Ensure they only include their own center
-                if data['center_ids'] != [user_center_id]:
-                    return jsonify({
-                        "success": False, 
-                        "message": "Access denied: Can only create events for your assigned center"
-                    }), 403
-            else:
-                # Auto-assign their center if not provided
-                data['center_ids'] = [user_center_id]
 
         logger.info("Creating new event: %s", data.get("event_name"))
 
@@ -263,6 +253,7 @@ def update_existing_event(event_id: int) -> Tuple:
         date_declared (string, optional) - Date declared
         end_date (string, optional) - End date
         status (string, optional) - Event status
+        center_ids (array, optional) - Array of center IDs
 
     Returns:
         Tuple containing:
@@ -270,6 +261,17 @@ def update_existing_event(event_id: int) -> Tuple:
             - HTTP status code
     """
     try:
+        # Get current user for role-based access control
+        current_user_id = get_jwt_identity()
+        current_user = get_current_user(current_user_id)
+        
+        # Only super_admin can update events
+        if not current_user or current_user.role != 'super_admin':
+            return jsonify({
+                "success": False, 
+                "message": "Access denied: Only super_admin can update events"
+            }), 403
+
         data = request.get_json()
 
         if not data:
@@ -297,6 +299,117 @@ def update_existing_event(event_id: int) -> Tuple:
         )
 
 
+@event_bp.route("/events/<int:event_id>/resolve", methods=["POST"])
+@jwt_required()
+def resolve_event(event_id: int) -> Tuple:
+    """
+    Resolve an event (mark as resolved).
+    Args:
+        event_id: Event ID
+    Returns:
+        Tuple containing:
+            - JSON response with standardized format
+            - HTTP status code
+    """
+    try:
+        # Get current user for role-based access control
+        current_user_id = get_jwt_identity()
+        current_user = get_current_user(current_user_id)
+        
+        # Only super_admin can resolve events
+        if not current_user or current_user.role != 'super_admin':
+            return jsonify({
+                "success": False, 
+                "message": "Access denied: Only super_admin can resolve events"
+            }), 403
+        data = request.get_json() or {}
+        end_date = data.get('end_date')
+        
+        if not end_date:
+            return jsonify({
+                "success": False,
+                "message": "End date is required to resolve an event"
+            }), 400
+        logger.info("Resolving event with ID: %s", event_id)
+        # Update event status to resolved and set end date
+        from app.models.event import Event
+        from datetime import datetime
+        
+        event = Event.get_by_id(event_id)
+        if not event:
+            return jsonify({"success": False, "message": "Event not found"}), 404
+        
+        if event.status == 'resolved':
+            return jsonify({"success": False, "message": "Event is already resolved"}), 400
+        # Update event status and end date
+        update_data = {
+            "status": "resolved",
+            "end_date": end_date
+        }
+        
+        result = update_event(event_id, update_data)
+        
+        if not result["success"]:
+            return jsonify(result), 400
+        # Deactivate all centers associated with this event
+        from app.models.evacuation_center import EvacuationCenter
+        from app.models.event import EventCenter
+        
+        event_centers = EventCenter.get_centers_by_event(event_id)
+        for center in event_centers:
+            EvacuationCenter.update(center['center_id'], {"status": "inactive"})
+        
+        # Auto-check-out all currently checked-in individuals
+        from app.models.attendance_records import AttendanceRecord
+        from datetime import datetime
+        
+        # Get all attendance records for this event
+        attendance_result = AttendanceRecord.get_event_attendance(event_id, center_id=None, page=1, limit=1000)
+        
+        # Handle the result based on its actual structure
+        records = []
+        if isinstance(attendance_result, dict):
+            records = attendance_result.get('records', [])
+        elif isinstance(attendance_result, list):
+            records = attendance_result
+        elif hasattr(attendance_result, '__iter__'):
+            records = list(attendance_result)
+        
+        for record in records:
+            # Handle both dict and object attribute access
+            record_id = record.get('record_id') if isinstance(record, dict) else getattr(record, 'record_id', None)
+            status = record.get('status') if isinstance(record, dict) else getattr(record, 'status', None)
+            individual_id = record.get('individual_id') if isinstance(record, dict) else getattr(record, 'individual_id', None)
+            
+            if status == 'checked_in' and record_id:
+                try:
+                    AttendanceRecord.check_out_individual(
+                        record_id=record_id,
+                        check_out_time=datetime.now().isoformat(),
+                        notes="Auto-checked out due to event resolution"
+                    )
+                except Exception as e:
+                    logger.warning(f"Failed to auto-check-out individual {individual_id}: {str(e)}")
+        
+        logger.info(f"Event {event_id} resolved. Centers deactivated and individuals auto-checked out.")
+        return jsonify({
+            "success": True,
+            "message": "Event resolved successfully. All associated centers have been deactivated and individuals have been auto-checked out.",
+            "data": result.get("data", {})
+        }), 200
+    except Exception as error:
+        logger.error("Error resolving event %s: %s", event_id, str(error))
+        return (
+            jsonify(
+                {
+                    "success": False,
+                    "message": "Internal server error while resolving event",
+                }
+            ),
+            500,
+        )
+
+
 @event_bp.route("/events/<int:event_id>", methods=["DELETE"])
 @jwt_required()
 def delete_existing_event(event_id: int) -> Tuple:
@@ -312,6 +425,17 @@ def delete_existing_event(event_id: int) -> Tuple:
             - HTTP status code
     """
     try:
+        # Get current user for role-based access control
+        current_user_id = get_jwt_identity()
+        current_user = get_current_user(current_user_id)
+        
+        # Only super_admin can delete events
+        if not current_user or current_user.role != 'super_admin':
+            return jsonify({
+                "success": False, 
+                "message": "Access denied: Only super_admin can delete events"
+            }), 403
+
         logger.info("Deleting event with ID: %s", event_id)
 
         result = delete_event(event_id)
@@ -393,6 +517,17 @@ def add_event_center(event_id: int) -> Tuple:
             - HTTP status code
     """
     try:
+        # Get current user for role-based access control
+        current_user_id = get_jwt_identity()
+        current_user = get_current_user(current_user_id)
+        
+        # Only super_admin can add centers to events
+        if not current_user or current_user.role != 'super_admin':
+            return jsonify({
+                "success": False, 
+                "message": "Access denied: Only super_admin can add centers to events"
+            }), 403
+
         from app.services.event_service import add_center_to_event
         from app.schemas.event import AddCenterSchema
 
@@ -437,6 +572,17 @@ def remove_event_center(event_id: int, center_id: int) -> Tuple:
             - HTTP status code
     """
     try:
+        # Get current user for role-based access control
+        current_user_id = get_jwt_identity()
+        current_user = get_current_user(current_user_id)
+        
+        # Only super_admin can remove centers from events
+        if not current_user or current_user.role != 'super_admin':
+            return jsonify({
+                "success": False, 
+                "message": "Access denied: Only super_admin can remove centers from events"
+            }), 403
+
         from app.services.event_service import remove_center_from_event
 
         logger.info("Removing center %s from event %s", center_id, event_id)
@@ -496,6 +642,69 @@ def get_event_details(event_id: int) -> Tuple:
                 {
                     "success": False,
                     "message": "Internal server error while fetching event details",
+                }
+            ),
+            500,
+        )
+
+
+@event_bp.route("/events/active", methods=["GET"])
+@jwt_required()
+def get_active_event() -> Tuple:
+    """
+    Get the currently active event.
+
+    Returns:
+        Tuple containing:
+            - JSON response with active event data
+            - HTTP status code
+    """
+    try:
+        from app.models.event import Event
+        
+        active_events = Event.get_all(status='active', limit=1)
+        
+        if active_events["total_count"] == 0:
+            return jsonify({
+                "success": True,
+                "data": None,
+                "message": "No active event found"
+            }), 200
+        
+        event = active_events["events"][0]
+        event_dict = event.to_schema()
+        
+        # Add capacity fields
+        if hasattr(event, 'total_capacity'):
+            event_dict['total_capacity'] = event.total_capacity
+        if hasattr(event, 'total_occupancy'):
+            event_dict['total_occupancy'] = event.total_occupancy
+        if hasattr(event, 'overall_usage_percentage') and event.overall_usage_percentage is not None:
+            event_dict['overall_usage_percentage'] = float(event.overall_usage_percentage)
+        else:
+            event_dict['overall_usage_percentage'] = 0.0
+        
+        # Add the new database-stored fields
+        event_dict['capacity'] = event.capacity
+        event_dict['max_occupancy'] = event.max_occupancy
+        if event.usage_percentage is not None:
+            event_dict['usage_percentage'] = float(event.usage_percentage)
+        else:
+            event_dict['usage_percentage'] = 0.0
+        
+        return jsonify({
+            "success": True,
+            "data": event_dict,
+            "message": "Active event found"
+        }), 200
+
+    except Exception as error:
+        logger.error("Error fetching active event: %s", str(error))
+        return (
+            jsonify(
+                {
+                    "success": False,
+                    "message": "Internal server error while fetching active event",
                 }
             ),
             500,

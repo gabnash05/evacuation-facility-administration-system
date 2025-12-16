@@ -6,6 +6,7 @@ from datetime import datetime
 
 from app.models.attendance_records import AttendanceRecord
 from app.models.individual import Individual
+from app.models.event import Event
 
 # Configure logger for this module
 logger = logging.getLogger(__name__)
@@ -146,8 +147,6 @@ def get_attendance_record_by_individual_id(individual_id: int) -> Dict[str, Any]
 def check_in_individual(
     individual_id: int,
     center_id: int,
-    event_id: int,
-    household_id: int,
     recorded_by_user_id: int,
     check_in_time: Optional[str] = None,
     notes: Optional[str] = None
@@ -155,12 +154,11 @@ def check_in_individual(
     """
     Check in an individual to an evacuation center.
     Automatically handles transfers if individual is checked in elsewhere.
+    Automatically links to the current active event for the center.
 
     Args:
         individual_id: Individual ID
         center_id: Center ID
-        event_id: Event ID
-        household_id: Household ID
         recorded_by_user_id: User ID who recorded the check-in
         check_in_time: Optional check-in time (defaults to current time)
         notes: Optional notes
@@ -174,15 +172,20 @@ def check_in_individual(
             check_in_time = datetime.now().isoformat()
 
         # Validate required fields
-        if not all([individual_id, center_id, event_id, household_id, recorded_by_user_id]):
+        if not all([individual_id, center_id, recorded_by_user_id]):
             return {"success": False, "message": "Missing required fields"}
 
-        # Use model method that handles transfers automatically
+        # Validate attendance conditions (center active and has active event)
+        if not AttendanceRecord.validate_attendance_conditions(center_id):
+            return {
+                "success": False, 
+                "message": "Cannot take attendance. Center must be active and have an active event."
+            }
+
+        # Use model method that handles transfers automatically and gets current event
         result = AttendanceRecord.check_in_individual(
             individual_id=individual_id,
             center_id=center_id,
-            event_id=event_id,
-            household_id=household_id,
             recorded_by_user_id=recorded_by_user_id,
             check_in_time=check_in_time,
             notes=notes
@@ -223,14 +226,13 @@ def check_in_multiple_individuals(data: List[Dict[str, Any]]) -> Dict[str, Any]:
     """
     Check in multiple individuals to an evacuation center in a batch operation.
     Automatically handles transfers if individuals are checked in elsewhere.
+    Automatically links to the current active event for the center.
 
     Args:
         data: List of dictionaries containing check-in data for each individual
             Each dictionary should contain:
             - individual_id: Individual ID
             - center_id: Center ID
-            - event_id: Event ID
-            - household_id: Household ID
             - recorded_by_user_id: User ID who recorded the check-in
             - check_in_time: Optional check-in time (defaults to current time)
             - notes: Optional notes
@@ -259,7 +261,7 @@ def check_in_multiple_individuals(data: List[Dict[str, Any]]) -> Dict[str, Any]:
             }
 
         # Validate each item in the batch
-        required_fields = ["individual_id", "center_id", "event_id", "household_id", "recorded_by_user_id"]
+        required_fields = ["individual_id", "center_id", "recorded_by_user_id"]
         for i, item in enumerate(data):
             if not isinstance(item, dict):
                 return {
@@ -275,11 +277,18 @@ def check_in_multiple_individuals(data: List[Dict[str, Any]]) -> Dict[str, Any]:
                         "message": f"Missing required field '{field}' for individual at index {i}"
                     }
 
+            # Validate attendance conditions for each center
+            center_id = item["center_id"]
+            if not AttendanceRecord.validate_attendance_conditions(center_id):
+                return {
+                    "success": False, 
+                    "message": f"Cannot take attendance at center {center_id}. Center must be active and have an active event."
+                }
+
         logger.info(
-            "Batch checking in %s individuals to center %s for event %s", 
+            "Batch checking in %s individuals to center %s", 
             len(data),
-            data[0].get("center_id"),  # All should have same center/event in typical use
-            data[0].get("event_id")
+            data[0].get("center_id")  # All should have same center in typical use
         )
 
         # Process batch check-in
@@ -297,8 +306,6 @@ def check_in_multiple_individuals(data: List[Dict[str, Any]]) -> Dict[str, Any]:
                 result = AttendanceRecord.check_in_individual(
                     individual_id=check_in_data["individual_id"],
                     center_id=check_in_data["center_id"],
-                    event_id=check_in_data["event_id"],
-                    household_id=check_in_data["household_id"],
                     recorded_by_user_id=check_in_data["recorded_by_user_id"],
                     check_in_time=check_in_time,
                     notes=check_in_data.get("notes")
@@ -584,6 +591,13 @@ def transfer_individual(
         if current_record.center_id == transfer_to_center_id:
             return {"success": False, "message": "Cannot transfer to the same center"}
 
+        # Validate destination center attendance conditions
+        if not AttendanceRecord.validate_attendance_conditions(transfer_to_center_id):
+            return {
+                "success": False, 
+                "message": "Cannot transfer to destination center. Center must be active and have an active event."
+            }
+
         # Use current recorded_by_user_id if not provided
         if recorded_by_user_id is None:
             recorded_by_user_id = current_record.recorded_by_user_id
@@ -676,6 +690,14 @@ def transfer_multiple_individuals(
                         "success": False, 
                         "message": f"Missing required field '{field}' for transfer at index {i}"
                     }
+
+            # Validate destination center attendance conditions
+            transfer_to_center_id = transfer_data["transfer_to_center_id"]
+            if not AttendanceRecord.validate_attendance_conditions(transfer_to_center_id):
+                return {
+                    "success": False, 
+                    "message": f"Cannot transfer to center {transfer_to_center_id}. Center must be active and have an active event."
+                }
 
         logger.info("Batch transferring %s individuals", len(transfers_data))
 
@@ -784,6 +806,18 @@ def get_current_evacuees_by_center(
         Dictionary with current evacuees
     """
     try:
+        # Validate attendance conditions before fetching
+        if not AttendanceRecord.validate_attendance_conditions(center_id):
+            return {
+                "success": False,
+                "message": "Center must be active and have an active event to view evacuees",
+                "data": [],
+                "total_count": 0,
+                "page": page,
+                "limit": limit,
+                "total_pages": 0
+            }
+
         result = AttendanceRecord.get_current_evacuees_by_center(
             center_id=center_id,
             search=search,
@@ -827,6 +861,14 @@ def get_attendance_summary_by_center(center_id: int, event_id: Optional[int] = N
         Dictionary with attendance summary
     """
     try:
+        # Validate attendance conditions if checking current status
+        if event_id is None and not AttendanceRecord.validate_attendance_conditions(center_id):
+            return {
+                "success": False, 
+                "message": "Center must be active and have an active event",
+                "data": {}
+            }
+
         summary = AttendanceRecord.get_attendance_summary_by_center(center_id, event_id)
 
         return {
@@ -1011,6 +1053,11 @@ def get_event_attendance(
         Dictionary with event attendance records and pagination info
     """
     try:
+        # Check if event exists and is not resolved
+        event = Event.get_by_id(event_id)
+        if not event:
+            return {"success": False, "message": "Event not found"}
+
         result = AttendanceRecord.get_event_attendance(
             event_id=event_id,
             center_id=center_id,
@@ -1084,4 +1131,3 @@ def get_all_current_evacuees(
     except Exception as error:
         logger.error("Error fetching all current evacuees: %s", str(error))
         return {"success": False, "message": "Failed to fetch current evacuees"}
-        
