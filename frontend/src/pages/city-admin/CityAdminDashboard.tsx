@@ -53,6 +53,8 @@ export function CityAdminDashboard() {
     // Use attendance store to validate attendance conditions
     const { validateAttendanceConditions } = useAttendanceStore();
 
+    const { fetchActiveEvent } = useEventStore();
+
     // City-wide summary
     const [selectedCenter, setSelectedCenter] = useState<SelectedCenter>({
         name: "Iligan City",
@@ -147,6 +149,25 @@ export function CityAdminDashboard() {
         }
     }, [citySummary]);
 
+    useEffect(() => {
+        // Fetch active event immediately on dashboard mount
+        const initActiveEvent = async () => {
+            try {
+                await fetchActiveEvent();
+            } catch (error) {
+                console.error("Failed to fetch active event:", error);
+            }
+        };
+        
+        initActiveEvent();
+    }, [fetchActiveEvent]);
+
+    // Also add this for good measure in your existing events useEffect:
+    useEffect(() => {
+        fetchEvents();
+        fetchActiveEvent(); // Add this line
+    }, [fetchEvents, fetchActiveEvent, searchQuery, currentPage, entriesPerPage, sortConfig]);
+
     // Fetch events when dependencies change
     useEffect(() => {
         fetchEvents();
@@ -175,7 +196,6 @@ export function CityAdminDashboard() {
 
     const handleAddEvent = async () => {
         try {
-            // Validate if event can be created
             const validation = await validateEventCreation();
             if (!validation.canCreate) {
                 setCreateError(validation.message || "Cannot create a new event at this time");
