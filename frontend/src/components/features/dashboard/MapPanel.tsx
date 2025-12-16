@@ -82,19 +82,30 @@ export function MapPanel({
             ? [validCenters[0].latitude, validCenters[0].longitude]
             : [8.230205, 124.249607];
 
+    // FIXED: Set zoom level based on whether we found the admin's center
+    // AND whether centers have actually loaded
+    const zoomLevel = adminCenter && validCenters.length > 0 ? 17 : 12;
+
     return (
         <div className="relative w-full h-[50vh] border-b border-border flex">
             {/* Map - Takes up most of the space */}
             <div className={`${isPanelVisible ? "flex-1" : "w-full"} rounded-lg overflow-hidden z-0`}>
-                <MonoMap 
-                    centers={formattedCenters}
-                    center={mapCenter}
-                    onCenterClick={(id) => {
-                        // Optional: Handle marker click if needed
-                        console.log("Marker clicked:", id);
-                    }}
-                    highlightCenterId={highlightCenterId}
-                />
+                {/* Only render map when centers are loaded OR when loading is complete */}
+                {(validCenters.length > 0 || !isLoadingCenter) ? (
+                    <MonoMap 
+                        centers={formattedCenters}
+                        center={mapCenter}
+                        zoom={zoomLevel}
+                        onCenterClick={(id) => {
+                            console.log("Marker clicked:", id);
+                        }}
+                        highlightCenterId={highlightCenterId}
+                    />
+                ) : (
+                    <div className="w-full h-full flex items-center justify-center bg-muted/30">
+                        <p className="text-muted-foreground">Loading map...</p>
+                    </div>
+                )}
             </div>
 
             {/* Right Info Panel - Narrower */}
