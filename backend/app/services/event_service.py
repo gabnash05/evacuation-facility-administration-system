@@ -156,6 +156,8 @@ def create_event(data: Dict[str, Any]) -> Dict[str, Any]:
 
     except Exception as error:
         logger.error("Error creating event: %s", str(error))
+        if "already an active event" in str(error):
+            return {"success": False, "message": str(error)}
         return {"success": False, "message": "Failed to create event"}
 
 
@@ -215,6 +217,11 @@ def update_event(event_id: int, update_data: Dict[str, Any]) -> Dict[str, Any]:
 
     except Exception as error:
         logger.error("Error updating event %s: %s", event_id, str(error))
+        error_msg = str(error)
+        if "Cannot edit a resolved event" in error_msg:
+            return {"success": False, "message": error_msg}
+        elif "already an active event" in error_msg:
+            return {"success": False, "message": error_msg}
         return {"success": False, "message": "Failed to update event"}
 
 
@@ -246,6 +253,9 @@ def delete_event(event_id: int) -> Dict[str, Any]:
 
     except Exception as error:
         logger.error("Error deleting event %s: %s", event_id, str(error))
+        error_msg = str(error)
+        if "Cannot delete a resolved event" in error_msg:
+            return {"success": False, "message": error_msg}
         return {"success": False, "message": "Failed to delete event"}
 
 
@@ -313,6 +323,10 @@ def add_center_to_event(event_id: int, center_id: int) -> Dict[str, Any]:
         if not existing_event:
             return {"success": False, "message": "Event not found"}
 
+        # Check if event is resolved
+        if existing_event.status == "resolved":
+            return {"success": False, "message": "Cannot modify a resolved event"}
+
         # Add center to event
         EventCenter.add_centers(event_id, [center_id])
 
@@ -347,42 +361,15 @@ def remove_center_from_event(event_id: int, center_id: int) -> Dict[str, Any]:
         if not existing_event:
             return {"success": False, "message": "Event not found"}
 
+        # Check if event is resolved
+        if existing_event.status == "resolved":
+            return {"success": False, "message": "Cannot modify a resolved event"}
+
         # Remove center from event
         EventCenter.remove_centers(event_id, [center_id])
 
         # Recalculate event capacity after removing center
         Event.recalculate_event_capacity(event_id)
-
-        logger.info("Center %s removed from event %s", center_id, event_id)
-
-        return {"success": True, "message": "Center removed from event successfully"}
-
-    except Exception as error:
-        logger.error("Error removing center from event %s: %s", event_id, str(error))
-        return {"success": False, "message": "Failed to remove center from event"}
-
-
-def remove_center_from_event(event_id: int, center_id: int) -> Dict[str, Any]:
-    """
-    Remove a center from an event.
-
-    Args:
-        event_id: Event ID
-        center_id: Center ID
-
-    Returns:
-        Dictionary with operation result
-    """
-    try:
-        from app.models.event import EventCenter
-
-        # Check if event exists
-        existing_event = Event.get_by_id(event_id)
-        if not existing_event:
-            return {"success": False, "message": "Event not found"}
-
-        # Remove center from event
-        EventCenter.remove_centers(event_id, [center_id])
 
         logger.info("Center %s removed from event %s", center_id, event_id)
 
