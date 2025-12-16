@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { AlertCircle } from "lucide-react";
+import { AlertCircle, Users } from "lucide-react";
 import { useDistributionStore } from "@/store/distributionStore";
 import { useAuthStore } from "@/store/authStore";
 import { Search } from "lucide-react";
@@ -51,7 +51,6 @@ export function DistributeAidModal({ isOpen, onClose }: Props) {
     // Clear all form data when modal closes
     useEffect(() => {
         if (!isOpen) {
-            // Reset all form state
             setHouseholdSearch("");
             setSelectedHouseholdId(null);
             setSelection({});
@@ -115,6 +114,22 @@ export function DistributeAidModal({ isOpen, onClose }: Props) {
 
     const selectedHousehold = centerHouseholds.find(h => h.household_id === selectedHouseholdId);
 
+    // Calculate max quantity based on distribution type
+    const calculateMaxQuantity = (allocation: AllocationType) => {
+        const stockLimit = allocation.remaining_quantity;
+        
+        if (!selectedHousehold) return stockLimit;
+        
+        // Check distribution type
+        if (allocation.distribution_type === 'per_household') {
+            return Math.min(1, stockLimit);
+        } else if (allocation.distribution_type === 'per_individual') {
+            return Math.min(selectedHousehold.member_count, stockLimit);
+        }
+        
+        return stockLimit;
+    };
+
     const handleToggleItem = (allocId: number) => {
         setSelection(prev => {
             const isSelected = !!prev[allocId]?.selected;
@@ -123,23 +138,28 @@ export function DistributeAidModal({ isOpen, onClose }: Props) {
                 delete newState[allocId];
                 return newState;
             } else {
+                const allocation = centerAllocations.find(a => a.allocation_id === allocId);
+                const maxQty = allocation ? calculateMaxQuantity(allocation) : 1;
+                
                 return {
                     ...prev,
-                    [allocId]: { selected: true, quantity: 1 }
+                    [allocId]: { selected: true, quantity: Math.min(1, maxQty) }
                 };
             }
         });
     };
 
-    const handleQuantityChange = (allocId: number, qty: string, max: number) => {
+    const handleQuantityChange = (allocId: number, qty: string, allocation: AllocationType) => {
         const numQty = parseInt(qty);
         if (isNaN(numQty) || numQty < 1) return;
+        
+        const maxQty = calculateMaxQuantity(allocation);
         
         setSelection(prev => ({
             ...prev,
             [allocId]: { 
                 selected: true, 
-                quantity: Math.min(numQty, max) 
+                quantity: Math.min(numQty, maxQty) 
             }
         }));
     };
@@ -162,12 +182,10 @@ export function DistributeAidModal({ isOpen, onClose }: Props) {
         const result = await submitDistribution(selectedHouseholdId, selectedCenterId, itemsToDistribute);
         
         if (result.success) {
-            // Reset form on successful submission
             setSelection({});
             setSelectedHouseholdId(null);
             setHouseholdSearch("");
             setOperationError(null);
-            // Refresh allocations after distribution
             if (selectedCenterId) {
                 const allocations = await getCenterAllocations(selectedCenterId);
                 setCenterAllocations(allocations);
@@ -179,8 +197,6 @@ export function DistributeAidModal({ isOpen, onClose }: Props) {
     };
 
     const totalItemsSelected = Object.values(selection).filter(s => s.selected).length;
-    
-    // Check if user is restricted to a specific center
     const isCenterRestricted = user?.center_id && (user.role === 'center_admin' || user.role === 'volunteer');
 
     return (
@@ -194,7 +210,6 @@ export function DistributeAidModal({ isOpen, onClose }: Props) {
                 </DialogHeader>
 
                 <div className="flex flex-col gap-6 py-4 overflow-y-auto">
-                    {/* Error Display */}
                     {(error || operationError) && (
                         <Alert variant="destructive">
                             <AlertCircle className="h-4 w-4" />
@@ -204,7 +219,6 @@ export function DistributeAidModal({ isOpen, onClose }: Props) {
                         </Alert>
                     )}
                     
-                    {/* Center Selection (only for non-restricted users) */}
                     {!isCenterRestricted && (
                         <div className="space-y-3">
                             <Label htmlFor="center-select">Select Center</Label>
@@ -212,7 +226,6 @@ export function DistributeAidModal({ isOpen, onClose }: Props) {
                                 value={selectedCenterId ? String(selectedCenterId) : ""}
                                 onValueChange={(value) => {
                                     setSelectedCenterId(value ? Number(value) : null);
-                                    // Clear dependent selections when center changes
                                     setSelectedHouseholdId(null);
                                     setHouseholdSearch("");
                                     setSelection({});
@@ -232,9 +245,7 @@ export function DistributeAidModal({ isOpen, onClose }: Props) {
                             </Select>
                             {selectedCenterId && (
                                 <div className="text-xs text-muted-foreground flex items-center gap-2">
-                                    <Badge variant="outline" className="text-[10px] h-5">
-                                        Selected
-                                    </Badge>
+                                    <Badge variant="outline" className="text-[10px] h-5">Selected</Badge>
                                     <span>{centers.find((c: any) => c.center_id === selectedCenterId)?.center_name}</span>
                                 </div>
                             )}
@@ -248,7 +259,6 @@ export function DistributeAidModal({ isOpen, onClose }: Props) {
                         </div>
                     )}
 
-                    {/* Household Selection - Always visible, but disabled if no center selected */}
                     <div className="space-y-3">
                         <Label htmlFor="household-search">Find Household</Label>
                         <div className="relative">
@@ -291,10 +301,16 @@ export function DistributeAidModal({ isOpen, onClose }: Props) {
                                             }}
                                             className="w-full text-left p-3 hover:bg-muted text-sm flex justify-between items-center"
                                         >
-                                            <span className="font-medium">{h.household_name}</span>
-                                            <span className="text-muted-foreground text-xs">
-                                                Head: {h.family_head}
-                                            </span>
+                                            <div className="flex flex-col">
+                                                <span className="font-medium">{h.household_name}</span>
+                                                <span className="text-xs text-muted-foreground">
+                                                    Head: {h.family_head}
+                                                </span>
+                                            </div>
+                                            <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                                                <Users className="h-3 w-3" />
+                                                <span>{h.member_count} members</span>
+                                            </div>
                                         </button>
                                     ))
                                 )}
@@ -306,7 +322,7 @@ export function DistributeAidModal({ isOpen, onClose }: Props) {
                                 <div>
                                     <div className="font-bold text-card-foreground">{selectedHousehold.household_name}</div>
                                     <div className="text-xs text-muted-foreground">
-                                        Head of Family: {selectedHousehold.family_head}
+                                        Head: {selectedHousehold.family_head} • {selectedHousehold.member_count} members
                                     </div>
                                 </div>
                                 <Button 
@@ -325,7 +341,6 @@ export function DistributeAidModal({ isOpen, onClose }: Props) {
                         )}
                     </div>
 
-                    {/* Aid Items Section - Always visible but disabled if no household selected */}
                     <div className="space-y-3">
                         <div className="flex justify-between items-center">
                             <Label>Select Relief Items</Label>
@@ -333,9 +348,9 @@ export function DistributeAidModal({ isOpen, onClose }: Props) {
                                 {loadingAllocations ? (
                                     "Loading items..."
                                 ) : selectedCenterId ? (
-                                    `${centerAllocations.filter((a: any) => a.status === 'active').length} types available at this center`
+                                    `${centerAllocations.filter((a: any) => a.status === 'active').length} types available`
                                 ) : (
-                                    "Select a center to view available items"
+                                    "Select a center first"
                                 )}
                             </span>
                         </div>
@@ -347,30 +362,18 @@ export function DistributeAidModal({ isOpen, onClose }: Props) {
                             {loadingAllocations ? (
                                 <div className="h-full flex flex-col items-center justify-center text-muted-foreground p-4">
                                     <p className="text-sm mb-2">Loading items...</p>
-                                    <p className="text-xs text-center">
-                                        Fetching available aid items from the center.
-                                    </p>
                                 </div>
                             ) : !selectedCenterId ? (
                                 <div className="h-full flex flex-col items-center justify-center text-muted-foreground p-4">
                                     <p className="text-sm mb-2">Select a center first</p>
-                                    <p className="text-xs text-center">
-                                        Choose an evacuation center to view available aid items.
-                                    </p>
                                 </div>
                             ) : !selectedHousehold ? (
                                 <div className="h-full flex flex-col items-center justify-center text-muted-foreground p-4">
                                     <p className="text-sm mb-2">Select a household first</p>
-                                    <p className="text-xs text-center">
-                                        Choose a household to distribute aid items to.
-                                    </p>
                                 </div>
                             ) : centerAllocations.length === 0 ? (
                                 <div className="h-full flex flex-col items-center justify-center text-muted-foreground p-4">
                                     <p className="text-sm mb-2">No aid items allocated to this center.</p>
-                                    <p className="text-xs text-center">
-                                        Please allocate aid items to this center before distributing.
-                                    </p>
                                 </div>
                             ) : (
                                 <div className="space-y-1">
@@ -378,6 +381,7 @@ export function DistributeAidModal({ isOpen, onClose }: Props) {
                                         const isSelected = !!selection[alloc.allocation_id]?.selected;
                                         const currentQty = selection[alloc.allocation_id]?.quantity || 1;
                                         const isOutOfStock = alloc.remaining_quantity === 0;
+                                        const maxQty = calculateMaxQuantity(alloc);
 
                                         return (
                                             <div 
@@ -406,9 +410,18 @@ export function DistributeAidModal({ isOpen, onClose }: Props) {
                                                     >
                                                         {alloc.resource_name}
                                                     </Label>
-                                                    <div className="flex gap-2 text-xs text-muted-foreground">
-                                                        <Badge variant="outline" className="text-[10px] h-5">{alloc.category_name}</Badge>
+                                                    <div className="flex gap-2 text-xs text-muted-foreground items-center flex-wrap">
+                                                        <Badge variant="outline" className="text-[10px] h-5">
+                                                            {alloc.category_name}
+                                                        </Badge>
+                                                        <Badge 
+                                                            variant={alloc.distribution_type === 'per_household' ? 'default' : 'secondary'}
+                                                            className="text-[10px] h-5"
+                                                        >
+                                                            {alloc.distribution_type === 'per_household' ? 'Per Household' : 'Per Individual'}
+                                                        </Badge>
                                                         <span>Stock: {alloc.remaining_quantity}</span>
+                                                        <span>Max: {maxQty}</span>
                                                     </div>
                                                 </div>
 
@@ -419,9 +432,9 @@ export function DistributeAidModal({ isOpen, onClose }: Props) {
                                                             type="number" 
                                                             className="w-20 h-8"
                                                             value={currentQty}
-                                                            onChange={(e) => handleQuantityChange(alloc.allocation_id, e.target.value, alloc.remaining_quantity)}
+                                                            onChange={(e) => handleQuantityChange(alloc.allocation_id, e.target.value, alloc)}
                                                             min={1}
-                                                            max={alloc.remaining_quantity}
+                                                            max={maxQty}
                                                         />
                                                     </div>
                                                 )}
