@@ -123,9 +123,9 @@ export function AppSidebar({ role, roleLabel, userEmail }: AppSidebarProps) {
                         icon: <Package className="w-4 h-4" />,
                     },
                     {
-                        key: "distribution-records", // Unique key
+                        key: "aid-distribution", // Unique key
                         label: "Distribution Records", // Slightly different label to distinguish
-                        href: "/city-admin/distribution-records", // Points to your new route
+                        href: "/center-admin/aid-distribution", // Points to your new route
                         icon: <Package className="w-4 h-4" />,
                     },
                     {
