@@ -7,6 +7,7 @@ export interface StatsFilter {
     gender?: Gender | null;
     age_group?: AgeGroup | null;
     center_id?: number | null;
+    event_id?: number | null; // NEW
 }
 
 export interface OccupancyStats {
