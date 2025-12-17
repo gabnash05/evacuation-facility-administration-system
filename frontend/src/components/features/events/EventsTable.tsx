@@ -8,6 +8,8 @@ import {
     MoreVertical,
     SquarePen,
     Trash2,
+    AlertCircle,
+    CheckCircle,
 } from "lucide-react";
 import {
     Table,
@@ -33,8 +35,10 @@ interface EventsTableProps {
     loading?: boolean;
     onEdit: (event: Event) => void;
     onDelete: (event: Event) => void;
+    onResolve?: (event: Event) => void; // New prop for resolving events
     onRowClick: (event: Event) => void;
-    userRole?: string; // Add user role prop
+    userRole?: string;
+    activeEventId?: number | null;
 }
 
 // Helper function to format date for display
@@ -64,12 +68,16 @@ function ActionDropdown({
     event,
     onEdit,
     onDelete,
-    userRole, // Add user role prop
+    onResolve,
+    userRole,
+    isActiveEvent,
 }: {
     event: Event;
     onEdit: (event: Event) => void;
     onDelete: (event: Event) => void;
-    userRole?: string; // Add user role prop
+    onResolve?: (event: Event) => void;
+    userRole?: string;
+    isActiveEvent?: boolean;
 }) {
     const [isOpen, setIsOpen] = useState(false);
     const dropdownRef = useRef<HTMLDivElement>(null);
@@ -97,11 +105,11 @@ function ActionDropdown({
 
             // Calculate position relative to the trigger
             let top = triggerRect.bottom;
-            let left = triggerRect.right - 132; // 132 = dropdown width (128) + some offset
+            let left = triggerRect.right - 148; // Wider for new option
 
             // Adjust if dropdown would go off-screen to the right
-            if (left + 132 > window.innerWidth) {
-                left = window.innerWidth - 132 - 8; // 8px margin from edge
+            if (left + 148 > window.innerWidth) {
+                left = window.innerWidth - 148 - 8;
             }
 
             // Adjust if dropdown would go off-screen to the bottom
@@ -143,11 +151,22 @@ function ActionDropdown({
         onDelete(event);
     };
 
-    // Check if user can edit (super_admin or city_admin)
-    const canEdit = userRole === "super_admin" || userRole === "city_admin";
+    const handleResolve = (e: React.MouseEvent) => {
+        e.stopPropagation();
+        setIsOpen(false);
+        if (onResolve) onResolve(event);
+    };
 
-    // Check if user can delete (only super_admin)
+    // Check user permissions
+    const canEdit = userRole === "super_admin" || userRole === "city_admin";
     const canDelete = userRole === "super_admin";
+    const canResolve = userRole === "super_admin" || userRole === "city_admin";
+
+    // Determine which actions are available
+    const isResolved = event.status?.toLowerCase() === 'resolved';
+    const canEditThisEvent = canEdit && !isResolved && !isActiveEvent;
+    const canDeleteThisEvent = canDelete && !isResolved && !isActiveEvent;
+    const canResolveThisEvent = canResolve && !isResolved && (isActiveEvent || event.status?.toLowerCase() === 'active' || event.status?.toLowerCase() === 'monitoring');
 
     return (
         <div ref={dropdownRef} className="relative inline-block">
@@ -160,12 +179,12 @@ function ActionDropdown({
                 <div className="fixed inset-0 z-50" style={{ pointerEvents: "none" }}>
                     <div
                         ref={dropdownContentRef}
-                        className="absolute bg-popover text-popover-foreground border border-border rounded-md shadow-lg w-32"
+                        className="absolute bg-popover text-popover-foreground border border-border rounded-md shadow-lg w-36"
                         style={{
                             pointerEvents: "auto",
                         }}
                     >
-                        {canEdit && ( // Only show edit button for super_admin or city_admin
+                        {canEditThisEvent && (
                             <button
                                 className="w-full text-left px-3 py-2 text-sm hover:bg-accent hover:text-accent-foreground flex items-center gap-2 rounded-sm"
                                 onClick={handleEdit}
@@ -174,10 +193,44 @@ function ActionDropdown({
                                 Edit
                             </button>
                         )}
-                        {canDelete && ( // Only show delete button for super_admin
+                        
+                        {canResolveThisEvent && onResolve && (
+                            <button
+                                className="w-full text-left px-3 py-2 text-sm hover:bg-green-50 hover:text-green-700 flex items-center gap-2 rounded-sm text-green-600"
+                                onClick={handleResolve}
+                            >
+                                <CheckCircle className="h-4 w-4" />
+                                Resolve Event
+                            </button>
+                        )}
+                        
+                        {canDeleteThisEvent && (
                             <button
                                 className="w-full text-left px-3 py-2 text-sm hover:bg-destructive/10 hover:text-destructive flex items-center gap-2 rounded-sm text-destructive"
                                 onClick={handleDelete}
+                            >
+                                <Trash2 className="h-4 w-4" />
+                                Delete
+                            </button>
+                        )}
+                        
+                        {/* Disabled options with tooltips */}
+                        {!canEditThisEvent && canEdit && (isResolved || isActiveEvent) && (
+                            <button
+                                className="w-full text-left px-3 py-2 text-sm text-muted-foreground flex items-center gap-2 rounded-sm cursor-not-allowed"
+                                disabled
+                                title={isResolved ? "Cannot edit resolved event" : "Cannot edit active event"}
+                            >
+                                <SquarePen className="h-4 w-4" />
+                                Edit
+                            </button>
+                        )}
+                        
+                        {!canDeleteThisEvent && canDelete && (isResolved || isActiveEvent) && (
+                            <button
+                                className="w-full text-left px-3 py-2 text-sm text-muted-foreground flex items-center gap-2 rounded-sm cursor-not-allowed"
+                                disabled
+                                title={isResolved ? "Cannot delete resolved event" : "Cannot delete active event"}
                             >
                                 <Trash2 className="h-4 w-4" />
                                 Delete
@@ -197,8 +250,10 @@ export function EventsTable({
     loading,
     onEdit,
     onDelete,
+    onResolve,
     onRowClick,
-    userRole, // Add user role prop
+    userRole,
+    activeEventId,
 }: EventsTableProps) {
     const getSortIcon = (key: string) => {
         if (!sortConfig || sortConfig.key !== key) {
@@ -360,13 +415,17 @@ export function EventsTable({
                         data.map((event, index) => {
                             const usagePercentage = calculateUsage(event);
                             const displayPercentage = getDisplayPercentage(event);
+                            const isActiveEvent = event.event_id === activeEventId;
+                            const isResolved = event.status?.toLowerCase() === 'resolved';
 
                             return (
                                 <TableRow
                                     key={event.event_id}
                                     className={cn(
                                         "hover:bg-muted/50 transition-colors cursor-pointer",
-                                        index % 2 === 1 ? "bg-muted/50" : ""
+                                        index % 2 === 1 ? "bg-muted/50" : "",
+                                        isActiveEvent && "bg-yellow-50 dark:bg-yellow-900/20 border-l-4 border-l-yellow-500",
+                                        isResolved && "opacity-80"
                                     )}
                                     onClick={() => onRowClick(event)}
                                 >
@@ -375,7 +434,12 @@ export function EventsTable({
                                         style={{ width: columnWidths.event_name }}
                                         title={event.event_name}
                                     >
-                                        {event.event_name}
+                                        <div className="flex items-center gap-2">
+                                            {event.event_name}
+                                            {isActiveEvent && (
+                                                <AlertCircle className="h-4 w-4 text-yellow-600 dark:text-yellow-400 flex-shrink-0" />
+                                            )}
+                                        </div>
                                     </TableCell>
                                     <TableCell
                                         className="py-3 truncate align-middle text-left"
@@ -444,10 +508,12 @@ export function EventsTable({
                                             variant="secondary"
                                             className={cn(
                                                 getStatusColor(event.status),
-                                                "truncate max-w-full inline-block"
+                                                "truncate max-w-full inline-block",
+                                                isActiveEvent && "ring-2 ring-yellow-500"
                                             )}
                                         >
                                             {capitalizeStatus(event.status)}
+                                            {isActiveEvent && " (Active)"}
                                         </Badge>
                                     </TableCell>
                                     <TableCell
@@ -459,7 +525,9 @@ export function EventsTable({
                                             event={event}
                                             onEdit={onEdit}
                                             onDelete={onDelete}
-                                            userRole={userRole} // Pass user role to dropdown
+                                            onResolve={onResolve}
+                                            userRole={userRole}
+                                            isActiveEvent={isActiveEvent}
                                         />
                                     </TableCell>
                                 </TableRow>

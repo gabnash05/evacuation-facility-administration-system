@@ -1,14 +1,16 @@
 import { useState, useMemo, useEffect } from "react";
 import { EventDetailsModal } from "@/components/features/dashboard/EventDetailsModal";
 import { MapPanel } from "@/components/features/dashboard/MapPanel";
-import { StatsRow } from "@/components/features/dashboard/StatsRow"; // Updated import
+import { StatsRow } from "@/components/features/dashboard/StatsRow";
 import { EventHistoryTable } from "@/components/features/dashboard/EventHistoryTable";
 import { ErrorAlert } from "@/components/features/dashboard/ErrorAlert";
 import { CreateEventModal } from "@/components/features/events/CreateEventModal";
+import { ResolveEventModal } from "@/components/features/events/ResolveEventModal";
 import { DeleteEventDialog } from "@/components/features/events/DeleteEventDialog";
 import { SuccessToast } from "@/components/features/evacuation-center/SuccessToast";
 import { useEventStore } from "@/store/eventStore";
 import { useEvacuationCenterStore } from "@/store/evacuationCenterStore";
+import { useAttendanceStore } from "@/store/attendanceRecordsStore";
 import { formatDate } from "@/utils/formatters";
 import type { Event, EventDetails } from "@/types/event";
 import { useAuthStore } from "@/store/authStore";
@@ -29,13 +31,16 @@ export function CityAdminDashboard() {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+    const [isResolveModalOpen, setIsResolveModalOpen] = useState(false);
     const [editingEvent, setEditingEvent] = useState<Event | null>(null);
+    const [resolvingEvent, setResolvingEvent] = useState<Event | null>(null);
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
     const [deletingEvent, setDeletingEvent] = useState<Event | null>(null);
     const [deleteLoading, setDeleteLoading] = useState(false);
     const [successToast, setSuccessToast] = useState({ isOpen: false, message: "" });
+    const [createError, setCreateError] = useState<string | null>(null);
 
-    // Use evacuation center store instead of local state
+    // Use evacuation center store
     const {
         centers: evacuationCenters,
         mapCenters,
@@ -45,7 +50,12 @@ export function CityAdminDashboard() {
         fetchCitySummary,
     } = useEvacuationCenterStore();
 
-    // City-wide summary instead of single center
+    // Use attendance store to validate attendance conditions
+    const { validateAttendanceConditions } = useAttendanceStore();
+
+    const { fetchActiveEvent } = useEventStore();
+
+    // City-wide summary
     const [selectedCenter, setSelectedCenter] = useState<SelectedCenter>({
         name: "Iligan City",
         address: "",
@@ -57,6 +67,7 @@ export function CityAdminDashboard() {
     // Use event store
     const {
         events,
+        activeEvent,
         loading: isLoadingEvents,
         error,
         searchQuery,
@@ -72,7 +83,10 @@ export function CityAdminDashboard() {
         getEventDetails,
         createEvent,
         updateEvent,
+        resolveEvent,
         deleteEvent,
+        clearError,
+        validateEventCreation,
     } = useEventStore();
 
     // Get current user and role
@@ -136,6 +150,26 @@ export function CityAdminDashboard() {
     }, [citySummary]);
 
     useEffect(() => {
+        // Fetch active event immediately on dashboard mount
+        const initActiveEvent = async () => {
+            try {
+                await fetchActiveEvent();
+            } catch (error) {
+                console.error("Failed to fetch active event:", error);
+            }
+        };
+        
+        initActiveEvent();
+    }, [fetchActiveEvent]);
+
+    // Also add this for good measure in your existing events useEffect:
+    useEffect(() => {
+        fetchEvents();
+        fetchActiveEvent(); // Add this line
+    }, [fetchEvents, fetchActiveEvent, searchQuery, currentPage, entriesPerPage, sortConfig]);
+
+    // Fetch events when dependencies change
+    useEffect(() => {
         fetchEvents();
     }, [fetchEvents, searchQuery, currentPage, entriesPerPage, sortConfig]);
 
@@ -160,29 +194,54 @@ export function CityAdminDashboard() {
         return "bg-green-500";
     };
 
-    const handleAddEvent = () => {
-        setIsCreateModalOpen(true);
+    const handleAddEvent = async () => {
+        try {
+            const validation = await validateEventCreation();
+            if (!validation.canCreate) {
+                setCreateError(validation.message || "Cannot create a new event at this time");
+                setTimeout(() => setCreateError(null), 5000);
+                return;
+            }
+            
+            setIsCreateModalOpen(true);
+            setCreateError(null);
+        } catch (error) {
+            console.error("Failed to validate event creation:", error);
+            setCreateError("Failed to validate event creation conditions");
+            setTimeout(() => setCreateError(null), 5000);
+        }
     };
 
     const handleCreateEvent = async (eventData: any) => {
         try {
-            await createEvent({
+            const result = await createEvent({
                 event_name: eventData.event_name,
                 event_type: eventData.event_type,
                 date_declared: eventData.date_declared,
                 end_date: eventData.end_date,
-                status: eventData.status,
                 center_ids: eventData.center_ids,
             });
 
-            setIsCreateModalOpen(false);
-            setSuccessToast({ isOpen: true, message: "Event created successfully" });
+            if (result.success) {
+                setIsCreateModalOpen(false);
+                setSuccessToast({ isOpen: true, message: "Event created successfully" });
+            } else {
+                throw new Error(result.message || "Failed to create event");
+            }
         } catch (err: any) {
+            console.error("Create event error:", err);
             throw err;
         }
     };
 
-    const handleEditEvent = (event: Event) => {
+    const handleEditEvent = async (event: Event) => {
+        // Check if event can be edited (not resolved)
+        if (event.status === 'resolved') {
+            setCreateError("Cannot edit a resolved event");
+            setTimeout(() => setCreateError(null), 5000);
+            return;
+        }
+        
         setEditingEvent(event);
         setIsEditModalOpen(true);
     };
@@ -194,12 +253,11 @@ export function CityAdminDashboard() {
             eventData.end_date &&
             new Date(eventData.end_date) < new Date(eventData.date_declared)
         ) {
-            console.error("End date cannot be earlier than the date declared.");
-            return;
+            throw new Error("End date cannot be earlier than the date declared.");
         }
 
         try {
-            await updateEvent(editingEvent.event_id, {
+            const result = await updateEvent(editingEvent.event_id, {
                 event_name: eventData.event_name,
                 event_type: eventData.event_type,
                 date_declared: eventData.date_declared,
@@ -208,15 +266,46 @@ export function CityAdminDashboard() {
                 center_ids: eventData.center_ids,
             });
 
-            setIsEditModalOpen(false);
-            setEditingEvent(null);
-            setSuccessToast({ isOpen: true, message: "Event updated successfully" });
+            if (result.success) {
+                setIsEditModalOpen(false);
+                setEditingEvent(null);
+                setSuccessToast({ isOpen: true, message: "Event updated successfully" });
+            } else {
+                throw new Error(result.message || "Failed to update event");
+            }
         } catch (err: any) {
             console.error("Update event error:", err);
+            throw err;
         }
     };
 
-    const handleDeleteEvent = (event: Event) => {
+    const handleResolveEvent = async (event: Event) => {
+        // Check if event can be resolved (not already resolved)
+        if (event.status === 'resolved') {
+            setCreateError("Event is already resolved");
+            setTimeout(() => setCreateError(null), 5000);
+            return;
+        }
+
+        setResolvingEvent(event);
+        setIsResolveModalOpen(true);
+    };
+
+    const handleConfirmResolve = async () => {
+        if (!resolvingEvent) return;
+
+        // Note: The actual resolve logic is handled in the ResolveEventModal component
+        // This function just sets up the modal
+    };
+
+    const handleDeleteEvent = async (event: Event) => {
+        // Check if event can be deleted (not resolved)
+        if (event.status === 'resolved') {
+            setCreateError("Cannot delete a resolved event");
+            setTimeout(() => setCreateError(null), 5000);
+            return;
+        }
+        
         setDeletingEvent(event);
         setIsDeleteDialogOpen(true);
     };
@@ -226,8 +315,14 @@ export function CityAdminDashboard() {
 
         setDeleteLoading(true);
         try {
-            await deleteEvent(deletingEvent.event_id);
-            setSuccessToast({ isOpen: true, message: "Event deleted successfully" });
+            const result = await deleteEvent(deletingEvent.event_id);
+            
+            if (result.success) {
+                setSuccessToast({ isOpen: true, message: "Event deleted successfully" });
+            } else {
+                setSuccessToast({ isOpen: true, message: result.message || "Failed to delete event" });
+            }
+            
             setIsDeleteDialogOpen(false);
             setDeletingEvent(null);
         } catch (err: any) {
@@ -278,6 +373,23 @@ export function CityAdminDashboard() {
         setSuccessToast({ isOpen: false, message: "" });
     };
 
+    const handleCreateModalClose = () => {
+        setIsCreateModalOpen(false);
+        setCreateError(null);
+    };
+
+    const handleEditModalClose = () => {
+        setIsEditModalOpen(false);
+        setEditingEvent(null);
+        setCreateError(null);
+    };
+
+    const handleResolveModalClose = () => {
+        setIsResolveModalOpen(false);
+        setResolvingEvent(null);
+        setCreateError(null);
+    };
+
     const formattedEvents = useMemo(() => {
         return events.map(event => ({
             ...event,
@@ -297,7 +409,7 @@ export function CityAdminDashboard() {
 
     return (
         <div className="w-full min-w-0 bg-background flex flex-col relative">
-            <ErrorAlert error={error} />
+            <ErrorAlert error={error || createError} />
 
             <MapPanel
                 isPanelVisible={isPanelVisible}
@@ -329,7 +441,9 @@ export function CityAdminDashboard() {
                 onAddEvent={handleAddEvent}
                 onEdit={handleEditEvent}
                 onDelete={handleDeleteEvent}
+                onResolve={handleResolveEvent}
                 userRole={userRole}
+                activeEvent={activeEvent}
             />
 
             <EventDetailsModal
@@ -340,19 +454,24 @@ export function CityAdminDashboard() {
 
             <CreateEventModal
                 isOpen={isCreateModalOpen}
-                onClose={() => setIsCreateModalOpen(false)}
+                onClose={handleCreateModalClose}
                 onSubmit={handleCreateEvent}
             />
 
             {editingEvent && (
                 <CreateEventModal
                     isOpen={isEditModalOpen}
-                    onClose={() => {
-                        setIsEditModalOpen(false);
-                        setEditingEvent(null);
-                    }}
+                    onClose={handleEditModalClose}
                     onSubmit={handleUpdateEvent}
                     initialData={editingEvent}
+                />
+            )}
+
+            {resolvingEvent && (
+                <ResolveEventModal
+                    isOpen={isResolveModalOpen}
+                    onClose={handleResolveModalClose}
+                    event={resolvingEvent}
                 />
             )}
 

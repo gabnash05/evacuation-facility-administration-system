@@ -4,6 +4,7 @@ import type { Event, EventDetails } from "@/types/event";
 
 interface EventState {
     events: Event[];
+    activeEvent: Event | null;
     loading: boolean;
     error: string | null;
     searchQuery: string;
@@ -27,16 +28,30 @@ interface EventState {
     setEntriesPerPage: (entries: number) => void;
     setSortConfig: (config: { key: string; direction: "asc" | "desc" | null } | null) => void;
     setCenterId: (centerId: number | null) => void;
+    
+    // Data fetching
     fetchEvents: (centerId?: number) => Promise<void>;
-    createEvent: (eventData: any) => Promise<void>;
-    updateEvent: (id: number, eventData: any) => Promise<void>;
-    deleteEvent: (id: number) => Promise<void>;
+    fetchActiveEvent: () => Promise<void>;
     getEventDetails: (id: number) => Promise<EventDetails>;
+    
+    // CRUD operations with validation
+    createEvent: (eventData: any) => Promise<{ success: boolean; data?: Event; message?: string }>;
+    updateEvent: (id: number, eventData: any) => Promise<{ success: boolean; data?: Event; message?: string }>;
+    resolveEvent: (id: number, end_date: string) => Promise<{ success: boolean; data?: Event; message?: string }>;
+    deleteEvent: (id: number) => Promise<{ success: boolean; message?: string }>;
+    
+    // Validation helpers
+    validateEventCreation: () => Promise<{ canCreate: boolean; message?: string; activeEvent?: Event }>;
+    validateEventUpdate: (id: number) => Promise<{ canUpdate: boolean; message?: string; event?: Event }>;
+    
+    // Utility
     resetState: () => void;
+    clearError: () => void;
 }
 
 const initialState = {
     events: [],
+    activeEvent: null,
     loading: false,
     error: null,
     searchQuery: "",
@@ -103,39 +118,196 @@ export const useEventStore = create<EventState>((set, get) => ({
         }
     },
 
-    createEvent: async (eventData: any) => {
+    fetchActiveEvent: async () => {
+        set({ loading: true, error: null });
+
         try {
-            await EventService.createEvent(eventData);
-            await get().fetchEvents(); // Refresh the list
+            const response = await EventService.getActiveEvent();
+            
+            set({
+                activeEvent: response.data,
+                loading: false,
+            });
         } catch (error) {
-            throw new Error(error instanceof Error ? error.message : "Failed to create event");
+            set({
+                error: error instanceof Error ? error.message : "Failed to fetch active event",
+                loading: false,
+                activeEvent: null,
+            });
         }
     },
 
-    updateEvent: async (id: number, eventData: any) => {
+    validateEventCreation: async (): Promise<{ canCreate: boolean; message?: string; activeEvent?: Event }> => {
         try {
-            const updateData = {
-                event_name: eventData.event_name,
-                event_type: eventData.event_type,
-                date_declared: eventData.date_declared,
-                end_date: eventData.end_date,
-                status: eventData.status,
-                center_ids: eventData.center_ids || [],
+            return await EventService.validateEventCreation();
+        } catch (error) {
+            return {
+                canCreate: false,
+                message: error instanceof Error ? error.message : "Failed to validate event creation"
+            };
+        }
+    },
+
+    validateEventUpdate: async (id: number): Promise<{ canUpdate: boolean; message?: string; event?: Event }> => {
+        try {
+            return await EventService.validateEventUpdate(id);
+        } catch (error) {
+            return {
+                canUpdate: false,
+                message: error instanceof Error ? error.message : "Failed to validate event update"
+            };
+        }
+    },
+
+    createEvent: async (eventData: any): Promise<{ success: boolean; data?: Event; message?: string }> => {
+        set({ loading: true, error: null });
+
+        try {
+            // Validate if event can be created (no active event should exist)
+            const validation = await get().validateEventCreation();
+            if (!validation.canCreate) {
+                throw new Error(validation.message || "Cannot create event");
+            }
+
+            // Always set status to 'active' for new events
+            const newEventData = {
+                ...eventData,
+                status: 'active'
             };
 
-            await EventService.updateEvent(id, updateData);
+            const response = await EventService.createEvent(newEventData);
+            
+            // Refresh events list and active event
             await get().fetchEvents();
+            await get().fetchActiveEvent();
+
+            set({ loading: false });
+            return {
+                success: true,
+                data: response.data
+            };
         } catch (error) {
-            throw new Error(error instanceof Error ? error.message : "Failed to update event");
+            const errorMessage = error instanceof Error ? error.message : "Failed to create event";
+            set({
+                error: errorMessage,
+                loading: false,
+            });
+            return {
+                success: false,
+                message: errorMessage
+            };
         }
     },
 
-    deleteEvent: async (id: number) => {
+    updateEvent: async (id: number, eventData: any): Promise<{ success: boolean; data?: Event; message?: string }> => {
+        set({ loading: true, error: null });
+
         try {
-            await EventService.deleteEvent(id);
+            // Validate if event can be updated (should not be resolved)
+            const validation = await get().validateEventUpdate(id);
+            if (!validation.canUpdate) {
+                throw new Error(validation.message || "Cannot update event");
+            }
+
+            // Prevent changing status to resolved via regular update
+            if (eventData.status === 'resolved') {
+                throw new Error("Use resolveEvent() method to resolve an event");
+            }
+
+            const response = await EventService.updateEvent(id, eventData);
+            
+            // Refresh events list
             await get().fetchEvents();
+            
+            // If this is the active event, refresh it too
+            if (get().activeEvent?.event_id === id) {
+                await get().fetchActiveEvent();
+            }
+
+            set({ loading: false });
+            return {
+                success: true,
+                data: response.data
+            };
         } catch (error) {
-            throw new Error(error instanceof Error ? error.message : "Failed to delete event");
+            const errorMessage = error instanceof Error ? error.message : "Failed to update event";
+            set({
+                error: errorMessage,
+                loading: false,
+            });
+            return {
+                success: false,
+                message: errorMessage
+            };
+        }
+    },
+
+    resolveEvent: async (id: number, end_date: string): Promise<{ success: boolean; data?: Event; message?: string }> => {
+        set({ loading: true, error: null });
+
+        try {
+            // Check if event can be resolved (should be active or monitoring)
+            const validation = await get().validateEventUpdate(id);
+            if (!validation.canUpdate) {
+                throw new Error(validation.message || "Cannot resolve event");
+            }
+
+            const response = await EventService.resolveEvent(id, end_date);
+            
+            // Refresh events list and active event
+            await get().fetchEvents();
+            await get().fetchActiveEvent();
+
+            set({ loading: false });
+            return {
+                success: true,
+                data: response.data,
+                message: response.message
+            };
+        } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : "Failed to resolve event";
+            set({
+                error: errorMessage,
+                loading: false,
+            });
+            return {
+                success: false,
+                message: errorMessage
+            };
+        }
+    },
+
+    deleteEvent: async (id: number): Promise<{ success: boolean; message?: string }> => {
+        set({ loading: true, error: null });
+
+        try {
+            // Check if event is resolved before deleting
+            const validation = await get().validateEventUpdate(id);
+            if (!validation.canUpdate && validation.event?.status === 'resolved') {
+                throw new Error("Cannot delete a resolved event");
+            }
+
+            const response = await EventService.deleteEvent(id);
+            
+            // Refresh events list and active event
+            await get().fetchEvents();
+            await get().fetchActiveEvent();
+
+            set({ loading: false });
+            return {
+                success: true,
+                message: response.message
+            };
+        } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : "Failed to delete event";
+            set({
+                error: errorMessage,
+                loading: false,
+            });
+            return {
+                success: false,
+                message: errorMessage
+            };
         }
     },
 
@@ -148,6 +320,10 @@ export const useEventStore = create<EventState>((set, get) => ({
                 error instanceof Error ? error.message : "Failed to fetch event details"
             );
         }
+    },
+
+    clearError: () => {
+        set({ error: null });
     },
 
     resetState: () => set(initialState),

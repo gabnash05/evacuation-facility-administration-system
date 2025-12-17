@@ -28,6 +28,7 @@ def get_dashboard_stats():
         - gender (optional): Male, Female, Other
         - age_group (optional): Child, Teen, Adult, Senior
         - center_id (optional): Filter by specific center (city admin only)
+        - event_id (optional): Filter by specific event (NEW)
     
     Returns:
         JSON response with dashboard statistics
@@ -44,13 +45,15 @@ def get_dashboard_stats():
         gender = request.args.get("gender")
         age_group = request.args.get("age_group")
         center_id = request.args.get("center_id", type=int)
+        event_id = request.args.get("event_id", type=int)  # NEW
         
         # Validate filters
         try:
             filters = filter_schema.load({
                 "gender": gender,
                 "age_group": age_group,
-                "center_id": center_id
+                "center_id": center_id,
+                "event_id": event_id  # NEW
             })
         except Exception as validation_error:
             return jsonify({
@@ -88,11 +91,12 @@ def get_dashboard_stats():
             # Super admin sees city-wide stats
             pass
         
-        # Get stats
+        # Get stats with event filter
         result = stats_service.get_dashboard_stats(
             center_id=center_id,
             gender=filters.get("gender"),
-            age_group=filters.get("age_group")
+            age_group=filters.get("age_group"),
+            event_id=filters.get("event_id")  # NEW
         )
         
         if not result.get("success"):
@@ -118,6 +122,7 @@ def get_occupancy_stats():
         - gender (optional): Male, Female, Other
         - age_group (optional): Child, Teen, Adult, Senior
         - center_id (optional): Filter by specific center (city admin only)
+        - event_id (optional): Filter by specific event (NEW)
     
     Returns:
         JSON response with occupancy statistics
@@ -134,6 +139,7 @@ def get_occupancy_stats():
         gender = request.args.get("gender")
         age_group = request.args.get("age_group")
         center_id = request.args.get("center_id", type=int)
+        event_id = request.args.get("event_id", type=int)  # NEW
         
         # Role-based center filtering
         if user.role in ["center_admin", "volunteer"]:
@@ -144,11 +150,12 @@ def get_occupancy_stats():
                 }), 403
             center_id = user.center_id
         
-        # Get stats
+        # Get stats with event filter
         occupancy_stats = stats_service.get_occupancy_stats(
             center_id=center_id,
             gender=gender,
-            age_group=age_group
+            age_group=age_group,
+            event_id=event_id  # NEW
         )
         
         return jsonify({
@@ -174,6 +181,7 @@ def get_registration_stats():
         - gender (optional): Male, Female, Other
         - age_group (optional): Child, Teen, Adult, Senior
         - center_id (optional): Filter by specific center (city admin only)
+        - event_id (optional): Filter by specific event (NEW)
     
     Returns:
         JSON response with registration statistics
@@ -190,6 +198,7 @@ def get_registration_stats():
         gender = request.args.get("gender")
         age_group = request.args.get("age_group")
         center_id = request.args.get("center_id", type=int)
+        event_id = request.args.get("event_id", type=int)  # NEW
         
         # Role-based center filtering
         if user.role in ["center_admin", "volunteer"]:
@@ -200,11 +209,12 @@ def get_registration_stats():
                 }), 403
             center_id = user.center_id
         
-        # Get stats
+        # Get stats with event filter
         registration_stats = stats_service.get_registration_stats(
             center_id=center_id,
             gender=gender,
-            age_group=age_group
+            age_group=age_group,
+            event_id=event_id  # NEW
         )
         
         return jsonify({
@@ -230,6 +240,7 @@ def get_aid_distribution_stats():
     
     Query Parameters:
         - center_id (optional): Filter by specific center (city admin only)
+        - event_id (optional): Filter by specific event (NEW)
     
     Returns:
         JSON response with aid distribution statistics
@@ -244,6 +255,7 @@ def get_aid_distribution_stats():
         
         # Get query parameters
         center_id = request.args.get("center_id", type=int)
+        event_id = request.args.get("event_id", type=int)  # NEW
         
         # Role-based center filtering
         if user.role in ["center_admin", "volunteer"]:
@@ -254,8 +266,11 @@ def get_aid_distribution_stats():
                 }), 403
             center_id = user.center_id
         
-        # Get stats
-        aid_stats = stats_service.get_aid_distribution_stats(center_id=center_id)
+        # Get stats with event filter
+        aid_stats = stats_service.get_aid_distribution_stats(
+            center_id=center_id,
+            event_id=event_id  # NEW
+        )
         
         return jsonify({
             "success": True,

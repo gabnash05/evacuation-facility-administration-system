@@ -10,6 +10,7 @@ import { SuccessToast } from "@/components/common/SuccessToast";
 import { useIndividualStore } from "@/store/individualStore";
 import { useAttendanceStore } from "@/store/attendanceRecordsStore";
 import { useEvacuationCenterStore } from "@/store/evacuationCenterStore";
+import { useEventStore } from "@/store/eventStore";
 import { debounce } from "@/utils/helpers";
 import { useAuthStore } from "@/store/authStore";
 import type { Individual } from "@/types/individual";
@@ -39,6 +40,7 @@ export function CenterAdminAttendancePage() {
     } = useAttendanceStore();
 
     const { centers, fetchAllCenters } = useEvacuationCenterStore();
+    const { activeEvent, fetchActiveEvent } = useEventStore();
 
     // Get current user and role
     const { user } = useAuthStore();
@@ -55,6 +57,7 @@ export function CenterAdminAttendancePage() {
         isOpen: false,
         message: "",
     });
+    const [eventError, setEventError] = useState<string | null>(null);
 
     // Filter states
     const [statusFilter, setStatusFilter] = useState<string>("all");
@@ -62,7 +65,6 @@ export function CenterAdminAttendancePage() {
     const [ageGroupFilter, setAgeGroupFilter] = useState<string>("all");
     
     // For center admin, we'll filter individuals by their household's center_id
-    // This shows individuals registered to this center (via household)
     const [centerFilter, setCenterFilter] = useState<number | undefined>(userCenterId || undefined);
 
     // Sorting state
@@ -76,15 +78,45 @@ export function CenterAdminAttendancePage() {
         [fetchIndividuals]
     );
 
-    // Initialize with user's center and fetch centers
+    // Initialize with user's center and fetch centers/event
     useEffect(() => {
         if (userCenterId) {
             setCenterFilter(userCenterId);
-            // Filter by household center_id to show individuals registered to this center
             setFilter("center_id", userCenterId);
         }
         fetchAllCenters();
-    }, [userCenterId, setFilter, fetchAllCenters]);
+        fetchActiveEvent();
+    }, [userCenterId, setFilter, fetchAllCenters, fetchActiveEvent]);
+
+    // Check for active event and center status - only when modals are opening
+    useEffect(() => {
+        if (isCheckInModalOpen || isCheckOutModalOpen || isTransferModalOpen) {
+            if (!activeEvent) {
+                setEventError("No active event found. An event must be active to perform attendance actions.");
+            } else if (userCenterId) {
+                const userCenter = centers.find(c => c.center_id === userCenterId);
+                if (!userCenter || userCenter.status !== "active") {
+                    setEventError("Your evacuation center is not active. Please contact administration.");
+                } else {
+                    setEventError(null);
+                }
+            }
+        }
+    }, [activeEvent, centers, userCenterId, isCheckInModalOpen, isCheckOutModalOpen, isTransferModalOpen]);
+
+    // Check for event/center status on initial load
+    useEffect(() => {
+        if (!activeEvent) {
+            setEventError("No active event found. An event must be active to perform attendance actions.");
+        } else if (userCenterId) {
+            const userCenter = centers.find(c => c.center_id === userCenterId);
+            if (!userCenter || userCenter.status !== "active") {
+                setEventError("Your evacuation center is not active. Please contact administration.");
+            } else {
+                setEventError(null);
+            }
+        }
+    }, [activeEvent, centers, userCenterId]);
 
     useEffect(() => {
         if (userCenterId) {
@@ -121,14 +153,12 @@ export function CenterAdminAttendancePage() {
             setFilter("age_group", undefined);
         }
 
-        // For center admin, we filter by household's center_id to show registered individuals
         if (userCenterId) {
             setFilter("center_id", userCenterId);
         }
     }, [statusFilter, genderFilter, ageGroupFilter, userCenterId, setFilter]);
 
     const handleSort = (key: string) => {
-        // Map frontend keys to backend sort keys
         const sortMapping: Record<string, string> = {
             "full_name": "full_name",
             "age": "age",
@@ -140,21 +170,17 @@ export function CenterAdminAttendancePage() {
 
         const backendKey = sortMapping[key] || key;
         
-        // Determine new sort direction
         let newDirection: "asc" | "desc" = "asc";
         
         if (sortConfig?.key === key) {
-            // Toggle direction if same key
             newDirection = sortConfig.direction === "asc" ? "desc" : "asc";
         }
         
-        // Update local sort state
         setSortConfig({
             key,
             direction: newDirection
         });
         
-        // Fetch with proper sort parameters
         fetchIndividuals({
             sortBy: backendKey,
             sortOrder: newDirection
@@ -162,7 +188,6 @@ export function CenterAdminAttendancePage() {
     };
 
     useEffect(() => {
-        // Reset sorting when filters change significantly
         setSortConfig(null);
     }, [searchQuery, statusFilter, genderFilter, ageGroupFilter]);
 
@@ -178,10 +203,12 @@ export function CenterAdminAttendancePage() {
         setIsTransferModalOpen(true);
     };
 
+    const handleOpenCheckInModalFromToolbar = () => {
+        setIsCheckInModalOpen(true);
+    };
+
     const handleDelete = async (id: number) => {
         try {
-            // Note: Deleting individuals might be handled differently
-            // This is just a placeholder
             console.log("Delete individual:", id);
             showSuccessToast("Individual deleted successfully");
             fetchIndividuals();
@@ -199,7 +226,6 @@ export function CenterAdminAttendancePage() {
         setSearchQuery(query);
         setCurrentPage(1);
         
-        // Trigger fetch immediately when search is cleared
         if (query.trim() === "") {
             fetchIndividuals();
         }
@@ -221,7 +247,6 @@ export function CenterAdminAttendancePage() {
                 setAgeGroupFilter(value as string);
                 break;
             case "center_id":
-                // Center admin cannot change center filter
                 if (userRole !== "center_admin") {
                     setCenterFilter(value as number);
                 }
@@ -234,13 +259,11 @@ export function CenterAdminAttendancePage() {
         setStatusFilter("all");
         setGenderFilter("all");
         setAgeGroupFilter("all");
-        // Center filter remains fixed to user's center
         clearFilters();
         setCurrentPage(1);
     };
 
     const handleOpenCheckInModal = (individualId: number, record: any) => {
-        // Find the full individual data
         const individual = individuals.find(ind => ind.individual_id === individualId);
         if (individual) {
             setIndividualToCheckIn(individual);
@@ -256,37 +279,80 @@ export function CenterAdminAttendancePage() {
         setSuccessToast({ isOpen: true, message });
     };
 
-    // Determine if user can perform actions
-    const canCheckOut = (individual: Individual) => {
-        // Center admins can only check out individuals currently checked into their center
-        return userCenterId && 
-               individual.current_status === "checked_in" && 
-               individual.current_center_id === userCenterId;
-    };
+    // Helper function to check if actions are allowed (without setting state)
+    const canPerformActions = useMemo(() => {
+        if (!activeEvent) {
+            return false;
+        }
 
-    const canTransfer = (individual: Individual) => {
-        // Center admins can only transfer individuals from their center
-        return userCenterId && 
-               individual.current_status === "checked_in" && 
-               individual.current_center_id === userCenterId;
-    };
+        if (userCenterId) {
+            const userCenter = centers.find(c => c.center_id === userCenterId);
+            if (!userCenter || userCenter.status !== "active") {
+                return false;
+            }
+        }
 
-    const canCheckIn = (individual: Individual) => {
-        // Center admins can check in individuals who are:
-        // 1. Registered to this center (household.center_id matches user's center)
-        // 2. Not currently checked in somewhere else
+        return true;
+    }, [activeEvent, centers, userCenterId]);
+
+    // Determine if user can perform actions on specific individuals
+    const canCheckOut = useMemo(() => (individual: Individual) => {
+        if (!canPerformActions) return false;
         
-        // Check if individual belongs to this center (via household)
+        return userCenterId && 
+               individual.current_status === "checked_in" && 
+               individual.current_center_id === userCenterId;
+    }, [canPerformActions, userCenterId]);
+
+    const canTransfer = useMemo(() => (individual: Individual) => {
+        if (!canPerformActions) return false;
+        
+        return userCenterId && 
+               individual.current_status === "checked_in" && 
+               individual.current_center_id === userCenterId;
+    }, [canPerformActions, userCenterId]);
+
+    const canCheckIn = useMemo(() => (individual: Individual) => {
+        if (!canPerformActions) return false;
+        
         const belongsToThisCenter = userCenterId && 
             individual.household?.center_id === userCenterId;
         
-        // Check if individual is available for check-in
+        if (!belongsToThisCenter) return false;
+        
         const isAvailableForCheckIn = 
             individual.current_status === "checked_out" || 
             individual.current_status === "transferred" ||
-            !individual.last_check_in_time; // Never been checked in
+            !individual.last_check_in_time;
         
-        return belongsToThisCenter && isAvailableForCheckIn;
+        return isAvailableForCheckIn;
+    }, [canPerformActions, userCenterId]);
+
+    const getEventStatusBadge = () => {
+        if (!activeEvent) {
+            return (
+                <div className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                    No Active Event
+                </div>
+            );
+        }
+        
+        const userCenter = userCenterId ? centers.find(c => c.center_id === userCenterId) : null;
+        const isCenterActive = userCenter?.status === "active";
+        
+        if (!isCenterActive) {
+            return (
+                <div className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                    Center Inactive
+                </div>
+            );
+        }
+        
+        return (
+            <div className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                Active Event: {activeEvent.event_name}
+            </div>
+        );
     };
 
     const headers = [
@@ -300,29 +366,24 @@ export function CenterAdminAttendancePage() {
         { key: "last_check_in_time", label: "Last Check-in", sortable: true },
     ];
     
-    const tableData = individuals.map(individual => {
+    const tableData = useMemo(() => individuals.map(individual => {
         const canPerformCheckOut = canCheckOut(individual);
         const canPerformTransfer = canTransfer(individual);
         const canPerformCheckIn = canCheckIn(individual);
         
-        // Generate full name from first and last name
         const fullName = `${individual.first_name} ${individual.last_name}`.trim();
         
-        // Get household name
         const householdName = individual.household?.household_name || 
                             individual.household_name || 
                             `Household ${individual.household_id}`;
         
-        // Get current center name
         const centerName = individual.current_center_name || "Not checked in";
         
-        // Get last check-in time
         const lastCheckInTime = individual.last_check_in_time;
         const formattedLastCheckIn = lastCheckInTime 
             ? new Date(lastCheckInTime).toLocaleString('en-US', { timeZone: 'UTC' })
             : "Never";
 
-        // Check if individual belongs to this center (via household)
         const belongsToThisCenter = userCenterId && 
             individual.household?.center_id === userCenterId;
         
@@ -336,33 +397,30 @@ export function CenterAdminAttendancePage() {
             relationship_to_head: individual.relationship_to_head || "N/A",
             current_status: individual.current_status || "checked_out",
             status: individual.current_status || "checked_out",
-            // Center information
             center_name: centerName,
             current_center_name: centerName,
             current_center_id: individual.current_center_id,
             belongs_to_this_center: belongsToThisCenter,
-            // Household information
             household_name: householdName,
             household_id: individual.household_id,
             household_center_id: individual.household?.center_id,
-            // Time information
             last_check_in_time: formattedLastCheckIn,
             check_in_time: lastCheckInTime,
-            // Action flags
             can_check_out: canPerformCheckOut as boolean,
             can_transfer: canPerformTransfer as boolean,
             can_check_in: canPerformCheckIn as boolean,
-            // For type compatibility
-            event_name: "",
+            event_name: activeEvent?.event_name || "",
             check_out_time: null,
             transfer_time: null,
         };
-    });
+    }), [individuals, canCheckOut, canTransfer, canCheckIn, userCenterId, activeEvent]);
 
-    // Filter centers to only show user's center for center admin
     const filteredCenters = userRole === "center_admin" && userCenterId
         ? centers.filter(center => center.center_id === userCenterId)
         : centers;
+
+    // Calculate if actions should be disabled
+    const shouldDisableActions = !canPerformActions;
 
     if (!userCenterId) {
         return (
@@ -382,13 +440,38 @@ export function CenterAdminAttendancePage() {
         <div className="w-full min-w-0 bg-background flex flex-col relative p-6">
             <div className="space-y-6">
                 <div>
-                    <h1 className="text-2xl font-bold tracking-tight">Attendance Management</h1>
-                    <p className="text-muted-foreground">
-                        Manage individuals registered to your center: {centers.find(c => c.center_id === userCenterId)?.center_name || `Center #${userCenterId}`}
-                    </p>
-                    <p className="text-sm text-muted-foreground mt-1">
-                        Showing individuals registered to this center (via household assignment)
-                    </p>
+                    <div className="flex items-center justify-between">
+                        <div>
+                            <h1 className="text-2xl font-bold tracking-tight">Attendance Management</h1>
+                            <p className="text-muted-foreground">
+                                Manage individuals registered to your center: {centers.find(c => c.center_id === userCenterId)?.center_name || `Center #${userCenterId}`}
+                            </p>
+                            <p className="text-sm text-muted-foreground mt-1">
+                                Showing individuals registered to this center (via household assignment)
+                            </p>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            {getEventStatusBadge()}
+                        </div>
+                    </div>
+                    
+                    {/* Event Status Warning */}
+                    {eventError && (
+                        <div className="mt-4 bg-yellow-50 border-l-4 border-yellow-400 p-4">
+                            <div className="flex">
+                                <div className="flex-shrink-0">
+                                    <svg className="h-5 w-5 text-yellow-400" viewBox="0 0 20 20" fill="currentColor">
+                                        <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                                    </svg>
+                                </div>
+                                <div className="ml-3">
+                                    <p className="text-sm text-yellow-700">
+                                        {eventError}
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    )}
                 </div>
 
                 {error && (
@@ -404,7 +487,7 @@ export function CenterAdminAttendancePage() {
                         <AttendanceTableToolbarV2
                             searchQuery={searchQuery}
                             onSearchChange={handleSearchChange}
-                            onCheckIn={() => setIsCheckInModalOpen(true)}
+                            onCheckIn={handleOpenCheckInModalFromToolbar}
                             onOpenCheckOut={() => {
                                 setSelectedIndividualId(null);
                                 setSelectedRecordId(null);
@@ -418,7 +501,6 @@ export function CenterAdminAttendancePage() {
                             entriesPerPage={entriesPerPage}
                             onEntriesPerPageChange={handleEntriesPerPageChange}
                             loading={loading}
-                            // Filter controls
                             filters={{
                                 status: statusFilter,
                                 gender: genderFilter,
@@ -430,6 +512,7 @@ export function CenterAdminAttendancePage() {
                             centers={filteredCenters}
                             userRole={userRole}
                             userCenterId={userCenterId}
+                            disabledActions={shouldDisableActions}
                         />
                     </div>
                     <div className="border-b border-border">
@@ -468,9 +551,9 @@ export function CenterAdminAttendancePage() {
                                     const individual = tableData.find(i => i.record_id === record.record_id);
                                     
                                     return {
-                                        canCheckOut: individual?.can_check_out || false,
-                                        canTransfer: individual?.can_transfer || false,
-                                        canCheckIn: individual?.can_check_in || false,
+                                        canCheckOut: !shouldDisableActions && (individual?.can_check_out || false),
+                                        canTransfer: !shouldDisableActions && (individual?.can_transfer || false),
+                                        canCheckIn: !shouldDisableActions && (individual?.can_check_in || false),
                                     };
                                 }}
                             />
@@ -495,6 +578,7 @@ export function CenterAdminAttendancePage() {
                 onClose={() => {
                     setIsCheckInModalOpen(false);
                     setIndividualToCheckIn(null);
+                    setEventError(null);
                 }}
                 onSuccess={() => {
                     setIsCheckInModalOpen(false);
@@ -502,14 +586,17 @@ export function CenterAdminAttendancePage() {
                     showSuccessToast("Individual checked in successfully");
                     fetchIndividuals();
                 }}
-                defaultCenterId={userCenterId} // Always check into user's center
+                defaultCenterId={userCenterId}
                 individualToCheckIn={individualToCheckIn}
             />
 
             <CheckOutModal
                 isOpen={isCheckOutModalOpen}
                 recordId={selectedRecordId}
-                onClose={() => setIsCheckOutModalOpen(false)}
+                onClose={() => {
+                    setIsCheckOutModalOpen(false);
+                    setEventError(null);
+                }}
                 onCheckOut={async (recordId: number, data) => {
                     await checkOutIndividual(recordId, data);
                 }}
@@ -524,14 +611,17 @@ export function CenterAdminAttendancePage() {
                     showSuccessToast(message);
                     fetchIndividuals();
                 }}
-                defaultCenterId={userCenterId} // Restrict to checking out from user's center
+                defaultCenterId={userCenterId}
             />
 
             <TransferIndividualModal
                 isOpen={isTransferModalOpen}
                 defaultCenterId={userCenterId}
                 initialIndividualId={selectedIndividualId || undefined}
-                onClose={() => setIsTransferModalOpen(false)}
+                onClose={() => {
+                    setIsTransferModalOpen(false);
+                    setEventError(null);
+                }}
                 onTransfer={async (recordId: number, data) => {
                     await transferIndividual(recordId, data as any);
                 }}
@@ -546,7 +636,7 @@ export function CenterAdminAttendancePage() {
                     showSuccessToast(message);
                     fetchIndividuals();
                 }}
-                sourceCenterId={userCenterId} // Restrict to transferring from user's center
+                sourceCenterId={userCenterId}
             />
 
             <SuccessToast

@@ -439,19 +439,96 @@ class EvacuationCenter(db.Model):
     @classmethod
     def delete(cls, center_id: int) -> bool:
         """Delete an evacuation center using raw SQL."""
-        result = db.session.execute(
-            text(
-                """  
-                DELETE FROM evacuation_centers
-                WHERE center_id = :center_id 
-                RETURNING center_id
-                """
-            ),
-            {"center_id": center_id},
-        ).fetchone()
+        try:
+            # First, handle users assigned to this center
+            # For volunteers and center_admins, we need to either:
+            # 1. Reassign them to another center
+            # 2. Deactivate them
+            # 3. Change their role
+            
+            # Get all users assigned to this center
+            users_result = db.session.execute(
+                text("""
+                    SELECT user_id, role, email 
+                    FROM users 
+                    WHERE center_id = :center_id
+                """),
+                {"center_id": center_id},
+            ).fetchall()
+            
+            # Handle each user based on their role
+            for user in users_result:
+                user_id, role, email = user
+                
+                if role in ['center_admin', 'volunteer']:
+                    # Find an alternative active center to reassign them to
+                    alternative_center = db.session.execute(
+                        text("""
+                            SELECT center_id 
+                            FROM evacuation_centers 
+                            WHERE center_id != :center_id 
+                            AND status = 'active'
+                            LIMIT 1
+                        """),
+                        {"center_id": center_id},
+                    ).fetchone()
+                    
+                    if alternative_center:
+                        # Reassign to alternative center
+                        db.session.execute(
+                            text("""
+                                UPDATE users 
+                                SET center_id = :new_center_id
+                                WHERE user_id = :user_id
+                            """),
+                            {"new_center_id": alternative_center[0], "user_id": user_id},
+                        )
+                    else:
+                        # No alternative center exists, change role or deactivate
+                        if role == 'volunteer':
+                            # Volunteers can be deactivated
+                            db.session.execute(
+                                text("""
+                                    UPDATE users 
+                                    SET center_id = NULL, 
+                                        is_active = FALSE,
+                                        role = 'volunteer'  -- Keep role but mark inactive
+                                    WHERE user_id = :user_id
+                                """),
+                                {"user_id": user_id},
+                            )
+                        else:  # center_admin
+                            # Center admins could become city_admins if no centers exist
+                            db.session.execute(
+                                text("""
+                                    UPDATE users 
+                                    SET center_id = NULL, 
+                                        role = 'city_admin'  # Or deactivate
+                                    WHERE user_id = :user_id
+                                """),
+                                {"user_id": user_id},
+                            )
+            
+            # Now delete the center
+            result = db.session.execute(
+                text("""
+                    DELETE FROM evacuation_centers
+                    WHERE center_id = :center_id 
+                    RETURNING center_id
+                """),
+                {"center_id": center_id},
+            ).fetchone()
 
-        db.session.commit()
-        return result is not None
+            db.session.commit()
+            return result is not None
+            
+        except Exception as e:
+            db.session.rollback()
+            # Log the error properly
+            import logging
+            logging.error(f"Error deleting center {center_id}: {str(e)}")
+            raise
+
 
     @classmethod
     def update_occupancy(
