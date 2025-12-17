@@ -153,6 +153,7 @@ class Household(db.Model):
             "head": "CONCAT(i.first_name, ' ', i.last_name)",
             "address": "h.address",
             "center": "ec.center_name",
+            "member_count": "member_count",  # Add this for sorting by member count
         }
         sort_column = allowed_sort_columns.get(sort_by, "h.household_name")
         if sort_direction.lower() not in ["asc", "desc"]:
@@ -190,23 +191,51 @@ class Household(db.Model):
                 i.gender AS head_gender,
                 i.relationship_to_head AS head_relationship_to_head,
                 i.created_at AS head_created_at,
-                i.updated_at AS head_updated_at
+                i.updated_at AS head_updated_at,
+                -- ADDED: Member count
+                COALESCE(COUNT(ind.individual_id), 0) AS member_count
             FROM
                 households h
             LEFT JOIN
                 individuals i ON h.household_head_id = i.individual_id
             LEFT JOIN
                 evacuation_centers ec ON h.center_id = ec.center_id
+            LEFT JOIN
+                individuals ind ON h.household_id = ind.household_id
             WHERE
                 (:search = '' OR 
                 h.household_name ILIKE '%' || :search || '%' OR
                 h.address ILIKE '%' || :search || '%' OR
                 EXISTS (
-                    SELECT 1 FROM individuals ind
-                    WHERE ind.household_id = h.household_id
-                    AND CONCAT(ind.first_name, ' ', ind.last_name) ILIKE '%' || :search || '%'
+                    SELECT 1 FROM individuals ind2
+                    WHERE ind2.household_id = h.household_id
+                    AND CONCAT(ind2.first_name, ' ', ind2.last_name) ILIKE '%' || :search || '%'
                 ))
                 {center_filter}
+            GROUP BY 
+                h.household_id,
+                h.household_name,
+                h.address,
+                h.center_id,
+                h.household_head_id,
+                h.created_at,
+                h.updated_at,
+                ec.center_id,
+                ec.center_name,
+                ec.address,
+                ec.capacity,
+                ec.current_occupancy,
+                ec.status,
+                ec.created_at,
+                ec.updated_at,
+                i.individual_id,
+                i.first_name,
+                i.last_name,
+                i.date_of_birth,
+                i.gender,
+                i.relationship_to_head,
+                i.created_at,
+                i.updated_at
             {order_by_clause}
             LIMIT :limit OFFSET :offset
         """
@@ -261,6 +290,7 @@ class Household(db.Model):
                 "updated_at": row_dict["updated_at"],
                 "center": center,
                 "household_head": household_head,
+                "member_count": row_dict["member_count"],  # ADDED: Include member_count
             }
 
             households.append(household)

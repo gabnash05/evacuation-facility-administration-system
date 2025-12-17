@@ -176,6 +176,106 @@ def get_center_route(center_id: int) -> Tuple:
             ),
             500,
         )
+    
+
+
+@evacuation_center_bp.route("/evacuation_centers/<int:center_id>/status", methods=["GET"])
+@jwt_required()
+def get_center_status(center_id: int) -> Tuple:
+    """
+    Get the status of a center and validate if attendance can be taken.
+    
+    Args:
+        center_id: Center ID
+        
+    Returns:
+        Tuple containing:
+            - JSON response with center status and validation info
+            - HTTP status code
+    """
+    try:
+        from app.models.evacuation_center import EvacuationCenter
+        from app.models.event import Event
+        
+        logger.info("Checking status for center ID: %s", center_id)
+        
+        # Get center
+        center = EvacuationCenter.get_by_id(center_id)
+        if not center:
+            return jsonify({
+                "success": False,
+                "message": "Center not found"
+            }), 404
+        
+        # Check if center is active
+        if center.status != 'active':
+            return jsonify({
+                "success": True,
+                "data": {
+                    "center_id": center_id,
+                    "status": center.status,
+                    "can_take_attendance": False,
+                    "message": f"Center is {center.status}. Only active centers can accept attendance."
+                }
+            }), 200
+        
+        # Check if there's an active event
+        active_events = Event.get_all(status='active', limit=1)
+        if active_events["total_count"] == 0:
+            return jsonify({
+                "success": True,
+                "data": {
+                    "center_id": center_id,
+                    "status": center.status,
+                    "can_take_attendance": False,
+                    "message": "No active event found. An event must be active to take attendance."
+                }
+            }), 200
+        
+        active_event = active_events["events"][0]
+        
+        # Check if center is associated with the active event
+        from app.models.event import EventCenter
+        event_centers = EventCenter.get_centers_by_event(active_event.event_id)
+        is_center_in_event = any(ec['center_id'] == center_id for ec in event_centers)
+        
+        if not is_center_in_event:
+            return jsonify({
+                "success": True,
+                "data": {
+                    "center_id": center_id,
+                    "status": center.status,
+                    "can_take_attendance": False,
+                    "message": f"Center is not associated with the active event '{active_event.event_name}'."
+                }
+            }), 200
+        
+        # All validations passed
+        return jsonify({
+            "success": True,
+            "data": {
+                "center_id": center_id,
+                "status": center.status,
+                "can_take_attendance": True,
+                "active_event": {
+                    "event_id": active_event.event_id,
+                    "event_name": active_event.event_name,
+                    "event_type": active_event.event_type,
+                    "date_declared": active_event.date_declared.isoformat() if active_event.date_declared else None
+                },
+                "message": "Center is ready to accept attendance."
+            }
+        }), 200
+        
+    except Exception as error:
+        logger.error("Error checking center status %s: %s", center_id, str(error))
+        return (
+            jsonify({
+                "success": False,
+                "message": "Internal server error while checking center status"
+            }),
+            500
+        )
 
 
 @evacuation_center_bp.route(

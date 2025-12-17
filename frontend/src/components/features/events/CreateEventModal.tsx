@@ -22,7 +22,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { AlertCircle, CalendarIcon, Plus, Trash2 } from "lucide-react";
+import { AlertCircle, CalendarIcon, Plus, Trash2, Loader2, AlertTriangle } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { AddCenterModal } from "@/components/features/events/AddCenterModal";
@@ -30,11 +30,12 @@ import { eventService } from "@/services/eventService";
 import { parseDate } from "@/utils/formatters";
 import type { Event } from "@/types/event";
 import type { EvacuationCenter } from "@/types/center";
+import { useEventStore } from "@/store/eventStore";
 
 interface CreateEventModalProps {
     isOpen: boolean;
     onClose: () => void;
-    onSubmit: (eventData: EventData) => void;
+    onSubmit?: (eventData: EventData) => Promise<void>;
     initialData?: Event;
 }
 
@@ -51,12 +52,14 @@ interface EventData {
 const transformCenterData = (center: any): EvacuationCenter => ({
     center_id: center.center_id,
     center_name: center.center_name,
-    address: center.barangay || center.address || "", // Use barangay as address if address is not provided
+    address: center.barangay || center.address || "",
     capacity: center.capacity,
     current_occupancy: center.current_occupancy,
-    status: "active", // Default status
+    status: "active",
     created_at: center.created_at || new Date().toISOString(),
     updated_at: center.updated_at,
+    latitude: center.latitude || 0,
+    longitude: center.longitude || 0,
 });
 
 export function CreateEventModal({
@@ -74,6 +77,12 @@ export function CreateEventModal({
     const [evacuation_centers, setEvacuationCenters] = useState<EvacuationCenter[]>([]);
     const [isAddCenterOpen, setIsAddCenterOpen] = useState(false);
     const [customEventType, setCustomEventType] = useState("");
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    
+    const { createEvent, updateEvent, loading: storeLoading } = useEventStore();
+
+    // Check if this is a resolved event (read-only)
+    const isResolvedEvent = initialData?.status?.toLowerCase() === 'resolved';
 
     // Initialize form with initialData when editing
     useEffect(() => {
@@ -110,10 +119,12 @@ export function CreateEventModal({
     }, [initialData, isOpen]);
 
     const handleAddEvent = async () => {
-        setError(null); // Clear previous errors
+        setError(null);
+        setIsSubmitting(true);
 
         if (!isFormValid) {
             setError("Please fill in all required fields");
+            setIsSubmitting(false);
             return;
         }
 
@@ -135,8 +146,30 @@ export function CreateEventModal({
                 center_ids: evacuation_centers.map(center => center.center_id),
             };
 
-            await onSubmit(eventData);
-            handleClose();
+            // If onSubmit prop is provided (for backward compatibility), use it
+            if (onSubmit) {
+                await onSubmit(eventData);
+                handleClose();
+            } else {
+                // Otherwise, use the store
+                let result;
+                if (initialData) {
+                    // Prevent updating resolved events
+                    if (isResolvedEvent) {
+                        throw new Error("Cannot update a resolved event");
+                    }
+                    
+                    result = await updateEvent(initialData.event_id, eventData);
+                } else {
+                    result = await createEvent(eventData);
+                }
+
+                if (result.success) {
+                    handleClose();
+                } else {
+                    setError(result.message || "Failed to save event");
+                }
+            }
         } catch (err: any) {
             // Handle specific error types
             if (err.message?.includes("already exists")) {
@@ -144,9 +177,11 @@ export function CreateEventModal({
             } else if (err.message?.includes("Validation error")) {
                 setError(err.message);
             } else {
-                setError("Failed to create event. Please try again.");
+                setError(err.message || "Failed to save event. Please try again.");
             }
-            console.error("Create event error:", err);
+            console.error("Create/update event error:", err);
+        } finally {
+            setIsSubmitting(false);
         }
     };
 
@@ -157,6 +192,9 @@ export function CreateEventModal({
         setDateDeclared(undefined);
         setEndDate("N/A");
         setEvacuationCenters([]);
+        setCustomEventType("");
+        setError(null);
+        setIsSubmitting(false);
     };
 
     const handleClose = () => {
@@ -206,6 +244,8 @@ export function CreateEventModal({
     };
 
     const isFormValid = event_name && event_type && date_declared;
+    const isLoading = isSubmitting || storeLoading;
+    const isReadOnly = isResolvedEvent;
 
     return (
         <>
@@ -213,9 +253,21 @@ export function CreateEventModal({
                 <DialogContent className="!max-w-[900px] w-[95vw] max-h-[90vh] overflow-y-auto">
                     <DialogHeader>
                         <DialogTitle className="text-lg font-semibold">
-                            {initialData ? "Edit Event" : "Create Event"}
+                            {initialData ? (isResolvedEvent ? "View Resolved Event" : "Edit Event") : "Create Event"}
                         </DialogTitle>
                     </DialogHeader>
+
+                    {/* Warning for resolved event */}
+                    {isResolvedEvent && (
+                        <div className="bg-yellow-50 border border-yellow-200 text-yellow-800 p-3 rounded-md">
+                            <div className="flex items-center gap-2">
+                                <AlertTriangle className="h-4 w-4" />
+                                <span className="text-sm">
+                                    This event is resolved and cannot be modified. Use the "Resolve Event" action to manage event resolution.
+                                </span>
+                            </div>
+                        </div>
+                    )}
 
                     {/* Error Display */}
                     {error && (
@@ -236,11 +288,17 @@ export function CreateEventModal({
                                 onChange={e => setEventName(e.target.value)}
                                 placeholder="Enter event name"
                                 className="w-full"
+                                disabled={isLoading || isReadOnly}
+                                readOnly={isReadOnly}
                             />
                         </div>
                         <div className="space-y-2">
                             <label className="text-sm font-medium">Event Type</label>
-                            <Select value={event_type} onValueChange={setEventType}>
+                            <Select 
+                                value={event_type} 
+                                onValueChange={setEventType} 
+                                disabled={isLoading || isReadOnly}
+                            >
                                 <SelectTrigger className="w-full">
                                     <SelectValue placeholder="Select disaster type" />
                                 </SelectTrigger>
@@ -266,21 +324,39 @@ export function CreateEventModal({
                                     onChange={e => setCustomEventType(e.target.value)}
                                     placeholder="Specify disaster type"
                                     className="mt-2"
+                                    disabled={isLoading || isReadOnly}
+                                    readOnly={isReadOnly}
                                 />
                             )}
                         </div>
                         <div className="space-y-2">
                             <label className="text-sm font-medium">Status</label>
-                            <Select value={status} onValueChange={setStatus}>
+                            <Select 
+                                value={status} 
+                                onValueChange={setStatus} 
+                                disabled={isLoading || !initialData || isReadOnly}
+                            >
                                 <SelectTrigger className={`w-full ${getStatusColor(status)}`}>
                                     <SelectValue>{getDisplayStatus(status)}</SelectValue>
                                 </SelectTrigger>
                                 <SelectContent>
                                     <SelectItem value="active">Active</SelectItem>
                                     <SelectItem value="monitoring">Monitoring</SelectItem>
-                                    <SelectItem value="resolved">Resolved</SelectItem>
+                                    <SelectItem value="resolved" disabled>
+                                        Resolved (Use Resolve Action)
+                                    </SelectItem>
                                 </SelectContent>
                             </Select>
+                            {!initialData && (
+                                <p className="text-xs text-muted-foreground">
+                                    New events are always created as "Active"
+                                </p>
+                            )}
+                            {initialData && status === 'resolved' && !isReadOnly && (
+                                <p className="text-xs text-yellow-600">
+                                    To resolve an event, use the "Resolve Event" action in the table
+                                </p>
+                            )}
                         </div>
                     </div>
 
@@ -295,6 +371,7 @@ export function CreateEventModal({
                                             "w-full justify-start text-left font-normal",
                                             !date_declared && "text-muted-foreground"
                                         )}
+                                        disabled={isLoading || isReadOnly}
                                     >
                                         <CalendarIcon className="mr-2 h-4 w-4" />
                                         {date_declared
@@ -307,7 +384,7 @@ export function CreateEventModal({
                                         mode="single"
                                         selected={date_declared}
                                         onSelect={setDateDeclared}
-                                        disabled={date => date > new Date()}
+                                        disabled={date => date > new Date() || isReadOnly}
                                         captionLayout="dropdown-years"
                                     />
                                 </PopoverContent>
@@ -323,6 +400,7 @@ export function CreateEventModal({
                                             "w-full justify-start text-left font-normal",
                                             end_date === "N/A" && "text-muted-foreground"
                                         )}
+                                        disabled={isLoading || isReadOnly}
                                     >
                                         <CalendarIcon className="mr-2 h-4 w-4" />
                                         {end_date === "N/A"
@@ -338,6 +416,7 @@ export function CreateEventModal({
                                             variant="outline"
                                             className="w-full"
                                             onClick={() => setEndDate("N/A")}
+                                            disabled={isLoading || isReadOnly}
                                         >
                                             Set as N/A
                                         </Button>
@@ -346,7 +425,7 @@ export function CreateEventModal({
                                         mode="single"
                                         selected={end_date === "N/A" ? undefined : end_date}
                                         onSelect={date => setEndDate(date || "N/A")}
-                                        disabled={date => date > new Date()}
+                                        disabled={date => date > new Date() || isReadOnly}
                                         captionLayout="dropdown-years"
                                     />
                                 </PopoverContent>
@@ -354,17 +433,20 @@ export function CreateEventModal({
                         </div>
                     </div>
 
-                    {/* Evacuation Centers Section - Make table responsive */}
+                    {/* Evacuation Centers Section */}
                     <div className="mt-6">
                         <div className="flex items-center justify-between mb-4">
                             <h3 className="font-semibold text-sm">Evacuation Centers Affected</h3>
-                            <Button
-                                onClick={() => setIsAddCenterOpen(true)}
-                                className="gap-2 bg-blue-600 hover:bg-blue-700"
-                            >
-                                <Plus className="h-4 w-4" />
-                                {initialData ? "Update Centers" : "Add Center"}
-                            </Button>
+                            {!isReadOnly && (
+                                <Button
+                                    onClick={() => setIsAddCenterOpen(true)}
+                                    className="gap-2 bg-blue-600 hover:bg-blue-700"
+                                    disabled={isLoading}
+                                >
+                                    <Plus className="h-4 w-4" />
+                                    {initialData ? "Update Centers" : "Add Center"}
+                                </Button>
+                            )}
                         </div>
 
                         {/* Responsive table container */}
@@ -388,16 +470,18 @@ export function CreateEventModal({
                                             <TableHead className="whitespace-nowrap">
                                                 Occupancy
                                             </TableHead>
-                                            <TableHead className="whitespace-nowrap">
-                                                Action
-                                            </TableHead>
+                                            {!isReadOnly && (
+                                                <TableHead className="whitespace-nowrap">
+                                                    Action
+                                                </TableHead>
+                                            )}
                                         </TableRow>
                                     </TableHeader>
                                     <TableBody>
                                         {evacuation_centers.length === 0 ? (
                                             <TableRow>
                                                 <TableCell
-                                                    colSpan={6}
+                                                    colSpan={isReadOnly ? 5 : 6}
                                                     className="text-center py-8 text-muted-foreground"
                                                 >
                                                     No evacuation centers added yet
@@ -429,16 +513,19 @@ export function CreateEventModal({
                                                             {`${Math.round((center.current_occupancy / center.capacity) * 100)}%`}
                                                         </span>
                                                     </TableCell>
-                                                    <TableCell>
-                                                        <Button
-                                                            variant="ghost"
-                                                            size="icon"
-                                                            onClick={() => handleRemoveCenter(i)}
-                                                            className="h-8 w-8 text-destructive hover:text-destructive"
-                                                        >
-                                                            <Trash2 className="h-4 w-4" />
-                                                        </Button>
-                                                    </TableCell>
+                                                    {!isReadOnly && (
+                                                        <TableCell>
+                                                            <Button
+                                                                variant="ghost"
+                                                                size="icon"
+                                                                onClick={() => handleRemoveCenter(i)}
+                                                                className="h-8 w-8 text-destructive hover:text-destructive"
+                                                                disabled={isLoading}
+                                                            >
+                                                                <Trash2 className="h-4 w-4" />
+                                                            </Button>
+                                                        </TableCell>
+                                                    )}
                                                 </TableRow>
                                             ))
                                         )}
@@ -449,26 +536,47 @@ export function CreateEventModal({
                     </div>
 
                     {/* Footer Button */}
-                    <div className="flex justify-end pt-4 border-t">
+                    <div className="flex justify-end pt-4 border-t gap-2">
                         <Button
-                            onClick={handleAddEvent}
-                            className="gap-2 bg-blue-600 hover:bg-blue-700 px-4 py-2 text-sm font-medium"
-                            disabled={!isFormValid}
+                            variant="outline"
+                            onClick={handleClose}
+                            disabled={isLoading}
+                            className="px-4 py-2 text-sm font-medium"
                         >
-                            <Plus className="h-4 w-4" />
-                            {initialData ? "Update Event" : "Add Event"}
+                            {isReadOnly ? "Close" : "Cancel"}
                         </Button>
+                        {!isReadOnly && (
+                            <Button
+                                onClick={handleAddEvent}
+                                className="gap-2 bg-blue-600 hover:bg-blue-700 px-4 py-2 text-sm font-medium"
+                                disabled={!isFormValid || isLoading}
+                            >
+                                {isLoading ? (
+                                    <>
+                                        <Loader2 className="h-4 w-4 animate-spin" />
+                                        {initialData ? "Updating..." : "Creating..."}
+                                    </>
+                                ) : (
+                                    <>
+                                        <Plus className="h-4 w-4" />
+                                        {initialData ? "Update Event" : "Add Event"}
+                                    </>
+                                )}
+                            </Button>
+                        )}
                     </div>
                 </DialogContent>
             </Dialog>
 
             {/* Add Center Modal */}
-            <AddCenterModal
-                isOpen={isAddCenterOpen}
-                onClose={() => setIsAddCenterOpen(false)}
-                onAddCenters={handleAddCenters}
-                existingCenters={evacuation_centers}
-            />
+            {!isReadOnly && (
+                <AddCenterModal
+                    isOpen={isAddCenterOpen}
+                    onClose={() => setIsAddCenterOpen(false)}
+                    onAddCenters={handleAddCenters}
+                    existingCenters={evacuation_centers}
+                />
+            )}
         </>
     );
 }

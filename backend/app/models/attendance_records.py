@@ -243,11 +243,20 @@ class AttendanceRecord(db.Model):
     @classmethod
     def create(cls, data: Dict[str, Any]) -> "AttendanceRecord":
         """Create a new attendance record using raw SQL."""
-        required_fields = ["individual_id", "center_id", "event_id", "household_id", "status", "recorded_by_user_id"]
+        required_fields = ["individual_id", "center_id", "household_id", "status", "recorded_by_user_id"]
         
         for field in required_fields:
             if field not in data:
                 raise ValueError(f"Missing required field: {field}")
+
+        # Validate center is active
+        center_status = db.session.execute(
+            text("SELECT status FROM evacuation_centers WHERE center_id = :center_id"),
+            {"center_id": data["center_id"]}
+        ).fetchone()
+        
+        if not center_status or center_status[0] != "active":
+            raise ValueError(f"Center {data['center_id']} is not active")
 
         # Check if individual is already checked in (only for check-ins)
         if data.get("status") == "checked_in":
@@ -272,6 +281,22 @@ class AttendanceRecord(db.Model):
                     f"since {existing_record.check_in_time.strftime('%Y-%m-%d %H:%M')}. "
                     f"They must be checked out before checking in to a new center."
                 )
+
+        # Get the current active event for the center if event_id not provided
+        if "event_id" not in data or data["event_id"] is None:
+            current_event_id = cls.get_current_event_for_center(data["center_id"])
+            if current_event_id is None:
+                raise ValueError(f"No active event found for center {data['center_id']}")
+            data["event_id"] = current_event_id
+        else:
+            # Validate event is active
+            event_status = db.session.execute(
+                text("SELECT status FROM events WHERE event_id = :event_id"),
+                {"event_id": data["event_id"]}
+            ).fetchone()
+            
+            if not event_status or event_status[0] != "active":
+                raise ValueError(f"Event {data['event_id']} is not active")
 
         # Build dynamic INSERT query based on provided fields
         fields = []
@@ -322,6 +347,17 @@ class AttendanceRecord(db.Model):
         current_record = cls.get_by_id(record_id)
         if not current_record:
             return None
+        
+        # Validate if trying to update event_id
+        if "event_id" in update_data and update_data["event_id"] != current_record.event_id:
+            # Validate new event is active
+            event_status = db.session.execute(
+                text("SELECT status FROM events WHERE event_id = :event_id"),
+                {"event_id": update_data["event_id"]}
+            ).fetchone()
+            
+            if not event_status or event_status[0] != "active":
+                raise ValueError(f"Event {update_data['event_id']} is not active")
         
         # Build dynamic UPDATE query
         set_clauses = []
@@ -385,8 +421,6 @@ class AttendanceRecord(db.Model):
         cls,
         individual_id: int,
         center_id: int,
-        event_id: int,
-        household_id: int,
         recorded_by_user_id: int,
         check_in_time: str,
         notes: Optional[str] = None
@@ -396,6 +430,22 @@ class AttendanceRecord(db.Model):
         # Import db here to ensure it's available
         from app.models import db
         
+        # Get household_id from individual
+        household_result = db.session.execute(
+            text("SELECT household_id FROM individuals WHERE individual_id = :individual_id"),
+            {"individual_id": individual_id}
+        ).fetchone()
+        
+        if not household_result:
+            raise ValueError("Individual not found")
+        
+        household_id = household_result[0]
+        
+        # Get current active event for the center
+        current_event_id = cls.get_current_event_for_center(center_id)
+        if current_event_id is None:
+            raise ValueError(f"No active event found for center {center_id}")
+
         # Check for existing check-in
         existing_checkin_query = text("""
             SELECT ar.record_id, ar.center_id, ec.center_name
@@ -447,7 +497,7 @@ class AttendanceRecord(db.Model):
             transfer_data = {
                 "individual_id": individual_id,
                 "center_id": center_id,
-                "event_id": event_id,
+                "event_id": current_event_id,
                 "household_id": household_id,
                 "status": "transferred",
                 "transfer_from_center_id": previous_center_id,
@@ -463,7 +513,7 @@ class AttendanceRecord(db.Model):
         data = {
             "individual_id": individual_id,
             "center_id": center_id,
-            "event_id": event_id,
+            "event_id": current_event_id,
             "household_id": household_id,
             "status": "checked_in",
             "check_in_time": check_in_time,
@@ -474,9 +524,9 @@ class AttendanceRecord(db.Model):
         record = cls.create(data)
 
         try:
-            cls._update_event_occupancy(event_id)
+            cls._update_event_occupancy(current_event_id)
         except Exception as e:
-            logger.warning(f"Failed to update event occupancy for event {event_id}: {str(e)}")
+            logger.warning(f"Failed to update event occupancy for event {current_event_id}: {str(e)}")
         
         # Return dict format that service expects
         return {
@@ -662,6 +712,11 @@ class AttendanceRecord(db.Model):
         if current_record.status != "checked_in" or current_record.check_out_time is not None:
             raise ValueError("Individual is not currently checked in")
 
+        # Validate destination center has an active event
+        destination_event_id = cls.get_current_event_for_center(transfer_to_center_id)
+        if destination_event_id is None:
+            raise ValueError(f"No active event found for destination center {transfer_to_center_id}")
+
         # Check out from current center first
         check_out_data = {
             "status": "checked_out",
@@ -675,7 +730,7 @@ class AttendanceRecord(db.Model):
         transfer_data = {
             "individual_id": current_record.individual_id,
             "center_id": transfer_to_center_id,  # Destination center
-            "event_id": current_record.event_id,
+            "event_id": destination_event_id,  # Destination center's event
             "household_id": current_record.household_id,
             "status": "transferred",
             "transfer_from_center_id": current_record.center_id,  # Source center
@@ -721,6 +776,8 @@ class AttendanceRecord(db.Model):
             WHERE ar.center_id = :center_id 
             AND ar.status = 'checked_in' 
             AND ar.check_out_time IS NULL
+            AND ec.status = 'active'
+            AND e.status = 'active'
         """
         
         params = {"center_id": center_id}
@@ -837,6 +894,10 @@ class AttendanceRecord(db.Model):
                 COUNT(CASE WHEN status = 'transferred' THEN 1 END) as total_transferred
             FROM attendance_records 
             WHERE center_id = :center_id
+            AND EXISTS (
+                SELECT 1 FROM evacuation_centers ec 
+                WHERE ec.center_id = :center_id AND ec.status = 'active'
+            )
         """
         params = {"center_id": center_id}
 
@@ -1065,15 +1126,23 @@ class AttendanceRecord(db.Model):
         """Get all currently checked-in attendees across all centers."""
         # Base query for current evacuees
         base_query = """
-            FROM attendance_records 
-            WHERE status = 'checked_in' 
-            AND check_out_time IS NULL
+            FROM attendance_records ar
+            JOIN evacuation_centers ec ON ar.center_id = ec.center_id
+            JOIN events e ON ar.event_id = e.event_id
+            WHERE ar.status = 'checked_in' 
+            AND ar.check_out_time IS NULL
+            AND ec.status = 'active'
+            AND e.status = 'active'
         """
         count_query = """
             SELECT COUNT(*) as total_count 
-            FROM attendance_records 
-            WHERE status = 'checked_in' 
-            AND check_out_time IS NULL
+            FROM attendance_records ar
+            JOIN evacuation_centers ec ON ar.center_id = ec.center_id
+            JOIN events e ON ar.event_id = e.event_id
+            WHERE ar.status = 'checked_in' 
+            AND ar.check_out_time IS NULL
+            AND ec.status = 'active'
+            AND e.status = 'active'
         """
         params = {}
 
@@ -1082,7 +1151,7 @@ class AttendanceRecord(db.Model):
         total_count = count_result[0] if count_result else 0
 
         # Build main query
-        select_query = f"SELECT * {base_query}"
+        select_query = f"SELECT ar.* {base_query}"
 
         # Add sorting
         if sort_by and sort_by in [
@@ -1091,9 +1160,9 @@ class AttendanceRecord(db.Model):
             "created_at",
         ]:
             order_direction = "DESC" if sort_order and sort_order.lower() == "desc" else "ASC"
-            select_query += f" ORDER BY {sort_by} {order_direction}"
+            select_query += f" ORDER BY ar.{sort_by} {order_direction}"
         else:
-            select_query += " ORDER BY check_in_time DESC"
+            select_query += " ORDER BY ar.check_in_time DESC"
 
         # Add pagination
         offset = (page - 1) * limit
@@ -1162,3 +1231,60 @@ class AttendanceRecord(db.Model):
         for row in events_result:
             event_id = row[0]
             cls._update_event_occupancy(event_id)
+
+    @classmethod
+    def get_current_event_for_center(cls, center_id: int) -> Optional[int]:
+        """Get the current active event ID for a center."""
+        result = db.session.execute(
+            text("""
+                SELECT ec.event_id 
+                FROM event_centers ec
+                JOIN events e ON ec.event_id = e.event_id
+                WHERE ec.center_id = :center_id
+                  AND e.status = 'active'
+                LIMIT 1
+            """),
+            {"center_id": center_id}
+        ).fetchone()
+        
+        return result[0] if result else None
+
+    @classmethod
+    def validate_attendance_conditions(cls, center_id: int, event_id: Optional[int] = None) -> bool:
+        """Validate that attendance can be recorded for a center."""
+        # Check center status
+        center_status_result = db.session.execute(
+            text("SELECT status FROM evacuation_centers WHERE center_id = :center_id"),
+            {"center_id": center_id}
+        ).fetchone()
+        
+        if not center_status_result or center_status_result[0] != "active":
+            return False
+        
+        # Check if center has an active event
+        active_event_result = db.session.execute(
+            text("""
+                SELECT EXISTS(
+                    SELECT 1 FROM event_centers ec
+                    JOIN events e ON ec.event_id = e.event_id
+                    WHERE ec.center_id = :center_id
+                      AND e.status = 'active'
+                )
+            """),
+            {"center_id": center_id}
+        ).fetchone()
+        
+        if not active_event_result or not active_event_result[0]:
+            return False
+        
+        # If event_id is provided, validate it's active
+        if event_id:
+            event_status_result = db.session.execute(
+                text("SELECT status FROM events WHERE event_id = :event_id"),
+                {"event_id": event_id}
+            ).fetchone()
+            
+            if not event_status_result or event_status_result[0] != "active":
+                return False
+        
+        return True

@@ -56,8 +56,10 @@ class Stats:
         center_id: Optional[int] = None,
         gender: Optional[str] = None,
         age_group: Optional[str] = None,
+        event_id: Optional[int] = None,  # NEW
     ) -> Dict[str, Any]:
         try:
+            # Capacity calculation (unchanged - capacity is center-based, not event-based)
             if center_id:
                 capacity_query = text("""
                     SELECT COALESCE(capacity, 0) as total_capacity
@@ -78,6 +80,7 @@ class Stats:
                 capacity_result = db.session.execute(capacity_query).fetchone()
                 total_capacity = capacity_result[0] if capacity_result else 0
 
+            # Occupancy calculation with event filter
             occupancy_query = """
                 SELECT COUNT(DISTINCT ar.individual_id) as current_occupancy
                 FROM attendance_records ar
@@ -90,6 +93,11 @@ class Stats:
             if center_id:
                 occupancy_query += " AND ar.center_id = :center_id"
                 params["center_id"] = center_id
+            
+            # NEW: Add event filter
+            if event_id:
+                occupancy_query += " AND ar.event_id = :event_id"
+                params["event_id"] = event_id
             
             if gender:
                 occupancy_query += " AND i.gender = :gender"
@@ -136,8 +144,10 @@ class Stats:
         center_id: Optional[int] = None,
         gender: Optional[str] = None,
         age_group: Optional[str] = None,
+        event_id: Optional[int] = None,  # NEW
     ) -> Dict[str, Any]:
         try:
+            # Total registered (unchanged - not event-specific)
             registered_query = """
                 SELECT COUNT(DISTINCT i.individual_id) as total_registered
                 FROM individuals i
@@ -171,6 +181,7 @@ class Stats:
             
             total_registered = registered_result[0] if registered_result else 0
             
+            # Check-ins with event filter
             checkins_query = """
                 SELECT COUNT(DISTINCT ar.individual_id) as total_check_ins
                 FROM attendance_records ar
@@ -183,6 +194,11 @@ class Stats:
             if center_id:
                 checkins_query += " AND ar.center_id = :center_id"
                 checkins_params["center_id"] = center_id
+            
+            # NEW: Add event filter
+            if event_id:
+                checkins_query += " AND ar.event_id = :event_id"
+                checkins_params["event_id"] = event_id
             
             if gender:
                 checkins_query += " AND i.gender = :gender"
@@ -227,51 +243,100 @@ class Stats:
     def get_aid_distribution_stats(
         cls,
         center_id: Optional[int] = None,
+        event_id: Optional[int] = None,  # NEW
     ) -> Dict[str, Any]:
         try:
-            # Get allocation-based statistics
-            if center_id:
-                allocation_query = text("""
-                    SELECT 
-                        COALESCE(SUM(total_quantity), 0) as total_allocated,
-                        COALESCE(SUM(remaining_quantity), 0) as remaining,
-                        COALESCE(SUM(total_quantity - remaining_quantity), 0) as calculated_distributed
-                    FROM allocations 
-                    WHERE center_id = :center_id 
-                    AND status IN ('active', 'depleted')
-                """)
-                params = {"center_id": center_id}
+            # Get allocation-based statistics with event filter
+            if event_id:
+                if center_id:
+                    allocation_query = text("""
+                        SELECT 
+                            COALESCE(SUM(total_quantity), 0) as total_allocated,
+                            COALESCE(SUM(remaining_quantity), 0) as remaining,
+                            COALESCE(SUM(total_quantity - remaining_quantity), 0) as calculated_distributed
+                        FROM allocations 
+                        WHERE center_id = :center_id 
+                        AND event_id = :event_id
+                        AND status IN ('active', 'depleted')
+                    """)
+                    params = {"center_id": center_id, "event_id": event_id}
+                else:
+                    allocation_query = text("""
+                        SELECT 
+                            COALESCE(SUM(total_quantity), 0) as total_allocated,
+                            COALESCE(SUM(remaining_quantity), 0) as remaining,
+                            COALESCE(SUM(total_quantity - remaining_quantity), 0) as calculated_distributed
+                        FROM allocations 
+                        WHERE event_id = :event_id
+                        AND status IN ('active', 'depleted')
+                    """)
+                    params = {"event_id": event_id}
             else:
-                allocation_query = text("""
-                    SELECT 
-                        COALESCE(SUM(total_quantity), 0) as total_allocated,
-                        COALESCE(SUM(remaining_quantity), 0) as remaining,
-                        COALESCE(SUM(total_quantity - remaining_quantity), 0) as calculated_distributed
-                    FROM allocations 
-                    WHERE status IN ('active', 'depleted')
-                """)
-                params = {}
+                # Original queries without event filter
+                if center_id:
+                    allocation_query = text("""
+                        SELECT 
+                            COALESCE(SUM(total_quantity), 0) as total_allocated,
+                            COALESCE(SUM(remaining_quantity), 0) as remaining,
+                            COALESCE(SUM(total_quantity - remaining_quantity), 0) as calculated_distributed
+                        FROM allocations 
+                        WHERE center_id = :center_id 
+                        AND status IN ('active', 'depleted')
+                    """)
+                    params = {"center_id": center_id}
+                else:
+                    allocation_query = text("""
+                        SELECT 
+                            COALESCE(SUM(total_quantity), 0) as total_allocated,
+                            COALESCE(SUM(remaining_quantity), 0) as remaining,
+                            COALESCE(SUM(total_quantity - remaining_quantity), 0) as calculated_distributed
+                        FROM allocations 
+                        WHERE status IN ('active', 'depleted')
+                    """)
+                    params = {}
 
             allocation_result = db.session.execute(allocation_query, params).fetchone()
             
-            # Get distribution-based statistics for verification
-            if center_id:
-                distribution_query = text("""
-                    SELECT COALESCE(SUM(d.quantity_distributed), 0) as total_from_distributions
-                    FROM distributions d
-                    JOIN allocations a ON d.allocation_id = a.allocation_id
-                    WHERE a.center_id = :center_id
-                    AND a.status IN ('active', 'depleted')
-                """)
-                dist_params = {"center_id": center_id}
+            # Get distribution-based statistics for verification with event filter
+            if event_id:
+                if center_id:
+                    distribution_query = text("""
+                        SELECT COALESCE(SUM(d.quantity_distributed), 0) as total_from_distributions
+                        FROM distributions d
+                        JOIN allocations a ON d.allocation_id = a.allocation_id
+                        WHERE a.center_id = :center_id
+                        AND a.event_id = :event_id
+                        AND a.status IN ('active', 'depleted')
+                    """)
+                    dist_params = {"center_id": center_id, "event_id": event_id}
+                else:
+                    distribution_query = text("""
+                        SELECT COALESCE(SUM(d.quantity_distributed), 0) as total_from_distributions
+                        FROM distributions d
+                        JOIN allocations a ON d.allocation_id = a.allocation_id
+                        WHERE a.event_id = :event_id
+                        AND a.status IN ('active', 'depleted')
+                    """)
+                    dist_params = {"event_id": event_id}
             else:
-                distribution_query = text("""
-                    SELECT COALESCE(SUM(d.quantity_distributed), 0) as total_from_distributions
-                    FROM distributions d
-                    JOIN allocations a ON d.allocation_id = a.allocation_id
-                    WHERE a.status IN ('active', 'depleted')
-                """)
-                dist_params = {}
+                # Original queries without event filter
+                if center_id:
+                    distribution_query = text("""
+                        SELECT COALESCE(SUM(d.quantity_distributed), 0) as total_from_distributions
+                        FROM distributions d
+                        JOIN allocations a ON d.allocation_id = a.allocation_id
+                        WHERE a.center_id = :center_id
+                        AND a.status IN ('active', 'depleted')
+                    """)
+                    dist_params = {"center_id": center_id}
+                else:
+                    distribution_query = text("""
+                        SELECT COALESCE(SUM(d.quantity_distributed), 0) as total_from_distributions
+                        FROM distributions d
+                        JOIN allocations a ON d.allocation_id = a.allocation_id
+                        WHERE a.status IN ('active', 'depleted')
+                    """)
+                    dist_params = {}
 
             distribution_result = db.session.execute(distribution_query, dist_params).fetchone()
             
@@ -314,11 +379,12 @@ class Stats:
         center_id: Optional[int] = None,
         gender: Optional[str] = None,
         age_group: Optional[str] = None,
+        event_id: Optional[int] = None,  # NEW
     ) -> Dict[str, Any]:
         try:
-            occupancy_stats = cls.get_occupancy_stats(center_id, gender, age_group)
-            registration_stats = cls.get_registration_stats(center_id, gender, age_group)
-            aid_distribution_stats = cls.get_aid_distribution_stats(center_id)
+            occupancy_stats = cls.get_occupancy_stats(center_id, gender, age_group, event_id)
+            registration_stats = cls.get_registration_stats(center_id, gender, age_group, event_id)
+            aid_distribution_stats = cls.get_aid_distribution_stats(center_id, event_id)
             
             return {
                 "occupancy_stats": occupancy_stats,

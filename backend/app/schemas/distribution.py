@@ -27,6 +27,7 @@ class DistributionHistoryParams(Schema):
             "resource_name", 
             "quantity", 
             "volunteer_name"
+            "status"
         ])
     )
     sort_order = fields.Str(

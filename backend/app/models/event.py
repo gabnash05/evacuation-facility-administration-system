@@ -267,6 +267,15 @@ class Event(db.Model):
     @classmethod
     def create(cls, data: Dict[str, Any]) -> "Event":
         """Create a new event using raw SQL."""
+        # Check if there's already an active event
+        if data.get("status", "active") == "active":
+            active_event_result = db.session.execute(
+                text("SELECT COUNT(*) FROM events WHERE status = 'active'")
+            ).fetchone()
+            
+            if active_event_result and active_event_result[0] > 0:
+                raise ValueError("There is already an active event. Only one event can be active at a time.")
+
         result = db.session.execute(
             text(
                 """  
@@ -317,6 +326,23 @@ class Event(db.Model):
 
         # Get current event data before update to check previous status
         current_event = cls.get_by_id(event_id)
+        
+        if not current_event:
+            return None
+            
+        # Check if event is resolved and trying to update (not allowed)
+        if current_event.status == "resolved":
+            raise ValueError("Cannot edit a resolved event")
+
+        # Check if trying to make another event active while one is already active
+        if update_data.get("status") == "active" and current_event.status != "active":
+            active_event_result = db.session.execute(
+                text("SELECT COUNT(*) FROM events WHERE status = 'active' AND event_id != :event_id"),
+                {"event_id": event_id}
+            ).fetchone()
+            
+            if active_event_result and active_event_result[0] > 0:
+                raise ValueError("There is already an active event. Only one event can be active at a time.")
 
         # Extract center_ids from update_data before building the UPDATE query
         center_ids = update_data.pop("center_ids", None)
@@ -409,6 +435,14 @@ class Event(db.Model):
     @classmethod
     def delete(cls, event_id: int) -> bool:
         """Delete an event using raw SQL."""
+        # Check if event exists and is not resolved
+        event = cls.get_by_id(event_id)
+        if not event:
+            return False
+            
+        if event.status == "resolved":
+            raise ValueError("Cannot delete a resolved event")
+
         result = db.session.execute(
             text(
                 """  
@@ -422,6 +456,32 @@ class Event(db.Model):
 
         db.session.commit()
         return result is not None
+
+    @classmethod
+    def get_current_active_event(cls) -> Optional["Event"]:
+        """Get the current active event."""
+        result = db.session.execute(
+            text("SELECT * FROM events WHERE status = 'active' LIMIT 1")
+        ).fetchone()
+        
+        return cls._row_to_event(result)
+
+    @classmethod
+    def validate_event_active_for_center(cls, center_id: int) -> bool:
+        """Validate that a center has an active event."""
+        result = db.session.execute(
+            text("""
+                SELECT EXISTS(
+                    SELECT 1 FROM event_centers ec
+                    JOIN events e ON ec.event_id = e.event_id
+                    WHERE ec.center_id = :center_id
+                      AND e.status = 'active'
+                )
+            """),
+            {"center_id": center_id}
+        ).fetchone()
+        
+        return result[0] if result else False
 
 
 class EventCenter(db.Model):
@@ -565,7 +625,7 @@ class EventCenter(db.Model):
                     {"center_id": center_id},
                 ).scalar()
 
-                # If center is not associated with any active events, set status to 'inactive'
+                # If center is not associated with any other active events, set status to 'inactive'
                 if result == 0:
                     db.session.execute(
                         text(
