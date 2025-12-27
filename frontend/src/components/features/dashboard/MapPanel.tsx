@@ -100,6 +100,7 @@ export function MapPanel({
                             console.log("Marker clicked:", id);
                         }}
                         highlightCenterId={highlightCenterId}
+                        shouldAnimateCenter={!!adminCenter} // Only animate if we have an admin center
                     />
                 ) : (
                     <div className="w-full h-full flex items-center justify-center bg-muted/30">
