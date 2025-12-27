@@ -675,4 +675,29 @@ export class AttendanceRecordsService {
             throw new Error(handleApiError(error));
         }
     }
+
+    static async getCurrentCenterOccupancy(centerId: number): Promise<{
+        success: boolean;
+        data: {
+            center_id: number;
+            current_occupancy: number;
+        };
+        message?: string;
+    }> {
+        try {
+            const response = await api.get<{
+                success: boolean;
+                data: {
+                    center_id: number;
+                    current_occupancy: number;
+                };
+                message?: string;
+            }>(`/attendance/occupancy/center/${centerId}`, {
+                withCredentials: true,
+            });
+            return response.data;
+        } catch (error) {
+            throw new Error(handleApiError(error));
+        }
+    }
 }
