@@ -259,3 +259,38 @@ class HouseholdService:
                 "success": False,
                 "message": "An error occurred while creating individual.",
             }, 500
+
+    @staticmethod
+    def get_center_household_count(center_id: int):
+        """
+        Get number of households in a center.
+        
+        Args:
+            center_id: Center ID
+            
+        Returns:
+            Dictionary with household count
+        """
+        try:
+            # Validate center_id is integer
+            try:
+                center_id = int(center_id)
+            except (ValueError, TypeError):
+                return {"success": False, "message": "Invalid center ID format"}
+            
+            household_count = Household.get_center_household_count(center_id)
+            
+            return {
+                "success": True,
+                "data": {
+                    "center_id": center_id,
+                    "household_count": household_count
+                }
+            }
+            
+        except Exception as e:
+            logger.error(f"Error fetching household count for center {center_id}: {e}")
+            return {
+                "success": False,
+                "message": "Failed to fetch center household count"
+            }

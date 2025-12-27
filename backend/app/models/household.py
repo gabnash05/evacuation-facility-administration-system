@@ -328,3 +328,19 @@ class Household(db.Model):
 
         result = db.session.execute(sql, params).scalar()
         return result if result is not None else 0
+    
+
+    @classmethod
+    def get_center_household_count(cls, center_id: int) -> int:
+        """Get number of households with at least one individual checked-in at a center."""
+        result = db.session.execute(
+            text("""
+                SELECT COUNT(DISTINCT household_id) as household_count
+                FROM individual_status_view
+                WHERE current_center_id = :center_id
+                AND current_status = 'checked_in'
+            """),
+            {"center_id": center_id}
+        ).fetchone()
+        
+        return result[0] if result else 0

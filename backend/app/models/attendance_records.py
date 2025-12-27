@@ -1288,3 +1288,21 @@ class AttendanceRecord(db.Model):
                 return False
         
         return True
+    
+    @classmethod
+    def get_current_center_occupancy(cls, center_id: int) -> int:
+        """Get current number of checked-in individuals at a center."""
+        result = db.session.execute(
+            text("""
+                SELECT COUNT(*) as current_occupancy
+                FROM attendance_records ar
+                JOIN evacuation_centers ec ON ar.center_id = ec.center_id
+                WHERE ar.center_id = :center_id 
+                AND ar.status = 'checked_in' 
+                AND ar.check_out_time IS NULL
+                AND ec.status = 'active'
+            """),
+            {"center_id": center_id}
+        ).fetchone()
+        
+        return result[0] if result else 0
