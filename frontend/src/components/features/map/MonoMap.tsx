@@ -3,8 +3,8 @@
 // MAP TILES FROM:
 // https://docs.stadiamaps.com/themes/
 
-import { useState } from "react";
-import { MapContainer, TileLayer, Marker, ScaleControl, Tooltip } from "react-leaflet";
+import { useState, useEffect, useRef } from "react";
+import { MapContainer, TileLayer, Marker, ScaleControl, Tooltip, useMap } from "react-leaflet";
 import { useTheme } from "@/components/common/ThemeProvider";
 import "leaflet/dist/leaflet.css";
 import "./map.css";
@@ -65,6 +65,41 @@ const createMarkerIcon = (name: string, color: string, currentCapacity: number, 
     });
 };
 
+// Component to handle map centering
+interface ChangeCenterProps {
+    center: [number, number];
+    zoom?: number;
+    animate?: boolean;
+    duration?: number;
+}
+
+function ChangeCenter({ center, zoom, animate = true, duration = 1 }: ChangeCenterProps) {
+    const map = useMap();
+    const [hasAnimated, setHasAnimated] = useState(false);
+    
+    useEffect(() => {
+        if (!center || isNaN(center[0]) || isNaN(center[1])) return;
+        
+        // Add a delay for the initial animation
+        if (animate && !hasAnimated) {
+            const timer = setTimeout(() => {
+                map.flyTo(center, zoom || map.getZoom(), {
+                    duration: duration,
+                    easeLinearity: 0.25
+                });
+                setHasAnimated(true);
+            }, 800);
+            
+            return () => clearTimeout(timer);
+        } else if (!animate) {
+            // Set view immediately without animation
+            map.setView(center, zoom || map.getZoom());
+        }
+    }, [center, zoom, map, animate, duration, hasAnimated]);
+    
+    return null;
+}
+
 interface EvacuationCenter {
     id: number;
     name: string;
@@ -82,6 +117,7 @@ interface MapProps {
     className?: string;
     onCenterClick?: (id: number) => void;
     highlightCenterId?: number;
+    shouldAnimateCenter?: boolean;
 }
 
 export default function MonoMap({
@@ -90,11 +126,18 @@ export default function MonoMap({
     centers = [], // Default to empty array
     className = "",
     onCenterClick = () => {},
-    highlightCenterId, // Add this to destructuring
+    highlightCenterId,
+    shouldAnimateCenter = true,
 }: MapProps) {
     const { theme } = useTheme();
     const [hoveredCenter, setHoveredCenter] = useState<number | null>(null);
     const isDark = theme === "dark";
+    const mapRef = useRef<any>(null);
+
+    // Find the highlighted center for map centering
+    const highlightedCenter = centers.find(c => c.id === highlightCenterId);
+    const effectiveCenter = highlightedCenter?.position || center;
+    const effectiveZoom = highlightedCenter ? 17 : zoom;
 
     const handleMarkerClick = (id: number) => {
         onCenterClick(id);
@@ -116,12 +159,13 @@ export default function MonoMap({
     return (
         <div className={`relative rounded-xl overflow-hidden shadow-lg border ${className} h-full`}>
             <MapContainer
-                center={center}
-                zoom={zoom}
+                center={effectiveCenter}
+                zoom={effectiveZoom}
                 bounds={calculateBounds()}
                 className="h-full w-full"
                 scrollWheelZoom={true}
                 zoomControl={true}
+                ref={mapRef}
             >
                 <TileLayer
                     url={isDark 
@@ -134,6 +178,16 @@ export default function MonoMap({
                 />
                 
                 <ScaleControl imperial={false} position="bottomleft" />
+                
+                {/* Use ChangeCenter component for programmatic control */}
+                {highlightedCenter && (
+                    <ChangeCenter 
+                        center={highlightedCenter.position} 
+                        zoom={17} 
+                        animate={shouldAnimateCenter}
+                        duration={1.5}
+                    />
+                )}
                 
                 {centers.map((center) => {
                     const isHighlighted = center.id === highlightCenterId;
