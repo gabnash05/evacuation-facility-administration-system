@@ -24,6 +24,12 @@ interface AttendanceState {
     currentAttendees: AttendanceRecord[];
     eventAttendance: AttendanceRecord[];
     transferRecords: AttendanceRecord[];
+    centerOccupancy: {
+        [centerId: number]: {
+            current_occupancy: number;
+            lastUpdated: string;
+        };
+    };
 
     // UI state
     loading: boolean;
@@ -122,6 +128,15 @@ interface AttendanceState {
     fetchTransferRecords: (params?: GetTransferRecordsParams) => Promise<void>;
     fetchAttendanceSummary: (centerId: number, eventId?: number) => Promise<void>;
     fetchIndividualAttendanceHistory: (individualId: number) => Promise<AttendanceRecord[]>;
+    fetchCurrentCenterOccupancy: (centerId: number) => Promise<{
+        success: boolean;
+        current_occupancy?: number;
+        message?: string;
+    }>;
+    getCachedCenterOccupancy: (centerId: number) => {
+        current_occupancy: number | null;
+        lastUpdated: string | null;
+    };
     
     // Event-related actions
     fetchActiveEvent: () => Promise<void>;
@@ -200,6 +215,7 @@ const initialState = {
     currentAttendees: [],
     eventAttendance: [],
     transferRecords: [],
+    centerOccupancy: {},
     loading: false,
     error: null,
     searchQuery: "",
@@ -757,6 +773,56 @@ export const useAttendanceStore = create<AttendanceState>((set, get) => ({
                 message: errorMessage
             };
         }
+    },
+
+    fetchCurrentCenterOccupancy: async (centerId: number) => {
+        set({ loading: true, error: null });
+
+        try {
+            const response = await AttendanceRecordsService.getCurrentCenterOccupancy(centerId);
+            
+            if (response.success && response.data) {
+                // Update the cache
+                set(state => ({
+                    centerOccupancy: {
+                        ...state.centerOccupancy,
+                        [centerId]: {
+                            current_occupancy: response.data.current_occupancy,
+                            lastUpdated: new Date().toISOString(),
+                        }
+                    },
+                    loading: false,
+                }));
+                
+                return {
+                    success: true,
+                    current_occupancy: response.data.current_occupancy,
+                    message: response.message,
+                };
+            } else {
+                throw new Error(response.message || "Failed to fetch occupancy");
+            }
+        } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : "Failed to fetch center occupancy";
+            set({
+                error: errorMessage,
+                loading: false,
+            });
+            return {
+                success: false,
+                message: errorMessage,
+            };
+        }
+    },
+
+    getCachedCenterOccupancy: (centerId: number) => {
+        const state = get();
+        const occupancy = state.centerOccupancy[centerId];
+        
+        return {
+            current_occupancy: occupancy?.current_occupancy || null,
+            lastUpdated: occupancy?.lastUpdated || null,
+        };
     },
 
     recalculateCenterOccupancy: async (centerId: number) => {

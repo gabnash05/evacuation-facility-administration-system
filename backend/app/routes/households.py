@@ -340,3 +340,40 @@ def create_household_individual(household_id: int) -> Tuple:
             ),
             500,
         )
+
+
+@households_bp.route("/households/count/center/<int:center_id>", methods=["GET"])
+@jwt_required()
+def get_center_household_count(center_id: int) -> Tuple:
+    """
+    Get number of households in a center.
+    
+    Args:
+        center_id: Center ID
+        
+    Returns:
+        Tuple containing:
+            - JSON response with household count
+            - HTTP status code
+    """
+    try:
+        logger.info("Fetching household count for center: %s", center_id)
+
+        result = HouseholdService.get_center_household_count(center_id)
+
+        if not result["success"]:
+            return jsonify(result), 400
+
+        return jsonify(result), 200
+
+    except Exception as error:
+        logger.error("Error fetching household count for center %s: %s", center_id, str(error))
+        return (
+            jsonify(
+                {
+                    "success": False,
+                    "message": "Internal server error while fetching household count",
+                }
+            ),
+            500,
+        )

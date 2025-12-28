@@ -5,6 +5,12 @@ import type { Individual } from "@/types/individual";
 
 interface HouseholdState {
     households: Household[];
+    centerHouseholdCount: {
+        [centerId: number]: {
+            household_count: number;
+            lastUpdated: string;
+        };
+    };
     loading: boolean;
     error: string | null;
     searchQuery: string;
@@ -27,6 +33,15 @@ interface HouseholdState {
     setEntriesPerPage: (entries: number) => void;
     setSortConfig: (config: { key: string; direction: "asc" | "desc" | null } | null) => void;
     fetchHouseholds: (centerId?: number) => Promise<void>;
+    fetchCenterHouseholdCount: (centerId: number) => Promise<{
+        success: boolean;
+        household_count?: number;
+        message?: string;
+    }>;
+    getCachedCenterHouseholdCount: (centerId: number) => {
+        household_count: number | null;
+        lastUpdated: string | null;
+    };
     createHousehold: (householdData: CreateHouseholdData) => Promise<number>; // Returns household ID
     createHouseholdWithIndividuals: (householdData: CreateHouseholdData) => Promise<void>;
     updateHousehold: (id: number, householdData: UpdateHouseholdData) => Promise<void>;
@@ -38,6 +53,7 @@ interface HouseholdState {
 
 const initialState = {
     households: [],
+    centerHouseholdCount: {},
     loading: false,
     error: null,
     searchQuery: "",
@@ -94,6 +110,56 @@ export const useHouseholdStore = create<HouseholdState>((set, get) => ({
                 pagination: null,
             });
         }
+    },
+
+    fetchCenterHouseholdCount: async (centerId: number) => {
+        set({ loading: true, error: null });
+
+        try {
+            const response = await HouseholdService.getCenterHouseholdCount(centerId);
+            
+            if (response.success && response.data) {
+                // Update the cache
+                set(state => ({
+                    centerHouseholdCount: {
+                        ...state.centerHouseholdCount,
+                        [centerId]: {
+                            household_count: response.data.household_count,
+                            lastUpdated: new Date().toISOString(),
+                        }
+                    },
+                    loading: false,
+                }));
+                
+                return {
+                    success: true,
+                    household_count: response.data.household_count,
+                    message: response.message,
+                };
+            } else {
+                throw new Error(response.message || "Failed to fetch household count");
+            }
+        } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : "Failed to fetch center household count";
+            set({
+                error: errorMessage,
+                loading: false,
+            });
+            return {
+                success: false,
+                message: errorMessage,
+            };
+        }
+    },
+
+    getCachedCenterHouseholdCount: (centerId: number) => {
+        const state = get();
+        const count = state.centerHouseholdCount[centerId];
+        
+        return {
+            household_count: count?.household_count || null,
+            lastUpdated: count?.lastUpdated || null,
+        };
     },
 
     createHousehold: async (householdData: CreateHouseholdData): Promise<number> => {
