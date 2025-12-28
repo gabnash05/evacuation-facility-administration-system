@@ -164,4 +164,29 @@ export class HouseholdService {
             throw new Error(handleApiError(error));
         }
     }
+
+    static async getCenterHouseholdCount(centerId: number): Promise<{
+        success: boolean;
+        data: {
+            center_id: number;
+            household_count: number;
+        };
+        message?: string;
+    }> {
+        try {
+            const response = await api.get<{
+                success: boolean;
+                data: {
+                    center_id: number;
+                    household_count: number;
+                };
+                message?: string;
+            }>(`/households/count/center/${centerId}`, {
+                withCredentials: true,
+            });
+            return response.data;
+        } catch (error) {
+            throw new Error(handleApiError(error));
+        }
+    }
 }

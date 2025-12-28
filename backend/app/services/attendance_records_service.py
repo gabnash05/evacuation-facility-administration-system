@@ -1131,3 +1131,29 @@ def get_all_current_evacuees(
     except Exception as error:
         logger.error("Error fetching all current evacuees: %s", str(error))
         return {"success": False, "message": "Failed to fetch current evacuees"}
+
+
+def get_current_center_occupancy(center_id: int) -> Dict[str, Any]:
+    """
+    Get current number of checked-in individuals at a center.
+    
+    Args:
+        center_id: Center ID
+        
+    Returns:
+        Dictionary with occupancy count
+    """
+    try:
+        occupancy = AttendanceRecord.get_current_center_occupancy(center_id)
+        
+        return {
+            "success": True,
+            "data": {
+                "center_id": center_id,
+                "current_occupancy": occupancy
+            }
+        }
+        
+    except Exception as error:
+        logger.error("Error fetching occupancy for center %s: %s", center_id, str(error))
+        return {"success": False, "message": "Failed to fetch center occupancy"}
