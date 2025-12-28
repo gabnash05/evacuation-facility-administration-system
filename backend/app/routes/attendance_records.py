@@ -25,6 +25,7 @@ from app.services.attendance_records_service import (
     delete_attendance_record,
     get_attendance_record_by_individual_id,
     check_in_multiple_individuals,
+    get_current_center_occupancy
 )
 from app.services.user_service import get_current_user
 
@@ -398,6 +399,55 @@ def get_transfer_records_route() -> Tuple:
                 {
                     "success": False,
                     "message": "Internal server error while fetching transfer records",
+                }
+            ),
+            500,
+        )
+
+
+@attendance_record_bp.route("/attendance/occupancy/center/<int:center_id>", methods=["GET"])
+@jwt_required()
+def get_current_center_occupancy_route(center_id: int) -> Tuple:
+    """
+    Get current number of checked-in individuals at a center.
+    
+    Args:
+        center_id: Center ID
+        
+    Returns:
+        Tuple containing:
+            - JSON response with occupancy count
+            - HTTP status code
+    """
+    try:
+        # Get current user for role-based access control
+        current_user_id = get_jwt_identity()
+        current_user = get_current_user(current_user_id)
+        
+        # Check if user has access to this center
+        if current_user and current_user.role in ['center_admin', 'volunteer'] and current_user.center_id:
+            if center_id != current_user.center_id:
+                return jsonify({
+                    "success": False, 
+                    "message": "Access denied: Cannot view occupancy for other centers"
+                }), 403
+
+        logger.info("Fetching current occupancy for center: %s", center_id)
+
+        result = get_current_center_occupancy(center_id)
+
+        if not result["success"]:
+            return jsonify(result), 400
+
+        return jsonify(result), 200
+
+    except Exception as error:
+        logger.error("Error fetching occupancy for center %s: %s", center_id, str(error))
+        return (
+            jsonify(
+                {
+                    "success": False,
+                    "message": "Internal server error while fetching center occupancy",
                 }
             ),
             500,

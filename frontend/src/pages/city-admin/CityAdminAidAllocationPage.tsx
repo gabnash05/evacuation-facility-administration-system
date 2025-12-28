@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { AidDistributionTable } from "@/components/features/aid-allocation/AidAllocationTable";
 import { AidDistributionToolbar } from "@/components/features/aid-allocation/AidAllocationToolbar";
 import { AidAllocationForm } from "@/components/features/aid-allocation/AidAllocationForm";
-import { EditAllocationForm } from "@/components/features/aid-allocation/EditAllocationForm"; // Add this import
+import { EditAllocationForm } from "@/components/features/aid-allocation/EditAllocationForm";
 import { TablePagination } from "@/components/common/TablePagination";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
 import { SuccessToast } from "@/components/common/SuccessToast";
@@ -28,7 +28,7 @@ export function CityAdminAidAllocationPage() {
         setSortConfig,
         fetchAllocations,
         createAllocation,
-        updateAllocation, // Make sure this exists in your store
+        updateAllocation,
         deleteAllocation,
         pagination,
     } = useAidAllocationStore();
@@ -95,7 +95,6 @@ export function CityAdminAidAllocationPage() {
             fetchAllocations();
         } catch (error: any) {
             console.error("Error updating allocation:", error);
-            // Throw so that EditAllocationForm can display the error inline
             throw error;
         }
     };
@@ -117,11 +116,11 @@ export function CityAdminAidAllocationPage() {
         }
     };
 
-    // NEW: Cancel action for City Admin (does not open edit modal)
     const handleCancelAllocation = async (allocation: any) => {
         if (!allocation) return;
-        // Only proceed if allocation is active
-        if (allocation.status?.toLowerCase() !== "active" && allocation.status?.toLowerCase() !== "depleted") return;
+        // Only proceed if allocation is active or depleted
+        const status = allocation.status?.toLowerCase();
+        if (status !== "active" && status !== "depleted") return;
 
         try {
             await updateAllocation(allocation.allocation_id, { status: "cancelled" });
@@ -162,18 +161,61 @@ export function CityAdminAidAllocationPage() {
         setSuccessToast({ isOpen: true, message });
     };
 
-    // Simplified allocations table columns
+    // Helper function to format distribution type for display
+    const formatDistributionType = (type: string) => {
+        if (!type) return "";
+        switch (type.toLowerCase()) {
+            case "per_individual":
+                return "Per Individual";
+            case "per_household":
+                return "Per Household";
+            default:
+                return type.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+        }
+    };
+
+    // Helper function to format status for display
+    const formatStatus = (status: string) => {
+        if (!status) return "";
+        const statusLower = status.toLowerCase();
+        switch (statusLower) {
+            case "active":
+                return "Active";
+            case "depleted":
+                return "Fully Distributed";
+            case "cancelled":
+                return "Cancelled";
+            case "partially_distributed":
+                return "Partially Distributed";
+            default:
+                return status.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+        }
+    };
+
+    // Simplified allocations table columns with distribution type
     const allocationColumns = [
         { key: "created_at", label: "Date", sortable: true },
         { key: "center_name", label: "Center", sortable: true },
-        { key: "category_name", label: "Category", sortable: true},
+        { key: "category_name", label: "Category", sortable: true },
         { key: "resource_name", label: "Relief Type", sortable: true },
-        { key: "remaining_quantity", label: "Quantity", sortable: true },
+        { key: "distribution_type", label: "Distribution Type", sortable: true },
+        { key: "total_quantity", label: "Total Quantity", sortable: true },
+        { key: "remaining_quantity", label: "Remaining", sortable: true },
         { key: "status", label: "Status", sortable: true },
     ];
 
+    // Transform allocations data for display
+    const transformedAllocations = allocations.map(allocation => ({
+        ...allocation,
+        distribution_type: formatDistributionType(allocation.distribution_type),
+        status: formatStatus(allocation.status),
+        // Keep original values for sorting/filtering
+        _original_distribution_type: allocation.distribution_type,
+        _original_status: allocation.status
+    }));
+
     // Determine if edit/delete should be enabled based on user role
-    const canEdit = userRole === "super_admin"; // ONLY super_admin can edit
+    const canEdit = userRole === "super_admin";
     const canDelete = userRole === "super_admin";
 
     return (
@@ -213,7 +255,7 @@ export function CityAdminAidAllocationPage() {
                                 />
                             </div>
                             <div className="border-b border-border">
-                                {loading && allocations.length === 0 ? (
+                                {loading && transformedAllocations.length === 0 ? (
                                     <div className="p-8 text-center">
                                         <div className="text-muted-foreground">
                                             Loading allocations...
@@ -222,14 +264,14 @@ export function CityAdminAidAllocationPage() {
                                 ) : (
                                     <AidDistributionTable
                                         columns={allocationColumns}
-                                        data={allocations}
+                                        data={transformedAllocations}
                                         onSort={handleSort}
                                         sortColumn={sortConfig?.key}
                                         sortDirection={sortConfig?.direction || undefined}
                                         onEdit={canEdit ? handleEditAllocation : undefined}
                                         onDelete={canDelete ? handleDeleteAllocation : undefined}
                                         onDistribute={handleDistribute}
-                                        onCancel={userRole === "city_admin" ? handleCancelAllocation : undefined} // NEW
+                                        onCancel={userRole === "city_admin" ? handleCancelAllocation : undefined}
                                         showActions={true}
                                         deleteLoading={isDeleting}
                                         userRole={userRole}
@@ -240,7 +282,7 @@ export function CityAdminAidAllocationPage() {
                                 <TablePagination
                                     currentPage={currentPage}
                                     entriesPerPage={entriesPerPage}
-                                    totalEntries={pagination?.total_items ?? allocations.length}
+                                    totalEntries={pagination?.total_items ?? transformedAllocations.length}
                                     onPageChange={handlePageChange}
                                     loading={loading}
                                     entriesLabel="allocations"
@@ -272,7 +314,7 @@ export function CityAdminAidAllocationPage() {
                     allocation={selectedAllocation}
                     title={userRole === "city_admin" ? "Cancel Allocation" : "Edit Allocation"}
                     submitText={userRole === "city_admin" ? "Confirm Cancellation" : "Update Allocation"}
-                    userRole={userRole} // Pass user role (optional)
+                    userRole={userRole}
                 />
             )}
 
