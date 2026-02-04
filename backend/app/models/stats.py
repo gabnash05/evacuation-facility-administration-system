@@ -64,7 +64,7 @@ class Stats:
                 capacity_query = text("""
                     SELECT COALESCE(capacity, 0) as total_capacity
                     FROM evacuation_centers
-                    WHERE center_id = :center_id AND status = 'active'
+                    WHERE center_id = :center_id
                 """)
                 capacity_result = db.session.execute(
                     capacity_query, 
@@ -75,7 +75,6 @@ class Stats:
                 capacity_query = text("""
                     SELECT COALESCE(SUM(capacity), 0) as total_capacity
                     FROM evacuation_centers
-                    WHERE status = 'active'
                 """)
                 capacity_result = db.session.execute(capacity_query).fetchone()
                 total_capacity = capacity_result[0] if capacity_result else 0

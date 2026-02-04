@@ -131,6 +131,7 @@ export default function MonoMap({
 }: MapProps) {
     const { theme } = useTheme();
     const [hoveredCenter, setHoveredCenter] = useState<number | null>(null);
+    const [clickedCenter, setClickedCenter] = useState<EvacuationCenter | null>(null);
     const isDark = theme === "dark";
     const mapRef = useRef<any>(null);
 
@@ -140,7 +141,21 @@ export default function MonoMap({
     const effectiveZoom = highlightedCenter ? 17 : zoom;
 
     const handleMarkerClick = (id: number) => {
-        onCenterClick(id);
+        const clickedCenter = centers.find(c => c.id === id);
+        if (clickedCenter) {
+            setClickedCenter(clickedCenter);
+            
+            // Animate to the clicked center with flyTo
+            if (mapRef.current) {
+                mapRef.current.flyTo(clickedCenter.position, 15, {
+                    duration: 1,
+                    easeLinearity: 0.25
+                });
+            }
+            
+            // Call the parent callback
+            onCenterClick(id);
+        }
     };
 
     const handleMarkerHover = (id: number | null) => {
@@ -186,6 +201,16 @@ export default function MonoMap({
                         zoom={17} 
                         animate={shouldAnimateCenter}
                         duration={1.5}
+                    />
+                )}
+                
+                {/* Center for clicked marker */}
+                {clickedCenter && clickedCenter.id !== highlightCenterId && (
+                    <ChangeCenter 
+                        center={clickedCenter.position} 
+                        zoom={15} 
+                        animate={true}
+                        duration={1}
                     />
                 )}
                 
