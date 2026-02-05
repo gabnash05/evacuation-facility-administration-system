@@ -1,0 +1,35 @@
+# Virtual environments
+venv/
+.venv/
+env/
+
+# Python cache/bytecode
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Environment files (SECURITY)
+.env
+.env.local
+.env.production
+
+# IDE/configs
+.vscode/
+.idea/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Git
+.git/
+.gitignore
+
+# Local databases
+*.db
+*.sqlite3
+
+# Logs
+*.log
+logs/
