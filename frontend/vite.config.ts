@@ -7,11 +7,11 @@ import { defineConfig } from "vite"
 export default defineConfig({
     plugins: [react(), tailwindcss()],
     build: {
-        outDir: '../backend/app/static',
+        outDir: 'dist', //'../backend/app/static' for Flask static files
         emptyOutDir: true,
         assetsDir: 'assets',
     },
-    base: './', // Use relative base path for production builds
+    base: './',
     resolve: {
         alias: {
             "@": path.resolve(__dirname, "./src"),
