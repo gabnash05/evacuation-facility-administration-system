@@ -4,7 +4,7 @@
 echo "Building frontend..."
 
 # Navigate to frontend directory
-cd frontend || exit 1
+cd ../frontend || exit 1
 
 # Install dependencies if needed
 echo "Installing dependencies..."

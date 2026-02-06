@@ -58,9 +58,9 @@ The build script will:
 
 1. **Build the frontend:**
    ```bash
-   .\build.ps1  # Windows
+   .\scripts\build.ps1  # Windows
    # or
-   ./build.sh   # Unix/Linux/Mac
+   ./scripts/build.sh   # Unix/Linux/Mac
    ```
 
 2. **Start the backend:**

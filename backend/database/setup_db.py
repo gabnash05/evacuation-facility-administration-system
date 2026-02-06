@@ -4,11 +4,14 @@ import getpass
 import logging
 import os
 import re
+import sys
+from pathlib import Path
 from typing import Optional
 
 import psycopg2
 from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT
 from werkzeug.security import generate_password_hash
+from dotenv import load_dotenv
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -17,11 +20,64 @@ logger = logging.getLogger(__name__)
 # Constants
 DEFAULT_DB_NAME = "efas_db"
 
+# Load environment variables from .env file at project root
+def load_environment():
+    """Load environment variables from .env file (only for local development)."""
+    # Check if we're in Docker/container environment
+    # In Docker, environment variables are passed by docker-compose, no .env file needed
+    if os.path.exists('/.dockerenv'):
+        logger.info("[✓] Running in Docker container - using environment variables from Docker Compose")
+        return  # Skip loading .env file in Docker
+    
+    # Only load .env file for local development (not in Docker)
+    try:
+        # Get the project root directory (parent of backend directory)
+        current_dir = Path(__file__).resolve().parent  # backend/database
+        backend_dir = current_dir.parent  # backend
+        project_root = backend_dir.parent  # project root
+        
+        # Try to load .env file from project root
+        env_path = project_root / ".env"
+        
+        if env_path.exists():
+            load_dotenv(dotenv_path=env_path)
+            logger.info(f"[✓] Loaded environment variables from: {env_path}")
+        else:
+            # Check if .env exists in current directory as fallback
+            env_local = current_dir / ".env"
+            if env_local.exists():
+                load_dotenv(dotenv_path=env_local)
+                logger.info(f"[✓] Loaded environment variables from: {env_local}")
+            else:
+                logger.warning("[!] No .env file found in development mode")
+                logger.warning("[!] Using default environment variables or OS environment")
+                
+    except Exception as e:
+        logger.warning(f"[!] Failed to load .env file: {e}")
+        logger.warning("[!] Using default environment variables or OS environment")
+
 
 def get_database_connection(database_name: Optional[str] = None):
     """Get database connection."""
     try:
         # Get connection parameters from environment
+        # First try DATABASE_URL, then individual variables
+        database_url = os.environ.get("DATABASE_URL")
+        
+        if database_url:
+            # Parse DATABASE_URL
+            logger.info("[✓] Using DATABASE_URL for connection")
+            if database_name:
+                # Modify the database in the URL if a specific database is requested
+                import re
+                # Replace the database name in the URL
+                pattern = r"/([^/]+)$"
+                database_url = re.sub(pattern, f"/{database_name}", database_url)
+            
+            conn = psycopg2.connect(database_url)
+            return conn
+        
+        # Fall back to individual environment variables
         db_host = os.environ.get("DB_HOST", "localhost")
         db_port = os.environ.get("DB_PORT", "5432")
         db_user = os.environ.get("DB_USER", "postgres")
@@ -32,6 +88,8 @@ def get_database_connection(database_name: Optional[str] = None):
         else:
             db_name = os.environ.get("DB_NAME", DEFAULT_DB_NAME)
 
+        logger.info(f"[✓] Connecting to database: {db_name} on {db_host}:{db_port}")
+        
         conn = psycopg2.connect(
             host=db_host,
             port=db_port,
@@ -133,39 +191,62 @@ def is_valid_email(email):
 
 
 def create_super_admin():
-    """Create super admin user with prompted email and password."""
+    """Create super admin user with prompted email and password or from env."""
     try:
-        print("\n=== Super Admin Setup ===")
+        logger.info("\n=== Super Admin Setup ===")
+        
+        # Check if super admin credentials are in environment variables
+        env_email = os.environ.get("SUPER_ADMIN_EMAIL")
+        env_password = os.environ.get("SUPER_ADMIN_PASSWORD")
+        
+        # Log what we found
+        logger.info(f"SUPER_ADMIN_EMAIL from env: {'Set' if env_email else 'Not set'}")
+        logger.info(f"SUPER_ADMIN_PASSWORD from env: {'Set' if env_password else 'Not set'}")
+        
+        # If environment variables are provided, use them automatically
+        if env_email and env_password:
+            logger.info(f"[✓] Using environment variables for super admin: {env_email}")
+            email = env_email
+            password = env_password
+        else:
+            # Check if we're in a non-interactive environment (Docker, CI/CD)
+            if not sys.stdin.isatty():
+                logger.warning("[!] Non-interactive environment detected and no SUPER_ADMIN credentials provided")
+                logger.warning("[!] Skipping super admin creation")
+                return False
+            
+            # Only prompt interactively if we have a terminal (local dev)
+            print("No SUPER_ADMIN credentials in environment variables")
+            
+            # Prompt for email
+            while True:
+                email = input("Enter email for super admin: ").strip()
+                if not email:
+                    print("Email cannot be empty. Please try again.")
+                    continue
+                if not is_valid_email(email):
+                    print("Invalid email format. Please enter a valid email address.")
+                    continue
+                break
 
-        # Prompt for email
-        while True:
-            email = input("Enter email for super admin: ").strip()
-            if not email:
-                print("Email cannot be empty. Please try again.")
-                continue
-            if not is_valid_email(email):
-                print("Invalid email format. Please enter a valid email address.")
-                continue
-            break
+            # Prompt for password
+            while True:
+                password = getpass.getpass("Enter password: ")
+                confirm_password = getpass.getpass("Confirm password: ")
 
-        # Prompt for password
-        while True:
-            password = getpass.getpass("Enter password: ")
-            confirm_password = getpass.getpass("Confirm password: ")
+                if not password:
+                    print("Password cannot be empty. Please try again.")
+                    continue
 
-            if not password:
-                print("Password cannot be empty. Please try again.")
-                continue
+                if password != confirm_password:
+                    print("Passwords do not match. Please try again.")
+                    continue
 
-            if password != confirm_password:
-                print("Passwords do not match. Please try again.")
-                continue
+                if len(password) < 6:
+                    print("Password must be at least 6 characters long. Please try again.")
+                    continue
 
-            if len(password) < 6:
-                print("Password must be at least 6 characters long. Please try again.")
-                continue
-
-            break
+                break
 
         password_hash = generate_password_hash(password)
 
@@ -209,10 +290,14 @@ def create_super_admin():
             cursor.close()
             conn.close()
 
+    except EOFError:
+        logger.warning("[!] Could not read input (non-interactive environment)")
+        logger.warning("[!] Skipping super admin creation")
+        return False
     except Exception as e:
         logger.error(f"[X] Failed to create super admin: {e}")
         return False
-
+    
 
 def verify_tables():
     """Verify that all tables were created correctly."""
@@ -269,34 +354,48 @@ def main():
     """Main setup function."""
     logger.info("Starting EFAS Database Setup...")
 
+    load_environment()
+    
+    # Log current environment configuration
+    logger.info("Environment Configuration:")
+    logger.info(f"  DB_HOST: {os.environ.get('DB_HOST', 'localhost (default)')}")
+    logger.info(f"  DB_PORT: {os.environ.get('DB_PORT', '5432 (default)')}")
+    logger.info(f"  DB_NAME: {os.environ.get('DB_NAME', DEFAULT_DB_NAME + ' (default)')}")
+    logger.info(f"  DB_USER: {os.environ.get('DB_USER', 'postgres (default)')}")
+    logger.info(f"  DATABASE_URL: {'Set' if os.environ.get('DATABASE_URL') else 'Not set'}")
+    logger.info(f"  SUPER_ADMIN_EMAIL: {'Set' if os.environ.get('SUPER_ADMIN_EMAIL') else 'Not set'}")
+
     try:
         # Step 1: Create database
-        logger.info("Step 1: Creating database...")
+        logger.info("\nStep 1: Creating database...")
         create_database()
 
         # Step 2: Setup tables
-        logger.info("Step 2: Setting up tables...")
+        logger.info("\nStep 2: Setting up tables...")
         setup_tables()
 
         # Step 3: Create super admin
-        logger.info("Step 3: Creating super admin user...")
+        logger.info("\nStep 3: Creating super admin user...")
         admin_created = create_super_admin()
 
         if not admin_created:
             logger.warning("[!] Super admin creation failed or skipped!")
 
         # Step 4: Verify setup
-        logger.info("Step 4: Verifying setup...")
+        logger.info("\nStep 4: Verifying setup...")
         success = verify_tables()
 
         if success:
-            logger.info("[✓] Database setup completed successfully!")
+            logger.info("\n[✓] Database setup completed successfully!")
+            logger.info("\nNext steps:")
+            logger.info("  1. Start the Flask application")
+            logger.info("  2. Access the system with your super admin credentials")
         else:
-            logger.error("[X] Database setup completed with errors!")
+            logger.error("\n[X] Database setup completed with errors!")
             exit(1)
 
     except Exception as e:
-        logger.error(f"[X] Database setup failed: {e}")
+        logger.error(f"\n[X] Database setup failed: {e}")
         exit(1)
 
 

@@ -7,6 +7,7 @@ WORKDIR /app
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libpq-dev \
+    postgresql-client \
     && rm -rf /var/lib/apt/lists/*
 
 COPY Pipfile Pipfile.lock ./
@@ -17,9 +18,12 @@ RUN pip install --upgrade pip && \
 
 COPY . .
 
+COPY entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+
 EXPOSE 5000
 
 RUN useradd -r appuser && chown -R appuser:appuser /app
 USER appuser
 
-CMD ["gunicorn", "--bind", "0.0.0.0:5000", "run:app"]
+ENTRYPOINT ["/entrypoint.sh"]

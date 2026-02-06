@@ -1,7 +1,7 @@
 Write-Host "Building frontend..." -ForegroundColor Green
 
 # Navigate to frontend directory
-Set-Location -Path "frontend"
+Set-Location -Path "../frontend"
 
 # Install dependencies if needed
 Write-Host "Installing dependencies..." -ForegroundColor Cyan
