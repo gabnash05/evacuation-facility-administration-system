@@ -135,6 +135,8 @@ export default function MonoMap({
     const isDark = theme === "dark";
     const mapRef = useRef<any>(null);
 
+    const STADIA_API_KEY = import.meta.env.VITE_STADIA_MAPS_API_KEY || '';
+
     // Find the highlighted center for map centering
     const highlightedCenter = centers.find(c => c.id === highlightCenterId);
     const effectiveCenter = highlightedCenter?.position || center;
@@ -184,8 +186,8 @@ export default function MonoMap({
             >
                 <TileLayer
                     url={isDark 
-                        ? "https://tiles.stadiamaps.com/tiles/alidade_smooth_dark/{z}/{x}/{y}{r}.png"
-                        : "https://tiles.stadiamaps.com/tiles/alidade_smooth/{z}/{x}/{y}{r}.png"
+                        ? `https://tiles.stadiamaps.com/tiles/alidade_smooth_dark/{z}/{x}/{y}{r}.png?api_key=${STADIA_API_KEY}`
+                        : `https://tiles.stadiamaps.com/tiles/alidade_smooth/{z}/{x}/{y}{r}.png?api_key=${STADIA_API_KEY}`
                     }
                     attribution='&copy; <a href="https://stadiamaps.com/">Stadia Maps</a>, &copy; <a href="https://openmaptiles.org/">OpenMapTiles</a> &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
                     maxZoom={19}
