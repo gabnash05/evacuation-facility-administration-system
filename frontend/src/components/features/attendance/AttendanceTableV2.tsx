@@ -7,8 +7,9 @@ import {
     LogOut,
     Move,
     Trash2,
-    CheckCircle
+    CheckCircle,
 } from "lucide-react";
+
 import {
     Table,
     TableBody,
@@ -17,6 +18,7 @@ import {
     TableHeader,
     TableRow,
 } from "@/components/ui/table";
+
 import { Button } from "@/components/ui/button";
 import {
     DropdownMenu,
@@ -24,8 +26,11 @@ import {
     DropdownMenuItem,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+
 import { DeleteAttendanceDialog } from "./DeleteAttendanceDialog";
 import { cn } from "@/lib/utils";
+
+/* ---------------- types ---------------- */
 
 export interface AttendanceRecord {
     record_id: number;
@@ -64,6 +69,7 @@ interface AttendanceTableProps {
     onCheckOut: (id: number) => void;
     onTransfer: (id: number) => void;
     onDelete: (id: number) => void;
+    onCheckIn?: (individualId: number, record: AttendanceRecord) => void;
     loading?: boolean;
     userRole?: string;
     showActions?: (record: AttendanceRecord) => {
@@ -71,8 +77,9 @@ interface AttendanceTableProps {
         canTransfer: boolean;
         canCheckIn: boolean;
     };
-    onCheckIn?: (individualId: number, record: AttendanceRecord) => void;
 }
+
+/* ---------------- component ---------------- */
 
 export function AttendanceTable({
     data,
@@ -88,22 +95,24 @@ export function AttendanceTable({
     showActions,
 }: AttendanceTableProps) {
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-    const [recordToDelete, setRecordToDelete] = useState<{ id: number; individual: string } | null>(
-        null
-    );
+    const [recordToDelete, setRecordToDelete] = useState<{
+        id: number;
+        individual: string;
+    } | null>(null);
 
-    // Update getSortIcon function to properly show active sort
+    /* -------- sort icon (same logic as other tables) -------- */
+
     const getSortIcon = (key: string) => {
-        if (!sortConfig || sortConfig.key !== key || sortConfig.direction === null) {
+        if (!sortConfig || sortConfig.key !== key || !sortConfig.direction)
             return <ChevronsUpDown className="h-4 w-4 text-muted-foreground" />;
-        }
-        
-        if (sortConfig.direction === "asc") {
+
+        if (sortConfig.direction === "asc")
             return <ChevronUp className="h-4 w-4" />;
-        }
-        
+
         return <ChevronDown className="h-4 w-4" />;
     };
+
+    /* -------- handlers -------- */
 
     const handleDeleteClick = (record: AttendanceRecord) => {
         setRecordToDelete({
@@ -114,11 +123,10 @@ export function AttendanceTable({
     };
 
     const handleConfirmDelete = async () => {
-        if (recordToDelete) {
-            await onDelete(recordToDelete.id);
-            setDeleteDialogOpen(false);
-            setRecordToDelete(null);
-        }
+        if (!recordToDelete) return;
+        await onDelete(recordToDelete.id);
+        setDeleteDialogOpen(false);
+        setRecordToDelete(null);
     };
 
     const handleCloseDialog = () => {
@@ -126,8 +134,9 @@ export function AttendanceTable({
         setRecordToDelete(null);
     };
 
-    // Only show delete for super_admin
     const isSuperAdmin = userRole === "super_admin";
+
+    /* -------- empty state -------- */
 
     if (data.length === 0 && !loading) {
         return (
@@ -137,63 +146,74 @@ export function AttendanceTable({
         );
     }
 
+    /* -------- status badge -------- */
+
     const getStatusBadge = (status: string) => {
-        // Status map with clean labels and colors
-        const statusMap: Record<string, { label: string, bg: string, text: string, border: string }> = {
-            "checked_in": {
+        const statusMap: Record<
+            string,
+            { label: string; bg: string; text: string; border: string }
+        > = {
+            checked_in: {
                 label: "Checked In",
                 bg: "bg-green-100",
                 text: "text-green-800",
-                border: "border border-green-200"
+                border: "border border-green-200",
             },
-            "checked_out": {
+            checked_out: {
                 label: "Checked Out",
                 bg: "bg-gray-100",
                 text: "text-gray-800",
-                border: "border border-gray-200"
+                border: "border border-gray-200",
             },
-            "transferred": {
+            transferred: {
                 label: "Transferred",
                 bg: "bg-orange-100",
                 text: "text-orange-800",
-                border: "border border-orange-200"
-            }
+                border: "border border-orange-200",
+            },
         };
-        
-        // Get status config or create default
-        const statusConfig = statusMap[status] || {
-            label: status 
+
+        const cfg = statusMap[status] || {
+            label: status
                 ? status
-                    .split('_')
-                    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-                    .join(' ')
-                : 'Unknown',
+                      .split("_")
+                      .map(w => w.charAt(0).toUpperCase() + w.slice(1))
+                      .join(" ")
+                : "Unknown",
             bg: "bg-gray-100",
             text: "text-gray-800",
-            border: "border border-gray-200"
+            border: "border border-gray-200",
         };
-        
+
         return (
-            <span className={`px-3 py-1.5 rounded-full text-sm font-medium ${statusConfig.bg} ${statusConfig.text} ${statusConfig.border}`}>
-                {statusConfig.label}
+            <span
+                className={`px-3 py-1.5 rounded-full text-sm font-medium ${cfg.bg} ${cfg.text} ${cfg.border}`}
+            >
+                {cfg.label}
             </span>
         );
     };
 
+    /* ---------------- render ---------------- */
+
     return (
         <>
-            <div className="w-full">
-                <Table>
+            <div className="w-full overflow-visible">
+                <Table className="table-fixed w-full">
                     <TableHeader>
                         <TableRow className="hover:bg-transparent">
                             {headers.map(header => (
                                 <TableHead
                                     key={header.key}
                                     className={cn(
-                                        "font-semibold text-foreground",
+                                        "font-semibold py-3 text-foreground break-words whitespace-normal",
                                         header.sortable && "cursor-pointer hover:bg-muted"
                                     )}
-                                    onClick={header.sortable ? () => onSort(header.key) : undefined}
+                                    onClick={
+                                        header.sortable
+                                            ? () => onSort(header.key)
+                                            : undefined
+                                    }
                                 >
                                     <div className="flex items-center justify-between">
                                         <span>{header.label}</span>
@@ -201,11 +221,14 @@ export function AttendanceTable({
                                     </div>
                                 </TableHead>
                             ))}
-                            <TableHead className="text-right font-semibold text-foreground">
+
+                            {/* Actions column */}
+                            <TableHead className="text-right font-semibold text-foreground w-24">
                                 Actions
                             </TableHead>
                         </TableRow>
                     </TableHeader>
+
                     <TableBody>
                         {loading && data.length === 0 ? (
                             <TableRow>
@@ -220,95 +243,135 @@ export function AttendanceTable({
                             </TableRow>
                         ) : (
                             data.map((row, index) => {
-                                // Determine if actions should be shown
-                                const actionState = showActions ? showActions(row) : {
-                                    canCheckOut: row.can_check_out || false,
-                                    canTransfer: row.can_transfer || false,
-                                    canCheckIn: false,
-                                };
+                                const actionState = showActions
+                                    ? showActions(row)
+                                    : {
+                                          canCheckOut: row.can_check_out || false,
+                                          canTransfer: row.can_transfer || false,
+                                          canCheckIn: false,
+                                      };
 
                                 return (
                                     <TableRow
                                         key={row.record_id}
                                         className={cn(
-                                            "hover:bg-muted/50",
+                                            "hover:bg-muted/50 cursor-pointer",
                                             index % 2 === 1 && "bg-muted/30"
                                         )}
                                     >
                                         {headers.map(header => (
-                                            <TableCell key={header.key} className="py-3">
+                                            <TableCell
+                                                key={header.key}
+                                                className="py-3 break-words whitespace-normal"
+                                            >
                                                 {header.key === "status" ? (
                                                     getStatusBadge(row.status)
                                                 ) : header.key === "age" ? (
-                                                    <span className="font-medium">{row.age}</span>
-                                                ) : header.key === "last_check_in_time" ? (
-                                                    // Check if it's already formatted (from our mapping)
-                                                    typeof row.last_check_in_time === 'string' && 
-                                                    (row.last_check_in_time === "Never" || row.last_check_in_time.includes(",")) ? (
+                                                    <span className="font-medium">
+                                                        {row.age}
+                                                    </span>
+                                                ) : header.key ===
+                                                  "last_check_in_time" ? (
+                                                    typeof row.last_check_in_time ===
+                                                        "string" &&
+                                                    (row.last_check_in_time ===
+                                                        "Never" ||
+                                                        row.last_check_in_time.includes(
+                                                            ","
+                                                        )) ? (
                                                         <span className="text-sm text-muted-foreground">
                                                             {row.last_check_in_time}
                                                         </span>
                                                     ) : row.last_check_in_time ? (
                                                         <span className="text-sm text-muted-foreground">
-                                                            {new Date(row.last_check_in_time).toLocaleString()}
+                                                            {new Date(
+                                                                row.last_check_in_time
+                                                            ).toLocaleString()}
                                                         </span>
                                                     ) : (
-                                                        <span className="text-sm text-muted-foreground">Never</span>
+                                                        <span className="text-sm text-muted-foreground">
+                                                            Never
+                                                        </span>
                                                     )
-                                                ) : header.key === "current_status" || header.key === "current_center_name" ? (
-                                                    // Handle center name and status display
-                                                    <span>
-                                                        {row[header.key as keyof AttendanceRecord] || "—"}
-                                                    </span>
                                                 ) : (
-                                                    // Default display
-                                                    row[header.key as keyof AttendanceRecord] || "—"
+                                                    row[
+                                                        header.key as keyof AttendanceRecord
+                                                    ] || "—"
                                                 )}
                                             </TableCell>
                                         ))}
-                                        <TableCell className="text-right">
+
+                                        {/* Actions */}
+                                        <TableCell
+                                            className="text-right w-24"
+                                            onClick={e => e.stopPropagation()}
+                                        >
                                             <DropdownMenu>
                                                 <DropdownMenuTrigger asChild>
                                                     <Button
                                                         variant="ghost"
                                                         size="icon"
                                                         className="h-8 w-8"
+                                                        onClick={e =>
+                                                            e.stopPropagation()
+                                                        }
                                                     >
                                                         <MoreVertical className="h-4 w-4" />
                                                     </Button>
                                                 </DropdownMenuTrigger>
+
                                                 <DropdownMenuContent align="end">
                                                     {actionState.canCheckOut && (
                                                         <DropdownMenuItem
-                                                            onClick={() => onCheckOut(row.record_id)}
+                                                            onClick={() =>
+                                                                onCheckOut(
+                                                                    row.record_id
+                                                                )
+                                                            }
                                                             className="flex items-center gap-2"
                                                         >
                                                             <LogOut className="h-4 w-4" />
                                                             Check Out
                                                         </DropdownMenuItem>
                                                     )}
+
                                                     {actionState.canTransfer && (
                                                         <DropdownMenuItem
-                                                            onClick={() => onTransfer(row.record_id)}
+                                                            onClick={() =>
+                                                                onTransfer(
+                                                                    row.record_id
+                                                                )
+                                                            }
                                                             className="flex items-center gap-2"
                                                         >
                                                             <Move className="h-4 w-4" />
                                                             Transfer
                                                         </DropdownMenuItem>
                                                     )}
-                                                    {/* ADD CHECK IN OPTION */}
-                                                    {actionState.canCheckIn && onCheckIn && (
-                                                        <DropdownMenuItem
-                                                            onClick={() => onCheckIn(row.individual_id, row)}
-                                                            className="flex items-center gap-2"
-                                                        >
-                                                            <CheckCircle className="h-4 w-4" />
-                                                            Check In
-                                                        </DropdownMenuItem>
-                                                    )}
+
+                                                    {actionState.canCheckIn &&
+                                                        onCheckIn && (
+                                                            <DropdownMenuItem
+                                                                onClick={() =>
+                                                                    onCheckIn(
+                                                                        row.individual_id,
+                                                                        row
+                                                                    )
+                                                                }
+                                                                className="flex items-center gap-2"
+                                                            >
+                                                                <CheckCircle className="h-4 w-4" />
+                                                                Check In
+                                                            </DropdownMenuItem>
+                                                        )}
+
                                                     {isSuperAdmin && (
                                                         <DropdownMenuItem
-                                                            onClick={() => handleDeleteClick(row)}
+                                                            onClick={() =>
+                                                                handleDeleteClick(
+                                                                    row
+                                                                )
+                                                            }
                                                             className="flex items-center gap-2 text-destructive focus:text-destructive"
                                                         >
                                                             <Trash2 className="h-4 w-4" />
@@ -326,7 +389,7 @@ export function AttendanceTable({
                 </Table>
             </div>
 
-            {/* Delete Confirmation Dialog */}
+            {/* Delete Dialog */}
             <DeleteAttendanceDialog
                 isOpen={deleteDialogOpen}
                 onClose={handleCloseDialog}

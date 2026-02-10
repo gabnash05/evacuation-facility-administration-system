@@ -57,16 +57,15 @@ export default function MainLayout({ children }: MainLayoutProps) {
             <div className="flex min-h-screen bg-background">
                 <AppSidebar role={user.role} roleLabel={roleLabel} userEmail={user.email} />
 
-                <div className="flex-1 flex flex-col overflow-hidden">
+                <div className="flex-1 flex flex-col min-w-0">
                     <div className="flex border-b border-border">
                         <SidebarTrigger className="h-14 w-14 flex items-center justify-center shrink-0" />
-                        <div className="flex-1">
+                        <div className="flex-1 min-w-0">
                             <Topbar title={roleLabel} />
                         </div>
                     </div>
 
-                    {/* 100vw - 21vw is from testing on my own device. Needs to be tested */}
-                    <main className="flex-1 p-6 w-[calc(100vw-21vw)] overflow-y-auto">
+                    <main className="flex-1 overflow-y-auto">
                         {children}
                     </main>
                 </div>

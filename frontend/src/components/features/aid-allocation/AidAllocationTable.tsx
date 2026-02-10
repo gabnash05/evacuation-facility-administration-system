@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import {
     Table,
     TableBody,
@@ -8,17 +9,29 @@ import {
     TableHeader,
     TableRow,
 } from "@/components/ui/table";
-import { ChevronsUpDown, ChevronUp, ChevronDown } from "lucide-react";
+
+import {
+    ChevronsUpDown,
+    ChevronUp,
+    ChevronDown,
+    MoreVertical,
+    Trash2,
+    Edit,
+    AlertCircle,
+} from "lucide-react";
+
 import { Button } from "@/components/ui/button";
-import { 
+import {
     DropdownMenu,
     DropdownMenuContent,
     DropdownMenuItem,
-    DropdownMenuTrigger 
+    DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { MoreVertical, Trash2, Edit, AlertCircle } from "lucide-react";
-import { useState } from "react";
+
+import { cn } from "@/lib/utils";
 import { DeleteAidDialog } from "@/components/features/aid-allocation/DeleteAidDialog";
+
+/* ---------------- types ---------------- */
 
 interface Column {
     key: string;
@@ -39,13 +52,14 @@ interface AidDistributionTableProps {
     onEdit?: (row: any) => void;
     onDelete?: (row: any) => void;
     onDistribute?: (row: any) => void;
-    onCancel?: (row: any) => void; // NEW: cancel action for city_admin
+    onCancel?: (row: any) => void;
     showActions?: boolean;
     showTitle?: boolean;
     deleteLoading?: boolean;
-    // NEW: Add user role prop
-    userRole?: string; // "super_admin", "city_admin", "center_admin", "volunteer"
+    userRole?: string;
 }
+
+/* ---------------- component ---------------- */
 
 export function AidDistributionTable({
     title,
@@ -57,27 +71,28 @@ export function AidDistributionTable({
     sortDirection,
     renderCell,
     onEdit,
-    onDelete, 
-    onCancel, // NEW
+    onDelete,
+    onCancel,
     showActions = true,
     showTitle = true,
     deleteLoading = false,
-    userRole = "city_admin", // Default to city_admin for safety
+    userRole = "city_admin",
 }: AidDistributionTableProps) {
-    // Determine if delete button should be shown based on user role
     const showDeleteButton = userRole === "super_admin";
-    
-    const [deleteDialog, setDeleteDialog] = useState({
+
+    const [deleteDialog, setDeleteDialog] = useState<{
+        isOpen: boolean;
+        allocation: any;
+    }>({
         isOpen: false,
-        allocation: null as any,
+        allocation: null,
     });
+
+    /* -------- dialog handlers -------- */
 
     const handleOpenDeleteDialog = (allocation: any, event: React.MouseEvent) => {
         event.stopPropagation();
-        setDeleteDialog({
-            isOpen: true,
-            allocation
-        });
+        setDeleteDialog({ isOpen: true, allocation });
     };
 
     const handleCloseDeleteDialog = () => {
@@ -90,6 +105,8 @@ export function AidDistributionTable({
             handleCloseDeleteDialog();
         }
     };
+
+    /* -------- formatting helpers -------- */
 
     const getStatusColor = (status: string) => {
         switch (status?.toLowerCase()) {
@@ -132,40 +149,16 @@ export function AidDistributionTable({
 
     const formatDate = (dateString: string) => {
         if (!dateString) return "N/A";
-        
         try {
             const date = new Date(dateString);
-            return date.toLocaleDateString('en-US', {
-                year: 'numeric',
-                month: 'long',
-                day: 'numeric'
+            return date.toLocaleDateString("en-US", {
+                year: "numeric",
+                month: "long",
+                day: "numeric",
             });
-        } catch (error) {
+        } catch {
             return "Invalid Date";
         }
-    };
-
-    // Helper function to get searchable text for a cell
-    const getSearchableText = (key: string, value: any, row: any): string => {
-        if (key === "created_at") {
-            return formatDate(value).toLowerCase();
-        }
-
-        if (key === "status") {
-            return value?.toLowerCase() || "";
-        }
-        
-        if (key === "distribution_type") {
-            return formatDistributionType(value).toLowerCase();
-        }
-        
-        if (key === "remaining_quantity") {
-            const total = row.total_quantity || 0;
-            const remaining = value || 0;
-            return `${remaining}/${total}`;
-        }
-        
-        return String(value || "").toLowerCase();
     };
 
     const defaultRenderCell = (key: string, value: any, row: any) => {
@@ -175,148 +168,193 @@ export function AidDistributionTable({
 
         if (key === "status") {
             return (
-                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(value)}`}>
+                <span
+                    className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(
+                        value
+                    )}`}
+                >
                     {value?.charAt(0).toUpperCase() + value?.slice(1) || "Unknown"}
                 </span>
             );
         }
-        
+
         if (key === "distribution_type") {
             return (
-                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getDistributionTypeColor(value)}`}>
+                <span
+                    className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getDistributionTypeColor(
+                        value
+                    )}`}
+                >
                     {formatDistributionType(value)}
                 </span>
             );
         }
-        
+
         if (key === "remaining_quantity") {
             const total = row.total_quantity || 0;
             const remaining = value || 0;
             const percentage = total > 0 ? Math.round((remaining / total) * 100) : 0;
-            
+
             return (
                 <div className="flex flex-col gap-1">
-                    <span className="font-medium">{remaining} / {total}</span>
+                    <span className="font-medium">
+                        {remaining} / {total}
+                    </span>
                     <div className="w-full bg-gray-200 rounded-full h-2 dark:bg-gray-700">
-                        <div 
+                        <div
                             className={`h-2 rounded-full ${
-                                percentage > 50 ? "bg-green-600" : 
-                                percentage > 20 ? "bg-yellow-600" : 
-                                "bg-red-600"
+                                percentage > 50
+                                    ? "bg-green-600"
+                                    : percentage > 20
+                                    ? "bg-yellow-600"
+                                    : "bg-red-600"
                             }`}
                             style={{ width: `${percentage}%` }}
                         />
                     </div>
-                    <span className="text-xs text-muted-foreground">{percentage}% remaining</span>
+                    <span className="text-xs text-muted-foreground">
+                        {percentage}% remaining
+                    </span>
                 </div>
             );
         }
-        
+
         return value;
     };
 
+    /* -------- sort icon -------- */
+
     const getSortIcon = (columnKey: string) => {
         if (sortColumn !== columnKey) {
-            return <ChevronsUpDown className="h-4 w-4 ml-1 opacity-50" />;
+            return <ChevronsUpDown className="h-4 w-4 text-muted-foreground" />;
         }
-        
+
         return sortDirection === "desc" ? (
-            <ChevronDown className="h-4 w-4 ml-1 text-600" />
+            <ChevronDown className="h-4 w-4" />
         ) : (
-            <ChevronUp className="h-4 w-4 ml-1 text-600" />
+            <ChevronUp className="h-4 w-4" />
         );
     };
 
+    /* -------- empty state -------- */
+
+    if (data.length === 0) {
+        return (
+            <div className="p-8 text-center">
+                <div className="text-muted-foreground">
+                    No aid distribution records found
+                </div>
+            </div>
+        );
+    }
+
+    /* ---------------- render ---------------- */
+
     return (
         <>
-            <div className="border border-border border-t-0">
+            <div className="w-full overflow-visible">
                 {showTitle && title && (
                     <div className="p-4 border-b border-border">
-                        <h3 className="font-semibold text-base text-foreground">{title}</h3>
+                        <h3 className="font-semibold text-base text-foreground">
+                            {title}
+                        </h3>
                     </div>
                 )}
-                <Table>
+
+                <Table className="table-fixed w-full">
                     <TableHeader>
-                        <TableRow>
+                        <TableRow className="hover:bg-transparent">
                             {columns.map(column => (
-                                <TableHead 
-                                    key={column.key} 
-                                    className={`${column.className || ""} ${column.sortable !== false && onSort ? "p-0" : ""}`}
-                                >
-                                    {column.sortable !== false && onSort ? (
-                                        <Button
-                                            variant="ghost"
-                                            onClick={() => onSort(column.key)}
-                                            className="h-full w-full justify-start px-3 py-3 hover:bg-transparent font-semibold"
-                                        >
-                                            <span className="flex items-center gap-1">
-                                                {column.label}
-                                                {getSortIcon(column.key)}
-                                            </span>
-                                        </Button>
-                                    ) : (
-                                        <div className="px-3 py-3">
-                                            {column.label}
-                                        </div>
+                                <TableHead
+                                    key={column.key}
+                                    className={cn(
+                                        "font-semibold py-3 text-foreground break-words whitespace-normal",
+                                        column.sortable !== false &&
+                                            onSort &&
+                                            "cursor-pointer hover:bg-muted"
                                     )}
+                                    onClick={
+                                        column.sortable !== false && onSort
+                                            ? () => onSort(column.key)
+                                            : undefined
+                                    }
+                                >
+                                    <div className="flex items-center justify-between">
+                                        <span>{column.label}</span>
+                                        {column.sortable !== false &&
+                                            onSort &&
+                                            getSortIcon(column.key)}
+                                    </div>
                                 </TableHead>
                             ))}
+
                             {showActions && (
-                                <TableHead className="text-right px-4 py-3">Actions</TableHead>
+                                <TableHead className="text-right font-semibold text-foreground w-24">
+                                    Actions
+                                </TableHead>
                             )}
                         </TableRow>
                     </TableHeader>
+
                     <TableBody>
-                        {data.length === 0 ? (
-                            <TableRow>
-                                <TableCell 
-                                    colSpan={columns.length + (showActions ? 1 : 0)} 
-                                    className="text-center py-8 text-muted-foreground"
-                                >
-                                    No aid distribution records found
-                                </TableCell>
-                            </TableRow>
-                        ) : (
-                            data.map((row, i) => (
-                                <TableRow
-                                    key={i}
-                                    className={`${i % 2 === 1 ? "bg-muted/50" : ""} ${
-                                        onRowClick
-                                            ? "cursor-pointer hover:bg-muted/50 transition-colors"
-                                            : ""
-                                    }`}
-                                    onClick={() => onRowClick?.(row, i)}
-                                >
-                                    {columns.map(column => (
-                                        <TableCell
-                                            key={column.key}
-                                            className={`${
-                                                column.key === columns[0].key ? "font-medium" : ""
-                                            } ${column.className || ""}`}
-                                            title={
-                                                column.className?.includes("truncate")
-                                                    ? getSearchableText(column.key, row[column.key], row)
-                                                    : undefined
-                                            }
-                                        >
-                                            {renderCell
-                                                ? renderCell(column.key, row[column.key], row)
-                                                : defaultRenderCell(column.key, row[column.key], row)}
-                                        </TableCell>
-                                    ))}
-                                    {showActions && (
-                                        <TableCell className="text-right px-4" onClick={e => e.stopPropagation()}>
-                                            <DropdownMenu>
-                                                <DropdownMenuTrigger asChild>
-                                                    <Button variant="ghost" size="icon">
-                                                        <MoreVertical className="h-4 w-4" />
-                                                    </Button>
-                                                </DropdownMenuTrigger>
-                                                <DropdownMenuContent align="end">
-                                                    {/* Show Edit only for super_admin */}
-                                                    {userRole === "super_admin" && onEdit && (
-                                                        <DropdownMenuItem 
-                                                            onClick={(e) => {
+                        {data.map((row, i) => (
+                            <TableRow
+                                key={i}
+                                className={cn(
+                                    "hover:bg-muted/50",
+                                    i % 2 === 1 && "bg-muted/30",
+                                    onRowClick && "cursor-pointer"
+                                )}
+                                onClick={() => onRowClick?.(row, i)}
+                            >
+                                {columns.map(column => (
+                                    <TableCell
+                                        key={column.key}
+                                        className={cn(
+                                            "py-3 break-words whitespace-normal",
+                                            column.key === columns[0].key &&
+                                                "font-medium",
+                                            column.className
+                                        )}
+                                    >
+                                        {renderCell
+                                            ? renderCell(
+                                                  column.key,
+                                                  row[column.key],
+                                                  row
+                                              )
+                                            : defaultRenderCell(
+                                                  column.key,
+                                                  row[column.key],
+                                                  row
+                                              )}
+                                    </TableCell>
+                                ))}
+
+                                {showActions && (
+                                    <TableCell
+                                        className="text-right w-24"
+                                        onClick={e => e.stopPropagation()}
+                                    >
+                                        <DropdownMenu>
+                                            <DropdownMenuTrigger asChild>
+                                                <Button
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    className="h-8 w-8"
+                                                    onClick={e =>
+                                                        e.stopPropagation()
+                                                    }
+                                                >
+                                                    <MoreVertical className="h-4 w-4" />
+                                                </Button>
+                                            </DropdownMenuTrigger>
+
+                                            <DropdownMenuContent align="end">
+                                                {userRole === "super_admin" &&
+                                                    onEdit && (
+                                                        <DropdownMenuItem
+                                                            onClick={e => {
                                                                 e.stopPropagation();
                                                                 onEdit(row);
                                                             }}
@@ -326,12 +364,15 @@ export function AidDistributionTable({
                                                             Edit
                                                         </DropdownMenuItem>
                                                     )}
-                                                    
-                                                    {/* Show Cancel for city_admin (when status is active)
-                                                        NOTE: Cancel should call onCancel (does not open edit modal) */}
-                                                    {userRole === "city_admin" && onCancel && (row.status?.toLowerCase() === "active" || row.status?.toLowerCase() === "depleted") && (
-                                                        <DropdownMenuItem 
-                                                            onClick={(e) => {
+
+                                                {userRole === "city_admin" &&
+                                                    onCancel &&
+                                                    (row.status?.toLowerCase() ===
+                                                        "active" ||
+                                                        row.status?.toLowerCase() ===
+                                                            "depleted") && (
+                                                        <DropdownMenuItem
+                                                            onClick={e => {
                                                                 e.stopPropagation();
                                                                 onCancel(row);
                                                             }}
@@ -341,29 +382,33 @@ export function AidDistributionTable({
                                                             Cancel
                                                         </DropdownMenuItem>
                                                     )}
-                                                    
-                                                    {/* Only show delete for super_admin */}
-                                                    {userRole === "super_admin" && onDelete && (
-                                                        <DropdownMenuItem 
-                                                            onClick={(e) => handleOpenDeleteDialog(row, e)}
+
+                                                {userRole === "super_admin" &&
+                                                    onDelete && (
+                                                        <DropdownMenuItem
+                                                            onClick={e =>
+                                                                handleOpenDeleteDialog(
+                                                                    row,
+                                                                    e
+                                                                )
+                                                            }
                                                             className="flex items-center gap-2 text-destructive focus:text-destructive"
                                                         >
                                                             <Trash2 className="h-4 w-4" />
                                                             Delete
                                                         </DropdownMenuItem>
                                                     )}
-                                                </DropdownMenuContent>
-                                            </DropdownMenu>
-                                        </TableCell>
-                                    )}
-                                </TableRow>
-                            ))
-                        )}
+                                            </DropdownMenuContent>
+                                        </DropdownMenu>
+                                    </TableCell>
+                                )}
+                            </TableRow>
+                        ))}
                     </TableBody>
                 </Table>
             </div>
 
-            {/* Delete Aid Allocation Dialog - Only needed if delete button is shown */}
+            {/* Delete Dialog */}
             {showDeleteButton && (
                 <DeleteAidDialog
                     isOpen={deleteDialog.isOpen}

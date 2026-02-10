@@ -408,7 +408,7 @@ export function CityAdminDashboard() {
     const paginatedData = processedData;
 
     return (
-        <div className="w-full min-w-0 bg-background flex flex-col relative">
+        <div className="w-full min-w-0 bg-background flex flex-col relative px-6">
             <ErrorAlert error={error || createError} />
 
             <MapPanel
