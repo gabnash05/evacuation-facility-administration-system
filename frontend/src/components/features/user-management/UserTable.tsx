@@ -1,4 +1,17 @@
-import { ChevronUp, ChevronDown, ChevronsUpDown, MoreVertical } from "lucide-react";
+"use client";
+
+import { useState } from "react";
+import {
+    ChevronUp,
+    ChevronDown,
+    ChevronsUpDown,
+    MoreVertical,
+    Edit,
+    Trash2,
+    Users,
+    Building,
+} from "lucide-react";
+
 import {
     Table,
     TableBody,
@@ -7,6 +20,7 @@ import {
     TableHeader,
     TableRow,
 } from "@/components/ui/table";
+
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -15,8 +29,8 @@ import {
     DropdownMenuItem,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+
 import { cn } from "@/lib/utils";
-import { Edit, Trash2, Users, Building } from "lucide-react";
 import type { User } from "@/types/user";
 
 interface UserTableProps {
@@ -30,131 +44,144 @@ interface UserTableProps {
     onDelete: (user: User) => void;
     onDeactivate?: (user: User) => void;
     loading?: boolean;
-    userRole: string | undefined;
+    userRole?: string;
 }
 
-export function UserTable({ data, sortConfig, onSort, onEdit, onDelete, onDeactivate, loading, userRole }: UserTableProps) {
-    const getSortIcon = (key: string) => {
-        if (!sortConfig || sortConfig.key !== key) {
-            return <ChevronsUpDown className="h-4 w-4 text-muted-foreground" />;
-        }
+/* ---------------- helpers ---------------- */
 
-        switch (sortConfig.direction) {
-            case "asc":
-                return <ChevronUp className="h-4 w-4" />;
-            case "desc":
-                return <ChevronDown className="h-4 w-4" />;
-            case null:
-            default:
-                return <ChevronsUpDown className="h-4 w-4 text-muted-foreground" />;
-        }
-    };
+const getSortIcon = (
+    sortConfig: UserTableProps["sortConfig"],
+    key: string
+) => {
+    if (!sortConfig || sortConfig.key !== key || !sortConfig.direction) {
+        return <ChevronsUpDown className="h-4 w-4 text-muted-foreground" />;
+    }
 
+    if (sortConfig.direction === "asc") {
+        return <ChevronUp className="h-4 w-4" />;
+    }
+
+    return <ChevronDown className="h-4 w-4" />;
+};
+
+const getRoleStyles = (role: string) => {
+    switch (role.toLowerCase()) {
+        case "super_admin":
+            return "bg-purple-100 text-purple-700 border-purple-100 dark:bg-purple-900 dark:text-purple-200 dark:border-purple-900";
+        case "city_admin":
+            return "bg-blue-100 text-blue-700 border-blue-100 dark:bg-blue-900 dark:text-blue-200 dark:border-blue-900";
+        case "center_admin":
+            return "bg-orange-100 text-orange-700 border-orange-100 dark:bg-orange-900 dark:text-orange-200 dark:border-orange-900";
+        case "volunteer":
+            return "bg-green-100 text-green-700 border-green-100 dark:bg-green-900 dark:text-green-200 dark:border-green-900";
+        default:
+            return "bg-gray-100 text-gray-700 border-gray-100 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-800";
+    }
+};
+
+const getStatusStyles = (isActive: boolean) => {
+    return isActive
+        ? "bg-green-100 text-green-700 border-green-100 dark:bg-green-900 dark:text-green-200 dark:border-green-900"
+        : "bg-gray-100 text-gray-700 border-gray-100 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-800";
+};
+
+const getRoleIcon = (role: string) => {
+    switch (role.toLowerCase()) {
+        case "super_admin":
+            return <Users className="h-3 w-3 mr-1" />;
+        case "city_admin":
+        case "center_admin":
+            return <Building className="h-3 w-3 mr-1" />;
+        case "volunteer":
+            return <Users className="h-3 w-3 mr-1" />;
+        default:
+            return <Users className="h-3 w-3 mr-1" />;
+    }
+};
+
+/* ---------------- component ---------------- */
+
+export function UserTable({
+    data,
+    sortConfig,
+    onSort,
+    onEdit,
+    onDelete,
+    onDeactivate,
+    loading,
+    userRole,
+}: UserTableProps) {
     const canDelete = userRole === "super_admin";
 
-    const columnWidths = {
-        email: "280px",
-        role: "140px",
-        center_name: "200px",
-        status: "120px",
-        actions: "100px",
-    };
+    /* -------- empty state -------- */
 
-    const headers = [
-        { key: "email", label: "Email", sortable: true, width: columnWidths.email },
-        { key: "role", label: "Role", sortable: true, width: columnWidths.role },
-        {
-            key: "center_name",
-            label: "Assigned Center",
-            sortable: true,
-            width: columnWidths.center_name,
-        },
-        { key: "status", label: "Status", sortable: true, width: columnWidths.status },
-        { key: "actions", label: "Action", sortable: false, width: columnWidths.actions },
-    ];
+    if (data.length === 0 && !loading) {
+        return (
+            <div className="p-8 text-center">
+                <div className="text-muted-foreground">No users found.</div>
+            </div>
+        );
+    }
 
-    const getRoleStyles = (role: string) => {
-        switch (role.toLowerCase()) {
-            case "super_admin":
-                return "bg-purple-100 text-purple-700 border-purple-100 dark:bg-purple-900 dark:text-purple-200 dark:border-purple-900";
-            case "city_admin":
-                return "bg-blue-100 text-blue-700 border-blue-100 dark:bg-blue-900 dark:text-blue-200 dark:border-blue-900";
-            case "center_admin":
-                return "bg-orange-100 text-orange-700 border-orange-100 dark:bg-orange-900 dark:text-orange-200 dark:border-orange-900";
-            case "volunteer":
-                return "bg-green-100 text-green-700 border-green-100 dark:bg-green-900 dark:text-green-200 dark:border-green-900";
-            default:
-                return "bg-gray-100 text-gray-700 border-gray-100 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-800";
-        }
-    };
-
-    const getStatusStyles = (isActive: boolean) => {
-        return isActive
-            ? "bg-green-100 text-green-700 border-green-100 dark:bg-green-900 dark:text-green-200 dark:border-green-900"
-            : "bg-gray-100 text-gray-700 border-gray-100 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-800";
-    };
-
-    const getRoleIcon = (role: string) => {
-        switch (role.toLowerCase()) {
-            case "super_admin":
-                return <Users className="h-3 w-3 mr-1" />;
-            case "city_admin":
-                return <Building className="h-3 w-3 mr-1" />;
-            case "center_admin":
-                return <Building className="h-3 w-3 mr-1" />;
-            case "volunteer":
-                return <Users className="h-3 w-3 mr-1" />;
-            default:
-                return <Users className="h-3 w-3 mr-1" />;
-        }
-    };
-
-    const handleDeactivate = (user: User) => {
-        if (onDeactivate) onDeactivate(user);
-    };
+    /* ---------------- render ---------------- */
 
     return (
-        <div className="w-full">
+        <div className="w-full overflow-visible">
             <Table className="table-fixed w-full">
                 <TableHeader>
                     <TableRow className="hover:bg-transparent">
-                        {headers.map(header => (
-                            <TableHead
-                                key={header.key}
-                                className={cn(
-                                    header.sortable && "cursor-pointer hover:bg-muted",
-                                    "font-semibold py-3 text-left"
-                                )}
-                                style={{ width: header.width }}
-                                onClick={header.sortable ? () => onSort(header.key) : undefined}
-                            >
-                                <div className="flex items-center justify-between w-full">
-                                    <span className="truncate block font-medium">
-                                        {header.label}
-                                    </span>
-                                    {header.sortable && (
-                                        <span className="flex-shrink-0 ml-2">
-                                            {getSortIcon(header.key)}
-                                        </span>
-                                    )}
-                                </div>
-                            </TableHead>
-                        ))}
+                        <TableHead
+                            className="font-semibold text-foreground cursor-pointer hover:bg-muted"
+                            onClick={() => onSort("email")}
+                        >
+                            <div className="flex items-center justify-between break-words whitespace-normal">
+                                <span>Email</span>
+                                {getSortIcon(sortConfig, "email")}
+                            </div>
+                        </TableHead>
+
+                        <TableHead
+                            className="font-semibold text-foreground cursor-pointer hover:bg-muted"
+                            onClick={() => onSort("role")}
+                        >
+                            <div className="flex items-center justify-between break-words whitespace-normal">
+                                <span>Role</span>
+                                {getSortIcon(sortConfig, "role")}
+                            </div>
+                        </TableHead>
+
+                        <TableHead
+                            className="font-semibold text-foreground cursor-pointer hover:bg-muted"
+                            onClick={() => onSort("center_name")}
+                        >
+                            <div className="flex items-center justify-between break-words whitespace-normal">
+                                <span>Assigned Center</span>
+                                {getSortIcon(sortConfig, "center_name")}
+                            </div>
+                        </TableHead>
+
+                        <TableHead
+                            className="font-semibold text-foreground cursor-pointer hover:bg-muted"
+                            onClick={() => onSort("is_active")}
+                        >
+                            <div className="flex items-center justify-between break-words whitespace-normal">
+                                <span>Status</span>
+                                {getSortIcon(sortConfig, "is_active")}
+                            </div>
+                        </TableHead>
+
+                        <TableHead className="text-right font-semibold text-foreground w-24">
+                            Actions
+                        </TableHead>
                     </TableRow>
                 </TableHeader>
+
                 <TableBody>
-                    {data.length === 0 && !loading ? (
+                    {loading && data.length === 0 ? (
                         <TableRow>
-                            <TableCell
-                                colSpan={6}
-                                className="h-32 text-center"
-                                style={{ width: "100%" }}
-                            >
-                                <div className="text-muted-foreground flex flex-col items-center justify-center">
-                                    <div className="text-lg font-medium mb-2">No users found</div>
-                                    <div className="text-sm">
-                                        Add your first user to get started
-                                    </div>
+                            <TableCell colSpan={5} className="h-32 text-center">
+                                <div className="text-muted-foreground">
+                                    Loading users...
                                 </div>
                             </TableCell>
                         </TableRow>
@@ -163,21 +190,15 @@ export function UserTable({ data, sortConfig, onSort, onEdit, onDelete, onDeacti
                             <TableRow
                                 key={user.user_id}
                                 className={cn(
-                                    "cursor-pointer hover:bg-muted/50 transition-colors",
-                                    index % 2 === 1 ? "bg-muted/30" : ""
+                                    "hover:bg-muted/50 cursor-pointer",
+                                    index % 2 === 1 && "bg-muted/30"
                                 )}
                             >
-                                <TableCell
-                                    className="font-medium py-3 truncate align-top text-left"
-                                    style={{ width: columnWidths.email }}
-                                    title={user.email}
-                                >
+                                <TableCell className="py-3 font-medium break-words whitespace-normal">
                                     {user.email}
                                 </TableCell>
-                                <TableCell
-                                    className="py-3 align-top text-left"
-                                    style={{ width: columnWidths.role }}
-                                >
+
+                                <TableCell className="py-3">
                                     <Badge
                                         variant="secondary"
                                         className={cn(
@@ -191,57 +212,69 @@ export function UserTable({ data, sortConfig, onSort, onEdit, onDelete, onDeacti
                                         </div>
                                     </Badge>
                                 </TableCell>
-                                <TableCell
-                                    className="py-3 truncate align-top text-left"
-                                    style={{ width: columnWidths.center_name }}
-                                    title={user.center_name || "Not assigned"}
-                                >
+
+                                <TableCell className="py-3 break-words whitespace-normal">
                                     {user.center_name || (
                                         <span className="text-muted-foreground italic">
                                             Not assigned
                                         </span>
                                     )}
                                 </TableCell>
-                                <TableCell
-                                    className="py-3 align-top text-left"
-                                    style={{ width: columnWidths.status }}
-                                >
+
+                                <TableCell className="py-3">
                                     <Badge
                                         variant="secondary"
                                         className={cn(
                                             getStatusStyles(user.is_active),
-                                            "truncate max-w-full inline-block"
+                                            "truncate max-w-full inline-block break-words whitespace-normal"
                                         )}
                                     >
                                         {user.is_active ? "Active" : "Inactive"}
                                     </Badge>
                                 </TableCell>
+
                                 <TableCell
-                                    className="py-3 align-top text-left"
-                                    style={{ width: columnWidths.actions }}
+                                    className="text-right w-24 break-words whitespace-normal"
+                                    onClick={(e) => e.stopPropagation()}
                                 >
                                     <DropdownMenu>
                                         <DropdownMenuTrigger asChild>
-                                            <Button variant="ghost" size="icon" className="h-8 w-8">
+                                            <Button
+                                                variant="ghost"
+                                                size="icon"
+                                                className="h-8 w-8"
+                                            >
                                                 <MoreVertical className="h-4 w-4" />
-                                                <span className="sr-only">Open menu</span>
                                             </Button>
                                         </DropdownMenuTrigger>
+
                                         <DropdownMenuContent align="end">
-                                            <DropdownMenuItem onClick={() => onEdit(user)}>
-                                                <Edit className="h-4 w-4 mr-2" />
+                                            <DropdownMenuItem
+                                                onClick={() => onEdit(user)}
+                                                className="flex items-center gap-2"
+                                            >
+                                                <Edit className="h-4 w-4" />
                                                 Edit
                                             </DropdownMenuItem>
-                                            <DropdownMenuItem onClick={() => handleDeactivate(user)}>
-                                                <Users className="h-4 w-4 mr-2" />
-                                                {user.is_active ? "Deactivate" : "Activate"}
-                                            </DropdownMenuItem>
+
+                                            {onDeactivate && (
+                                                <DropdownMenuItem
+                                                    onClick={() => onDeactivate(user)}
+                                                    className="flex items-center gap-2"
+                                                >
+                                                    <Users className="h-4 w-4" />
+                                                    {user.is_active
+                                                        ? "Deactivate"
+                                                        : "Activate"}
+                                                </DropdownMenuItem>
+                                            )}
+
                                             {canDelete && (
                                                 <DropdownMenuItem
                                                     onClick={() => onDelete(user)}
-                                                    className="text-destructive focus:text-destructive"
+                                                    className="flex items-center gap-2 text-destructive focus:text-destructive"
                                                 >
-                                                    <Trash2 className="h-4 w-4 mr-2" />
+                                                    <Trash2 className="h-4 w-4" />
                                                     Delete
                                                 </DropdownMenuItem>
                                             )}

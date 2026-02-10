@@ -87,7 +87,7 @@ export function MapPanel({
     const zoomLevel = adminCenter && validCenters.length > 0 ? 17 : 12;
 
     return (
-        <div className="relative w-full h-[50vh] border-b border-border flex">
+        <div className="relative w-full h-[60vh] border-b border-border flex">
             {/* Map - Takes up most of the space */}
             <div className={`${isPanelVisible ? "flex-1" : "w-full"} rounded-lg overflow-hidden z-0`}>
                 {/* Only render map when centers are loaded OR when loading is complete */}

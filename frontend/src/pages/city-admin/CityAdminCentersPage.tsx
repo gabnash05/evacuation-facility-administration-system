@@ -46,12 +46,8 @@ export function CityAdminCentersPage() {
     );
 
     useEffect(() => {
-        if (searchQuery || entriesPerPage !== 10) {
-            debouncedFetchCenters();
-        } else {
-            fetchCenters();
-        }
-    }, [searchQuery, currentPage, entriesPerPage, sortConfig, fetchCenters, debouncedFetchCenters]);
+        debouncedFetchCenters();
+    }, [searchQuery, currentPage, entriesPerPage, sortConfig, debouncedFetchCenters]);
 
     const handleSort = (key: string) => {
         if (!sortConfig || sortConfig.key !== key) {
@@ -166,7 +162,7 @@ export function CityAdminCentersPage() {
 
                     {/* Table Section */}
                     <div className="border-b border-border">
-                        {loading ? (
+                        {loading && centers.length === 0 ? (
                             <div className="p-8 text-center">
                                 <div className="text-muted-foreground">Loading centers...</div>
                             </div>

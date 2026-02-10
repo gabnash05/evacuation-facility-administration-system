@@ -106,15 +106,15 @@ export function HouseholdTable({
 
     return (
         <>
-            <div className="w-full">
-                <Table>
+            <div className="w-full overflow-visible">
+                <Table className="table-fixed w-full">
                     <TableHeader>
                         <TableRow className="hover:bg-transparent">
                             {headers.map(header => (
                                 <TableHead
                                     key={header.key}
                                     className={cn(
-                                        "font-semibold text-foreground",
+                                        "font-semibold p-3 text-foreground break-words whitespace-normal",
                                         header.sortable && "cursor-pointer hover:bg-muted"
                                     )}
                                     onClick={header.sortable ? () => onSort(header.key) : undefined}
@@ -125,7 +125,7 @@ export function HouseholdTable({
                                     </div>
                                 </TableHead>
                             ))}
-                            <TableHead className="text-right font-semibold text-foreground">
+                            <TableHead className="text-right font-semibold text-foreground w-24">
                                 Actions
                             </TableHead>
                         </TableRow>
@@ -147,19 +147,19 @@ export function HouseholdTable({
                                 <TableRow
                                     key={row.household_id}
                                     className={cn(
-                                        "hover:bg-muted/50 cursor-pointer", // Added cursor-pointer
+                                        "hover:bg-muted/50 cursor-pointer",
                                         index % 2 === 1 && "bg-muted/30"
                                     )}
-                                    onClick={() => onRowClick(row.household_id)} // Added row click handler
+                                    onClick={() => onRowClick(row.household_id)}
                                 >
                                     {headers.map(header => (
-                                        <TableCell key={header.key} className="py-3">
+                                        <TableCell key={header.key} className="py-3 break-words whitespace-normal">
                                             {row[header.key as keyof Household]}
                                         </TableCell>
                                     ))}
                                     <TableCell 
-                                        className="text-right"
-                                        onClick={(e) => e.stopPropagation()} // Prevent row click when clicking actions
+                                        className="text-right w-24"
+                                        onClick={(e) => e.stopPropagation()}
                                     >
                                         <DropdownMenu>
                                             <DropdownMenuTrigger asChild>
@@ -167,7 +167,7 @@ export function HouseholdTable({
                                                     variant="ghost"
                                                     size="icon"
                                                     className="h-8 w-8"
-                                                    onClick={(e) => e.stopPropagation()} // Prevent row click
+                                                    onClick={(e) => e.stopPropagation()}
                                                 >
                                                     <MoreVertical className="h-4 w-4" />
                                                 </Button>

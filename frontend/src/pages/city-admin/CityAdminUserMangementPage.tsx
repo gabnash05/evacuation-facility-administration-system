@@ -256,22 +256,17 @@ export function CityAdminUserManagementPage() {
                     </div>
 
                     <div className="border-b border-border">
-                        {loading ? (
-                            <div className="p-8 text-center">
-                                <div className="text-muted-foreground">Loading users...</div>
-                            </div>
-                        ) : (
-                            <UserTable
-                                data={users}
-                                sortConfig={sortConfig}
-                                onSort={handleSort}
-                                onEdit={handleEditUser}
-                                onDelete={handleDeleteUser}
-                                onDeactivate={handleDeactivate}
-                                loading={loading}
-                                userRole={userRole}
-                            />
-                        )}
+                        {/* REMOVED: Early loading check */}
+                        <UserTable
+                            data={users}
+                            sortConfig={sortConfig}
+                            onSort={handleSort}
+                            onEdit={handleEditUser}
+                            onDelete={handleDeleteUser}
+                            onDeactivate={handleDeactivate}
+                            loading={loading}
+                            userRole={userRole}
+                        />
                     </div>
 
                     <div className="bg-card p-4">

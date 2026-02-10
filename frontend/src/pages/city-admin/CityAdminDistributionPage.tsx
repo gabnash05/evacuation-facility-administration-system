@@ -8,6 +8,7 @@ import { EditDistributionModal } from "@/components/features/distribution/EditDi
 import { DistributionHistoryTable } from "@/components/features/distribution/DistributionHistoryTable";
 import { DeleteConfirmationModal } from "@/components/features/user-management/DeleteConfirmationModal";
 import type { DistributionRecord } from "@/types/distribution";
+import { debounce } from "@/utils/helpers";
 
 export function CityAdminDistributionPage() {
     const { user } = useAuthStore();
@@ -37,7 +38,25 @@ export function CityAdminDistributionPage() {
     const [editRecord, setEditRecord] = useState<DistributionRecord | null>(null);
     const [deleteRecord, setDeleteRecord] = useState<DistributionRecord | null>(null);
 
-    // Debounce effect
+    // Create debounced fetch function
+    const debouncedFetchData = useMemo(
+        () => debounce(() => fetchData(), 500),
+        [fetchData]
+    );
+
+    // Fetch data on mount and when dependencies change
+    useEffect(() => {
+        debouncedFetchData();
+    }, [
+        searchQuery,
+        currentPage,
+        entriesPerPage,
+        sortColumn,
+        sortDirection,
+        debouncedFetchData // Add this to dependencies
+    ]);
+
+    // Debounce effect for search - similar to other pages
     useEffect(() => {
         const timer = setTimeout(() => {
             if (localSearch !== searchQuery) {
@@ -62,12 +81,8 @@ export function CityAdminDistributionPage() {
             setSortColumn(column);
             setSortDirection("desc");
         }
-    }, [sortColumn, sortDirection, setSortColumn, setSortDirection]);
-
-    // Fetch data when dependencies change
-    useEffect(() => {
-        fetchData();
-    }, [fetchData, currentPage, entriesPerPage, searchQuery, sortColumn, sortDirection]);
+        setCurrentPage(1); // Reset to first page when sorting
+    }, [sortColumn, sortDirection, setSortColumn, setSortDirection, setCurrentPage]);
 
     // Server-side pagination data
     const totalPages = pagination?.total_pages || 1;
@@ -77,6 +92,8 @@ export function CityAdminDistributionPage() {
         if (deleteRecord) {
             await deleteDistribution(deleteRecord.distribution_id);
             setDeleteRecord(null);
+            // Refresh data after deletion
+            debouncedFetchData();
         }
     };
 
@@ -107,16 +124,22 @@ export function CityAdminDistributionPage() {
 
                     {/* Table */}
                     <div className="border-b border-border">
-                        <DistributionHistoryTable 
-                            data={history}
-                            loading={isLoading}
-                            userRole={user?.role}
-                            onEdit={setEditRecord}
-                            onDelete={setDeleteRecord}
-                            onSort={handleSort}
-                            sortColumn={sortColumn}
-                            sortDirection={sortDirection}
-                        />
+                        {isLoading && history.length === 0 ? (
+                            <div className="p-8 text-center">
+                                <div className="text-muted-foreground">Loading distribution records...</div>
+                            </div>
+                        ) : (
+                            <DistributionHistoryTable 
+                                data={history}
+                                loading={isLoading}
+                                userRole={user?.role}
+                                onEdit={setEditRecord}
+                                onDelete={setDeleteRecord}
+                                onSort={handleSort}
+                                sortColumn={sortColumn}
+                                sortDirection={sortDirection}
+                            />
+                        )}
                     </div>
 
                     {/* Pagination */}

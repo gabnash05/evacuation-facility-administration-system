@@ -134,11 +134,15 @@ export function CityAdminHouseholdsPage() {
     return (
         <div className="w-full min-w-0 bg-background flex flex-col relative p-6">
             <div className="space-y-6">
+                {/* Page Header */}
                 <div>
                     <h1 className="text-2xl font-bold tracking-tight">Household Management</h1>
-                    <p className="text-muted-foreground">View and manage household records</p>
+                    <p className="text-muted-foreground">
+                        View and manage household records
+                    </p>
                 </div>
 
+                {/* Error Display */}
                 {error && (
                     <div className="bg-destructive/15 text-destructive p-4 rounded-md">
                         <div className="flex items-center gap-2">
@@ -147,7 +151,9 @@ export function CityAdminHouseholdsPage() {
                     </div>
                 )}
 
+                {/* Main Table Card */}
                 <div className="border border-border rounded-lg">
+                    {/* Controls Bar */}
                     <div className="bg-card border-b border-border p-4">
                         <HouseholdTableToolbar
                             searchQuery={searchQuery}
@@ -158,6 +164,8 @@ export function CityAdminHouseholdsPage() {
                             loading={loading}
                         />
                     </div>
+
+                    {/* Table Section */}
                     <div className="border-b border-border">
                         {loading && households.length === 0 ? (
                             <div className="p-8 text-center">
@@ -177,6 +185,8 @@ export function CityAdminHouseholdsPage() {
                             />
                         )}
                     </div>
+
+                    {/* Pagination Section */}
                     <div className="bg-card p-4">
                         <TablePagination
                             currentPage={currentPage}
@@ -189,6 +199,8 @@ export function CityAdminHouseholdsPage() {
                     </div>
                 </div>
             </div>
+
+            {/* Add Household Modal */}
             <AddHouseholdModal
                 isOpen={isAddModalOpen}
                 onClose={() => setIsAddModalOpen(false)}
@@ -198,6 +210,8 @@ export function CityAdminHouseholdsPage() {
                     fetchHouseholds();
                 }}
             />
+
+            {/* Edit Household Modal */}
             <EditHouseholdModal
                 isOpen={isEditModalOpen}
                 householdId={selectedHouseholdId}
@@ -208,11 +222,15 @@ export function CityAdminHouseholdsPage() {
                     fetchHouseholds();
                 }}
             />
+
+            {/* Household Details Modal */}
             <HouseholdDetailsModal
                 householdId={selectedHouseholdForDetails}
                 isOpen={isDetailsModalOpen}
                 onClose={() => setIsDetailsModalOpen(false)}
             />
+
+            {/* Global Success Toast */}
             <SuccessToast
                 isOpen={successToast.isOpen}
                 message={successToast.message}
