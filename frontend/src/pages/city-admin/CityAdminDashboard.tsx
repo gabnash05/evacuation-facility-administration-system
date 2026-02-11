@@ -417,6 +417,7 @@ export function CityAdminDashboard() {
                 selectedCenter={selectedCenter}
                 isLoadingCenter={isLoadingCenter || isLoadingCenters}
                 getCenterStatusStyles={getCenterStatusStyles}
+                userRole={userRole}
                 getUsageColor={getUsageColor}
                 centers={mapCenters.length > 0 ? mapCenters : evacuationCenters}
             />

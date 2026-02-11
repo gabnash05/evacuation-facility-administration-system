@@ -299,7 +299,7 @@ export function CityAdminAidAllocationPage() {
                 onClose={() => setShowAllocationForm(false)}
                 onSubmit={handleAllocationSubmit}
                 title="Allocate Aid to Center"
-                submitText="Allocate"
+                submitText="Allocate Aid"
             />
 
             {/* Edit Allocation Form Modal */}

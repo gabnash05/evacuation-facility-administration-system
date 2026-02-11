@@ -602,10 +602,10 @@ export function AidAllocationForm({
 
                     {/* Recommended Quantity Information */}
                     {formData.distribution_type && calculationInfo && (
-                        <Alert className="bg-blue-50 border-blue-200">
+                        <Alert className="bg-muted/50 border-border">
                             <div className="flex items-start">
-                                <Calculator className="h-4 w-4 text-blue-600 mt-0.5 mr-2" />
-                                <AlertDescription className="text-sm">
+                                <Calculator className="h-4 w-4 text-primary mt-0.5 mr-2" />
+                                <AlertDescription className="text-sm text-foreground">
                                     <span className="font-medium">Recommended:</span> {calculationInfo}
                                     {recommendedQuantity !== null && (
                                         <>

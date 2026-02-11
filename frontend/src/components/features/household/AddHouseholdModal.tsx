@@ -400,7 +400,7 @@ export function AddHouseholdModal({
                             disabled={isSubmitting || centersLoading}
                             className="bg-blue-600 hover:bg-blue-700 px-6"
                         >
-                            {isSubmitting ? "Creating..." : "Create Household"}
+                            {isSubmitting ? "Adding..." : "Add Household"}
                         </Button>
                     </DialogFooter>
                 </DialogContent>

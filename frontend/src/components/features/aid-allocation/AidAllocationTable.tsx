@@ -313,7 +313,7 @@ export function AidDistributionTable({
                                         className={cn(
                                             "py-3 break-words whitespace-normal",
                                             column.key === columns[0].key &&
-                                                "font-medium",
+                                                "font-medium text-muted-foreground",
                                             column.className
                                         )}
                                     >
