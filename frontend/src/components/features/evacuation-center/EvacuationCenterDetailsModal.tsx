@@ -43,7 +43,6 @@ const formatDateForDisplay = (dateString: string): string => {
     return `${day}/${month}/${year}`;
 };
 
-
 // Helper function to calculate age from date of birth
 const calculateAge = (dateOfBirth: string): string => {
     if (!dateOfBirth) return "N/A";
@@ -62,7 +61,6 @@ const calculateAge = (dateOfBirth: string): string => {
     
     return age.toString();
 };
-
 
 // Helper function to capitalize status for display
 const capitalizeStatus = (status: string): string => {
@@ -247,187 +245,183 @@ export function EvacuationCenterDetailsModal({
 
     // Center Details Content
     const centerDetailsContent = (
-        <div className="space-y-6 overflow-y-auto">
-            {/* Header and Basic Center Details */}
-            <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
-                {/* Left Side - Map */}
-                <div className="xl:col-span-1 space-y-3">
-                    <Label className="text-sm font-medium">Location</Label>
-                    <div className="border border-border rounded-lg bg-muted/50 h-80 relative">
-                        <MonoMap 
-                            centers={mapCenters}
-                            center={mapCenter}
-                            zoom={center.latitude && center.longitude ? 15 : 13}
-                            onCenterClick={() => {}}
-                            className="h-full"
-                        />
-                        {!center.latitude || !center.longitude ? (
-                            <div className="absolute inset-0 flex items-center justify-center bg-background/80 z-10">
-                                <div className="text-center p-4">
-                                    <MapPin className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
-                                    <p className="text-sm text-muted-foreground">
-                                        No location coordinates available
-                                    </p>
+        <div className="space-y-6">
+            {/* Two column layout for remaining content */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {/* Left column - Photo */}
+                <div className="space-y-3">
+                    <Label className="text-sm font-medium">Photo of Evacuation Center</Label>
+                    <div className="border border-border rounded-lg bg-muted/50 h-[250px] flex items-center justify-center overflow-hidden">
+                        {center.photo_data ? (
+                            <img
+                                src={`data:image/jpeg;base64,${center.photo_data}`}
+                                alt={center.center_name}
+                                className="w-full h-full object-contain bg-gray-100 dark:bg-gray-900"
+                            />
+                        ) : (
+                            <div className="text-muted-foreground text-center p-4">
+                                <div className="mb-2">
+                                    <svg
+                                        className="mx-auto h-16 w-16"
+                                        fill="none"
+                                        stroke="currentColor"
+                                        viewBox="0 0 24 24"
+                                    >
+                                        <path
+                                            strokeLinecap="round"
+                                            strokeLinejoin="round"
+                                            strokeWidth={1.5}
+                                            d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
+                                        />
+                                    </svg>
                                 </div>
+                                <p className="text-sm">No photo available</p>
                             </div>
-                        ) : null}
+                        )}
                     </div>
-                    {center.latitude && center.longitude && (
-                        <div className="text-xs text-muted-foreground flex items-center gap-2 mt-1">
-                            <MapPin className="h-3 w-3" />
-                            <span>Lat: {center.latitude.toFixed(6)}°</span>
-                            <span>•</span>
-                            <span>Lng: {center.longitude.toFixed(6)}°</span>
-                        </div>
-                    )}
                 </div>
 
-                {/* Right Side - Center Information */}
-                <div className="xl:col-span-2 space-y-6">
-                    {/* Center Photo at the top of right side */}
-                    <div className="space-y-3">
-                        <Label className="text-sm font-medium">Photo of Evacuation Center</Label>
-                        <div className="border border-border rounded-lg bg-muted/50 h-60 flex items-center justify-center overflow-hidden">
-                            {center.photo_data ? (
-                                <img
-                                    src={`data:image/jpeg;base64,${center.photo_data}`}
-                                    alt={center.center_name}
-                                    className="w-full h-full object-cover rounded-lg"
-                                />
-                            ) : (
-                                <div className="text-muted-foreground text-center p-4">
-                                    <div className="mb-2">
-                                        <svg
-                                            className="mx-auto h-16 w-16"
-                                            fill="none"
-                                            stroke="currentColor"
-                                            viewBox="0 0 24 24"
-                                        >
-                                            <path
-                                                strokeLinecap="round"
-                                                strokeLinejoin="round"
-                                                strokeWidth={1.5}
-                                                d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
-                                            />
-                                        </svg>
-                                    </div>
-                                    <p className="text-sm">No photo available</p>
-                                </div>
-                            )}
+                {/* Right column - Status, Capacity, Occupancy */}
+                <div className="space-y-6">
+                    <div className="space-y-2">
+                        <Label htmlFor="status" className="text-sm font-medium">
+                            Status
+                        </Label>
+                        <div>
+                            <Badge
+                                variant="secondary"
+                                className={cn(
+                                    getCenterStatusColor(center.status),
+                                    "text-sm font-medium px-3 py-1.5"
+                                )}
+                            >
+                                {center.status.charAt(0).toUpperCase() +
+                                    center.status.slice(1).toLowerCase()}
+                            </Badge>
                         </div>
                     </div>
 
-                    {/* Status and Usage Percentage */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div className="space-y-2">
-                            <Label htmlFor="status" className="text-sm font-medium">
-                                Status
-                            </Label>
-                            <div>
-                                <Badge
-                                    variant="secondary"
+                    <div className="space-y-2">
+                        <Label className="text-sm font-medium">Usage Percentage</Label>
+                        <div className="flex items-center gap-4">
+                            <div className="w-full bg-gray-200 rounded-full h-3 dark:bg-gray-700 flex-1">
+                                <div
                                     className={cn(
-                                        getCenterStatusColor(center.status),
-                                        "text-sm font-medium px-3 py-1.5"
+                                        "h-3 rounded-full",
+                                        center.capacity > 0
+                                            ? Math.round(
+                                                (center.current_occupancy / center.capacity) *
+                                                    100
+                                            ) >= 80
+                                                ? "bg-red-600"
+                                                : Math.round(
+                                                        (center.current_occupancy /
+                                                            center.capacity) *
+                                                            100
+                                                    ) >= 60
+                                                ? "bg-yellow-500"
+                                                : "bg-green-500"
+                                            : "bg-gray-400"
                                     )}
-                                >
-                                    {center.status.charAt(0).toUpperCase() +
-                                        center.status.slice(1).toLowerCase()}
-                                </Badge>
-                            </div>
-                        </div>
-
-                        <div className="space-y-2">
-                            <Label className="text-sm font-medium">Usage Percentage</Label>
-                            <div className="flex items-center gap-4">
-                                <div className="w-full bg-gray-200 rounded-full h-3 dark:bg-gray-700 flex-1">
-                                    <div
-                                        className={cn(
-                                            "h-3 rounded-full",
+                                    style={{
+                                        width:
                                             center.capacity > 0
-                                                ? Math.round(
-                                                    (center.current_occupancy / center.capacity) *
-                                                        100
-                                                ) >= 80
-                                                    ? "bg-red-600"
-                                                    : Math.round(
-                                                            (center.current_occupancy /
-                                                                center.capacity) *
-                                                                100
-                                                        ) >= 60
-                                                    ? "bg-yellow-500"
-                                                    : "bg-green-500"
-                                                : "bg-gray-400"
-                                        )}
-                                        style={{
-                                            width:
-                                                center.capacity > 0
-                                                    ? `${Math.min(Math.round((center.current_occupancy / center.capacity) * 100), 100)}%`
-                                                    : "0%",
-                                        }}
-                                    />
-                                </div>
-                                <span className="text-sm font-medium whitespace-nowrap min-w-[60px]">
-                                    {center.capacity > 0
-                                        ? `${Math.round((center.current_occupancy / center.capacity) * 100)}%`
-                                        : "0%"}
-                                </span>
+                                                ? `${Math.min(Math.round((center.current_occupancy / center.capacity) * 100), 100)}%`
+                                                : "0%",
+                                    }}
+                                />
                             </div>
+                            <span className="text-sm font-medium whitespace-nowrap min-w-[60px]">
+                                {center.capacity > 0
+                                    ? `${Math.round((center.current_occupancy / center.capacity) * 100)}%`
+                                    : "0%"}
+                            </span>
                         </div>
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div className="space-y-2">
-                            <Label htmlFor="center_name" className="text-sm font-medium">
-                                Center Name
-                            </Label>
-                            <Input
-                                id="center_name"
-                                value={center.center_name}
-                                readOnly
-                                className="bg-muted/50 h-11 text-base"
-                            />
-                        </div>
-
-                        <div className="space-y-2">
-                            <Label htmlFor="address" className="text-sm font-medium">
-                                Address
-                            </Label>
-                            <Input
-                                id="address"
-                                value={center.address}
-                                readOnly
-                                className="bg-muted/50 h-11 text-base"
-                            />
-                        </div>
+                    <div className="space-y-2">
+                        <Label htmlFor="capacity" className="text-sm font-medium">
+                            Capacity
+                        </Label>
+                        <Input
+                            id="capacity"
+                            value={center.capacity.toLocaleString()}
+                            readOnly
+                            className="bg-muted/50 h-11 text-base font-medium"
+                        />
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div className="space-y-2">
-                            <Label htmlFor="capacity" className="text-sm font-medium">
-                                Capacity
-                            </Label>
-                            <Input
-                                id="capacity"
-                                value={center.capacity.toLocaleString()}
-                                readOnly
-                                className="bg-muted/50 h-11 text-base font-medium"
-                            />
-                        </div>
-
-                        <div className="space-y-2">
-                            <Label htmlFor="current_occupancy" className="text-sm font-medium">
-                                Current Occupancy
-                            </Label>
-                            <Input
-                                id="current_occupancy"
-                                value={center.current_occupancy.toLocaleString()}
-                                readOnly
-                                className="bg-muted/50 h-11 text-base font-medium"
-                            />
-                        </div>
+                    <div className="space-y-2">
+                        <Label htmlFor="current_occupancy" className="text-sm font-medium">
+                            Current Occupancy
+                        </Label>
+                        <Input
+                            id="current_occupancy"
+                            value={center.current_occupancy.toLocaleString()}
+                            readOnly
+                            className="bg-muted/50 h-11 text-base font-medium"
+                        />
                     </div>
                 </div>
+            </div>
+
+            {/* Bottom row - Center Name and Address */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2">
+                <div className="space-y-2">
+                    <Label htmlFor="center_name" className="text-sm font-medium">
+                        Center Name
+                    </Label>
+                    <Input
+                        id="center_name"
+                        value={center.center_name}
+                        readOnly
+                        className="bg-muted/50 h-11 text-base"
+                    />
+                </div>
+
+                <div className="space-y-2">
+                    <Label htmlFor="address" className="text-sm font-medium">
+                        Address
+                    </Label>
+                    <Input
+                        id="address"
+                        value={center.address}
+                        readOnly
+                        className="bg-muted/50 h-11 text-base"
+                    />
+                </div>
+            </div>
+
+            {/* Map - Full width, not thin */}
+            <div className="space-y-3">
+                <Label className="text-sm font-medium">Location</Label>
+                <div className="border border-border rounded-lg bg-muted/50 h-[350px] relative overflow-hidden">
+                    <MonoMap 
+                        centers={mapCenters}
+                        center={mapCenter}
+                        zoom={center.latitude && center.longitude ? 15 : 13}
+                        onCenterClick={() => {}}
+                        className="h-full"
+                    />
+                    {!center.latitude || !center.longitude ? (
+                        <div className="absolute inset-0 flex items-center justify-center bg-background/80 z-10">
+                            <div className="text-center p-4">
+                                <MapPin className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
+                                <p className="text-sm text-muted-foreground">
+                                    No location coordinates available
+                                </p>
+                            </div>
+                        </div>
+                    ) : null}
+                </div>
+                {center.latitude && center.longitude && (
+                    <div className="text-xs text-muted-foreground flex items-center gap-2 mt-1">
+                        <MapPin className="h-3 w-3" />
+                        <span>Lat: {center.latitude.toFixed(6)}°</span>
+                        <span>•</span>
+                        <span>Lng: {center.longitude.toFixed(6)}°</span>
+                    </div>
+                )}
             </div>
         </div>
     );
@@ -691,54 +685,43 @@ export function EvacuationCenterDetailsModal({
     return (
         <Dialog open={isOpen} onOpenChange={onClose}>
             <DialogContent
-                className="max-w-[85vw] min-w-[85vw] h-[90vh] p-0 overflow-hidden flex flex-col"
+                className="max-w-[85vw] min-w-[85vw] max-h-[90vh] overflow-y-auto p-0"
                 onOpenAutoFocus={e => {
                     e.preventDefault();
                 }}
             >
-                <div className="flex flex-col h-full">
-                    {/* Fixed Header */}
-                    <div className="p-6 pb-4 flex-shrink-0">
-                        <DialogHeader>
-                            <DialogTitle className="text-xl font-semibold">
-                                Evacuation Center Details
-                            </DialogTitle>
-                        </DialogHeader>
-                    </div>
+                <div className="p-6 pb-0">
+                    <DialogHeader>
+                        <DialogTitle className="text-xl font-semibold">
+                            Evacuation Center Details
+                        </DialogTitle>
+                    </DialogHeader>
+                </div>
 
-                    {/* Fixed Tabs */}
-                    <div className="px-6 flex-shrink-0">
-                        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-                            <TabsList className="grid w-full grid-cols-3 justify-start">
-                                <TabsTrigger value="details">Center Details</TabsTrigger>
-                                <TabsTrigger value="events">Events</TabsTrigger>
-                                <TabsTrigger value="attendance">Attendance</TabsTrigger>
-                            </TabsList>
-                        </Tabs>
-                    </div>
+                <div className="px-6">
+                    <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+                        <TabsList className="grid w-full grid-cols-3 justify-start">
+                            <TabsTrigger value="details">Center Details</TabsTrigger>
+                            <TabsTrigger value="events">Events</TabsTrigger>
+                            <TabsTrigger value="attendance">Attendance</TabsTrigger>
+                        </TabsList>
+                    </Tabs>
+                </div>
 
-                    {/* Scrollable Content */}
-                    <div className="flex-1 overflow-hidden px-6 pb-6">
-                        <Tabs value={activeTab} className="w-full h-full">
-                            <TabsContent value="details" className="h-full m-0 pt-4 overflow-hidden">
-                                <div className="h-full overflow-y-auto pr-2 -mr-2">
-                                    {centerDetailsContent}
-                                </div>
-                            </TabsContent>
+                <div className="p-6 pt-4">
+                    <Tabs value={activeTab} className="w-full">
+                        <TabsContent value="details" className="m-0">
+                            {centerDetailsContent}
+                        </TabsContent>
 
-                            <TabsContent value="events" className="h-full m-0 pt-4 overflow-hidden">
-                                <div className="h-full overflow-y-auto pr-2 -mr-2">
-                                    {eventsContent}
-                                </div>
-                            </TabsContent>
+                        <TabsContent value="events" className="m-0">
+                            {eventsContent}
+                        </TabsContent>
 
-                            <TabsContent value="attendance" className="h-full m-0 pt-4 overflow-hidden">
-                                <div className="h-full overflow-y-auto pr-2 -mr-2">
-                                    {attendanceContent}
-                                </div>
-                            </TabsContent>
-                        </Tabs>
-                    </div>
+                        <TabsContent value="attendance" className="m-0">
+                            {attendanceContent}
+                        </TabsContent>
+                    </Tabs>
                 </div>
             </DialogContent>
         </Dialog>

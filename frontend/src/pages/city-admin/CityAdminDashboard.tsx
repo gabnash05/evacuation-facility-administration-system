@@ -421,7 +421,6 @@ export function CityAdminDashboard() {
                 centers={mapCenters.length > 0 ? mapCenters : evacuationCenters}
             />
 
-            {/* UPDATED: Use new StatsRow with filters - NO centerId for city admin */}
             <StatsRow />
 
             <EventHistoryTable

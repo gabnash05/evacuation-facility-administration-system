@@ -330,258 +330,263 @@ export function EditAllocationForm({
     return (
         <Dialog open={isOpen} onOpenChange={handleClose}>
             <DialogContent 
-                className="max-w-md"
+                className="max-w-md max-h-[90vh] overflow-y-auto p-0"
                 onOpenAutoFocus={handleOpenAutoFocus}
                 onCloseAutoFocus={(event) => event.preventDefault()}
             >
-                <DialogHeader>
+                {/* Fixed Header - No sticky, just normal flow */}
+                <DialogHeader className="px-6 pt-6 pb-4 border-b">
                     <DialogTitle>{title}</DialogTitle>
                 </DialogHeader>
                 
-                <div className="space-y-4 py-4">
-                    {/* Evacuation Center (Read-only) */}
-                    <div className="space-y-2">
-                        <Label htmlFor="center_id" className="font-semibold">
-                            Evacuation Center
-                        </Label>
-                        <Select
-                            value={formData.center_id}
-                            onValueChange={(value) => handleChange("center_id", value)}
-                            disabled={true} // Center cannot be changed
-                        >
-                            <SelectTrigger 
-                                className="w-full bg-muted"
-                                ref={firstSelectRef}
+                {/* Scrollable Content */}
+                <div className="px-6 py-4">
+                    <div className="space-y-4">
+                        {/* Evacuation Center (Read-only) */}
+                        <div className="space-y-2">
+                            <Label htmlFor="center_id" className="font-semibold">
+                                Evacuation Center
+                            </Label>
+                            <Select
+                                value={formData.center_id}
+                                onValueChange={(value) => handleChange("center_id", value)}
+                                disabled={true} // Center cannot be changed
                             >
-                                <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                                {loading.centers ? (
-                                    <SelectItem value="loading" disabled>
-                                        Loading...
-                                    </SelectItem>
-                                ) : activeCenters.length > 0 ? (
-                                    activeCenters.map(center => (
-                                        <SelectItem key={center.id} value={center.id.toString()}>
-                                            {center.name}
+                                <SelectTrigger 
+                                    className="w-full bg-muted"
+                                    ref={firstSelectRef}
+                                >
+                                    <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {loading.centers ? (
+                                        <SelectItem value="loading" disabled>
+                                            Loading...
                                         </SelectItem>
-                                    ))
-                                ) : (
-                                    <SelectItem value="none" disabled>
-                                        No active centers
-                                    </SelectItem>
-                                )}
-                            </SelectContent>
-                        </Select>
-                    </div>
-
-                    {/* Event (Read-only) */}
-                    <div className="space-y-2">
-                        <Label htmlFor="event_id" className="font-semibold">
-                            Event
-                        </Label>
-                        <Select
-                            value={formData.event_id}
-                            onValueChange={(value) => handleChange("event_id", value)}
-                            disabled={true} // Event cannot be changed
-                        >
-                            <SelectTrigger className="w-full bg-muted">
-                                <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                                {loading.events ? (
-                                    <SelectItem value="loading" disabled>
-                                        Loading...
-                                    </SelectItem>
-                                ) : activeEvents.length > 0 ? (
-                                    activeEvents.map(event => (
-                                        <SelectItem key={event.event_id} value={event.event_id.toString()}>
-                                            {event.event_name}
+                                    ) : activeCenters.length > 0 ? (
+                                        activeCenters.map(center => (
+                                            <SelectItem key={center.id} value={center.id.toString()}>
+                                                {center.name}
+                                            </SelectItem>
+                                        ))
+                                    ) : (
+                                        <SelectItem value="none" disabled>
+                                            No active centers
                                         </SelectItem>
-                                    ))
-                                ) : (
-                                    <SelectItem value="none" disabled>
-                                        No events for selected center
-                                    </SelectItem>
-                                )}
-                            </SelectContent>
-                        </Select>
-                    </div>
+                                    )}
+                                </SelectContent>
+                            </Select>
+                        </div>
 
-                    {/* Category (Read-only) */}
-                    <div className="space-y-2">
-                        <Label htmlFor="category_id" className="font-semibold">
-                            Category
-                        </Label>
-                        <Select
-                            value={formData.category_id}
-                            onValueChange={(value) => handleChange("category_id", value)}
-                            disabled={true} // Category cannot be changed
-                        >
-                            <SelectTrigger className="w-full bg-muted">
-                                <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                                {loading.categories ? (
-                                    <SelectItem value="loading" disabled>
-                                        Loading...
-                                    </SelectItem>
-                                ) : aidCategories.length > 0 ? (
-                                    aidCategories.map(category => (
-                                        <SelectItem key={category.category_id} value={category.category_id.toString()}>
-                                            {category.category_name}
+                        {/* Event (Read-only) */}
+                        <div className="space-y-2">
+                            <Label htmlFor="event_id" className="font-semibold">
+                                Event
+                            </Label>
+                            <Select
+                                value={formData.event_id}
+                                onValueChange={(value) => handleChange("event_id", value)}
+                                disabled={true} // Event cannot be changed
+                            >
+                                <SelectTrigger className="w-full bg-muted">
+                                    <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {loading.events ? (
+                                        <SelectItem value="loading" disabled>
+                                            Loading...
                                         </SelectItem>
-                                    ))
-                                ) : (
-                                    <SelectItem value="none" disabled>
-                                        No active categories
-                                    </SelectItem>
-                                )}
-                            </SelectContent>
-                        </Select>
-                    </div>
+                                    ) : activeEvents.length > 0 ? (
+                                        activeEvents.map(event => (
+                                            <SelectItem key={event.event_id} value={event.event_id.toString()}>
+                                                {event.event_name}
+                                            </SelectItem>
+                                        ))
+                                    ) : (
+                                        <SelectItem value="none" disabled>
+                                            No events for selected center
+                                        </SelectItem>
+                                    )}
+                                </SelectContent>
+                            </Select>
+                        </div>
 
-                    {/* Relief Type */}
-                    <div className="space-y-2">
-                        <Label htmlFor="resource_name" className="font-semibold">
-                            Relief Type
-                        </Label>
-                        <Input
-                            ref={resourceNameInputRef}
-                            id="resource_name"
-                            value={formData.resource_name}
-                            onChange={(e) => handleChange("resource_name", e.target.value)}
-                            className={`w-full ${errors.resource_name ? "border-destructive" : ""}`}
-                            placeholder="e.g., Food Packs, Medicine, Blankets"
-                            autoComplete="off"
-                        />
-                        {errors.resource_name && (
-                            <p className="text-sm text-destructive">{errors.resource_name}</p>
-                        )}
-                    </div>
+                        {/* Category (Read-only) */}
+                        <div className="space-y-2">
+                            <Label htmlFor="category_id" className="font-semibold">
+                                Category
+                            </Label>
+                            <Select
+                                value={formData.category_id}
+                                onValueChange={(value) => handleChange("category_id", value)}
+                                disabled={true} // Category cannot be changed
+                            >
+                                <SelectTrigger className="w-full bg-muted">
+                                    <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {loading.categories ? (
+                                        <SelectItem value="loading" disabled>
+                                            Loading...
+                                        </SelectItem>
+                                    ) : aidCategories.length > 0 ? (
+                                        aidCategories.map(category => (
+                                            <SelectItem key={category.category_id} value={category.category_id.toString()}>
+                                                {category.category_name}
+                                            </SelectItem>
+                                        ))
+                                    ) : (
+                                        <SelectItem value="none" disabled>
+                                            No active categories
+                                        </SelectItem>
+                                    )}
+                                </SelectContent>
+                            </Select>
+                        </div>
 
-                    {/* Quantity */}
-                    <div className="space-y-2">
-                        <Label htmlFor="total_quantity" className="font-semibold">
-                            Total Quantity
-                        </Label>
-                        <div className="relative w-full">
+                        {/* Relief Type */}
+                        <div className="space-y-2">
+                            <Label htmlFor="resource_name" className="font-semibold">
+                                Relief Type
+                            </Label>
                             <Input
-                                id="total_quantity"
-                                type="text"
-                                inputMode="numeric"
-                                pattern="[0-9]*"
-                                value={formData.total_quantity}
-                                onChange={(e) => {
-                                    const value = e.target.value.replace(/[^0-9]/g, '');
-                                    handleChange("total_quantity", value);
-                                }}
-                                className={`w-full pr-16 ${errors.total_quantity ? "border-destructive" : ""}`}
-                                placeholder="e.g., 450"
+                                ref={resourceNameInputRef}
+                                id="resource_name"
+                                value={formData.resource_name}
+                                onChange={(e) => handleChange("resource_name", e.target.value)}
+                                className={`w-full ${errors.resource_name ? "border-destructive" : ""}`}
+                                placeholder="e.g., Food Packs, Medicine, Blankets"
                                 autoComplete="off"
                             />
-                            <div className="absolute inset-y-0 right-0 flex flex-col border-l border-input">
-                                <button
-                                    type="button"
-                                    onClick={() => handleQuantityChange('increment')}
-                                    className="flex-1 flex items-center justify-center px-3 border-b border-input hover:bg-accent focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
-                                    aria-label="Increase quantity"
-                                >
-                                    <ChevronUp className="h-3 w-3" />
-                                </button>
-                                <button
-                                    type="button"
-                                    onClick={() => handleQuantityChange('decrement')}
-                                    className="flex-1 flex items-center justify-center px-3 hover:bg-accent focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
-                                    aria-label="Decrease quantity"
-                                >
-                                    <ChevronDown className="h-3 w-3" />
-                                </button>
-                            </div>
+                            {errors.resource_name && (
+                                <p className="text-sm text-destructive">{errors.resource_name}</p>
+                            )}
                         </div>
-                        {errors.total_quantity && (
-                            <p className="text-sm text-destructive">{errors.total_quantity}</p>
-                        )}
-                    </div>
 
-                    {/* Distribution Rule */}
-                    <div className="space-y-3">
-                        <Label className="font-semibold block">Distribution Rule</Label>
-                        {errors.distribution_type && (
-                            <p className="text-sm text-destructive">{errors.distribution_type}</p>
-                        )}
-                        <div className="flex space-x-6">
-                            <div className="flex items-center">
-                                <input
-                                    type="radio"
-                                    id="per_individual"
-                                    name="distribution_type"
-                                    value="per_individual"
-                                    checked={formData.distribution_type === "per_individual"}
-                                    onChange={(e) => handleChange("distribution_type", e.target.value)}
-                                    className="h-4 w-4 border-gray-300 text-primary focus:ring-primary cursor-pointer"
+                        {/* Quantity */}
+                        <div className="space-y-2">
+                            <Label htmlFor="total_quantity" className="font-semibold">
+                                Total Quantity
+                            </Label>
+                            <div className="relative w-full">
+                                <Input
+                                    id="total_quantity"
+                                    type="text"
+                                    inputMode="numeric"
+                                    pattern="[0-9]*"
+                                    value={formData.total_quantity}
+                                    onChange={(e) => {
+                                        const value = e.target.value.replace(/[^0-9]/g, '');
+                                        handleChange("total_quantity", value);
+                                    }}
+                                    className={`w-full pr-16 ${errors.total_quantity ? "border-destructive" : ""}`}
+                                    placeholder="e.g., 450"
+                                    autoComplete="off"
                                 />
-                                <Label 
-                                    htmlFor="per_individual" 
-                                    className="ml-2 cursor-pointer select-none"
-                                >
-                                    Per Individual
-                                </Label>
+                                <div className="absolute inset-y-0 right-0 flex flex-col border-l border-input">
+                                    <button
+                                        type="button"
+                                        onClick={() => handleQuantityChange('increment')}
+                                        className="flex-1 flex items-center justify-center px-3 border-b border-input hover:bg-accent focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+                                        aria-label="Increase quantity"
+                                    >
+                                        <ChevronUp className="h-3 w-3" />
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => handleQuantityChange('decrement')}
+                                        className="flex-1 flex items-center justify-center px-3 hover:bg-accent focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+                                        aria-label="Decrease quantity"
+                                    >
+                                        <ChevronDown className="h-3 w-3" />
+                                    </button>
+                                </div>
                             </div>
-                            <div className="flex items-center">
-                                <input
-                                    type="radio"
-                                    id="per_household"
-                                    name="distribution_type"
-                                    value="per_household"
-                                    checked={formData.distribution_type === "per_household"}
-                                    onChange={(e) => handleChange("distribution_type", e.target.value)}
-                                    className="h-4 w-4 border-gray-300 text-primary focus:ring-primary cursor-pointer"
-                                />
-                                <Label 
-                                    htmlFor="per_household" 
-                                    className="ml-2 cursor-pointer select-none"
-                                >
-                                    Per Household
-                                </Label>
+                            {errors.total_quantity && (
+                                <p className="text-sm text-destructive">{errors.total_quantity}</p>
+                            )}
+                        </div>
+
+                        {/* Distribution Rule */}
+                        <div className="space-y-3">
+                            <Label className="font-semibold block">Distribution Rule</Label>
+                            {errors.distribution_type && (
+                                <p className="text-sm text-destructive">{errors.distribution_type}</p>
+                            )}
+                            <div className="flex space-x-6">
+                                <div className="flex items-center">
+                                    <input
+                                        type="radio"
+                                        id="per_individual"
+                                        name="distribution_type"
+                                        value="per_individual"
+                                        checked={formData.distribution_type === "per_individual"}
+                                        onChange={(e) => handleChange("distribution_type", e.target.value)}
+                                        className="h-4 w-4 border-gray-300 text-primary focus:ring-primary cursor-pointer"
+                                    />
+                                    <Label 
+                                        htmlFor="per_individual" 
+                                        className="ml-2 cursor-pointer select-none"
+                                    >
+                                        Per Individual
+                                    </Label>
+                                </div>
+                                <div className="flex items-center">
+                                    <input
+                                        type="radio"
+                                        id="per_household"
+                                        name="distribution_type"
+                                        value="per_household"
+                                        checked={formData.distribution_type === "per_household"}
+                                        onChange={(e) => handleChange("distribution_type", e.target.value)}
+                                        className="h-4 w-4 border-gray-300 text-primary focus:ring-primary cursor-pointer"
+                                    />
+                                    <Label 
+                                        htmlFor="per_household" 
+                                        className="ml-2 cursor-pointer select-none"
+                                    >
+                                        Per Household
+                                    </Label>
+                                </div>
                             </div>
                         </div>
-                    </div>
 
-                    {/* Status Field */}
-                    <div className="space-y-2">
-                        <Label htmlFor="status" className="font-semibold">
-                            Status
-                        </Label>
-                        <Select
-                            value={formData.status}
-                            onValueChange={(value) => handleChange("status", value)}
-                        >
-                            <SelectTrigger className={`w-full ${errors.status ? "border-destructive" : ""}`}>
-                                <SelectValue placeholder="Select status" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                {statusOptions.map(option => (
-                                    <SelectItem key={option.value} value={option.value}>
-                                        {option.label}
-                                    </SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
-                        {errors.status && (
-                            <p className="text-sm text-destructive">{errors.status}</p>
+                        {/* Status Field */}
+                        <div className="space-y-2">
+                            <Label htmlFor="status" className="font-semibold">
+                                Status
+                            </Label>
+                            <Select
+                                value={formData.status}
+                                onValueChange={(value) => handleChange("status", value)}
+                            >
+                                <SelectTrigger className={`w-full ${errors.status ? "border-destructive" : ""}`}>
+                                    <SelectValue placeholder="Select status" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {statusOptions.map(option => (
+                                        <SelectItem key={option.value} value={option.value}>
+                                            {option.label}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                            {errors.status && (
+                                <p className="text-sm text-destructive">{errors.status}</p>
+                            )}
+                        </div>
+
+                        {/* Server error (generic) */}
+                        {serverError && (
+                            <div className="bg-destructive/10 text-destructive p-2 rounded">
+                                <p className="text-sm">{serverError}</p>
+                            </div>
                         )}
                     </div>
-
-                    {/* Server error (generic) */}
-                    {serverError && (
-                        <div className="bg-destructive/10 text-destructive p-2 rounded">
-                            <p className="text-sm">{serverError}</p>
-                        </div>
-                    )}
                 </div>
 
-                <DialogFooter>
+                {/* Fixed Footer - No sticky, just normal flow */}
+                <DialogFooter className="px-6 pb-6 pt-4 border-t">
                     <Button variant="outline" onClick={handleClose} disabled={submitting}>
                         Cancel
                     </Button>

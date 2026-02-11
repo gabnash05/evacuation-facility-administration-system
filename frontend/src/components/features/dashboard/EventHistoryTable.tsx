@@ -122,7 +122,6 @@ export function EventHistoryTable({
                     </div>
 
                     <div className="flex items-center gap-3">
-                        {/* Add Event Button - Only shows if onAddEvent is provided */}
                         {onAddEvent && (
                             <Button
                                 onClick={onAddEvent}

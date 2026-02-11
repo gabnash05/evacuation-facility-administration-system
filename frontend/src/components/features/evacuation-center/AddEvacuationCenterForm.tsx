@@ -5,10 +5,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
-import { Badge } from "@/components/ui/badge"; // ADDED: For location badge
+import { Badge } from "@/components/ui/badge";
 import { useEvacuationCenterStore } from "@/store/evacuationCenterStore";
 import { DuplicateCenterDialog } from "./DuplicateCenterDialog";
-import { ChevronUp, ChevronDown, X, MapPin, CheckCircle } from "lucide-react"; // ADDED: CheckCircle
+import { ChevronUp, ChevronDown, X, MapPin, CheckCircle } from "lucide-react";
 import MapLocationPicker from "../map/MapLocationPicker";
 
 // Define the form data type that matches what the store expects
@@ -18,8 +18,8 @@ interface CenterFormData {
     capacity: number;
     current_occupancy: number;
     status: "active" | "inactive" | "closed";
-    latitude?: number; // NEW: Add latitude
-    longitude?: number; // NEW: Add longitude
+    latitude?: number;
+    longitude?: number;
 }
 
 interface AddEvacuationCenterFormProps {
@@ -112,16 +112,16 @@ export function AddEvacuationCenterForm({
         capacity: 0,
         current_occupancy: 0,
         status: "inactive",
-        latitude: undefined, // NEW
-        longitude: undefined, // NEW
+        latitude: undefined,
+        longitude: undefined,
     });
-    const [photo, setPhoto] = useState<File | undefined>(undefined); // Changed from null to undefined
+    const [photo, setPhoto] = useState<File | undefined>(undefined);
     const [photoPreview, setPhotoPreview] = useState<string | null>(null);
     const [duplicateDialog, setDuplicateDialog] = useState({
         isOpen: false,
         centerName: "",
     });
-    const [showMapPicker, setShowMapPicker] = useState(false); // NEW: Map picker state
+    const [showMapPicker, setShowMapPicker] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     // Reset form when dialog closes
@@ -136,9 +136,9 @@ export function AddEvacuationCenterForm({
                 latitude: undefined,
                 longitude: undefined,
             });
-            setPhoto(undefined); // Changed from null to undefined
+            setPhoto(undefined);
             setPhotoPreview(null);
-            setShowMapPicker(false); // Reset map picker
+            setShowMapPicker(false);
         }
     }, [isOpen]);
 
@@ -158,7 +158,7 @@ export function AddEvacuationCenterForm({
         }));
     };
 
-    // NEW: Handle location selection from map
+    // Handle location selection from map
     const handleLocationSelect = (location: { lat: number; lng: number }) => {
         setFormData(prev => ({
             ...prev,
@@ -167,12 +167,12 @@ export function AddEvacuationCenterForm({
         }));
     };
 
-    // NEW: Handle opening map picker
+    // Handle opening map picker
     const handleOpenMapPicker = () => {
         setShowMapPicker(true);
     };
 
-    // NEW: Handle closing map picker
+    // Handle closing map picker
     const handleCloseMapPicker = () => {
         setShowMapPicker(false);
     };
@@ -192,7 +192,7 @@ export function AddEvacuationCenterForm({
                 return;
             }
 
-            setPhoto(file); // Now this matches the expected type
+            setPhoto(file);
 
             // Create preview URL
             const previewUrl = URL.createObjectURL(file);
@@ -201,7 +201,7 @@ export function AddEvacuationCenterForm({
     };
 
     const handleRemovePhoto = () => {
-        setPhoto(undefined); // Changed from null to undefined
+        setPhoto(undefined);
         if (photoPreview) {
             URL.revokeObjectURL(photoPreview);
             setPhotoPreview(null);
@@ -214,7 +214,7 @@ export function AddEvacuationCenterForm({
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         
-        // NEW: Validate location is selected
+        // Validate location is selected
         if (!formData.latitude || !formData.longitude) {
             alert("Please select a location on the map for the evacuation center.");
             return;
@@ -228,12 +228,13 @@ export function AddEvacuationCenterForm({
                 capacity: formData.capacity,
                 current_occupancy: formData.current_occupancy,
                 status: formData.status,
-                latitude: formData.latitude, // Include latitude
-                longitude: formData.longitude, // Include longitude
+                latitude: formData.latitude,
+                longitude: formData.longitude,
             };
             
-            // Pass the photo file to the store - now photo is File | undefined which matches the expected type
+            // Pass the photo file to the store
             await addCenter(centerData, photo);
+            
             // Show success toast using the prop
             if (onShowSuccessToast) {
                 onShowSuccessToast("Evacuation center added successfully.");
@@ -266,7 +267,7 @@ export function AddEvacuationCenterForm({
                 return;
             }
 
-            setPhoto(file); // Now this matches the expected type
+            setPhoto(file);
             const previewUrl = URL.createObjectURL(file);
             setPhotoPreview(previewUrl);
         }
@@ -286,7 +287,7 @@ export function AddEvacuationCenterForm({
     return (
         <>
             <Dialog open={isOpen} onOpenChange={onClose}>
-                <DialogContent className={`${showMapPicker ? 'min-w-[65vw] max-w-[85vw] h-[85vh]' : 'max-w-4xl max-h-[90vh]'}`}>
+                <DialogContent className={`${showMapPicker ? 'min-w-[65vw] max-w-[85vw] h-[85vh]' : 'max-w-4xl max-h-[90vh] overflow-y-auto'}`}>
                     {showMapPicker ? (
                         <div className="flex flex-col h-full">
                             <div className="flex-1 min-h-0">
@@ -324,9 +325,9 @@ export function AddEvacuationCenterForm({
                             </div>
                         </div>
                     ) : (
-                        // Original Form View
-                        <div className="flex flex-col h-[calc(90vh-120px)]"> {/* Same height adjustment */}
-                            <form onSubmit={handleSubmit} className="space-y-4 flex-1 overflow-y-auto pr-2">
+                        // Form View - Entire form is scrollable only when needed
+                        <div className="flex flex-col">
+                            <form onSubmit={handleSubmit} className="space-y-4">
                                 {/* Center Name */}
                                 <div className="space-y-2">
                                     <Label htmlFor="center_name" className="text-sm font-medium">
@@ -532,11 +533,11 @@ export function AddEvacuationCenterForm({
                                     />
                                 </div>
 
-                                {/* Submit Button - Now inside the form but after all content */}
-                                <div className="flex justify-end pt-3 border-t pb-4">
+                                {/* Submit Button - Inside form, part of scrollable content */}
+                                <div className="flex justify-end pt-4 border-t mt-6">
                                     <Button
                                         type="submit"
-                                        disabled={loading || !formData.latitude || !formData.longitude} // NEW: Disable if no location
+                                        disabled={loading || !formData.latitude || !formData.longitude}
                                         className="px-4 py-2 text-sm font-medium"
                                     >
                                         {loading ? "Adding..." : "+ Add Center"}
