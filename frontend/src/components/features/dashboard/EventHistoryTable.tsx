@@ -57,6 +57,10 @@ export function EventHistoryTable({
     const hasActiveEvent = !!activeEvent;
     const canAddEvent = !hasActiveEvent; // Can't add event if one is already active
     
+    // Determine if we should show the skeleton or actual data
+    const showLoadingSkeleton = isLoadingEvents && paginatedData.length === 0;
+    const preserveExistingData = isLoadingEvents && paginatedData.length > 0;
+    
     return (
         <div className="p-0">
             {/* Controls Bar */}
@@ -163,28 +167,29 @@ export function EventHistoryTable({
                     </div>
                 </div>
 
-                {/* Table Content */}
-                <div className="min-h-[234px]">
-                    {isLoadingEvents ? (
+                {/* Table Content - No flashy loading spinner, preserve existing data */}
+                <div className="min-h-[234px] relative">
+                    {showLoadingSkeleton ? (
+                        // Only show loading text when we have absolutely no data
                         <div className="flex justify-center items-center h-[234px]">
-                            <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full" />
+                            <div className="text-muted-foreground">Loading events...</div>
                         </div>
                     ) : (
                         <>
-                            {/* Always use EventsTable */}
+                            {/* Always show the table with data - don't hide during loading */}
                             <EventsTable
-                                data={paginatedData}
+                                data={preserveExistingData ? paginatedData : paginatedData}
                                 sortConfig={sortConfig}
                                 onSort={onSort}
-                                loading={isLoadingEvents}
+                                loading={false} // Never pass loading to avoid spinner in table
                                 onEdit={onEdit || (() => {})}
                                 onDelete={onDelete || (() => {})}
                                 onResolve={onResolve}
                                 onRowClick={onRowClick}
                                 userRole={userRole}
-                                activeEventId={activeEvent?.event_id} // Pass active event ID for highlighting
+                                activeEventId={activeEvent?.event_id}
                             />
-                            {paginatedData.length === 0 && (
+                            {!preserveExistingData && paginatedData.length === 0 && !isLoadingEvents && (
                                 <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
                                     <Search className="h-12 w-12 mb-4 opacity-50" />
                                     <p className="text-lg font-medium mb-2">No events found</p>

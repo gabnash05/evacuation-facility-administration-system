@@ -155,39 +155,39 @@ export function AttendanceTable({
         > = {
             checked_in: {
                 label: "Checked In",
-                bg: "bg-green-100",
-                text: "text-green-800",
-                border: "border border-green-200",
+                bg: "bg-chart-2/15",
+                text: "text-chart-2",
+                border: "border border-chart-2/30",
             },
             checked_out: {
                 label: "Checked Out",
-                bg: "bg-gray-100",
-                text: "text-gray-800",
-                border: "border border-gray-200",
+                bg: "bg-muted",
+                text: "text-muted-foreground",
+                border: "border border-border",
             },
             transferred: {
                 label: "Transferred",
-                bg: "bg-orange-100",
-                text: "text-orange-800",
-                border: "border border-orange-200",
+                bg: "bg-chart-5/15",
+                text: "text-chart-5",
+                border: "border border-chart-5/30",
             },
         };
 
         const cfg = statusMap[status] || {
             label: status
                 ? status
-                      .split("_")
-                      .map(w => w.charAt(0).toUpperCase() + w.slice(1))
-                      .join(" ")
+                    .split("_")
+                    .map(w => w.charAt(0).toUpperCase() + w.slice(1))
+                    .join(" ")
                 : "Unknown",
-            bg: "bg-gray-100",
-            text: "text-gray-800",
-            border: "border border-gray-200",
+            bg: "bg-muted",
+            text: "text-muted-foreground",
+            border: "border border-border",
         };
 
         return (
             <span
-                className={`px-3 py-1.5 rounded-full text-sm font-medium ${cfg.bg} ${cfg.text} ${cfg.border}`}
+                className={`inline-flex items-center px-3 py-1.5 rounded-full text-sm font-medium ${cfg.bg} ${cfg.text} ${cfg.border}`}
             >
                 {cfg.label}
             </span>

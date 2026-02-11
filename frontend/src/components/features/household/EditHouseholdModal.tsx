@@ -452,7 +452,7 @@ export function EditHouseholdModal({
                             disabled={isSubmitting || centersLoading || isLoading}
                             className="bg-blue-600 hover:bg-blue-700 px-6"
                         >
-                            {isSubmitting ? "Saving..." : "Save Changes"}
+                            {isSubmitting ? "Saving..." : "Update Household"}
                         </Button>
                     </DialogFooter>
                 </DialogContent>

@@ -382,7 +382,7 @@ export function EventsTable({
                                 onClick={header.sortable ? () => onSort(header.key) : undefined}
                             >
                                 <div className="flex items-center justify-between w-full">
-                                    <span className="truncate block font-medium">
+                                    <span className="break-words whitespace-normal block font-medium">
                                         {header.label}
                                     </span>
                                     {header.sortable && (

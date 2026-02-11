@@ -3,6 +3,8 @@
 import { Eye, EyeOff, Map, Image } from "lucide-react";
 import MonoMap from "../map/MonoMap"
 import type { EvacuationCenter } from "@/types/center";
+import type { UserRole } from "@/types/user";
+import efasLogo from "@/assets/logo/efas-logo.png";
 
 interface SelectedCenter {
     name: string;
@@ -21,6 +23,7 @@ interface MapPanelProps {
     isLoadingCenter: boolean;
     getCenterStatusStyles: (status: string) => string;
     getUsageColor: (percentage: number) => string;
+    userRole?: UserRole;
     centers?: EvacuationCenter[];
     highlightCenterId?: number;
 }
@@ -32,6 +35,7 @@ export function MapPanel({
     isLoadingCenter,
     getCenterStatusStyles,
     getUsageColor,
+    userRole,
     centers = [],
     highlightCenterId,
 }: MapPanelProps) {
@@ -109,7 +113,7 @@ export function MapPanel({
                 )}
             </div>
 
-            {/* Right Info Panel - Narrower */}
+            {/* Right Info Panel */}
             {isPanelVisible && (
                 <div className="w-[350px] bg-card border-l border-border flex flex-col">
                     <div className="flex-1 overflow-y-auto p-4">
@@ -124,18 +128,27 @@ export function MapPanel({
                             </div>
                         ) : (
                             <div className="space-y-4">
-                                {/* Blank Photo Placeholder */}
-                                <div className="relative">
-                                    <div className="w-full h-35 bg-muted rounded-lg flex flex-col items-center justify-center">
-                                        <Image className="h-12 w-12 text-muted-foreground/60 mb-2" />
-                                        <span className="text-sm text-muted-foreground">
-                                            Center Photo
-                                        </span>
-                                        <span className="text-xs text-muted-foreground/60 mt-1">
-                                            
-                                        </span>
+                                {userRole !== "super_admin" && userRole !== "city_admin" ? (
+                                    <div className="relative">
+                                        <div className="w-full h-35 bg-muted rounded-lg flex flex-col items-center justify-center">
+                                            <Image className="h-12 w-12 text-muted-foreground/60 mb-2" />
+                                            <span className="text-sm text-muted-foreground">
+                                                Center Photo
+                                            </span>
+                                            <span className="text-xs text-muted-foreground/60 mt-1">
+                                                
+                                            </span>
+                                        </div>
                                     </div>
-                                </div>
+                                ) : (
+                                    <div className="flex justify-center">
+                                        <img 
+                                            src={efasLogo} 
+                                            alt="Center" 
+                                            className="rounded-lg w-45 h-45 object-cover" 
+                                        />
+                                    </div>
+                                )}
 
                                 {/* Center Name */}
                                 <div className="mb-3">
