@@ -140,7 +140,7 @@ export function VolunteerDashboard() {
     const paginatedData = processedData;
 
     return (
-        <div className="w-full min-w-0 bg-background flex flex-col">
+        <div className="w-full min-w-0 bg-background flex flex-col p-6">
             {/* Quick Action Section */}
             <div className="p-none mt-12">
                 {/* Display Volunteer's Center Information */}

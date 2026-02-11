@@ -171,8 +171,8 @@ export function AddEditUserModal({ isOpen, onClose, userToEdit, currentUserRole,
 
     return (
         <Dialog open={isOpen} onOpenChange={onClose}>
-            <DialogContent className="sm:max-w-[425px]">
-                <DialogHeader>
+            <DialogContent className="sm:max-w-[425px] max-h-[90vh] flex flex-col p-0 gap-0">
+                <DialogHeader className="px-6 py-4 border-b shrink-0">
                     <DialogTitle>{isEditMode ? "Edit User" : "Add New User"}</DialogTitle>
                     <DialogDescription>
                         {isEditMode ? `Update the details for ${userToEdit?.email}.` : "Fill in the details to create a new user account."}
@@ -183,78 +183,82 @@ export function AddEditUserModal({ isOpen, onClose, userToEdit, currentUserRole,
                         )}
                     </DialogDescription>
                 </DialogHeader>
-                <form onSubmit={handleSubmit(onSubmit)} className="grid gap-4 py-4">
-                    {submitError && (
-                        <div className="bg-destructive/10 text-destructive p-2 rounded">
-                            <span className="text-sm">{submitError}</span>
-                        </div>
-                    )}
-                    <div className="grid grid-cols-4 items-center gap-4">
-                        <Label htmlFor="email" className="text-right">Email</Label>
-                        <div className="col-span-3">
-                            <Input id="email" {...register("email")} />
-                            {errors.email && <p className="text-destructive text-sm mt-1">{errors.email.message}</p>}
-                        </div>
-                    </div>
-
-                    <div className="grid grid-cols-4 items-center gap-4">
-                        <Label htmlFor="password" className="text-right">Password</Label>
-                        <div className="col-span-3">
-                            <Input id="password" type="password" {...register("password")} placeholder={isEditMode ? "Leave blank to keep current" : ""}/>
-                            {errors.password && <p className="text-destructive text-sm mt-1">{errors.password.message}</p>}
-                        </div>
-                    </div>
-
-                    <div className="grid grid-cols-4 items-center gap-4">
-                        <Label htmlFor="role" className="text-right">Role</Label>
-                        <div className="col-span-3">
-                            <Controller name="role" control={control} render={({ field }) => (
-                                <Select onValueChange={field.onChange} value={field.value}>
-                                    <SelectTrigger><SelectValue placeholder="Select a role" /></SelectTrigger>
-                                    <SelectContent>
-                                        {availableRoles.map(role => (
-                                            <SelectItem key={role.value} value={role.value}>{role.label}</SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
-                            )} />
-                            {errors.role && <p className="text-destructive text-sm mt-1">{errors.role.message}</p>}
-                        </div>
-                    </div>
-
-                    {isCenterRequired && (
+                
+                <form onSubmit={handleSubmit(onSubmit)} className="flex-1 overflow-y-auto px-6 py-4">
+                    <div className="grid gap-4">
+                        {submitError && (
+                            <div className="bg-destructive/10 text-destructive p-2 rounded">
+                                <span className="text-sm">{submitError}</span>
+                            </div>
+                        )}
                         <div className="grid grid-cols-4 items-center gap-4">
-                            <Label htmlFor="center_id" className="text-right">Center</Label>
+                            <Label htmlFor="email" className="text-right">Email</Label>
                             <div className="col-span-3">
-                                {isCenterFieldLocked ? (
-                                    // Display only mode for center admin
-                                    <div className="flex items-center h-10 px-3 py-2 text-sm border border-input rounded-md bg-muted">
-                                        {centers.find(center => center.center_id === userCenterId)?.center_name || "Your Center"}
-                                    </div>
-                                ) : (
-                                    // Select mode for other roles
-                                    <Controller name="center_id" control={control} render={({ field }) => (
-                                        <Select onValueChange={field.onChange} value={field.value} disabled={centers.length === 0}>
-                                            <SelectTrigger><SelectValue placeholder="Assign a center" /></SelectTrigger>
-                                            <SelectContent>
-                                                {centers.map(center => (
-                                                    <SelectItem key={center.center_id} value={String(center.center_id)}>{center.center_name}</SelectItem>
-                                                ))}
-                                            </SelectContent>
-                                        </Select>
-                                    )} />
-                                )}
-                                {errors.center_id && <p className="text-destructive text-sm mt-1">{errors.center_id.message}</p>}
+                                <Input id="email" {...register("email")} />
+                                {errors.email && <p className="text-destructive text-sm mt-1">{errors.email.message}</p>}
                             </div>
                         </div>
-                    )}
-                    <DialogFooter>
-                        <Button type="button" variant="outline" onClick={onClose}>Cancel</Button>
-                        <Button type="submit" disabled={isSubmitting}>
-                            {isEditMode ? "Save Changes" : "Create User"}
-                        </Button>
-                    </DialogFooter>
+
+                        <div className="grid grid-cols-4 items-center gap-4">
+                            <Label htmlFor="password" className="text-right">Password</Label>
+                            <div className="col-span-3">
+                                <Input id="password" type="password" {...register("password")} placeholder={isEditMode ? "Leave blank to keep current" : ""}/>
+                                {errors.password && <p className="text-destructive text-sm mt-1">{errors.password.message}</p>}
+                            </div>
+                        </div>
+
+                        <div className="grid grid-cols-4 items-center gap-4">
+                            <Label htmlFor="role" className="text-right">Role</Label>
+                            <div className="col-span-3">
+                                <Controller name="role" control={control} render={({ field }) => (
+                                    <Select onValueChange={field.onChange} value={field.value}>
+                                        <SelectTrigger><SelectValue placeholder="Select a role" /></SelectTrigger>
+                                        <SelectContent>
+                                            {availableRoles.map(role => (
+                                                <SelectItem key={role.value} value={role.value}>{role.label}</SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                )} />
+                                {errors.role && <p className="text-destructive text-sm mt-1">{errors.role.message}</p>}
+                            </div>
+                        </div>
+
+                        {isCenterRequired && (
+                            <div className="grid grid-cols-4 items-center gap-4">
+                                <Label htmlFor="center_id" className="text-right">Center</Label>
+                                <div className="col-span-3">
+                                    {isCenterFieldLocked ? (
+                                        // Display only mode for center admin
+                                        <div className="flex items-center h-10 px-3 py-2 text-sm border border-input rounded-md bg-muted">
+                                            {centers.find(center => center.center_id === userCenterId)?.center_name || "Your Center"}
+                                        </div>
+                                    ) : (
+                                        // Select mode for other roles
+                                        <Controller name="center_id" control={control} render={({ field }) => (
+                                            <Select onValueChange={field.onChange} value={field.value} disabled={centers.length === 0}>
+                                                <SelectTrigger><SelectValue placeholder="Assign a center" /></SelectTrigger>
+                                                <SelectContent>
+                                                    {centers.map(center => (
+                                                        <SelectItem key={center.center_id} value={String(center.center_id)}>{center.center_name}</SelectItem>
+                                                    ))}
+                                                </SelectContent>
+                                            </Select>
+                                        )} />
+                                    )}
+                                    {errors.center_id && <p className="text-destructive text-sm mt-1">{errors.center_id.message}</p>}
+                                </div>
+                            </div>
+                        )}
+                    </div>
                 </form>
+                
+                <DialogFooter className="px-6 py-4 border-t shrink-0">
+                    <Button type="button" variant="outline" onClick={onClose}>Cancel</Button>
+                    <Button type="submit" disabled={isSubmitting} onClick={handleSubmit(onSubmit)}>
+                        {isEditMode ? "Save Changes" : "Create User"}
+                    </Button>
+                </DialogFooter>
             </DialogContent>
         </Dialog>
     );

@@ -364,7 +364,7 @@ export function EditEvacuationCenterForm({
     return (
         <>
             <Dialog open={isOpen} onOpenChange={onClose}>
-                <DialogContent className={`${showMapPicker ? 'min-w-[65vw] max-w-[85vw] h-[85vh]' : 'max-w-4xl max-h-[90vh]'}`}>
+                <DialogContent className={`${showMapPicker ? 'min-w-[65vw] max-w-[85vw] h-[85vh]' : 'max-w-4xl max-h-[90vh] overflow-y-auto'}`}>
                     {showMapPicker ? (
                         <div className="flex flex-col h-full">
                             <div className="flex-1 min-h-0">
@@ -402,297 +402,294 @@ export function EditEvacuationCenterForm({
                             </div>
                         </div>
                     ) : (
-                        // Form View
-                        <div className="flex flex-col h-full">
-                            <div className="flex-1 overflow-y-auto pr-2">
-                                <DialogHeader className="pb-4">
-                                    <DialogTitle className="text-lg font-semibold">
-                                        Edit Evacuation Center
-                                    </DialogTitle>
-                                </DialogHeader>
-                                <form onSubmit={handleSubmit} className="space-y-5">
-                                    {/* Center Name */}
-                                    <div className="space-y-2">
-                                        <Label htmlFor="center_name" className="text-sm font-medium">
-                                            Center Name
-                                        </Label>
-                                        <Input
-                                            id="center_name"
-                                            type="text"
-                                            placeholder="Enter center name"
-                                            value={formData.center_name}
-                                            onChange={e => handleInputChange("center_name", e.target.value)}
-                                            required
-                                            className="w-full"
-                                        />
-                                    </div>
+                        // Form View - Entire form is scrollable including buttons
+                        <div className="flex flex-col">
+                            <DialogHeader className="pb-4">
+                                <DialogTitle className="text-lg font-semibold">
+                                    Edit Evacuation Center
+                                </DialogTitle>
+                            </DialogHeader>
+                            <form onSubmit={handleSubmit} className="space-y-5">
+                                {/* Center Name */}
+                                <div className="space-y-2">
+                                    <Label htmlFor="center_name" className="text-sm font-medium">
+                                        Center Name
+                                    </Label>
+                                    <Input
+                                        id="center_name"
+                                        type="text"
+                                        placeholder="Enter center name"
+                                        value={formData.center_name}
+                                        onChange={e => handleInputChange("center_name", e.target.value)}
+                                        required
+                                        className="w-full"
+                                    />
+                                </div>
 
-                                    {/* Address */}
-                                    <div className="space-y-2">
-                                        <Label htmlFor="address" className="text-sm font-medium">
-                                            Address
-                                        </Label>
-                                        <Input
-                                            id="address"
-                                            type="text"
-                                            placeholder="Enter full address"
-                                            value={formData.address}
-                                            onChange={e => handleInputChange("address", e.target.value)}
-                                            required
-                                            className="w-full"
-                                        />
-                                    </div>
+                                {/* Address */}
+                                <div className="space-y-2">
+                                    <Label htmlFor="address" className="text-sm font-medium">
+                                        Address
+                                    </Label>
+                                    <Input
+                                        id="address"
+                                        type="text"
+                                        placeholder="Enter full address"
+                                        value={formData.address}
+                                        onChange={e => handleInputChange("address", e.target.value)}
+                                        required
+                                        className="w-full"
+                                    />
+                                </div>
 
-                                    {/* Location Selection */}
-                                    <div className="space-y-2">
-                                        <Label className="text-sm font-medium">
-                                            Location
-                                        </Label>
-                                        <div className="space-y-3">
-                                            {formData.latitude && formData.longitude ? (
-                                                <div className="p-4 border border-green-200 bg-green-50 rounded-md dark:border-green-800 dark:bg-green-950/30">
-                                                    <div className="flex items-start justify-between">
-                                                        <div className="space-y-2">
-                                                            <div className="flex items-center gap-2">
-                                                                <MapPin className="h-4 w-4 text-green-600 dark:text-green-400" />
-                                                                <span className="font-medium text-green-700 dark:text-green-300">
-                                                                    Location Selected
-                                                                </span>
+                                {/* Location Selection */}
+                                <div className="space-y-2">
+                                    <Label className="text-sm font-medium">
+                                        Location
+                                    </Label>
+                                    <div className="space-y-3">
+                                        {formData.latitude && formData.longitude ? (
+                                            <div className="p-4 border border-green-200 bg-green-50 rounded-md dark:border-green-800 dark:bg-green-950/30">
+                                                <div className="flex items-start justify-between">
+                                                    <div className="space-y-2">
+                                                        <div className="flex items-center gap-2">
+                                                            <MapPin className="h-4 w-4 text-green-600 dark:text-green-400" />
+                                                            <span className="font-medium text-green-700 dark:text-green-300">
+                                                                Location Selected
+                                                            </span>
+                                                        </div>
+                                                        <div className="text-sm space-y-1">
+                                                            <div>
+                                                                <span className="text-muted-foreground">Latitude: </span>
+                                                                <span className="font-mono">{formData.latitude.toFixed(6)}°</span>
                                                             </div>
-                                                            <div className="text-sm space-y-1">
-                                                                <div>
-                                                                    <span className="text-muted-foreground">Latitude: </span>
-                                                                    <span className="font-mono">{formData.latitude.toFixed(6)}°</span>
-                                                                </div>
-                                                                <div>
-                                                                    <span className="text-muted-foreground">Longitude: </span>
-                                                                    <span className="font-mono">{formData.longitude.toFixed(6)}°</span>
-                                                                </div>
+                                                            <div>
+                                                                <span className="text-muted-foreground">Longitude: </span>
+                                                                <span className="font-mono">{formData.longitude.toFixed(6)}°</span>
                                                             </div>
                                                         </div>
-                                                        <button
-                                                            type="button"
-                                                            onClick={handleOpenMapPicker}
-                                                            className="px-3 py-1 text-sm border border-input rounded-md hover:bg-accent transition-colors"
-                                                        >
-                                                            Change
-                                                        </button>
                                                     </div>
-                                                </div>
-                                            ) : (
-                                                <div className="p-6 border-2 border-dashed border-muted-foreground/25 rounded-lg text-center cursor-pointer hover:border-muted-foreground/50 transition-colors bg-background dark:bg-background"
-                                                    onClick={handleOpenMapPicker}>
-                                                    <div className="space-y-3">
-                                                        <div className="text-muted-foreground">
-                                                            <MapPin className="mx-auto h-12 w-12" />
-                                                        </div>
-                                                        <div className="space-y-1">
-                                                            <p className="text-sm font-medium text-foreground">
-                                                                Click to select location on map
-                                                            </p>
-                                                            <p className="text-xs text-muted-foreground">
-                                                                Required for mapping and proximity features
-                                                            </p>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            )}
-                                        </div>
-                                    </div>
-
-                                    {/* Capacity */}
-                                    <div className="space-y-2">
-                                        <Label htmlFor="capacity" className="text-sm font-medium">
-                                            Capacity
-                                        </Label>
-                                        <NumberInputWithChevrons
-                                            id="capacity"
-                                            value={formData.capacity}
-                                            onChange={value => handleInputChange("capacity", value)}
-                                            min={1}
-                                            max={10000}
-                                            placeholder="Enter capacity"
-                                            required
-                                        />
-                                    </div>
-
-                                    {/* Status */}
-                                    <div className="space-y-2">
-                                        <Label htmlFor="status" className="text-sm font-medium">
-                                            Status
-                                        </Label>
-                                        <StatusDropdown
-                                            value={formData.status}
-                                            onChange={value => handleInputChange("status", value)}
-                                        />
-                                    </div>
-
-                                    {/* Photo Upload Section */}
-                                    <div className="space-y-2">
-                                        <Label className="text-sm font-medium">
-                                            Photo of Evacuation Center
-                                        </Label>
-
-                                        {center?.photo_data && !removeExistingPhoto && !photoPreview ? (
-                                            // Show existing center photo from backend (base64)
-                                            <div className="border border-border rounded-lg bg-background">
-                                                <div className="flex flex-col items-center space-y-3 p-4 pb-2">
-                                                    <div className="relative w-full max-w-[200px]">
-                                                        <img
-                                                            src={`data:image/jpeg;base64,${center.photo_data}`}
-                                                            alt="Current center photo"
-                                                            className="w-full h-32 object-cover rounded-md border border-border"
-                                                        />
-                                                        <button
-                                                            type="button"
-                                                            onClick={handleRemovePhoto}
-                                                            className="absolute -top-2 -right-2 bg-destructive text-destructive-foreground rounded-full p-1 shadow-md hover:bg-destructive/90 transition-colors z-10"
-                                                        >
-                                                            <X className="h-3 w-3" />
-                                                        </button>
-                                                    </div>
-                                                    <div className="text-center">
-                                                        <p className="text-sm font-medium text-foreground truncate max-w-[180px]">
-                                                            Current Photo
-                                                        </p>
-                                                    </div>
-                                                </div>
-                                                <div
-                                                    className="cursor-pointer border-t border-border bg-muted/50 hover:bg-muted/70 transition-colors text-center py-2 rounded-b-lg"
-                                                    onClick={() => fileInputRef.current?.click()}
-                                                    onDrop={handleDrop}
-                                                    onDragOver={handleDragOver}
-                                                >
-                                                    <p className="text-xs text-muted-foreground font-medium">
-                                                        Click here to change photo
-                                                    </p>
-                                                </div>
-                                            </div>
-                                        ) : removeExistingPhoto ? (
-                                            // Show removed photo state
-                                            <div
-                                                className="border-2 border-dashed border-muted-foreground/25 rounded-lg p-6 text-center cursor-pointer hover:border-muted-foreground/50 transition-colors bg-background"
-                                                onDrop={handleDrop}
-                                                onDragOver={handleDragOver}
-                                                onClick={() => fileInputRef.current?.click()}
-                                            >
-                                                <div className="space-y-3">
-                                                    <div className="text-muted-foreground">
-                                                        <svg
-                                                            className="mx-auto h-12 w-12"
-                                                            fill="none"
-                                                            stroke="currentColor"
-                                                            viewBox="0 0 24 24"
-                                                        >
-                                                            <path
-                                                                strokeLinecap="round"
-                                                                strokeLinejoin="round"
-                                                                strokeWidth={1.5}
-                                                                d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
-                                                            />
-                                                        </svg>
-                                                    </div>
-                                                    <div className="space-y-1">
-                                                        <p className="text-sm font-medium text-foreground">
-                                                            Photo removed
-                                                        </p>
-                                                        <p className="text-xs text-muted-foreground">
-                                                            Click to upload
-                                                        </p>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        ) : photoPreview ? (
-                                            // Show newly uploaded photo preview
-                                            <div className="border border-border rounded-lg bg-background">
-                                                <div className="flex flex-col items-center space-y-3 p-4 pb-2">
-                                                    <div className="relative w-full max-w-[200px]">
-                                                        <img
-                                                            src={photoPreview}
-                                                            alt="Preview"
-                                                            className="w-full h-32 object-cover rounded-md border border-border"
-                                                        />
-                                                        <button
-                                                            type="button"
-                                                            onClick={handleRemovePhoto}
-                                                            className="absolute -top-2 -right-2 bg-destructive text-destructive-foreground rounded-full p-1 shadow-md hover:bg-destructive/90 transition-colors z-10"
-                                                        >
-                                                            <X className="h-3 w-3" />
-                                                        </button>
-                                                    </div>
-                                                    <div className="text-center">
-                                                        <p className="text-sm font-medium text-foreground truncate max-w-[180px]">
-                                                            {photo?.name}
-                                                        </p>
-                                                    </div>
-                                                </div>
-                                                <div
-                                                    className="cursor-pointer border-t border-border bg-muted/50 hover:bg-muted/70 transition-colors text-center py-2 rounded-b-lg"
-                                                    onClick={() => fileInputRef.current?.click()}
-                                                    onDrop={handleDrop}
-                                                    onDragOver={handleDragOver}
-                                                >
-                                                    <p className="text-xs text-muted-foreground font-medium">
-                                                        Click here to change photo
-                                                    </p>
+                                                    <button
+                                                        type="button"
+                                                        onClick={handleOpenMapPicker}
+                                                        className="px-3 py-1 text-sm border border-input rounded-md hover:bg-accent transition-colors"
+                                                    >
+                                                        Change
+                                                    </button>
                                                 </div>
                                             </div>
                                         ) : (
-                                            // Empty State (no photo at all)
-                                            <div
-                                                className="border-2 border-dashed border-muted-foreground/25 rounded-lg p-6 text-center cursor-pointer hover:border-muted-foreground/50 transition-colors bg-background"
-                                                onDrop={handleDrop}
-                                                onDragOver={handleDragOver}
-                                                onClick={() => fileInputRef.current?.click()}
+                                            <div 
+                                                className="p-6 border-2 border-dashed border-muted-foreground/25 rounded-lg text-center cursor-pointer hover:border-muted-foreground/50 transition-colors bg-background dark:bg-background"
+                                                onClick={handleOpenMapPicker}
                                             >
                                                 <div className="space-y-3">
                                                     <div className="text-muted-foreground">
-                                                        <svg
-                                                            className="mx-auto h-12 w-12"
-                                                            fill="none"
-                                                            stroke="currentColor"
-                                                            viewBox="0 0 24 24"
-                                                        >
-                                                            <path
-                                                                strokeLinecap="round"
-                                                                strokeLinejoin="round"
-                                                                strokeWidth={1.5}
-                                                                d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
-                                                            />
-                                                        </svg>
+                                                        <MapPin className="mx-auto h-12 w-12" />
                                                     </div>
                                                     <div className="space-y-1">
                                                         <p className="text-sm font-medium text-foreground">
-                                                            Upload photo
+                                                            Click to select location on map
                                                         </p>
                                                         <p className="text-xs text-muted-foreground">
-                                                            PNG or JPG (max 5MB)
+                                                            Required for mapping and proximity features
                                                         </p>
                                                     </div>
                                                 </div>
                                             </div>
                                         )}
-
-                                        <input
-                                            ref={fileInputRef}
-                                            id="photo-upload"
-                                            type="file"
-                                            accept="image/*"
-                                            onChange={handlePhotoChange}
-                                            className="hidden"
-                                        />
                                     </div>
-                                </form>
-                            </div>
+                                </div>
 
-                            {/* Submit Button - Fixed at bottom */}
-                            <div className="border-t pt-4 pb-1 mt-2 shrink-0">
-                                <div className="flex justify-end">
+                                {/* Capacity */}
+                                <div className="space-y-2">
+                                    <Label htmlFor="capacity" className="text-sm font-medium">
+                                        Capacity
+                                    </Label>
+                                    <NumberInputWithChevrons
+                                        id="capacity"
+                                        value={formData.capacity}
+                                        onChange={value => handleInputChange("capacity", value)}
+                                        min={1}
+                                        max={10000}
+                                        placeholder="Enter capacity"
+                                        required
+                                    />
+                                </div>
+
+                                {/* Status */}
+                                <div className="space-y-2">
+                                    <Label htmlFor="status" className="text-sm font-medium">
+                                        Status
+                                    </Label>
+                                    <StatusDropdown
+                                        value={formData.status}
+                                        onChange={value => handleInputChange("status", value)}
+                                    />
+                                </div>
+
+                                {/* Photo Upload Section */}
+                                <div className="space-y-2">
+                                    <Label className="text-sm font-medium">
+                                        Photo of Evacuation Center
+                                    </Label>
+
+                                    {center?.photo_data && !removeExistingPhoto && !photoPreview ? (
+                                        // Show existing center photo from backend (base64)
+                                        <div className="border border-border rounded-lg bg-background">
+                                            <div className="flex flex-col items-center space-y-3 p-4 pb-2">
+                                                <div className="relative w-full max-w-[200px]">
+                                                    <img
+                                                        src={`data:image/jpeg;base64,${center.photo_data}`}
+                                                        alt="Current center photo"
+                                                        className="w-full h-32 object-cover rounded-md border border-border"
+                                                    />
+                                                    <button
+                                                        type="button"
+                                                        onClick={handleRemovePhoto}
+                                                        className="absolute -top-2 -right-2 bg-destructive text-destructive-foreground rounded-full p-1 shadow-md hover:bg-destructive/90 transition-colors z-10"
+                                                    >
+                                                        <X className="h-3 w-3" />
+                                                    </button>
+                                                </div>
+                                                <div className="text-center">
+                                                    <p className="text-sm font-medium text-foreground truncate max-w-[180px]">
+                                                        Current Photo
+                                                    </p>
+                                                </div>
+                                            </div>
+                                            <div
+                                                className="cursor-pointer border-t border-border bg-muted/50 hover:bg-muted/70 transition-colors text-center py-2 rounded-b-lg"
+                                                onClick={() => fileInputRef.current?.click()}
+                                                onDrop={handleDrop}
+                                                onDragOver={handleDragOver}
+                                            >
+                                                <p className="text-xs text-muted-foreground font-medium">
+                                                    Click here to change photo
+                                                </p>
+                                            </div>
+                                        </div>
+                                    ) : removeExistingPhoto ? (
+                                        // Show removed photo state
+                                        <div
+                                            className="border-2 border-dashed border-muted-foreground/25 rounded-lg p-6 text-center cursor-pointer hover:border-muted-foreground/50 transition-colors bg-background"
+                                            onDrop={handleDrop}
+                                            onDragOver={handleDragOver}
+                                            onClick={() => fileInputRef.current?.click()}
+                                        >
+                                            <div className="space-y-3">
+                                                <div className="text-muted-foreground">
+                                                    <svg
+                                                        className="mx-auto h-12 w-12"
+                                                        fill="none"
+                                                        stroke="currentColor"
+                                                        viewBox="0 0 24 24"
+                                                    >
+                                                        <path
+                                                            strokeLinecap="round"
+                                                            strokeLinejoin="round"
+                                                            strokeWidth={1.5}
+                                                            d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
+                                                        />
+                                                    </svg>
+                                                </div>
+                                                <div className="space-y-1">
+                                                    <p className="text-sm font-medium text-foreground">
+                                                        Photo removed
+                                                    </p>
+                                                    <p className="text-xs text-muted-foreground">
+                                                        Click to upload
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ) : photoPreview ? (
+                                        // Show newly uploaded photo preview
+                                        <div className="border border-border rounded-lg bg-background">
+                                            <div className="flex flex-col items-center space-y-3 p-4 pb-2">
+                                                <div className="relative w-full max-w-[200px]">
+                                                    <img
+                                                        src={photoPreview}
+                                                        alt="Preview"
+                                                        className="w-full h-32 object-cover rounded-md border border-border"
+                                                    />
+                                                    <button
+                                                        type="button"
+                                                        onClick={handleRemovePhoto}
+                                                        className="absolute -top-2 -right-2 bg-destructive text-destructive-foreground rounded-full p-1 shadow-md hover:bg-destructive/90 transition-colors z-10"
+                                                    >
+                                                        <X className="h-3 w-3" />
+                                                    </button>
+                                                </div>
+                                                <div className="text-center">
+                                                    <p className="text-sm font-medium text-foreground truncate max-w-[180px]">
+                                                        {photo?.name}
+                                                    </p>
+                                                </div>
+                                            </div>
+                                            <div
+                                                className="cursor-pointer border-t border-border bg-muted/50 hover:bg-muted/70 transition-colors text-center py-2 rounded-b-lg"
+                                                onClick={() => fileInputRef.current?.click()}
+                                                onDrop={handleDrop}
+                                                onDragOver={handleDragOver}
+                                            >
+                                                <p className="text-xs text-muted-foreground font-medium">
+                                                    Click here to change photo
+                                                </p>
+                                            </div>
+                                        </div>
+                                    ) : (
+                                        // Empty State (no photo at all)
+                                        <div
+                                            className="border-2 border-dashed border-muted-foreground/25 rounded-lg p-6 text-center cursor-pointer hover:border-muted-foreground/50 transition-colors bg-background"
+                                            onDrop={handleDrop}
+                                            onDragOver={handleDragOver}
+                                            onClick={() => fileInputRef.current?.click()}
+                                        >
+                                            <div className="space-y-3">
+                                                <div className="text-muted-foreground">
+                                                    <svg
+                                                        className="mx-auto h-12 w-12"
+                                                        fill="none"
+                                                        stroke="currentColor"
+                                                        viewBox="0 0 24 24"
+                                                    >
+                                                        <path
+                                                            strokeLinecap="round"
+                                                            strokeLinejoin="round"
+                                                            strokeWidth={1.5}
+                                                            d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
+                                                        />
+                                                    </svg>
+                                                </div>
+                                                <div className="space-y-1">
+                                                    <p className="text-sm font-medium text-foreground">
+                                                        Upload photo
+                                                    </p>
+                                                    <p className="text-xs text-muted-foreground">
+                                                        PNG or JPG (max 5MB)
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    <input
+                                        ref={fileInputRef}
+                                        id="photo-upload"
+                                        type="file"
+                                        accept="image/*"
+                                        onChange={handlePhotoChange}
+                                        className="hidden"
+                                    />
+                                </div>
+
+                                {/* Submit Buttons - Now inside the form, part of scrollable content */}
+                                <div className="flex justify-end gap-2 pt-4 border-t mt-6">
                                     <Button
                                         type="button"
                                         variant="outline"
                                         onClick={onClose}
-                                        className="mr-2"
                                     >
                                         Cancel
                                     </Button>
@@ -705,7 +702,7 @@ export function EditEvacuationCenterForm({
                                         {loading ? "Updating..." : "Update Center"}
                                     </Button>
                                 </div>
-                            </div>
+                            </form>
                         </div>
                     )}
                 </DialogContent>
