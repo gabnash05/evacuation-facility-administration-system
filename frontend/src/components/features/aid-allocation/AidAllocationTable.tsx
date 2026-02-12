@@ -147,25 +147,7 @@ export function AidDistributionTable({
         }
     };
 
-    const formatDate = (dateString: string) => {
-        if (!dateString) return "N/A";
-        try {
-            const date = new Date(dateString);
-            return date.toLocaleDateString("en-US", {
-                year: "numeric",
-                month: "long",
-                day: "numeric",
-            });
-        } catch {
-            return "Invalid Date";
-        }
-    };
-
     const defaultRenderCell = (key: string, value: any, row: any) => {
-        if (key === "created_at") {
-            return formatDate(value);
-        }
-
         if (key === "status") {
             return (
                 <span
