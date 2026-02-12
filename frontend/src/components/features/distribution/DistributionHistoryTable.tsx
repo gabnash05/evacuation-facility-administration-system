@@ -83,17 +83,6 @@ export function DistributionHistoryTable({
         { key: "volunteer_name", label: "Distributed By", sortable: true },
     ];
 
-    // REMOVE the early return for loading - this is what causes the jump
-    // if (loading) {
-    //     return (
-    //         <div className="border border-border border-t-0">
-    //             <div className="p-8 text-center text-muted-foreground">
-    //                 Loading records...
-    //             </div>
-    //         </div>
-    //     );
-    // }
-
     return (
         <div className="border border-border border-t-0">
             {showTitle && title && (
@@ -141,7 +130,6 @@ export function DistributionHistoryTable({
 
                 <TableBody>
                     {loading && data.length === 0 ? (
-                        // SHOW LOADING INSIDE TABLE - LIKE HOUSEHOLDTABLE
                         <TableRow>
                             <TableCell 
                                 colSpan={columns.length + (showActions ? 1 : 0)} 
@@ -173,7 +161,7 @@ export function DistributionHistoryTable({
                                 `}
                             >
                                 <TableCell className="text-sm text-muted-foreground break-words whitespace-normal">
-                                    {format(new Date(record.distribution_date), "MMM d, yyyy h:mm a")}
+                                    {format(new Date(record.distribution_date), 'MM/dd/yyyy, h:mm:ss a')}
                                 </TableCell>
 
                                 <TableCell className="font-medium break-words whitespace-normal">

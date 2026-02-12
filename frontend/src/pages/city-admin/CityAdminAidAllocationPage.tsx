@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { format } from 'date-fns';
 import { AidDistributionTable } from "@/components/features/aid-allocation/AidAllocationTable";
 import { AidDistributionToolbar } from "@/components/features/aid-allocation/AidAllocationToolbar";
 import { AidAllocationForm } from "@/components/features/aid-allocation/AidAllocationForm";
@@ -207,6 +208,7 @@ export function CityAdminAidAllocationPage() {
     // Transform allocations data for display
     const transformedAllocations = allocations.map(allocation => ({
         ...allocation,
+        created_at: format(new Date(allocation.created_at), 'MM/dd/yyyy, h:mm:ss a'),
         distribution_type: formatDistributionType(allocation.distribution_type),
         status: formatStatus(allocation.status),
         // Keep original values for sorting/filtering
