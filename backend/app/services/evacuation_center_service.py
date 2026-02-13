@@ -200,12 +200,12 @@ def create_center(data: Dict[str, Any]) -> Dict[str, Any]:
                     }
 
         # Handle S3 key if provided
-        if "s3Key" in valid_data and valid_data["s3Key"]:
+        if "s3_key" in valid_data and valid_data["s3_key"]:
             # Map s3Key to database column name
-            valid_data["s3_key"] = valid_data.pop("s3Key")
+            valid_data["s3_key"] = valid_data.pop("s3_key")
             # Extract filename from s3Key for the filename field
-            if "fileName" not in valid_data and valid_data["s3_key"]:
-                valid_data["filename"] = valid_data["s3_key"].split('/')[-1]
+            if "file_name" not in valid_data and valid_data["s3_key"]:
+                valid_data["file_name"] = valid_data["s3_key"].split('/')[-1]
 
         # Validate coordinates if provided
         if "latitude" in valid_data and "longitude" in valid_data:
@@ -275,10 +275,10 @@ def update_center(
                 "message": "Both latitude and longitude must be provided together"
             }
 
-        if "s3Key" in valid_data and valid_data["s3Key"]:
-            valid_data["s3_key"] = valid_data.pop("s3Key")
-            if "fileName" not in valid_data and valid_data["s3_key"]:
-                valid_data["filename"] = valid_data["s3_key"].split('/')[-1]
+        if "s3_key" in valid_data and valid_data["s3_key"]:
+            valid_data["s3_key"] = valid_data.pop("s3_key")
+            if "file_name" not in valid_data and valid_data["s3_key"]:
+                valid_data["file_name"] = valid_data["s3_key"].split('/')[-1]
         
         if remove_photo:
             valid_data["s3_key"] = None
