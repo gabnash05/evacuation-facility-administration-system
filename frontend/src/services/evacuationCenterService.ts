@@ -96,9 +96,9 @@ export class EvacuationCenterService {
         capacity: number;
         current_occupancy: number;
         status: string;
-        s3Key: string;
-        fileName?: string;
-        fileType?: string;
+        s3_key: string;
+        file_name?: string;
+        file_type?: string;
     }): Promise<CentersResponse> {
         try {
             const response = await api.post<CentersResponse>("/evacuation_centers", data, {

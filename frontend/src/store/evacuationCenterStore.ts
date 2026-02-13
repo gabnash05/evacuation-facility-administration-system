@@ -196,9 +196,9 @@ export const useEvacuationCenterStore = create<EvacuationCenterState>((set, get)
                 capacity: center.capacity,
                 current_occupancy: center.current_occupancy || 0,
                 status: center.status || "active",
-                s3Key: s3Key,
-                fileName: s3Key.split('/').pop(),
-                fileType: fileType
+                s3_key: s3Key,
+                file_name: s3Key.split('/').pop(),
+                file_type: fileType
             };
             
             await EvacuationCenterService.createCenterWithS3Key(centerData);
