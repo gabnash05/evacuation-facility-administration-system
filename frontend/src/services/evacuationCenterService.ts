@@ -57,6 +57,7 @@ export class EvacuationCenterService {
         }
     }
 
+    // ✅ UPDATED: Original base64 method (kept for backward compatibility)
     static async createCenter(data: CreateCenterFormData, photo?: File): Promise<CentersResponse> {
         try {
             const formData = new FormData();
@@ -87,6 +88,159 @@ export class EvacuationCenterService {
         }
     }
 
+    static async createCenterWithS3Key(data: {
+        center_name: string;
+        address: string;
+        latitude: number;
+        longitude: number;
+        capacity: number;
+        current_occupancy: number;
+        status: string;
+        s3Key: string;
+        fileName?: string;
+        fileType?: string;
+    }): Promise<CentersResponse> {
+        try {
+            const response = await api.post<CentersResponse>("/evacuation_centers", data, {
+                withCredentials: true,
+                headers: {
+                    "Content-Type": "application/json",
+                },
+            });
+            return response.data;
+        } catch (error) {
+            throw new Error(handleApiError(error));
+        }
+    }
+
+    static async getUploadUrl(fileName: string, fileType: string): Promise<{
+        success: boolean;
+        message?: string;
+        data: {
+            uploadUrl: string;
+            s3Key: string;
+            bucket: string;
+        };
+    }> {
+        try {
+            const response = await api.post<{
+                success: boolean;
+                message?: string;
+                data: {
+                    uploadUrl: string;
+                    s3Key: string;
+                    bucket: string;
+                };
+            }>("/evacuation_centers/upload-url", 
+                { fileName, fileType },
+                {
+                    withCredentials: true,
+                    headers: {
+                        "Content-Type": "application/json",
+                    },
+                }
+            );
+            return response.data;
+        } catch (error) {
+            throw new Error(handleApiError(error));
+        }
+    }
+
+    static async uploadFileToS3(
+        uploadUrl: string, 
+        file: File, 
+        onProgress?: (progress: number) => void
+    ): Promise<void> {
+        return new Promise((resolve, reject) => {
+            const xhr = new XMLHttpRequest();
+            
+            xhr.open('PUT', uploadUrl, true);
+            xhr.setRequestHeader('Content-Type', file.type);
+            
+            if (onProgress) {
+                xhr.upload.onprogress = (event) => {
+                    if (event.lengthComputable) {
+                        const progress = Math.round((event.loaded / event.total) * 100);
+                        onProgress(progress);
+                    }
+                };
+            }
+            
+            xhr.onload = () => {
+                if (xhr.status === 200) {
+                    resolve();
+                } else {
+                    reject(new Error(`Upload failed with status ${xhr.status}`));
+                }
+            };
+            
+            xhr.onerror = () => {
+                reject(new Error('Network error during upload'));
+            };
+            
+            xhr.ontimeout = () => {
+                reject(new Error('Upload timeout'));
+            };
+            
+            xhr.send(file);
+        });
+    }
+
+
+    static async getDeleteUrl(s3Key: string): Promise<{
+        success: boolean;
+        message?: string;
+        data: {
+            deleteUrl: string;
+            s3Key: string;
+        };
+    }> {
+        try {
+            const response = await api.post<{
+                success: boolean;
+                message?: string;
+                data: {
+                    deleteUrl: string;
+                    s3Key: string;
+                };
+            }>("/evacuation_centers/delete-url", 
+                { s3Key },
+                {
+                    withCredentials: true,
+                    headers: {
+                        "Content-Type": "application/json",
+                    },
+                }
+            );
+            return response.data;
+        } catch (error) {
+            throw new Error(handleApiError(error));
+        }
+    }
+
+
+    static async deleteFileFromS3(deleteUrl: string): Promise<void> {
+        return new Promise((resolve, reject) => {
+            const xhr = new XMLHttpRequest();
+            
+            xhr.open('DELETE', deleteUrl, true);
+            
+            xhr.onload = () => {
+                if (xhr.status === 200 || xhr.status === 204) {
+                    resolve();
+                } else {
+                    reject(new Error(`Delete failed with status ${xhr.status}`));
+                }
+            };
+            
+            xhr.onerror = () => {
+                reject(new Error('Network error during delete'));
+            };
+            
+            xhr.send();
+        });
+    }
+
     static async updateCenter(
         id: number,
         updates: UpdateCenterFormData,
@@ -95,7 +249,6 @@ export class EvacuationCenterService {
         try {
             const formData = new FormData();
 
-            // Append form data (only provided fields, including coordinates)
             if (updates.center_name) formData.append("center_name", updates.center_name);
             if (updates.address) formData.append("address", updates.address);
             if (updates.latitude !== undefined) formData.append("latitude", updates.latitude.toString());
@@ -105,18 +258,33 @@ export class EvacuationCenterService {
                 formData.append("current_occupancy", updates.current_occupancy.toString());
             if (updates.status) formData.append("status", updates.status);
 
-            // Handle photo: file upload or removal - FIXED
             if (photo === "remove") {
                 formData.append("remove_photo", "true");
             } else if (photo && photo instanceof File) {
                 formData.append("photo", photo);
             }
-            // If photo is undefined, don't append anything (keeps existing photo)
 
             const response = await api.put<CentersResponse>(`/evacuation_centers/${id}`, formData, {
                 withCredentials: true,
                 headers: {
                     "Content-Type": "multipart/form-data",
+                },
+            });
+            return response.data;
+        } catch (error) {
+            throw new Error(handleApiError(error));
+        }
+    }
+
+    static async updateCenterWithS3Key(
+        id: number,
+        updates: UpdateCenterFormData & { s3Key?: string; remove_photo?: boolean }
+    ): Promise<CentersResponse> {
+        try {
+            const response = await api.put<CentersResponse>(`/evacuation_centers/${id}`, updates, {
+                withCredentials: true,
+                headers: {
+                    "Content-Type": "application/json",
                 },
             });
             return response.data;
@@ -219,7 +387,7 @@ export class EvacuationCenterService {
 
     static async getCenterEvents(centerId: number): Promise<{
         success: boolean;
-        data: any[]; // Replace 'any' with your Event type
+        data: any[];
     }> {
         try {
             const response = await api.get<{

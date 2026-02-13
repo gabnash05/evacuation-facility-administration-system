@@ -11,6 +11,8 @@ export interface EvacuationCenter {
     capacity: number;
     status: CenterStatus;
     current_occupancy: number;
+    s3_key?: string;
+    photo_url?: string;
     created_at: string;
     updated_at?: string;
     photo_data?: string;

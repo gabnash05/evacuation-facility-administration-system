@@ -5,14 +5,15 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Progress } from "@/components/ui/progress";
+import { Badge } from "@/components/ui/badge"; // ✅ ADDED: Import Badge
 import { useEvacuationCenterStore } from "@/store/evacuationCenterStore";
 import { DuplicateCenterDialog } from "./DuplicateCenterDialog";
 import { ConfirmationDialog } from "./ConfirmationDialog";
 import type { EvacuationCenter } from "@/types/center";
-import { ChevronDown, ChevronUp, X, MapPin } from "lucide-react";
+import { ChevronDown, ChevronUp, X, MapPin, Loader2, UploadCloud } from "lucide-react";
 import MapLocationPicker from "../map/MapLocationPicker";
 
-// Define the form data type that matches what the store expects
 interface CenterFormData {
     center_name: string;
     address: string;
@@ -29,7 +30,6 @@ interface EditEvacuationCenterFormProps {
     onShowSuccessToast?: (message: string) => void;
 }
 
-// Custom NumberInput component with chevron buttons
 function NumberInputWithChevrons({
     id,
     value,
@@ -38,6 +38,7 @@ function NumberInputWithChevrons({
     max,
     placeholder,
     required,
+    disabled, // ✅ ADDED: Add disabled prop
 }: {
     id: string;
     value: number;
@@ -46,8 +47,10 @@ function NumberInputWithChevrons({
     max?: number;
     placeholder?: string;
     required?: boolean;
+    disabled?: boolean; // ✅ ADDED: Add disabled to interface
 }) {
     const handleIncrement = () => {
+        if (disabled) return; // ✅ ADDED: Check disabled
         const newValue = value + 1;
         if (max === undefined || newValue <= max) {
             onChange(newValue);
@@ -55,6 +58,7 @@ function NumberInputWithChevrons({
     };
 
     const handleDecrement = () => {
+        if (disabled) return; // ✅ ADDED: Check disabled
         const newValue = value - 1;
         if (min === undefined || newValue >= min) {
             onChange(newValue);
@@ -62,6 +66,7 @@ function NumberInputWithChevrons({
     };
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (disabled) return; // ✅ ADDED: Check disabled
         const newValue = parseInt(e.target.value) || 0;
         onChange(newValue);
     };
@@ -77,6 +82,7 @@ function NumberInputWithChevrons({
                 min={min}
                 max={max}
                 required={required}
+                disabled={disabled} // ✅ ADDED: Pass disabled to Input
                 className="w-full pr-16 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
             />
             <div className="absolute right-0 top-0 h-full flex flex-col border-l border-input">
@@ -84,7 +90,7 @@ function NumberInputWithChevrons({
                     type="button"
                     onClick={handleIncrement}
                     className="flex-1 flex items-center justify-center px-2 hover:bg-muted transition-colors border-b border-input"
-                    disabled={max !== undefined && value >= max}
+                    disabled={disabled || (max !== undefined && value >= max)} // ✅ FIXED: Use disabled prop
                 >
                     <ChevronUp className="h-3 w-3" />
                 </button>
@@ -92,7 +98,7 @@ function NumberInputWithChevrons({
                     type="button"
                     onClick={handleDecrement}
                     className="flex-1 flex items-center justify-center px-2 hover:bg-muted transition-colors"
-                    disabled={min !== undefined && value <= min}
+                    disabled={disabled || (min !== undefined && value <= min)} // ✅ FIXED: Use disabled prop
                 >
                     <ChevronDown className="h-3 w-3" />
                 </button>
@@ -101,13 +107,14 @@ function NumberInputWithChevrons({
     );
 }
 
-// Status dropdown component (custom implementation)
 function StatusDropdown({
     value,
     onChange,
+    disabled, // ✅ ADDED: Add disabled prop
 }: {
     value: string;
     onChange: (value: "active" | "inactive" | "closed") => void;
+    disabled?: boolean; // ✅ ADDED: Add disabled to interface
 }) {
     const [isOpen, setIsOpen] = useState(false);
     const options = [
@@ -122,8 +129,9 @@ function StatusDropdown({
         <div className="relative">
             <button
                 type="button"
-                onClick={() => setIsOpen(!isOpen)}
-                className="w-full h-10 px-3 py-2 text-sm bg-background rounded-md border border-input shadow-sm transition-colors hover:border-border focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 flex items-center justify-between"
+                onClick={() => !disabled && setIsOpen(!isOpen)} // ✅ FIXED: Check disabled
+                disabled={disabled} // ✅ ADDED: Add disabled attribute
+                className="w-full h-10 px-3 py-2 text-sm bg-background rounded-md border border-input shadow-sm transition-colors hover:border-border focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 flex items-center justify-between disabled:opacity-50 disabled:cursor-not-allowed"
             >
                 <span>{selectedOption?.label}</span>
                 <ChevronDown
@@ -131,7 +139,7 @@ function StatusDropdown({
                 />
             </button>
 
-            {isOpen && (
+            {isOpen && !disabled && (
                 <div className="absolute z-50 w-full mt-1 bg-background border border-input rounded-md shadow-lg">
                     {options.map(option => (
                         <button
@@ -160,7 +168,13 @@ export function EditEvacuationCenterForm({
     center,
     onShowSuccessToast,
 }: EditEvacuationCenterFormProps) {
-    const { updateCenter, loading } = useEvacuationCenterStore();
+    const { 
+        updateCenter, 
+        uploadPhotoToS3, 
+        loading: storeLoading, 
+        uploadProgress 
+    } = useEvacuationCenterStore();
+    
     const [formData, setFormData] = useState<CenterFormData>({
         center_name: "",
         address: "",
@@ -169,6 +183,7 @@ export function EditEvacuationCenterForm({
         latitude: undefined,
         longitude: undefined,
     });
+    
     const [photo, setPhoto] = useState<File | undefined>(undefined);
     const [photoPreview, setPhotoPreview] = useState<string | null>(null);
     const [removeExistingPhoto, setRemoveExistingPhoto] = useState(false);
@@ -180,6 +195,10 @@ export function EditEvacuationCenterForm({
         isOpen: false,
     });
     const [showMapPicker, setShowMapPicker] = useState(false);
+    const [isUploading, setIsUploading] = useState(false);
+    const [s3Key, setS3Key] = useState<string | null>(null);
+    const [hasExistingPhoto, setHasExistingPhoto] = useState(false);
+    
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     // Pre-fill form when center data changes or dialog opens
@@ -194,6 +213,10 @@ export function EditEvacuationCenterForm({
                 longitude: center.longitude,
             });
             setRemoveExistingPhoto(false);
+            setS3Key(null);
+            setPhoto(undefined);
+            setPhotoPreview(null);
+            setHasExistingPhoto(!!center.s3_key || !!center.photo_data);
         }
     }, [center, isOpen]);
 
@@ -212,6 +235,9 @@ export function EditEvacuationCenterForm({
             setPhotoPreview(null);
             setRemoveExistingPhoto(false);
             setShowMapPicker(false);
+            setS3Key(null);
+            setIsUploading(false);
+            setHasExistingPhoto(false);
         }
     }, [isOpen]);
 
@@ -231,7 +257,6 @@ export function EditEvacuationCenterForm({
         }));
     };
 
-    // Handle location selection from map
     const handleLocationSelect = (location: { lat: number; lng: number }) => {
         setFormData(prev => ({
             ...prev,
@@ -240,17 +265,15 @@ export function EditEvacuationCenterForm({
         }));
     };
 
-    // Handle opening map picker
     const handleOpenMapPicker = () => {
         setShowMapPicker(true);
     };
 
-    // Handle closing map picker
     const handleCloseMapPicker = () => {
         setShowMapPicker(false);
     };
 
-    const handlePhotoChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const handlePhotoChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
         const file = event.target.files?.[0];
         if (file) {
             if (!file.type.startsWith("image/")) {
@@ -265,22 +288,25 @@ export function EditEvacuationCenterForm({
 
             setPhoto(file);
             setRemoveExistingPhoto(false);
+            setS3Key(null);
             const previewUrl = URL.createObjectURL(file);
             setPhotoPreview(previewUrl);
         }
     };
 
     const handleRemovePhoto = () => {
-        if (center?.photo_data && !photo) {
+        if (hasExistingPhoto && !photo) {
+            // Remove existing photo from DB
             setRemoveExistingPhoto(true);
             setPhotoPreview(null);
+            setPhoto(undefined);
+            setS3Key(null);
         } else if (photo) {
+            // Remove newly selected photo
             setPhoto(undefined);
             setPhotoPreview(null);
             setRemoveExistingPhoto(false);
-        } else {
-            setRemoveExistingPhoto(false);
-            setPhotoPreview(null);
+            setS3Key(null);
         }
 
         if (fileInputRef.current) {
@@ -292,6 +318,13 @@ export function EditEvacuationCenterForm({
         e.preventDefault();
 
         if (!center) return;
+        
+        // Validate location is selected
+        if (!formData.latitude || !formData.longitude) {
+            alert("Please select a location on the map for the evacuation center.");
+            return;
+        }
+        
         setConfirmationDialog({ isOpen: true });
     };
 
@@ -299,10 +332,41 @@ export function EditEvacuationCenterForm({
         if (!center) return;
 
         try {
-            const updateData = { ...formData };
-            const photoToSend = removeExistingPhoto ? "remove" : photo;
-
-            await updateCenter(center.center_id, updateData, photoToSend);
+            let finalS3Key = s3Key;
+            
+            // Step 1: Upload new photo to S3 if there is one and it hasn't been uploaded yet
+            if (photo && !s3Key) {
+                setIsUploading(true);
+                const result = await uploadPhotoToS3(photo);
+                finalS3Key = result.s3Key;
+                setS3Key(finalS3Key);
+                setIsUploading(false);
+            }
+            
+            // Step 2: Prepare update data
+            const updateData: any = {
+                center_name: formData.center_name,
+                address: formData.address,
+                latitude: formData.latitude,
+                longitude: formData.longitude,
+                capacity: formData.capacity,
+                status: formData.status,
+            };
+            
+            // Step 3: Handle photo cases
+            if (finalS3Key) {
+                // New photo uploaded to S3
+                updateData.s3Key = finalS3Key;
+                updateData.fileName = photo?.name;
+                updateData.fileType = photo?.type;
+            } else if (removeExistingPhoto) {
+                // Remove existing photo
+                updateData.remove_photo = true;
+            }
+            
+            // Step 4: Update center with S3 key or remove_photo flag
+            await updateCenter(center.center_id, updateData, undefined);
+            
             setConfirmationDialog({ isOpen: false });
 
             if (onShowSuccessToast) {
@@ -311,6 +375,8 @@ export function EditEvacuationCenterForm({
 
             onClose();
         } catch (error: any) {
+            setIsUploading(false);
+            
             if (
                 error.message?.includes("already exists") ||
                 error.message?.includes("duplicate") ||
@@ -324,6 +390,7 @@ export function EditEvacuationCenterForm({
             } else {
                 console.error("Failed to update center:", error);
                 setConfirmationDialog({ isOpen: false });
+                alert(error.message || "Failed to update center. Please try again.");
             }
         }
     };
@@ -332,7 +399,7 @@ export function EditEvacuationCenterForm({
         setConfirmationDialog({ isOpen: false });
     };
 
-    const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
+    const handleDrop = async (e: React.DragEvent<HTMLDivElement>) => {
         e.preventDefault();
         const file = e.dataTransfer.files[0];
         if (file && file.type.startsWith("image/")) {
@@ -343,6 +410,7 @@ export function EditEvacuationCenterForm({
 
             setPhoto(file);
             setRemoveExistingPhoto(false);
+            setS3Key(null);
             const previewUrl = URL.createObjectURL(file);
             setPhotoPreview(previewUrl);
         }
@@ -358,6 +426,8 @@ export function EditEvacuationCenterForm({
             centerName: "",
         });
     };
+
+    const isLoading = storeLoading || isUploading;
 
     if (!center) return null;
 
@@ -382,7 +452,6 @@ export function EditEvacuationCenterForm({
                                 />
                             </div>
                             
-                            {/* Buttons at the bottom - always visible */}
                             <div className="flex justify-end gap-2 pt-4 mt-4 border-t shrink-0">
                                 <Button
                                     type="button"
@@ -402,7 +471,6 @@ export function EditEvacuationCenterForm({
                             </div>
                         </div>
                     ) : (
-                        // Form View - Entire form is scrollable including buttons
                         <div className="flex flex-col">
                             <DialogHeader className="pb-4">
                                 <DialogTitle className="text-lg font-semibold">
@@ -410,7 +478,6 @@ export function EditEvacuationCenterForm({
                                 </DialogTitle>
                             </DialogHeader>
                             <form onSubmit={handleSubmit} className="space-y-5">
-                                {/* Center Name */}
                                 <div className="space-y-2">
                                     <Label htmlFor="center_name" className="text-sm font-medium">
                                         Center Name
@@ -423,10 +490,10 @@ export function EditEvacuationCenterForm({
                                         onChange={e => handleInputChange("center_name", e.target.value)}
                                         required
                                         className="w-full"
+                                        disabled={isLoading}
                                     />
                                 </div>
 
-                                {/* Address */}
                                 <div className="space-y-2">
                                     <Label htmlFor="address" className="text-sm font-medium">
                                         Address
@@ -439,10 +506,10 @@ export function EditEvacuationCenterForm({
                                         onChange={e => handleInputChange("address", e.target.value)}
                                         required
                                         className="w-full"
+                                        disabled={isLoading}
                                     />
                                 </div>
 
-                                {/* Location Selection */}
                                 <div className="space-y-2">
                                     <Label className="text-sm font-medium">
                                         Location
@@ -473,6 +540,7 @@ export function EditEvacuationCenterForm({
                                                         type="button"
                                                         onClick={handleOpenMapPicker}
                                                         className="px-3 py-1 text-sm border border-input rounded-md hover:bg-accent transition-colors"
+                                                        disabled={isLoading}
                                                     >
                                                         Change
                                                     </button>
@@ -501,7 +569,6 @@ export function EditEvacuationCenterForm({
                                     </div>
                                 </div>
 
-                                {/* Capacity */}
                                 <div className="space-y-2">
                                     <Label htmlFor="capacity" className="text-sm font-medium">
                                         Capacity
@@ -514,10 +581,10 @@ export function EditEvacuationCenterForm({
                                         max={10000}
                                         placeholder="Enter capacity"
                                         required
+                                        disabled={isLoading} // ✅ FIXED: Removed extra parentheses
                                     />
                                 </div>
 
-                                {/* Status */}
                                 <div className="space-y-2">
                                     <Label htmlFor="status" className="text-sm font-medium">
                                         Status
@@ -525,29 +592,37 @@ export function EditEvacuationCenterForm({
                                     <StatusDropdown
                                         value={formData.status}
                                         onChange={value => handleInputChange("status", value)}
+                                        disabled={isLoading} // ✅ ADDED: Pass disabled prop
                                     />
                                 </div>
 
-                                {/* Photo Upload Section */}
                                 <div className="space-y-2">
                                     <Label className="text-sm font-medium">
                                         Photo of Evacuation Center
                                     </Label>
 
-                                    {center?.photo_data && !removeExistingPhoto && !photoPreview ? (
-                                        // Show existing center photo from backend (base64)
+                                    {hasExistingPhoto && !removeExistingPhoto && !photoPreview ? (
                                         <div className="border border-border rounded-lg bg-background">
                                             <div className="flex flex-col items-center space-y-3 p-4 pb-2">
                                                 <div className="relative w-full max-w-[200px]">
-                                                    <img
-                                                        src={`data:image/jpeg;base64,${center.photo_data}`}
-                                                        alt="Current center photo"
-                                                        className="w-full h-32 object-cover rounded-md border border-border"
-                                                    />
+                                                    {center.photo_url ? (
+                                                        <img
+                                                            src={center.photo_url}
+                                                            alt="Current center photo"
+                                                            className="w-full h-32 object-cover rounded-md border border-border"
+                                                        />
+                                                    ) : center.photo_data ? (
+                                                        <img
+                                                            src={`data:image/jpeg;base64,${center.photo_data}`}
+                                                            alt="Current center photo"
+                                                            className="w-full h-32 object-cover rounded-md border border-border"
+                                                        />
+                                                    ) : null}
                                                     <button
                                                         type="button"
                                                         onClick={handleRemovePhoto}
                                                         className="absolute -top-2 -right-2 bg-destructive text-destructive-foreground rounded-full p-1 shadow-md hover:bg-destructive/90 transition-colors z-10"
+                                                        disabled={isLoading}
                                                     >
                                                         <X className="h-3 w-3" />
                                                     </button>
@@ -559,8 +634,8 @@ export function EditEvacuationCenterForm({
                                                 </div>
                                             </div>
                                             <div
-                                                className="cursor-pointer border-t border-border bg-muted/50 hover:bg-muted/70 transition-colors text-center py-2 rounded-b-lg"
-                                                onClick={() => fileInputRef.current?.click()}
+                                                className={`cursor-pointer border-t border-border bg-muted/50 hover:bg-muted/70 transition-colors text-center py-2 rounded-b-lg ${isLoading ? 'opacity-50 pointer-events-none' : ''}`}
+                                                onClick={() => !isLoading && fileInputRef.current?.click()}
                                                 onDrop={handleDrop}
                                                 onDragOver={handleDragOver}
                                             >
@@ -570,12 +645,11 @@ export function EditEvacuationCenterForm({
                                             </div>
                                         </div>
                                     ) : removeExistingPhoto ? (
-                                        // Show removed photo state
                                         <div
-                                            className="border-2 border-dashed border-muted-foreground/25 rounded-lg p-6 text-center cursor-pointer hover:border-muted-foreground/50 transition-colors bg-background"
+                                            className={`border-2 border-dashed border-muted-foreground/25 rounded-lg p-6 text-center cursor-pointer hover:border-muted-foreground/50 transition-colors bg-background ${isLoading ? 'opacity-50 pointer-events-none' : ''}`}
                                             onDrop={handleDrop}
                                             onDragOver={handleDragOver}
-                                            onClick={() => fileInputRef.current?.click()}
+                                            onClick={() => !isLoading && fileInputRef.current?.click()}
                                         >
                                             <div className="space-y-3">
                                                 <div className="text-muted-foreground">
@@ -595,16 +669,15 @@ export function EditEvacuationCenterForm({
                                                 </div>
                                                 <div className="space-y-1">
                                                     <p className="text-sm font-medium text-foreground">
-                                                        Photo removed
+                                                        Photo will be removed
                                                     </p>
                                                     <p className="text-xs text-muted-foreground">
-                                                        Click to upload
+                                                        Click to upload new photo
                                                     </p>
                                                 </div>
                                             </div>
                                         </div>
                                     ) : photoPreview ? (
-                                        // Show newly uploaded photo preview
                                         <div className="border border-border rounded-lg bg-background">
                                             <div className="flex flex-col items-center space-y-3 p-4 pb-2">
                                                 <div className="relative w-full max-w-[200px]">
@@ -617,6 +690,7 @@ export function EditEvacuationCenterForm({
                                                         type="button"
                                                         onClick={handleRemovePhoto}
                                                         className="absolute -top-2 -right-2 bg-destructive text-destructive-foreground rounded-full p-1 shadow-md hover:bg-destructive/90 transition-colors z-10"
+                                                        disabled={isLoading}
                                                     >
                                                         <X className="h-3 w-3" />
                                                     </button>
@@ -625,11 +699,28 @@ export function EditEvacuationCenterForm({
                                                     <p className="text-sm font-medium text-foreground truncate max-w-[180px]">
                                                         {photo?.name}
                                                     </p>
+                                                    {s3Key && (
+                                                        <Badge variant="outline" className="mt-1 bg-green-50 text-green-700 border-green-200">
+                                                            <UploadCloud className="h-3 w-3 mr-1" />
+                                                            Ready to save
+                                                        </Badge>
+                                                    )}
                                                 </div>
                                             </div>
+                                            
+                                            {isUploading && uploadProgress !== null && (
+                                                <div className="px-4 pb-3">
+                                                    <div className="flex justify-between text-xs mb-1">
+                                                        <span>Uploading to S3...</span>
+                                                        <span>{uploadProgress}%</span>
+                                                    </div>
+                                                    <Progress value={uploadProgress} className="h-2" />
+                                                </div>
+                                            )}
+                                            
                                             <div
-                                                className="cursor-pointer border-t border-border bg-muted/50 hover:bg-muted/70 transition-colors text-center py-2 rounded-b-lg"
-                                                onClick={() => fileInputRef.current?.click()}
+                                                className={`cursor-pointer border-t border-border bg-muted/50 hover:bg-muted/70 transition-colors text-center py-2 rounded-b-lg ${isLoading ? 'opacity-50 pointer-events-none' : ''}`}
+                                                onClick={() => !isLoading && fileInputRef.current?.click()}
                                                 onDrop={handleDrop}
                                                 onDragOver={handleDragOver}
                                             >
@@ -639,12 +730,11 @@ export function EditEvacuationCenterForm({
                                             </div>
                                         </div>
                                     ) : (
-                                        // Empty State (no photo at all)
                                         <div
-                                            className="border-2 border-dashed border-muted-foreground/25 rounded-lg p-6 text-center cursor-pointer hover:border-muted-foreground/50 transition-colors bg-background"
+                                            className={`border-2 border-dashed border-muted-foreground/25 rounded-lg p-6 text-center cursor-pointer hover:border-muted-foreground/50 transition-colors bg-background ${isLoading ? 'opacity-50 pointer-events-none' : ''}`}
                                             onDrop={handleDrop}
                                             onDragOver={handleDragOver}
-                                            onClick={() => fileInputRef.current?.click()}
+                                            onClick={() => !isLoading && fileInputRef.current?.click()}
                                         >
                                             <div className="space-y-3">
                                                 <div className="text-muted-foreground">
@@ -681,25 +771,37 @@ export function EditEvacuationCenterForm({
                                         accept="image/*"
                                         onChange={handlePhotoChange}
                                         className="hidden"
+                                        disabled={isLoading}
                                     />
                                 </div>
 
-                                {/* Submit Buttons - Now inside the form, part of scrollable content */}
                                 <div className="flex justify-end gap-2 pt-4 border-t mt-6">
                                     <Button
                                         type="button"
                                         variant="outline"
                                         onClick={onClose}
+                                        disabled={isLoading}
                                     >
                                         Cancel
                                     </Button>
                                     <Button
                                         type="submit"
-                                        onClick={handleSubmit}
-                                        disabled={loading || !formData.latitude || !formData.longitude}
-                                        className="bg-blue-600 text-white hover:bg-blue-700 px-4 py-2 text-sm font-medium"
+                                        disabled={isLoading || !formData.latitude || !formData.longitude || !formData.center_name.trim()}
+                                        className="bg-blue-600 text-white hover:bg-blue-700 px-4 py-2 text-sm font-medium min-w-[120px]"
                                     >
-                                        {loading ? "Updating..." : "Update Center"}
+                                        {isUploading ? (
+                                            <span className="flex items-center gap-2">
+                                                <Loader2 className="h-4 w-4 animate-spin" />
+                                                Uploading {uploadProgress}%
+                                            </span>
+                                        ) : storeLoading ? (
+                                            <span className="flex items-center gap-2">
+                                                <Loader2 className="h-4 w-4 animate-spin" />
+                                                Updating...
+                                            </span>
+                                        ) : (
+                                            "Update Center"
+                                        )}
                                     </Button>
                                 </div>
                             </form>
@@ -708,17 +810,15 @@ export function EditEvacuationCenterForm({
                 </DialogContent>
             </Dialog>
 
-            {/* Confirmation Dialog */}
             <ConfirmationDialog
                 isOpen={confirmationDialog.isOpen}
                 onClose={handleCancelSave}
                 onConfirm={handleConfirmSave}
                 title="Save Changes?"
                 message="Are you sure you want to save these changes?"
-                loading={loading}
+                loading={isLoading}
             />
 
-            {/* Duplicate Center Name Dialog */}
             <DuplicateCenterDialog
                 isOpen={duplicateDialog.isOpen}
                 onClose={handleDuplicateDialogClose}

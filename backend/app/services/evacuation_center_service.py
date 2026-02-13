@@ -169,13 +169,12 @@ def get_all_centers() -> Dict[str, Any]:
         return {"success": False, "message": "Failed to retrieve centers", "data": []}
 
 
-def create_center(data: Dict[str, Any], photo_file=None) -> Dict[str, Any]:
+def create_center(data: Dict[str, Any]) -> Dict[str, Any]:
     """
     Create a new evacuation center.
-
+    
     Args:
-        data: Center data
-        photo_file: Optional photo file
+        data: Center data (may include s3Key for photo)
 
     Returns:
         Dictionary with creation result
@@ -200,17 +199,13 @@ def create_center(data: Dict[str, Any], photo_file=None) -> Dict[str, Any]:
                         "message": "Evacuation center name already exists",
                     }
 
-        # Handle photo upload as base64
-        if photo_file:
-            try:
-                base64_data = process_photo_file(photo_file)
-                if base64_data:
-                    valid_data["photo_data"] = base64_data
-            except ValueError as e:
-                return {"success": False, "message": str(e)}
-            except Exception as e:
-                logger.error("Error processing photo: %s", str(e))
-                return {"success": False, "message": "Failed to process photo"}
+        # Handle S3 key if provided
+        if "s3Key" in valid_data and valid_data["s3Key"]:
+            # Map s3Key to database column name
+            valid_data["s3_key"] = valid_data.pop("s3Key")
+            # Extract filename from s3Key for the filename field
+            if "fileName" not in valid_data and valid_data["s3_key"]:
+                valid_data["filename"] = valid_data["s3_key"].split('/')[-1]
 
         # Validate coordinates if provided
         if "latitude" in valid_data and "longitude" in valid_data:
@@ -235,52 +230,20 @@ def create_center(data: Dict[str, Any], photo_file=None) -> Dict[str, Any]:
     except Exception as error:
         logger.error("Error creating evacuation center: %s", str(error))
         return {"success": False, "message": "Failed to create evacuation center"}
-
+    
 
 def update_center(
     center_id: int,
     update_data: Dict[str, Any],
-    photo_file=None,
     remove_photo: bool = False,
 ) -> Dict[str, Any]:
-    """
-    Update an evacuation center.
-
-    Args:
-        center_id: Center ID
-        update_data: Update data
-        photo_file: Optional new photo file
-        remove_photo: Whether to remove existing photo
-
-    Returns:
-        Dictionary with update result
-    """
     try:
-        # DEBUG: Log the incoming parameters
-        logger.info("🔧 [Backend Service] update_center called with:")
-        logger.info(
-            "🔧 [Backend Service] center_id: %s, remove_photo: %s",
-            center_id,
-            remove_photo,
-        )
-        logger.info("🔧 [Backend Service] update_data: %s", update_data)
-        logger.info("🔧 [Backend Service] photo_file: %s", photo_file is not None)
+        valid_data = update_schema.load(update_data)
 
-        # Validate input data
-        try:
-            valid_data = update_schema.load(update_data)
-        except Exception as validation_error:
-            return {
-                "success": False,
-                "message": f"Validation error: {str(validation_error)}",
-            }
-
-        # Check if center exists
         existing_center = EvacuationCenter.get_by_id(center_id)
         if not existing_center:
             return {"success": False, "message": "Evacuation center not found"}
 
-        # Check for duplicate center name if name is being updated
         if "center_name" in valid_data and valid_data["center_name"]:
             existing_centers = EvacuationCenter.get_all(
                 search=valid_data["center_name"]
@@ -295,7 +258,6 @@ def update_center(
                         "message": "Evacuation center name already exists",
                     }
 
-        # Validate coordinates if being updated
         if "latitude" in valid_data and "longitude" in valid_data:
             lat = valid_data["latitude"]
             lng = valid_data["longitude"]
@@ -304,7 +266,6 @@ def update_center(
             if lng is not None and (lng < -180 or lng > 180):
                 return {"success": False, "message": "Invalid longitude value"}
         
-        # Validate coordinate pairing
         lat_provided = "latitude" in valid_data and valid_data["latitude"] is not None
         lng_provided = "longitude" in valid_data and valid_data["longitude"] is not None
         
@@ -314,77 +275,33 @@ def update_center(
                 "message": "Both latitude and longitude must be provided together"
             }
 
-        # Handle photo upload/removal
+        if "s3Key" in valid_data and valid_data["s3Key"]:
+            valid_data["s3_key"] = valid_data.pop("s3Key")
+            if "fileName" not in valid_data and valid_data["s3_key"]:
+                valid_data["filename"] = valid_data["s3_key"].split('/')[-1]
+        
         if remove_photo:
-            # Remove existing photo - explicitly set to None
-            valid_data["photo_data"] = None
-            logger.info(
-                "🔧 [Backend Service] Explicitly setting photo_data to None for removal"
-            )
-        elif photo_file:
-            # Handle new photo upload
-            try:
-                base64_data = process_photo_file(photo_file)
-                if base64_data:
-                    valid_data["photo_data"] = base64_data
-                    logger.info("🔧 [Backend Service] Setting new photo data")
-            except ValueError as e:
-                return {"success": False, "message": str(e)}
-            except Exception as e:
-                logger.error("Error processing photo: %s", str(e))
-                return {"success": False, "message": "Failed to process photo"}
-        else:
-            # If no photo changes, ensure photo_data is not in valid_data
-            # so it doesn't override existing photo
-            if "photo_data" in valid_data:
-                del valid_data["photo_data"]
-            logger.info("🔧 [Backend Service] No photo changes, keeping existing photo")
-
-        # DEBUG: Log what will be sent to model
-        logger.info(
-            "🔧 [Backend Service] Final update data keys: %s", list(valid_data.keys())
-        )
+            valid_data["s3_key"] = None
+            valid_data["filename"] = None
+        
         if "photo_data" in valid_data:
-            logger.info(
-                "🔧 [Backend Service] photo_data value: %s",
-                (
-                    "None"
-                    if valid_data["photo_data"] is None
-                    else "Base64 string (length: {})".format(
-                        len(valid_data["photo_data"])
-                    )
-                ),
-            )
+            del valid_data["photo_data"]
 
-        # Check if we're updating occupancy - if so, use the specialized method
         if "current_occupancy" in valid_data:
             new_occupancy = valid_data["current_occupancy"]
-            logger.info(
-                "🔧 [Backend Service] Occupancy update detected, using update_occupancy method for center %s to %s",
-                center_id, new_occupancy
-            )
-            
-            # Use the specialized occupancy update method which also updates events
             updated_center = EvacuationCenter.update_occupancy(center_id, new_occupancy)
             
             if not updated_center:
                 return {"success": False, "message": "Failed to update evacuation center occupancy"}
                 
-            # If there are other fields to update besides occupancy, update them separately
             other_fields = {k: v for k, v in valid_data.items() if k != "current_occupancy"}
             if other_fields:
-                logger.info(
-                    "🔧 [Backend Service] Also updating other fields: %s", list(other_fields.keys())
-                )
                 updated_center = EvacuationCenter.update(center_id, other_fields)
         else:
-            # Regular update without occupancy change
             updated_center = EvacuationCenter.update(center_id, valid_data)
 
         if not updated_center:
             return {"success": False, "message": "Failed to update evacuation center"}
-
-        logger.info("Evacuation center updated: %s", center_id)
 
         return {
             "success": True,
@@ -393,12 +310,11 @@ def update_center(
         }
 
     except ValueError as error:
-        # Handle occupancy validation errors
         return {"success": False, "message": str(error)}
     except Exception as error:
         logger.error("Error updating evacuation center %s: %s", center_id, str(error))
         return {"success": False, "message": "Failed to update evacuation center"}
-
+    
 
 def delete_center(center_id: int) -> Dict[str, Any]:
     """

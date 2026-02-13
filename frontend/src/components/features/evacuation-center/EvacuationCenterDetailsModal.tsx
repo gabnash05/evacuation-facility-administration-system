@@ -252,9 +252,9 @@ export function EvacuationCenterDetailsModal({
                 <div className="space-y-3">
                     <Label className="text-sm font-medium">Photo of Evacuation Center</Label>
                     <div className="border border-border rounded-lg bg-muted/50 h-[250px] flex items-center justify-center overflow-hidden">
-                        {center.photo_data ? (
+                        {center.photo_url ? (
                             <img
-                                src={`data:image/jpeg;base64,${center.photo_data}`}
+                                src={`${center.photo_url}`}
                                 alt={center.center_name}
                                 className="w-full h-full object-contain bg-gray-100 dark:bg-gray-900"
                             />

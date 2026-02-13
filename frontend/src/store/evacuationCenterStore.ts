@@ -26,6 +26,7 @@ interface EvacuationCenterState {
     citySummary: CitySummary | null;
     mapCenters: EvacuationCenter[]; // Centers for map display
     nearbyCenters: (EvacuationCenter & { distance_km?: number })[]; // Centers with distance info
+    uploadProgress: number | null; // For S3 upload progress
 
     // Actions
     setSearchQuery: (query: string) => void;
@@ -37,6 +38,14 @@ interface EvacuationCenterState {
         center: Omit<EvacuationCenter, "center_id" | "created_at" | "updated_at">,
         photo?: File
     ) => Promise<void>;
+    
+    uploadPhotoToS3: (file: File) => Promise<{ s3Key: string; uploadUrl: string }>;
+    addCenterWithS3Photo: (
+        center: Omit<EvacuationCenter, "center_id" | "created_at" | "updated_at">,
+        s3Key: string,
+        fileType: string
+    ) => Promise<void>;
+    
     updateCenter: (
         id: number,
         updates: Partial<EvacuationCenter>,
@@ -57,7 +66,7 @@ interface EvacuationCenterState {
         status?: string
     ) => Promise<void>;
     fetchCenterById: (id: number) => Promise<EvacuationCenter | null>;
-    fetchCenterEvents: (centerId: number) => Promise<any[]>; // Replace 'any' with your Event type
+    fetchCenterEvents: (centerId: number) => Promise<any[]>;
 }
 
 const initialState = {
@@ -72,6 +81,7 @@ const initialState = {
     citySummary: null,
     mapCenters: [],
     nearbyCenters: [],
+    uploadProgress: null,
 };
 
 export const useEvacuationCenterStore = create<EvacuationCenterState>((set, get) => ({
@@ -127,7 +137,6 @@ export const useEvacuationCenterStore = create<EvacuationCenterState>((set, get)
         photo?: File
     ) => {
         try {
-            // Convert to CreateCenterFormData format
             const centerData = {
                 center_name: center.center_name,
                 address: center.address,
@@ -139,7 +148,61 @@ export const useEvacuationCenterStore = create<EvacuationCenterState>((set, get)
             };
             
             await EvacuationCenterService.createCenter(centerData, photo);
-            await get().fetchCenters(); // Refresh the list
+            await get().fetchCenters();
+        } catch (error) {
+            throw new Error(error instanceof Error ? error.message : "Failed to add center");
+        }
+    },
+
+    uploadPhotoToS3: async (file: File) => {
+        set({ uploadProgress: 0, error: null });
+        
+        try {
+            const uploadUrlResponse = await EvacuationCenterService.getUploadUrl(
+                file.name,
+                file.type
+            );
+            
+            if (!uploadUrlResponse.success) {
+                throw new Error(uploadUrlResponse.message || "Failed to get upload URL");
+            }
+            
+            const { uploadUrl, s3Key } = uploadUrlResponse.data;
+            
+            await EvacuationCenterService.uploadFileToS3(uploadUrl, file, (progress: number) => {
+                set({ uploadProgress: progress });
+            });
+            
+            set({ uploadProgress: null });
+            
+            return { s3Key, uploadUrl };
+        } catch (error) {
+            set({ uploadProgress: null });
+            throw error;
+        }
+    },
+
+    addCenterWithS3Photo: async (
+        center: Omit<EvacuationCenter, "center_id" | "created_at" | "updated_at">,
+        s3Key: string,
+        fileType: string
+    ) => {
+        try {
+            const centerData = {
+                center_name: center.center_name,
+                address: center.address,
+                latitude: center.latitude,
+                longitude: center.longitude,
+                capacity: center.capacity,
+                current_occupancy: center.current_occupancy || 0,
+                status: center.status || "active",
+                s3Key: s3Key,
+                fileName: s3Key.split('/').pop(),
+                fileType: fileType
+            };
+            
+            await EvacuationCenterService.createCenterWithS3Key(centerData);
+            await get().fetchCenters();
         } catch (error) {
             throw new Error(error instanceof Error ? error.message : "Failed to add center");
         }
@@ -151,7 +214,6 @@ export const useEvacuationCenterStore = create<EvacuationCenterState>((set, get)
         photo?: File | "remove"
     ) => {
         try {
-            // Convert to UpdateCenterFormData format
             const updateData: any = {};
             if (updates.center_name !== undefined) updateData.center_name = updates.center_name;
             if (updates.address !== undefined) updateData.address = updates.address;
@@ -172,16 +234,13 @@ export const useEvacuationCenterStore = create<EvacuationCenterState>((set, get)
         try {
             await EvacuationCenterService.deleteCenter(id);
 
-            // Get current state to check pagination
             const { centers, currentPage } = get();
 
-            // If this was the last item on the current page and we're not on page 1
             if (centers.length === 1 && currentPage > 1) {
-                // Decrement the page before fetching
                 set({ currentPage: currentPage - 1 });
             }
 
-            await get().fetchCenters(); // Refresh the list
+            await get().fetchCenters();
         } catch (error) {
             throw new Error(error instanceof Error ? error.message : "Failed to delete center");
         }
@@ -195,7 +254,7 @@ export const useEvacuationCenterStore = create<EvacuationCenterState>((set, get)
 
             set({
                 centers: response.data,
-                mapCenters: response.data, // Also store for map use
+                mapCenters: response.data,
                 loading: false,
                 pagination: null,
             });

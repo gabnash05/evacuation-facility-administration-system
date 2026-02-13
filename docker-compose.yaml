@@ -31,6 +31,8 @@ services:
       - SUPER_ADMIN_EMAIL=${SUPER_ADMIN_EMAIL}
       - SUPER_ADMIN_PASSWORD=${SUPER_ADMIN_PASSWORD}
       - CORS_ORIGINS=http://frontend
+      - AWS_REGION=${AWS_REGION}
+      - S3_BUCKET_NAME=${S3_BUCKET_NAME}
       - API_PREFIX=/api
       - DEBUG=False
     depends_on:

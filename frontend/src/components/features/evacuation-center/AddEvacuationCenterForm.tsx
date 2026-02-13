@@ -8,8 +8,9 @@ import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { useEvacuationCenterStore } from "@/store/evacuationCenterStore";
 import { DuplicateCenterDialog } from "./DuplicateCenterDialog";
-import { ChevronUp, ChevronDown, X, MapPin, CheckCircle } from "lucide-react";
+import { ChevronUp, ChevronDown, X, MapPin, CheckCircle, Loader2, UploadCloud } from "lucide-react";
 import MapLocationPicker from "../map/MapLocationPicker";
+import { Progress } from "@/components/ui/progress"; // Add this if you have shadcn/ui progress
 
 // Define the form data type that matches what the store expects
 interface CenterFormData {
@@ -105,7 +106,13 @@ export function AddEvacuationCenterForm({
     onClose,
     onShowSuccessToast,
 }: AddEvacuationCenterFormProps) {
-    const { addCenter, loading } = useEvacuationCenterStore();
+    const { 
+        addCenterWithS3Photo, 
+        uploadPhotoToS3, 
+        loading: storeLoading, 
+        uploadProgress 
+    } = useEvacuationCenterStore();
+    
     const [formData, setFormData] = useState<CenterFormData>({
         center_name: "",
         address: "",
@@ -115,6 +122,7 @@ export function AddEvacuationCenterForm({
         latitude: undefined,
         longitude: undefined,
     });
+    
     const [photo, setPhoto] = useState<File | undefined>(undefined);
     const [photoPreview, setPhotoPreview] = useState<string | null>(null);
     const [duplicateDialog, setDuplicateDialog] = useState({
@@ -122,6 +130,9 @@ export function AddEvacuationCenterForm({
         centerName: "",
     });
     const [showMapPicker, setShowMapPicker] = useState(false);
+    const [isUploading, setIsUploading] = useState(false);
+    const [s3Key, setS3Key] = useState<string | null>(null);
+    
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     // Reset form when dialog closes
@@ -139,10 +150,11 @@ export function AddEvacuationCenterForm({
             setPhoto(undefined);
             setPhotoPreview(null);
             setShowMapPicker(false);
+            setS3Key(null);
+            setIsUploading(false);
         }
     }, [isOpen]);
 
-    // Clean up object URL when component unmounts or photo changes
     useEffect(() => {
         return () => {
             if (photoPreview) {
@@ -158,7 +170,6 @@ export function AddEvacuationCenterForm({
         }));
     };
 
-    // Handle location selection from map
     const handleLocationSelect = (location: { lat: number; lng: number }) => {
         setFormData(prev => ({
             ...prev,
@@ -167,36 +178,33 @@ export function AddEvacuationCenterForm({
         }));
     };
 
-    // Handle opening map picker
     const handleOpenMapPicker = () => {
         setShowMapPicker(true);
     };
 
-    // Handle closing map picker
     const handleCloseMapPicker = () => {
         setShowMapPicker(false);
     };
 
-    const handlePhotoChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const handlePhotoChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
         const file = event.target.files?.[0];
         if (file) {
-            // Validate file type
             if (!file.type.startsWith("image/")) {
                 alert("Please select an image file (PNG or JPG)");
                 return;
             }
 
-            // Validate file size (max 5MB for base64)
             if (file.size > 5 * 1024 * 1024) {
                 alert("Please select an image smaller than 5MB");
                 return;
             }
 
             setPhoto(file);
-
-            // Create preview URL
+            
             const previewUrl = URL.createObjectURL(file);
             setPhotoPreview(previewUrl);
+            
+            setS3Key(null);
         }
     };
 
@@ -209,6 +217,7 @@ export function AddEvacuationCenterForm({
         if (fileInputRef.current) {
             fileInputRef.current.value = "";
         }
+        setS3Key(null);
     };
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -220,8 +229,23 @@ export function AddEvacuationCenterForm({
             return;
         }
         
+        // Validate center name
+        if (!formData.center_name.trim()) {
+            alert("Please enter a center name.");
+            return;
+        }
+        
         try {
-            // Prepare data for store - ensure all required fields are included
+            let finalS3Key = s3Key;
+            
+            if (photo && !s3Key) {
+                setIsUploading(true);
+                const result = await uploadPhotoToS3(photo);
+                finalS3Key = result.s3Key;
+                setS3Key(finalS3Key);
+                setIsUploading(false);
+            }
+            
             const centerData = {
                 center_name: formData.center_name,
                 address: formData.address,
@@ -232,16 +256,20 @@ export function AddEvacuationCenterForm({
                 longitude: formData.longitude,
             };
             
-            // Pass the photo file to the store
-            await addCenter(centerData, photo);
+            if (finalS3Key) {
+                await addCenterWithS3Photo(centerData, finalS3Key, photo!.type);
+            } else {
+                const { addCenter } = useEvacuationCenterStore.getState();
+                await addCenter(centerData, photo);
+            }
             
-            // Show success toast using the prop
             if (onShowSuccessToast) {
                 onShowSuccessToast("Evacuation center added successfully.");
             }
             onClose();
         } catch (error: any) {
-            // Check if the error is about duplicate center name
+            setIsUploading(false);
+            
             if (
                 error.message?.includes("already exists") ||
                 error.message?.includes("duplicate") ||
@@ -253,15 +281,16 @@ export function AddEvacuationCenterForm({
                 });
             } else {
                 console.error("Failed to add center:", error);
+                alert(error.message || "Failed to add center. Please try again.");
             }
         }
     };
 
-    const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
+    const handleDrop = async (e: React.DragEvent<HTMLDivElement>) => {
         e.preventDefault();
         const file = e.dataTransfer.files[0];
         if (file && file.type.startsWith("image/")) {
-            // Validate file size (max 5MB for base64)
+            // Validate file size (max 5MB)
             if (file.size > 5 * 1024 * 1024) {
                 alert("Please select an image smaller than 5MB");
                 return;
@@ -270,6 +299,7 @@ export function AddEvacuationCenterForm({
             setPhoto(file);
             const previewUrl = URL.createObjectURL(file);
             setPhotoPreview(previewUrl);
+            setS3Key(null);
         }
     };
 
@@ -283,6 +313,8 @@ export function AddEvacuationCenterForm({
             centerName: "",
         });
     };
+
+    const isLoading = storeLoading || isUploading;
 
     return (
         <>
@@ -325,7 +357,7 @@ export function AddEvacuationCenterForm({
                             </div>
                         </div>
                     ) : (
-                        // Form View - Entire form is scrollable only when needed
+                        // Form View
                         <div className="flex flex-col">
                             <form onSubmit={handleSubmit} className="space-y-4">
                                 {/* Center Name */}
@@ -341,6 +373,7 @@ export function AddEvacuationCenterForm({
                                         onChange={e => handleInputChange("center_name", e.target.value)}
                                         required
                                         className="w-full"
+                                        disabled={isLoading}
                                     />
                                 </div>
 
@@ -357,6 +390,7 @@ export function AddEvacuationCenterForm({
                                         onChange={e => handleInputChange("address", e.target.value)}
                                         required
                                         className="w-full"
+                                        disabled={isLoading}
                                     />
                                 </div>
 
@@ -401,6 +435,7 @@ export function AddEvacuationCenterForm({
                                                         size="sm"
                                                         onClick={handleOpenMapPicker}
                                                         className="h-8"
+                                                        disabled={isLoading}
                                                     >
                                                         Change
                                                     </Button>
@@ -465,6 +500,7 @@ export function AddEvacuationCenterForm({
                                                         type="button"
                                                         onClick={handleRemovePhoto}
                                                         className="absolute -top-2 -right-2 bg-destructive text-destructive-foreground rounded-full p-1 shadow-md hover:bg-destructive/90 transition-colors z-10"
+                                                        disabled={isLoading}
                                                     >
                                                         <X className="h-3 w-3" />
                                                     </button>
@@ -473,27 +509,45 @@ export function AddEvacuationCenterForm({
                                                     <p className="text-sm font-medium text-foreground truncate max-w-[180px]">
                                                         {photo?.name}
                                                     </p>
+                                                    {s3Key && (
+                                                        <Badge variant="outline" className="mt-1 bg-green-50 text-green-700 border-green-200">
+                                                            <UploadCloud className="h-3 w-3 mr-1" />
+                                                            Uploaded to S3
+                                                        </Badge>
+                                                    )}
                                                 </div>
                                             </div>
-                                            {/* Clickable area at the bottom with no space */}
+                                            
+                                            {/* Upload Progress Bar */}
+                                            {isUploading && uploadProgress !== null && (
+                                                <div className="px-4 pb-3">
+                                                    <div className="flex justify-between text-xs mb-1">
+                                                        <span>Uploading to S3...</span>
+                                                        <span>{uploadProgress}%</span>
+                                                    </div>
+                                                    <Progress value={uploadProgress} className="h-2" />
+                                                </div>
+                                            )}
+                                            
+                                            {/* Clickable area to change photo */}
                                             <div
-                                                className="cursor-pointer border-t border-border bg-muted/50 hover:bg-muted/70 transition-colors text-center py-2 rounded-b-lg"
-                                                onClick={() => fileInputRef.current?.click()}
+                                                className={`cursor-pointer border-t border-border bg-muted/50 hover:bg-muted/70 transition-colors text-center py-2 rounded-b-lg ${isLoading ? 'opacity-50 pointer-events-none' : ''}`}
+                                                onClick={() => !isLoading && fileInputRef.current?.click()}
                                                 onDrop={handleDrop}
                                                 onDragOver={handleDragOver}
                                             >
                                                 <p className="text-xs text-muted-foreground font-medium">
-                                                    Click here to change photo
+                                                    {isUploading ? 'Upload in progress...' : 'Click here to change photo'}
                                                 </p>
                                             </div>
                                         </div>
                                     ) : (
                                         // Empty State
                                         <div
-                                            className="border-2 border-dashed border-border rounded-lg p-6 text-center cursor-pointer hover:border-primary/50 transition-colors bg-background hover:bg-accent/50"
+                                            className={`border-2 border-dashed border-border rounded-lg p-6 text-center cursor-pointer hover:border-primary/50 transition-colors bg-background hover:bg-accent/50 ${isLoading ? 'opacity-50 pointer-events-none' : ''}`}
                                             onDrop={handleDrop}
                                             onDragOver={handleDragOver}
-                                            onClick={() => fileInputRef.current?.click()}
+                                            onClick={() => !isLoading && fileInputRef.current?.click()}
                                         >
                                             <div className="space-y-3">
                                                 <div className="text-muted-foreground">
@@ -530,17 +584,30 @@ export function AddEvacuationCenterForm({
                                         accept="image/*"
                                         onChange={handlePhotoChange}
                                         className="hidden"
+                                        disabled={isLoading}
                                     />
                                 </div>
 
-                                {/* Submit Button - Inside form, part of scrollable content */}
+                                {/* Submit Button */}
                                 <div className="flex justify-end pt-4 border-t mt-6">
                                     <Button
                                         type="submit"
-                                        disabled={loading || !formData.latitude || !formData.longitude}
-                                        className="px-4 py-2 text-sm font-medium"
+                                        disabled={isLoading || !formData.latitude || !formData.longitude || !formData.center_name.trim()}
+                                        className="px-4 py-2 text-sm font-medium min-w-[120px]"
                                     >
-                                        {loading ? "Adding..." : "+ Add Center"}
+                                        {isUploading ? (
+                                            <span className="flex items-center gap-2">
+                                                <Loader2 className="h-4 w-4 animate-spin" />
+                                                Uploading {uploadProgress}%
+                                            </span>
+                                        ) : storeLoading ? (
+                                            <span className="flex items-center gap-2">
+                                                <Loader2 className="h-4 w-4 animate-spin" />
+                                                Creating...
+                                            </span>
+                                        ) : (
+                                            "+ Add Center"
+                                        )}
                                     </Button>
                                 </div>
                             </form>

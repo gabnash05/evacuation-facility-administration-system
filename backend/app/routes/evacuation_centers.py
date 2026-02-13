@@ -5,9 +5,10 @@ from typing import Tuple
 
 from flask import Blueprint, jsonify, request
 from flask_jwt_extended import jwt_required
+from app.services.s3_service import S3Service
 from sqlalchemy import text
 
-from app.models import db  # Add this import
+from app.models import db
 from app.services.evacuation_center_service import (
     create_center,
     delete_center,
@@ -87,6 +88,17 @@ def get_centers_route() -> Tuple:
             sort_order=sort_order,
         )
 
+        if result["success"] and "data" in result and "results" in result["data"]:
+            from app.services.s3_service import S3Service
+            s3_service = S3Service()
+            
+            for center in result["data"]["results"]:
+                if center.get("s3_key"):
+                    center["photo_url"] = s3_service.generate_download_url(
+                        center["s3_key"],
+                        expires_in=3600
+                    )
+
         if not result["success"]:
             return jsonify(result), 400
 
@@ -159,6 +171,14 @@ def get_center_route(center_id: int) -> Tuple:
         logger.info("Fetching center with ID: %s", center_id)
 
         result = get_center_by_id(center_id)
+
+        if result["data"].get("s3_key"):
+            from app.services.s3_service import S3Service
+            s3_service = S3Service()
+            result["data"]["photo_url"] = s3_service.generate_download_url(
+                result["data"]["s3_key"],
+                expires_in=3600
+            )
 
         if not result["success"]:
             return jsonify(result), 404
@@ -315,7 +335,7 @@ def create_new_center_route() -> Tuple:
     """
     Create a new evacuation center.
 
-    Request Body (multipart/form-data):
+    Request Body (application/json):
         center_name (string) - Center name
         address (string) - Center address
         latitude (float) - Latitude coordinate
@@ -323,7 +343,8 @@ def create_new_center_route() -> Tuple:
         capacity (integer) - Center capacity
         current_occupancy (integer, optional) - Current occupancy (default: 0)
         status (string, optional) - Center status (default: active)
-        photo (file, optional) - Center photo
+        s3Key (string, optional) - S3 key for uploaded photo
+        fileName (string, optional) - Original filename
 
     Returns:
         Tuple containing:
@@ -331,28 +352,15 @@ def create_new_center_route() -> Tuple:
             - HTTP status code
     """
     try:
-        # Check if request is multipart/form-data for file upload
-        if request.content_type and "multipart/form-data" in request.content_type:
-            data = {
-                "center_name": request.form.get("center_name"),
-                "address": request.form.get("address"),
-                "latitude": request.form.get("latitude", type=float),
-                "longitude": request.form.get("longitude", type=float),
-                "capacity": request.form.get("capacity", type=int),
-                "current_occupancy": request.form.get("current_occupancy", 0, type=int),
-                "status": request.form.get("status", "active"),
-            }
-            photo_file = request.files.get("photo")
-        else:
-            data = request.get_json()
-            photo_file = None
-
+        # Get JSON data (no multipart/form-data)
+        data = request.get_json()
+        
         if not data:
             return jsonify({"success": False, "message": "No data provided"}), 400
 
         logger.info("Creating new evacuation center: %s", data.get("center_name"))
-
-        result = create_center(data, photo_file)
+        
+        result = create_center(data)
 
         if not result["success"]:
             return jsonify(result), 400
@@ -370,7 +378,7 @@ def create_new_center_route() -> Tuple:
             ),
             500,
         )
-
+    
 
 @evacuation_center_bp.route("/evacuation_centers/<int:center_id>", methods=["PUT"])
 @jwt_required()
@@ -381,7 +389,7 @@ def update_existing_center_route(center_id: int) -> Tuple:
     Args:
         center_id: Center ID to update
 
-    Request Body (multipart/form-data):
+    Request Body (application/json):
         center_name (string, optional) - Center name
         address (string, optional) - Center address
         latitude (float, optional) - Latitude coordinate
@@ -389,8 +397,8 @@ def update_existing_center_route(center_id: int) -> Tuple:
         capacity (integer, optional) - Center capacity
         current_occupancy (integer, optional) - Current occupancy
         status (string, optional) - Center status
-        photo (file, optional) - Center photo
-        remove_photo (string, optional) - "true" to remove existing photo
+        s3Key (string, optional) - New S3 key for photo
+        remove_photo (boolean, optional) - Set to true to remove existing photo
 
     Returns:
         Tuple containing:
@@ -398,37 +406,19 @@ def update_existing_center_route(center_id: int) -> Tuple:
             - HTTP status code
     """
     try:
-        # Check if request is multipart/form-data for file upload
-        if request.content_type and "multipart/form-data" in request.content_type:
-            data = {
-                "center_name": request.form.get("center_name"),
-                "address": request.form.get("address"),
-                "latitude": request.form.get("latitude", type=float),
-                "longitude": request.form.get("longitude", type=float),
-                "capacity": request.form.get("capacity", type=int),
-                "current_occupancy": request.form.get("current_occupancy", type=int),
-                "status": request.form.get("status"),
-            }
-            # Remove None values
-            data = {k: v for k, v in data.items() if v is not None}
-            photo_file = request.files.get("photo")
-            remove_photo = (
-                request.form.get("remove_photo") == "true"
-            )
-        else:
-            data = request.get_json()
-            photo_file = None
-            remove_photo = False
-
-        if not data and not photo_file and not remove_photo:
+        # Get JSON data (no multipart/form-data)
+        data = request.get_json()
+        
+        if not data:
             return jsonify({"success": False, "message": "No data provided"}), 400
 
-        logger.info(
-            "Updating center with ID: %s, remove_photo: %s", center_id, remove_photo
-        )
+        logger.info("Updating center with ID: %s", center_id)
 
         result = update_center(
-            center_id, data, photo_file, remove_photo
+            center_id, 
+            data, 
+            photo_file=None, 
+            remove_photo=data.get("remove_photo", False)
         )
 
         if not result["success"]:
@@ -447,7 +437,7 @@ def update_existing_center_route(center_id: int) -> Tuple:
             ),
             500,
         )
-
+    
 
 @evacuation_center_bp.route("/evacuation_centers/<int:center_id>", methods=["DELETE"])
 @jwt_required()
@@ -663,3 +653,98 @@ def get_centers_in_bounds_route() -> Tuple:
             }),
             500
         )
+
+
+@evacuation_center_bp.route("/evacuation_centers/upload-url", methods=["POST"])
+@jwt_required()
+def get_upload_url():
+    """
+    Generate a presigned URL for direct S3 upload.
+    Frontend can use this to upload photos directly to S3.
+    """
+    try:
+        data = request.get_json()
+        file_name = data.get("fileName")
+        file_type = data.get("fileType")
+        
+        if not file_name or not file_type:
+            return jsonify({
+                "success": False,
+                "message": "fileName and fileType are required"
+            }), 400
+        
+        s3_service = S3Service()
+
+        print(file_name, file_type)
+        
+        upload_data = s3_service.generate_upload_url(
+            file_name=file_name,
+            file_type=file_type,
+        )
+
+        print(upload_data)
+        
+        if not upload_data:
+            return jsonify({
+                "success": False,
+                "message": "Failed to generate upload URL"
+            }), 500
+        
+        return jsonify({
+            "success": True,
+            "data": {
+                "uploadUrl": upload_data["url"],
+                "s3Key": upload_data["key"],
+                "bucket": upload_data["bucket"]
+            }
+        }), 200
+        
+    except Exception as e:
+        logger.error(f"Error generating upload URL: {str(e)}")
+        return jsonify({
+            "success": False,
+            "message": "Failed to generate upload URL"
+        }), 500
+    
+
+@evacuation_center_bp.route("/evacuation_centers/delete-url", methods=["POST"])
+@jwt_required()
+def get_delete_url():
+    """
+    Generate a presigned URL for S3 deletion.
+    Frontend uses this to delete photos from S3.
+    """
+    try:
+        data = request.get_json()
+        s3_key = data.get("s3Key")
+        
+        if not s3_key:
+            return jsonify({
+                "success": False,
+                "message": "s3Key is required"
+            }), 400
+        
+        s3_service = S3Service()
+        
+        delete_url = s3_service.generate_delete_url(s3_key)
+        
+        if not delete_url:
+            return jsonify({
+                "success": False,
+                "message": "Failed to generate delete URL"
+            }), 500
+        
+        return jsonify({
+            "success": True,
+            "data": {
+                "deleteUrl": delete_url,
+                "s3Key": s3_key
+            }
+        }), 200
+        
+    except Exception as e:
+        logger.error(f"Error generating delete URL: {str(e)}")
+        return jsonify({
+            "success": False,
+            "message": "Failed to generate delete URL"
+        }), 500

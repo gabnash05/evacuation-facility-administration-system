@@ -13,8 +13,15 @@ CREATE TABLE IF NOT EXISTS evacuation_centers (
     coordinates POINT NOT NULL,
     capacity INTEGER NOT NULL CHECK (capacity > 0),
     status VARCHAR(20) NOT NULL DEFAULT 'inactive' CHECK (status IN ('active', 'inactive', 'closed')),
+    --operation_type VARCHAR(20) NOT NULL CHECK (operation_type IN ('exclusive', 'secondary', 'temporary')),
+    -- 'public_works', 'educational_institution', 'sports_and_recreation', 'religious_and_cultural', 'medical', 'social_service', 'government_establishment', 'other'
+    --facility_type VARCHAR(50) NOT NULL,
     current_occupancy INTEGER NOT NULL DEFAULT 0 CHECK (current_occupancy >= 0),
-    photo_data TEXT,
+    s3_key TEXT NOT NULL,
+    filename TEXT NOT NULL,
+    --mime_type TEXT,
+    --upload_completed BOOLEAN NOT NULL DEFAULT FALSE,
+    --size BIGINT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
