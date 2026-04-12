@@ -1,128 +1,36 @@
-# Evacuation Facility Administration System — First-Time Setup
+# Application Name
 
-This guide is for **new collaborators** setting up the project for the **first time**. At this stage, you do **not** need to create or work on a feature branch yet — this setup ensures your environment is ready for future development.
-
----
-
-## 1. Clone the Repository
-
-Clone the repository from the remote origin and navigate into it:
-
-```bash
-git clone <repository_url>
-cd <project_name>
-```
+A web-based disaster management platform that enables local government units to coordinate evacuation centers, track households and attendance, and manage aid distribution during emergency events.
 
 ---
 
-## 2. Configure Git Identity
+## Showcase
 
-Ensure your local Git configuration matches your **Atlassian account** for proper commit tracking:
+### Evacuation Facility Management
 
-```bash
-git config --global user.name "Your Real Name"
-git config --global user.email "your-school-email@edu.com"
-```
+![Screenshot 1](./docs/assets/screenshot-1.png)
 
-This ensures that your commits are correctly linked to your Jira and Bitbucket account.
+### Resource Allocation
 
----
-
-## 3. Set Up the Development Branch
-
-Ensure you are on the `dev` branch (all active work is based on it):
-
-```bash
-git checkout dev
-git pull origin dev
-```
+![Screenshot 2](./docs/assets/screenshot-2.png)
 
 ---
 
-## 4. Set Up the Backend
+## Features
 
-1. Go to the backend directory:
-
-    ```bash
-    cd backend
-    ```
-2. Copy the environment file and update your local settings:
-
-    ```bash
-    copy .env.example .env   # Windows PowerShell
-    ```
-
-    * Edit `.env` to include your local PostgreSQL connection details and any secret keys. These detials are the most important.
-
-    ```txt
-    DATABASE_URL=postgresql://<username>:<password>@localhost:5432/efas_db
-    DB_HOST=localhost
-    DB_PORT=5432
-    DB_NAME=efas_db
-    DB_USER=<username>
-    DB_PASSWORD=<password>
-    ```
-
-3. Install Python dependencies and activate the virtual environment:
-
-    ```bash
-    pipenv install
-    pipenv shell
-    ```
-4. Run the backend development server:
-
-    ```bash
-    python run.py
-    ```
-
+* **Evacuation Center Management** – Create, update, and monitor multiple evacuation centers across a city with centralized oversight.
+* **Role-Based Access Control (RBAC)** – Secure multi-user workflows for City Admins, Center Admins, and Volunteers using JWT authentication.
+* **Household Registration & Attendance Tracking** – Register households and track real-time attendance during disaster events for accurate occupancy monitoring.
+* **Aid Allocation & Distribution** – Allocate resources to evacuation centers and track distribution to households with full visibility and accountability.
+* **Real-Time Dashboards & Analytics** – Monitor occupancy, resource usage, and event statistics through centralized dashboards for data-driven decision-making.
 ---
 
-## 5. Set Up the Database
+## Technologies Used
 
-1. Ensure your database is running (PostgreSQL) or that you have PostgreSQL installed.
+* Flask
+* PostgreSQL
+* React
+* Docker
+* Stadia Maps
 
-2. Open a new terminal and go to the backend directory.
 
-    ```bash
-    cd backend
-    ```
-
-3. Create tables and super_admin user using the provided setup script:
-
-   ```bash
-   python database/setup_db.py  # from Backend
-   ```
-
-4. The script will prompt for your email and password for the app
-
-5. If no errors are visible, you can close this terminal.
-
----
-
-## 6. Set Up the Frontend
-
-1. Open a new terminal and go to the frontend directory:
-
-   ```bash
-   cd ../frontend           # from Backend
-   ```
-2. Copy the environment file and adjust the API URL if needed:
-
-   ```bash
-   copy .env.example .env   # Windows PowerShell
-   ```
-3. Install dependencies and start the dev server:
-
-   ```bash
-   npm install
-   npm run dev
-   ```
-
----
-
-## 7. Verify the Setup
-
-* The backend should run locally (e.g., `http://127.0.0.1:5000`).
-* The frontend should run locally (e.g., `http://localhost:5173`).
-
-Once everything is confirmed working, your environment is ready. You can begin development by following your team's **CONTRIBUTION workflow** in Jira when assigned a ticket.
