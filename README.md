@@ -4,8 +4,6 @@ A web-based disaster management platform that enables local government units to 
 
 ---
 
-## Showcase
-
 ### Evacuation Facility Management
 
 ![Screenshot 1](./docs/assets/screenshot-1.png)
