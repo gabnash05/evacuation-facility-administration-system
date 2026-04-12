@@ -1,4 +1,4 @@
-# Application Name
+# EFAS: Evacuation Facility Administration System
 
 A web-based disaster management platform that enables local government units to coordinate evacuation centers, track households and attendance, and manage aid distribution during emergency events.
 
