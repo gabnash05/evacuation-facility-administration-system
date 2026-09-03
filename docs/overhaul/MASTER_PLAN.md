@@ -338,3 +338,14 @@ The audit tickets are complete. The tickets below are the authoritative implemen
 - **Rollback:** revert `backend/wsgi.py` and its focused test only.
 - **Acceptance/review:** documented Gunicorn target imports; no new application behavior; changed diff is limited to this scope; no P0-P3 issue in review.
 - **Escalation:** only if the application factory cannot create safely without an external production configuration (not currently evidenced).
+
+### TEST-001A — Establish the dependency-free backend regression command
+
+- **Priority/risk:** P1 / S; first required split of TEST-001, with no database or external service access.
+- **Evidence:** no test command or files existed; DEVOPS-001 was only covered by an ad-hoc import command.
+- **Scope:** add a Pipenv `test` script and stdlib `unittest` discovery; add a WSGI regression that verifies the documented `wsgi:app` export and a representative registered API route.
+- **Non-goals:** no test framework dependency, database fixture, route behavior test, production configuration change, or frontend test setup.
+- **Dependencies:** DEVOPS-001.
+- **Validation:** `py -3.13 -m pipenv run test`, Black/isort on changed Python files, `pipenv verify`, and `git diff --check`.
+- **Acceptance/rollback:** test command completes without live database access and fails if the WSGI export/route registration regresses; revert only the `Pipfile` script and `backend/tests/**` files to roll back.
+- **Escalation:** none; database-backed test infrastructure is deferred to a separate TEST-001 split after DATABASE-002.
