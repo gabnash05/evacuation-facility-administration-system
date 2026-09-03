@@ -306,7 +306,8 @@ The audit tickets are complete. The tickets below are the authoritative implemen
 | ID | Priority | Scope and invariant | Dependencies | Size |
 | --- | --- | --- | --- | --- |
 | DEVOPS-001 | P1 | Export the Flask application from `backend/wsgi.py`; the documented Gunicorn target must import without debug-only behavior. Add an import smoke regression. | none | XS |
-| TEST-001 | P1 | Establish isolated backend API/unit test infrastructure and frontend component/client test infrastructure with deterministic fixtures; do not weaken existing checks. | DEVOPS-001 | must-split |
+| TEST-001 | P1 | Establish isolated backend API/unit test infrastructure and frontend component/client test infrastructure with deterministic fixtures; do not weaken existing checks. Completed by TEST-001A/B/C; database integration is separately deferred to TEST-002 after DATABASE-002. | DEVOPS-001 | must-split |
+| TEST-002 | P1 | Establish disposable PostgreSQL/PostGIS integration fixtures, clean/upgrade migration validation, and transaction isolation after DATABASE-002 defines the supported migration baseline. | DATABASE-002 | must-split |
 | SECURITY-002 | P1 | Centralize actor resolution and server-side role/center authorization for `/users/**`; deny cross-role and privilege-escalating writes. | TEST-001 | M |
 | SECURITY-004 | P1 | Apply the same server-side authorization policy to center reads and mutations, including map/status/photo paths. | SECURITY-002 | M |
 | SECURITY-006 | P1 | Apply PII/center-scope authorization to household and individual reads, writes, search, and status recalculation. | SECURITY-002 | M |
