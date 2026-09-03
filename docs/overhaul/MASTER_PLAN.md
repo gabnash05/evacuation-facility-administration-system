@@ -349,3 +349,34 @@ The audit tickets are complete. The tickets below are the authoritative implemen
 - **Validation:** `py -3.13 -m pipenv run test`, Black/isort on changed Python files, `pipenv verify`, and `git diff --check`.
 - **Acceptance/rollback:** test command completes without live database access and fails if the WSGI export/route registration regresses; revert only the `Pipfile` script and `backend/tests/**` files to roll back.
 - **Escalation:** none; database-backed test infrastructure is deferred to a separate TEST-001 split after DATABASE-002.
+
+### TEST-001B — Establish the frontend component-test harness
+
+- **Priority/risk:** P1 / S; enables regression coverage for the authenticated UI and security fixes without reaching the backend, database, browser, or external services.
+- **Motivation/evidence:** `frontend/package.json` provides build, type-check, lint, and format commands but no test runner; no frontend test files or test configuration exist. `FRONTEND-004` confirms the missing client-test configuration. The existing Vite 7.1.7 and Node 24.19.0 baseline meets Vitest 4's documented Vite >=6 and Node >=20 requirements.
+- **Scope:** add the minimal Vitest/jsdom/React Testing Library development dependencies, a deterministic test configuration sharing the existing Vite alias/plugins, explicit DOM cleanup/matcher setup, `test` and watch scripts, and one focused shared-component regression for `ErrorAlert`. Correct any directly discovered empty-state or alert-semantics defect in that shared component. Likely files: `frontend/package.json`, `frontend/package-lock.json`, `frontend/vite.config.ts`, `frontend/src/test/setup.ts`, `frontend/src/components/features/dashboard/ErrorAlert.{tsx,test.tsx}`.
+- **Explicit non-goals:** no source formatting sweep; no API mocking framework, browser/E2E runner, coverage threshold, frontend dependency upgrade, authentication test, map rendering test, or remediation of unrelated `ErrorAlert` consumer behavior.
+- **Dependencies:** DEVOPS-001; TEST-001A is complete. This ticket does not depend on DATABASE-002 because it must make no database connection.
+- **Current behavior:** frontend has no executable component-test command, so a shared component's empty state and accessible error rendering have no automated regression protection.
+- **Intended invariant:** `npm run test` deterministically runs tests once in jsdom; test files can resolve the existing `@/` alias and use user-facing Testing Library assertions; each test gets a cleaned DOM and reset mock state; test execution does not write production build output or call external systems.
+- **Detailed implementation checklist:**
+  1. Add only the test-runner, jsdom, React Testing Library, DOM Testing Library, and matcher dependencies as locked dev dependencies.
+  2. Configure the existing Vite configuration with an explicit jsdom test environment, narrowly scoped test include pattern, shared alias/plugin behavior, and setup file.
+  3. Install matchers and register `afterEach(cleanup)` explicitly rather than relying on test globals or implicit teardown.
+  4. Add scripts for one-shot CI-safe execution and local watch mode.
+  5. Add `ErrorAlert` tests for its null/empty state and accessible displayed-error state; assert behavior users can observe, not Lucide or class implementation details.
+  6. Run narrow tests first, then type-check and build; record exact outcomes and new findings without fixing unrelated pre-existing lint/format failures.
+- **Required tests:** `ErrorAlert` renders no DOM for a null error and exposes the supplied message in an alert for a non-empty error. Later frontend tickets must add feature-specific tests to this harness; this ticket is not evidence that those features are covered.
+- **Required validation commands:** `npm run test`; `npm run type-check`; `npm run build`; `npm run format:check` limited to the changed test/config files where supported; `git diff --check`. Record the repository-wide lint/format baseline separately rather than silently bypassing it.
+- **Security considerations:** no credentials, real APIs, browser storage, or network access in tests. The harness is a prerequisite for SECURITY-010’s hostile-marker regression but does not make the map safe itself.
+- **Database/migration considerations:** none; test configuration must not initialize Flask, PostgreSQL, SQLite, migrations, or seed data.
+- **Compatibility considerations:** keep existing `npm run build` behavior and Vite aliases intact; all new dependencies are development-only and locked in the existing npm lockfile.
+- **Rollback strategy:** remove only the test dependencies, scripts, configuration test block, setup module, and focused test; no persisted data or build artifact changes occur.
+- **Acceptance criteria:** a clean frontend install can run the new one-shot test command; the focused test fails if `ErrorAlert` stops hiding empty errors or exposing error text accessibly; type-check/build stay green; the diff contains no unrelated formatting sweep; no unresolved P0-P3 finding is introduced by this ticket.
+- **Review checklist:** confirm tests use the configured alias and user-visible queries; confirm explicit cleanup and mock reset; verify no tests reach a network endpoint; inspect the lockfile change for only intended packages; retain pre-existing lint/format failures as findings.
+- **Conditions requiring user escalation:** a package requires a major Vite/React/Node migration, changes application runtime behavior, introduces a telemetry/external-service requirement, or conflicts with the lockfile integrity policy. None are expected for this bounded dev-only setup.
+- **Estimated size:** S.
+
+#### TEST-001B completion evidence
+
+Completed 2026-09-03. Added Vitest 4.1.11, jsdom, and Testing Library as locked development dependencies; configured jsdom tests in the existing Vite configuration; and added the one-shot/watch test commands plus explicit matcher, cleanup, and mock-reset setup. The first regression found that `ErrorAlert` did not expose a non-empty error as an alert; its direct `role="alert"` correction is tracked as resolved FRONTEND-019. A clean `npm ci --ignore-scripts` succeeded; after it, the focused suite passed 2 tests with verbose output. The normal `npm run test` suite, `npm run type-check`, targeted Prettier checks, `npm run build`, and `git diff --check` passed. Build reports the recorded P4 dynamic-import/chunk-size optimization warning (FRONTEND-020). No backend, database, API, or external service was contacted.
