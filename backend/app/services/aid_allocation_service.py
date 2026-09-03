@@ -13,6 +13,42 @@ from app.models import db  # ensure db is imported and available
 # Configure logger for this module
 logger = logging.getLogger(__name__)
 
+ALLOCATION_UPDATE_FIELDS = (
+    "category_id",
+    "resource_name",
+    "description",
+    "total_quantity",
+    "distribution_type",
+    "suggested_amount",
+    "status",
+    "notes",
+)
+
+
+def _validated_allocation_update_data(data: Dict[str, Any]) -> Dict[str, Any]:
+    """Return a safe copy containing only explicitly mutable allocation fields."""
+    if set(data).difference(ALLOCATION_UPDATE_FIELDS):
+        raise ValueError("Unsupported allocation update fields")
+
+    return {field: data[field] for field in ALLOCATION_UPDATE_FIELDS if field in data}
+
+
+def _derived_remaining_quantity(old_total: int, old_remaining: int, new_total: int) -> int:
+    """Derive inventory remaining quantity from persisted state and a new total."""
+    if new_total < old_remaining:
+        raise ValueError(
+            f"Total quantity ({new_total}) cannot be less than remaining quantity ({old_remaining})"
+        )
+
+    if new_total > old_total:
+        remaining = old_remaining + (new_total - old_total)
+    elif new_total < old_total:
+        remaining = max(0, old_remaining - (old_total - new_total))
+    else:
+        remaining = old_remaining
+
+    return min(remaining, new_total)
+
 
 def get_allocations(
     center_id: Optional[int] = None,
@@ -369,15 +405,20 @@ def update_allocation(allocation_id: int, data: Dict[str, Any]) -> Dict[str, Any
     refresh_allocation_status to enforce the depletion rule.
     """
     try:
+        try:
+            update_data = _validated_allocation_update_data(data)
+        except ValueError as error:
+            return {"success": False, "message": str(error)}
+
         # Get current allocation using existing helper (returns Allocation dataclass-like object)
         current_allocation = Allocation.get_by_id(allocation_id)
         if not current_allocation:
             return {"success": False, "message": "Allocation not found"}
 
         # Defensive coercion for integers if present
-        if "total_quantity" in data:
+        if "total_quantity" in update_data:
             try:
-                data["total_quantity"] = int(data["total_quantity"])
+                update_data["total_quantity"] = int(update_data["total_quantity"])
             except (ValueError, TypeError):
                 return {"success": False, "message": "Invalid total_quantity; expected integer"}
 
@@ -385,46 +426,29 @@ def update_allocation(allocation_id: int, data: Dict[str, Any]) -> Dict[str, Any
         old_total = int(current_allocation.total_quantity or 0)
         old_remaining = int(current_allocation.remaining_quantity or 0)
 
-        if "total_quantity" in data:
-            new_total = data["total_quantity"]
-            if new_total < old_remaining:
-                return {
-                    "success": False,
-                    "message": f"Total quantity ({new_total}) cannot be less than remaining quantity ({old_remaining})"
-                }
+        if "total_quantity" in update_data:
+            try:
+                update_data["remaining_quantity"] = _derived_remaining_quantity(
+                    old_total, old_remaining, update_data["total_quantity"]
+                )
+            except ValueError as error:
+                return {"success": False, "message": str(error)}
 
-            if new_total > old_total:
-                increase_amount = new_total - old_total
-                computed_remaining = old_remaining + increase_amount
-            elif new_total < old_total:
-                decrease_amount = old_total - new_total
-                computed_remaining = max(0, old_remaining - decrease_amount)
-            else:
-                computed_remaining = old_remaining
-
-            # Ensure remaining does not exceed new total
-            computed_remaining = min(computed_remaining, new_total)
-
-            # Server authoritative: set computed remaining
-            data["remaining_quantity"] = int(computed_remaining)
-
-        # Prevent updating certain fields for safety
-        for protected in ("center_id", "event_id", "allocated_by_user_id"):
-            if protected in data:
-                data.pop(protected, None)
-
-        if not data:
+        if not update_data:
             return {"success": True, "message": "No changes applied", "data": current_allocation.to_dict()}
 
         # Build dynamic UPDATE SQL
         set_clauses: List[str] = []
         params: Dict[str, Any] = {"allocation_id": allocation_id}
 
-        for key, value in data.items():
-            # Only allow columns that actually exist (simple whitelist by name)
-            # We assume frontend/backend use snake_case matching DB column names.
-            set_clauses.append(f"{key} = :{key}")
-            params[key] = value
+        for field in ALLOCATION_UPDATE_FIELDS:
+            if field in update_data:
+                set_clauses.append(f"{field} = :{field}")
+                params[field] = update_data[field]
+
+        if "remaining_quantity" in update_data:
+            set_clauses.append("remaining_quantity = :remaining_quantity")
+            params["remaining_quantity"] = update_data["remaining_quantity"]
 
         # Add updated_at
         set_clauses.append("updated_at = NOW()")
@@ -447,7 +471,11 @@ def update_allocation(allocation_id: int, data: Dict[str, Any]) -> Dict[str, Any
 
         updated_allocation = Allocation._row_to_allocation(result)
 
-        logger.info("Allocation updated - ID: %s (fields: %s)", allocation_id, ", ".join(data.keys()))
+        logger.info(
+            "Allocation updated - ID: %s (fields: %s)",
+            allocation_id,
+            ", ".join(update_data.keys()),
+        )
 
         return {"success": True, "message": "Allocation updated successfully", "data": updated_allocation.to_dict()}
     except Exception as error:

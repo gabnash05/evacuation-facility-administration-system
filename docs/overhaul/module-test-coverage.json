@@ -29,6 +29,12 @@
       "status": "covered",
       "tests": ["frontend/src/components/features/dashboard/ErrorAlert.test.tsx"],
       "behavior": "Exposes visible errors as accessible alerts."
+    },
+    {
+      "path": "frontend/src/components/features/aid-allocation/EditAllocationForm.tsx",
+      "status": "covered",
+      "tests": ["frontend/src/components/features/aid-allocation/EditAllocationForm.test.tsx"],
+      "behavior": "Sends only mutable allocation fields; remaining inventory is server-owned."
     }
   ]
 }
