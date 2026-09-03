@@ -377,6 +377,36 @@ The audit tickets are complete. The tickets below are the authoritative implemen
 - **Conditions requiring user escalation:** a package requires a major Vite/React/Node migration, changes application runtime behavior, introduces a telemetry/external-service requirement, or conflicts with the lockfile integrity policy. None are expected for this bounded dev-only setup.
 - **Estimated size:** S.
 
+#### TEST-001C completion evidence
+
+Completed 2026-09-03. Added a test-only Flask configuration, a reusable API test base, and two `/api/users` boundary regressions. The no-token request returns `401` before `get_users` is called; a locally generated header JWT plus `page=0` returns `400` before the service is called. The focused module and `py -3.13 -m pipenv run test` pass (3 total backend tests), as do Black, isort, Pipenv lock verification, and `git diff --check`. The app factory logs the pre-existing BACKEND-001 Flask-CORS warning; no database schema, query, migration, seed, external request, account, or production configuration was used.
+
 #### TEST-001B completion evidence
 
 Completed 2026-09-03. Added Vitest 4.1.11, jsdom, and Testing Library as locked development dependencies; configured jsdom tests in the existing Vite configuration; and added the one-shot/watch test commands plus explicit matcher, cleanup, and mock-reset setup. The first regression found that `ErrorAlert` did not expose a non-empty error as an alert; its direct `role="alert"` correction is tracked as resolved FRONTEND-019. A clean `npm ci --ignore-scripts` succeeded; after it, the focused suite passed 2 tests with verbose output. The normal `npm run test` suite, `npm run type-check`, targeted Prettier checks, `npm run build`, and `git diff --check` passed. Build reports the recorded P4 dynamic-import/chunk-size optimization warning (FRONTEND-020). No backend, database, API, or external service was contacted.
+
+### TEST-001C — Establish isolated backend API-boundary regression tests
+
+- **Priority/risk:** P1 / S; completes the no-database portion of backend test infrastructure needed to prove authentication guards and request-validation behavior before authorization remediation.
+- **Motivation/evidence:** TEST-001A only proves import/route registration. `backend/app/__init__.py` provides an injectable application factory, but no test configuration, Flask test client, JWT helper, or route-boundary test exists. `backend/app/routes/user.py` applies `@jwt_required()` before its pagination validation, making those two layers testable without invoking persistence.
+- **Scope:** add a test-only Flask configuration and reusable `unittest` API test base that uses an in-memory SQLAlchemy URI but creates no schema or queries no tables; generate header-only JWTs inside the application context; add focused `/api/users` tests proving an unauthenticated request is rejected before service access and an authenticated invalid page is rejected before persistence. Likely files: `backend/tests/{__init__,api_test_case,test_user_route_guards}.py` and `docs/overhaul/{MASTER_PLAN,PROGRESS,FINDINGS,FEATURE_TEST_MATRIX}.md`.
+- **Explicit non-goals:** no production configuration edit; no SQLite schema, migration, database table, seed, external service, real account, JWT transport policy, role/center policy, or user-route authorization implementation. Do not issue a valid list request because it would reach unsupported persistence.
+- **Dependencies:** TEST-001A. It intentionally precedes DATABASE-002 and SECURITY-002.
+- **Current behavior:** only the WSGI export has an automated backend assertion; any route safety regression would otherwise rely on manual testing or a database setup the repository cannot currently reproduce.
+- **Intended invariant:** test code can create a Flask test client with deterministic secrets and header-only tokens, verify request guard/validation ordering, and leave no database state; an unauthenticated `/api/users` call returns `401`, while a valid JWT with `page=0` returns `400` without invoking the user service.
+- **Detailed implementation checklist:**
+  1. Inspect the application-factory and JWT configuration keys required to create a client and access token safely.
+  2. Add a test-only config with `TESTING=True`, deterministic non-production secrets, in-memory URI, disabled SQLAlchemy modification tracking, and header-only JWT location.
+  3. Add a reusable `unittest.TestCase` base that creates the app/client and exposes an authorization-header helper entirely inside the app context.
+  4. Add route tests that patch the imported user service to fail if called, then assert JWT guard and invalid-pagination behavior at the HTTP boundary.
+  5. Run narrow tests, all backend tests, formatting/import checks on changed Python files, Pipenv lock verification, and whitespace review.
+- **Required tests:** no-token list returns `401` and does not call `get_users`; a header token plus `page=0` returns `400` and does not call `get_users`. Subsequent SECURITY-002 work must extend this setup with actor/role/scope allowed and denied cases.
+- **Required validation commands:** `py -3.13 -m pipenv run test`; focused `unittest` module run; Black and isort check on changed test files; `py -3.13 -m pipenv verify`; `git diff --check`. Do not run migrations or a live database command.
+- **Security considerations:** test secrets must be test-only constants with no production value; tokens must not be logged or committed. The harness must default to header auth so it neither tests nor accidentally normalizes the unresolved cookie/CSRF policy.
+- **Database/migration considerations:** `sqlite://` is a test-client extension configuration only; it must not be treated as proof that the application’s PostgreSQL/PostGIS persistence works. Tests must not create a table or execute persistence SQL.
+- **Compatibility considerations:** preserve the public route paths and current JWT header semantics; no dependency changes are needed because Flask, Flask-JWT-Extended, and `unittest` are locked dependencies.
+- **Rollback strategy:** remove the test-only base and its tests; no production source, database data, migration, or route contract changes occur.
+- **Acceptance criteria:** test helpers create no external connection; both guard-ordering tests pass; the tests would fail if `@jwt_required()` is removed or the invalid-page validation starts calling the service; existing WSGI regression remains green; no unresolved P0-P3 finding is introduced.
+- **Review checklist:** verify the service patch targets the route import, not an unused module symbol; assert both status and non-invocation; confirm the test config cannot be selected by runtime code; inspect for token/secret output; preserve no-database discipline.
+- **Conditions requiring user escalation:** a test cannot initialize the Flask app without a real database or credentials; authentication behavior must change; or the only viable approach requires adding a major framework/runtime dependency. None are expected.
+- **Estimated size:** S.
