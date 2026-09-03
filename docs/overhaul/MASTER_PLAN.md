@@ -291,13 +291,49 @@ Reviewed 54 frontend shell/auth/shared files, including a coherent 24-file shadc
 - **Escalation:** only material contract, feature-retirement, cross-role privacy, or data-repair decisions unresolved by repository evidence.
 - **Estimated size:** must-split into deterministic feature batches.
 
+## Module-level regression coverage policy
+
+The overhaul must provide NestJS-style test traceability for every relevant human-authored executable module. Risk-based testing still determines the depth and kind of assertions, but it no longer permits a module to have no identified test counterpart. A passing aggregate suite or broad end-to-end test is not sufficient evidence by itself.
+
+### Pairing and location conventions
+
+- **Backend:** mirror production paths beneath `backend/tests/`. For example, `backend/app/services/user_service.py` maps to `backend/tests/app/services/test_user_service.py`; route, schema, model, utility, bootstrap, and maintained database-script modules follow the same pattern. A single test file may cover inseparable declarations in one production module, but it must name that module in the coverage ledger.
+- **Frontend:** colocate `*.test.ts` or `*.test.tsx` beside the production module by default, matching the existing `ErrorAlert.test.tsx` convention. A nearby feature-level spec may cover a tightly coupled file only when the module-test ledger records the exact mapping and reason.
+- **Scripts and configuration modules:** use deterministic command, import, contract, or fixture tests appropriate to their behavior. Never execute a destructive setup, seed, deployment, or production command merely to satisfy pairing.
+- **Non-executable exceptions:** type-only declarations, pure re-export barrels, generated/vendor-derived files, static assets, and intentionally empty placeholders may be exempt only through an explicit ledger row that identifies the covering type/contract/build test or gives a valid exclusion reason. There are no silent exemptions.
+
+### Required module-test ledger
+
+Create and maintain `docs/overhaul/MODULE_TEST_COVERAGE.md` with one row for every relevant module and these fields: production path, subsystem, module role, corresponding test path(s), required test levels, behaviors/invariants covered, negative and edge cases covered, current status, justified exception if any, owning ticket IDs, and last verified command/date. The ledger must reconcile against `FILE_COVERAGE.md` and an automated pairing verifier. A module is complete only when its row is `covered` or has an approved valid exception.
+
+### Minimum meaningful coverage by module role
+
+- Routes/controllers: authentication and authorization, request validation, status/error mapping, supported query/body variants, and proof that rejected requests do not reach services.
+- Services/domain logic: happy path, invalid input, boundary conditions, dependency failures, idempotency/transaction orchestration where applicable, and preservation of domain invariants.
+- Models/repositories/database query modules: parameter binding, not-found and failure behavior, transaction/rollback behavior, serialization, constraints, and PostgreSQL/PostGIS integration after TEST-002.
+- Schemas/contracts/types: valid and invalid inputs, optionality/nullability, enum/identifier/timestamp serialization, and cross-layer examples that would catch drift.
+- React pages/components/layouts: meaningful loading, empty, error, success, disabled, permission, keyboard/focus, and destructive-action states applicable to that module.
+- Hooks/stores/clients/utilities: state transitions, caching/reset behavior, request method/path/payload mapping, response normalization, failures/retries where applicable, clock/randomness control, and edge cases.
+- Entry points/build/runtime modules: import/startup, provider/route registration, environment selection, and production artifact smoke behavior.
+
+Tests must assert observable behavior or a concrete invariant. Empty render tests, import-only tests, snapshot-only coverage, and one assertion added solely to satisfy the pairing verifier do not count unless importability is the module's actual contract. Equivalent tests may be parameterized or generated from a shared contract table, but every module must remain explicitly traceable.
+
+### Enforcement and rollout
+
+1. TEST-003A creates the complete ledger and an executable verifier that fails when a relevant module has neither a mapped test nor a valid exception.
+2. TEST-003B through TEST-003J fill the ledger in deterministic subsystem batches: backend bootstrap/config/shared utilities; auth/users; centers/events/stats; households/individuals; attendance/transfers; allocations/distributions; frontend shell/auth/shared UI; frontend feature modules; and repository scripts/tooling.
+3. Each batch must be split further when it exceeds M. Tests must be added alongside any characterized bug fix needed to make the asserted existing behavior deterministic; product ambiguities remain decision points.
+4. From TEST-003A onward, every implementation ticket must add or update the mapped tests for every changed executable module in the same ticket. A changed module may not be published with a newly uncovered ledger gap.
+5. CI must run the pairing verifier, narrow changed-module tests, and the aggregate backend/frontend suites. It must reject skipped tests, weakened assertions, focused-test markers, deleted coverage, or unjustified exceptions.
+6. Per-module coverage complements rather than replaces API integration, database integration, contract, accessibility, security, and end-to-end journey tests.
+
 ## Execution loop
 
-For every future ticket: read this plan, `PROGRESS.md`, `FINDINGS.md`, `FILE_COVERAGE.md`, applicable instructions, and Git status; select the highest-priority unblocked ticket; implement only its scope; add required tests; run narrow then complete validation; review the complete diff; record P0-P4 findings; fix all P0-P3 findings before publication; update artifacts; publish only when credentials, CI, and repository policy permit.
+For every future ticket: read this plan, `PROGRESS.md`, `FINDINGS.md`, `FILE_COVERAGE.md`, `MODULE_TEST_COVERAGE.md` once created, applicable instructions, and Git status; select the highest-priority unblocked ticket; implement only its scope; add or update the mapped tests for every changed executable module; run narrow then complete validation plus the module-pairing verifier; review the complete diff; record P0-P4 findings; fix all P0-P3 findings before publication; update artifacts; publish only when credentials, CI, and repository policy permit.
 
 ## Definition of done
 
-Completion requires complete ledger coverage, documented behavior for every feature, no unresolved P0-P3 findings, passing required validation suites, verified clean/upgrade database migrations, reproducible setup, secure dependency posture, CI coverage, accurate documentation, and a final system review. The later `/goal` stops only when those criteria are evidenced.
+Completion requires complete file-ledger coverage; a reconciled module-test ledger in which every relevant human-authored executable module has a meaningful test counterpart or approved valid exception; a passing automated module-pairing verifier; documented behavior for every feature; no unresolved P0-P3 findings; passing required validation suites; verified clean/upgrade database migrations; reproducible setup; secure dependency posture; CI coverage; accurate documentation; and a final system review. The later `/goal` stops only when those criteria are evidenced.
 
 ## Implementation roadmap
 
@@ -308,12 +344,13 @@ The audit tickets are complete. The tickets below are the authoritative implemen
 | DEVOPS-001 | P1 | Export the Flask application from `backend/wsgi.py`; the documented Gunicorn target must import without debug-only behavior. Add an import smoke regression. | none | XS |
 | TEST-001 | P1 | Establish isolated backend API/unit test infrastructure and frontend component/client test infrastructure with deterministic fixtures; do not weaken existing checks. Completed by TEST-001A/B/C; database integration is separately deferred to TEST-002 after DATABASE-002. | DEVOPS-001 | must-split |
 | TEST-002 | P1 | Establish disposable PostgreSQL/PostGIS integration fixtures, clean/upgrade migration validation, and transaction isolation after DATABASE-002 defines the supported migration baseline. | DATABASE-002 | must-split |
+| TEST-003 | P1 | Provide a meaningful, traceable test counterpart for every relevant human-authored executable backend/frontend module, enforced by a reconciled module-test ledger and automated pairing check. | TEST-001; database cases depend on TEST-002 | must-split |
 | SECURITY-002 | P1 | Centralize actor resolution and server-side role/center authorization for `/users/**`; deny cross-role and privilege-escalating writes. | TEST-001 | M |
 | SECURITY-004 | P1 | Apply the same server-side authorization policy to center reads and mutations, including map/status/photo paths. | SECURITY-002 | M |
 | SECURITY-006 | P1 | Apply PII/center-scope authorization to household and individual reads, writes, search, and status recalculation. | SECURITY-002 | M |
 | SECURITY-007 | P1 | Scope attendance histories and derive recorder identity from the JWT; reject caller-supplied audit attribution. | SECURITY-006, TEST-001 | M |
 | SECURITY-008 | P1 | Enforce distribution actor, center, event, household, and allocation ownership before any inventory mutation. | SECURITY-006, TEST-001 | M |
-| SECURITY-009 | P1 | Replace dynamic allocation SQL identifiers with an explicit field whitelist and server-owned quantity derivation. | TEST-001 | S |
+| SECURITY-009 | P1 | Replace dynamic allocation SQL identifiers with an explicit field whitelist and server-owned quantity derivation; complete mapped tests for every backend/frontend module changed by the ticket. | TEST-001, TEST-003A | S |
 | SECURITY-010 | P1 | Render map marker content without HTML interpolation; test hostile center names. | TEST-001 | S |
 | DATABASE-002 | P1 | Adopt a versioned PostgreSQL/PostGIS migration baseline and document supported upgrade/rollback states. | decision: migration baseline and recovery approval | must-split |
 | DATABASE-003 | P1 | Make PostgreSQL/PostGIS the explicit supported runtime and fail fast for unsupported SQLite configuration. | DATABASE-002 | M |
@@ -378,13 +415,37 @@ The audit tickets are complete. The tickets below are the authoritative implemen
 - **Conditions requiring user escalation:** a package requires a major Vite/React/Node migration, changes application runtime behavior, introduces a telemetry/external-service requirement, or conflicts with the lockfile integrity policy. None are expected for this bounded dev-only setup.
 - **Estimated size:** S.
 
-#### TEST-001C completion evidence
-
-Completed 2026-09-03. Added a test-only Flask configuration, a reusable API test base, and two `/api/users` boundary regressions. The no-token request returns `401` before `get_users` is called; a locally generated header JWT plus `page=0` returns `400` before the service is called. The focused module and `py -3.13 -m pipenv run test` pass (3 total backend tests), as do Black, isort, Pipenv lock verification, and `git diff --check`. The app factory logs the pre-existing BACKEND-001 Flask-CORS warning; no database schema, query, migration, seed, external request, account, or production configuration was used.
-
 #### TEST-001B completion evidence
 
 Completed 2026-09-03. Added Vitest 4.1.11, jsdom, and Testing Library as locked development dependencies; configured jsdom tests in the existing Vite configuration; and added the one-shot/watch test commands plus explicit matcher, cleanup, and mock-reset setup. The first regression found that `ErrorAlert` did not expose a non-empty error as an alert; its direct `role="alert"` correction is tracked as resolved FRONTEND-019. A clean `npm ci --ignore-scripts` succeeded; after it, the focused suite passed 2 tests with verbose output. The normal `npm run test` suite, `npm run type-check`, targeted Prettier checks, `npm run build`, and `git diff --check` passed. Build reports the recorded P4 dynamic-import/chunk-size optimization warning (FRONTEND-020). No backend, database, API, or external service was contacted.
+
+### SECURITY-009 — Constrain allocation-update SQL and server-own quantity state
+
+- **Priority/risk:** P1 / S; removes a confirmed SQL-injection primitive from a super-admin update path and closes client control of inventory state. Source-only, reversible, and independent of database-migration policy.
+- **Motivation/evidence:** `backend/app/services/aid_allocation_service.py:update_allocation` constructs `SET` identifiers from every JSON key after removing only three protected names. Bound values do not protect the interpolated identifier. `frontend/src/components/features/aid-allocation/EditAllocationForm.tsx` also sends browser-calculated `remaining_quantity`, even though the service claims that field is server authoritative.
+- **Scope:** define one explicit update-field allowlist in the allocation service; copy and validate the incoming payload before any database read or SQL construction; reject every unknown or server-managed field with a client error; derive `remaining_quantity` from the persisted allocation only when `total_quantity` changes; update the routed edit form to stop sending `remaining_quantity`; add deterministic unit tests for validation, immutability, and quantity derivation. Likely files: `backend/app/services/aid_allocation_service.py`, `backend/tests/test_aid_allocation_update.py`, `frontend/src/components/features/aid-allocation/EditAllocationForm.tsx`, and planning ledgers/matrix.
+- **Explicit non-goals:** no migration; no allocation/distribution transaction redesign; no historical stock repair; no authorization-policy change; no center/event reassignment behavior; no broad API contract redesign; no database-backed integration test; no change to the existing status-refresh design beyond passing only validated data into it.
+- **Dependencies:** TEST-001 complete. DATABASE-002 is not required because validation/derivation tests are pure and must not access persistence.
+- **Current behavior:** an attacker who reaches the super-admin route can supply arbitrary JSON property names that are spliced into SQL. A legitimate frontend edit duplicates the server’s remaining-quantity calculation and can send inventory state independently of a total change.
+- **Intended invariant:** SQL identifiers in the allocation update statement are selected only from a reviewable constant allowlist. Immutable relation/audit fields and `remaining_quantity` never originate from request data. A total-quantity update computes its remaining quantity exactly once from persisted `old_total`/`old_remaining`; unknown keys are rejected before `Allocation.get_by_id` or `db.session.execute`.
+- **Detailed implementation checklist:**
+  1. Derive the allowed mutable fields from the allocation model and actual edit payload, retaining existing supported metadata/status updates but excluding primary key, center, event, audit, timestamps, and remaining quantity.
+  2. Add a pure payload-validation/copy helper that rejects unsupported keys and preserves the caller dictionary.
+  3. Move validation before the allocation lookup; retain current total/remaining guard semantics, but write computed remaining only after a total change.
+  4. Build SQL `SET` clauses by iterating the fixed allowlist, never request-key iteration.
+  5. Remove the edit form’s browser delta/`remaining_quantity` payload logic while retaining the displayed client-side total-vs-remaining validation.
+  6. Add unit tests proving malicious identifiers and direct remaining-quantity writes are rejected before model/database calls, supported fields are copied predictably, and total changes derive the expected server-side remaining quantity.
+  7. Run narrow tests, all backend tests, frontend tests/type-check/build, targeted format/import checks, Pipenv verification, and whitespace review.
+- **Required tests:** malicious SQL-like key rejection with no `Allocation.get_by_id` call; direct `remaining_quantity` rejection with no database call; valid field selection leaves the input untouched; increasing/decreasing total derives correct remaining quantities and preserves the lower-bound rejection. A mapped `EditAllocationForm.test.tsx` must assert its submitted update payload excludes `remaining_quantity`; testability work needed to isolate the component stays within the ticket unless it requires a material architecture change.
+- **Required validation commands:** focused backend unit module; `py -3.13 -m pipenv run test`; Black/isort on changed backend files; `py -3.13 -m pipenv verify`; `npm run test`; `npm run type-check`; `npm run build`; targeted Prettier check on the changed TSX; `git diff --check`. Do not run migrations, seed data, or a live database.
+- **Security considerations:** do not log malicious inputs or tokens; report invalid fields generically enough to aid a valid client without echoing SQL. This does not make the currently weak super-admin authorization boundary safe; SECURITY-008 and the later authorization work remain required.
+- **Database/migration considerations:** this changes only request validation and the SQL construction source. It has no schema effect and leaves `NOW()`/PostgreSQL execution untested until TEST-002 after DATABASE-002.
+- **Compatibility considerations:** valid current edit-form fields (`resource_name`, `total_quantity`, `distribution_type`, `status`, `category_id`) stay accepted. Direct callers that previously supplied `remaining_quantity` or unknown fields receive a `400`, which is the necessary security correction. Center/event/audit reassignment remains unsupported as before.
+- **Rollback strategy:** revert the service allowlist/validation and edit-form payload change together; no data migration or historic state rewrite is involved. The security regression would return, so rollback requires incident review.
+- **Acceptance criteria:** no request key is interpolated into SQL; unsupported/server-managed keys are rejected before persistence access; total changes derive remaining quantity server-side; routed UI no longer submits remaining quantity; every changed executable module has a mapped meaningful test; targeted and full validations pass; no unresolved P0-P3 issue is introduced.
+- **Review checklist:** verify allowlist values exactly match actual allocation columns; verify only validated copies reach SQL; inspect total-decrease edge cases; ensure frontend does not retain a second source of truth; confirm tests fail if request-key SQL construction or client quantity payload returns.
+- **Conditions requiring user escalation:** an evidence-backed use case requires center/event reassignment or manual remaining-stock correction through this endpoint; those are public inventory-policy changes and must be separately designed. None is currently evidenced.
+- **Estimated size:** S.
 
 ### TEST-001C — Establish isolated backend API-boundary regression tests
 
@@ -411,3 +472,54 @@ Completed 2026-09-03. Added Vitest 4.1.11, jsdom, and Testing Library as locked 
 - **Review checklist:** verify the service patch targets the route import, not an unused module symbol; assert both status and non-invocation; confirm the test config cannot be selected by runtime code; inspect for token/secret output; preserve no-database discipline.
 - **Conditions requiring user escalation:** a test cannot initialize the Flask app without a real database or credentials; authentication behavior must change; or the only viable approach requires adding a major framework/runtime dependency. None are expected.
 - **Estimated size:** S.
+
+#### TEST-001C completion evidence
+
+Completed 2026-09-03. Added a test-only Flask configuration, a reusable API test base, and two `/api/users` boundary regressions. The no-token request returns `401` before `get_users` is called; a locally generated header JWT plus `page=0` returns `400` before the service is called. The focused module and `py -3.13 -m pipenv run test` pass (3 total backend tests), as do Black, isort, Pipenv lock verification, and `git diff --check`. The app factory logs the pre-existing BACKEND-001 Flask-CORS warning; no database schema, query, migration, seed, external request, account, or production configuration was used.
+
+### TEST-003 — Establish and complete per-module regression coverage
+
+- **Priority/risk:** P1 / must-split; without module-level traceability, broad suites can remain green while an untested route, service, model, schema, hook, store, component, or client drifts independently.
+- **Motivation/evidence:** `FILE_COVERAGE.md` accounts for 253 tracked files, including 54 backend and 187 frontend files, while the current repository has only the initial WSGI/API-boundary tests and one frontend component spec. The existing plan required risk-based behavior coverage but did not require a test counterpart for every relevant module, which is weaker than the requested NestJS-style per-file convention.
+- **Scope:** create `MODULE_TEST_COVERAGE.md`; create a deterministic repository-native pairing verifier with its own tests; classify every relevant source module as covered, missing, or validly exempt; then implement meaningful module tests in deterministic backend/frontend/tooling batches. Update the ledger and feature matrix in every batch. Existing feature remediation may share a batch only when it owns the same modules and satisfies all mapped cases.
+- **Explicit non-goals:** no mechanical one-assertion-per-file exercise; no coverage-percentage gaming; no snapshot-only blanket; no production rewrite solely for test convenience; no real production/shared database or external-service call; no automatic exemption based on file size, framework, or difficulty.
+- **Dependencies:** TEST-001. TEST-003A is unblocked and must precede further implementation-ticket publication. PostgreSQL/PostGIS model integration cases remain blocked on DATABASE-002 and TEST-002, but their unit/contract test counterparts and explicit integration status must still be ledgered.
+- **Likely files/modules:** all relevant human-authored executable paths recorded in `FILE_COVERAGE.md`; existing/new tests under `backend/tests/**` and colocated `frontend/src/**/*.test.{ts,tsx}`; a small verifier under the repository's existing script/tooling convention; `docs/overhaul/{MODULE_TEST_COVERAGE,FEATURE_TEST_MATRIX,PROGRESS,FINDINGS,MASTER_PLAN}.md`; later CI workflow files.
+- **Current behavior:** test commands exist, but there is no complete module-to-test map, no automated missing-test check, and most runtime modules have no direct regression suite. Aggregate build/type checks cannot prove behavioral stability.
+- **Intended invariant:** each relevant executable module has an explicitly mapped meaningful test file or a narrow justified exception; the verifier detects added/renamed/deleted modules and stale mappings; every changed module updates its mapped tests in the same ticket; integration and end-to-end layers remain additional protection rather than substitutes.
+- **Detailed implementation checklist:**
+  1. Generate a deterministic module inventory from the reviewed file ledger and current filesystem, respecting documented generated/vendor/artifact exclusions.
+  2. Define the machine-checkable ledger schema and path conventions for Flask/Python and React/TypeScript modules.
+  3. Implement and test a verifier for missing modules, missing test paths, stale production paths, duplicate rows, invalid exceptions, focused/skipped tests, and excluded generated groups.
+  4. Populate the ledger without claiming coverage until each named test and assertion has been inspected.
+  5. Execute TEST-003B–J in bounded subsystem batches, splitting any L-sized batch before implementation.
+  6. For every module, identify observable behavior/invariants and add positive, negative, boundary, and failure cases appropriate to its role.
+  7. Add shared deterministic fixtures for clocks, identifiers, randomness, API responses, actor roles/centers, and external-service mocks without hiding module ownership.
+  8. Require narrow mapped tests during implementation and aggregate suites plus verifier for publication.
+  9. Track database-dependent cases as blocked—not passed—until disposable PostgreSQL/PostGIS fixtures exist; close them through TEST-002 follow-on batches.
+  10. Add the verifier and aggregate suites to CI, including safeguards against `.only`, skipped tests, weakened assertions, and unjustified coverage deletion.
+- **Required tests:** the verifier itself must have fixtures for a covered module, missing test, stale mapping, missing test file, duplicate mapping, valid exception, invalid exception, and focused/skipped marker. Each subsystem batch must enumerate its module-specific cases in `MODULE_TEST_COVERAGE.md` before coding and must add regression tests for every confirmed defect changed in that batch.
+- **Required validation commands:** verifier unit tests and full pairing check; `py -3.13 -m pipenv run test`; `npm run test`; backend/frontend type/static/format checks appropriate to changed files; PostgreSQL/PostGIS integration commands only after TEST-002; build; `git diff --check`; CI workflow validation once introduced.
+- **Security considerations:** authorization, tenant/center scope, secret redaction, malicious inputs, and sensitive-output behavior require negative cases for every applicable route/service/client module. Fixtures must use synthetic data and test-only secrets.
+- **Database/migration considerations:** unit tests may mock persistence boundaries but cannot be used as evidence that PostgreSQL SQL, constraints, migrations, triggers, transactions, or PostGIS behavior work. Those ledger rows remain partially covered until TEST-002 integration evidence is green.
+- **Compatibility considerations:** preserve public behavior while characterizing it. When a meaningful test exposes a confirmed defect, fix it in the owning bounded ticket with a regression. If evidence conflicts on intended behavior, mark the case blocked and use the plan's decision process rather than encoding an arbitrary expectation.
+- **Rollback strategy:** each subsystem batch is independently revertible. The ledger/verifier may be reverted only together; removing tests or adding exceptions to recover a green build is prohibited unless evidence shows the module was validly removed or reclassified.
+- **Acceptance criteria:** every relevant current module appears exactly once in the module-test ledger; every row is covered or validly exempt; all referenced test paths exist; every covered row names concrete behavior/negative cases; verifier and aggregate suites pass; all database-dependent partial rows are closed after TEST-002; no skipped/focused tests or unapproved exceptions remain.
+- **Review checklist:** inspect assertion quality rather than test count; verify production-to-test path mapping; confirm shared helpers do not erase feature-specific behavior; check failure-path and authorization cases; reconcile counts with `FILE_COVERAGE.md`; verify no production behavior was silently redefined to make a test pass.
+- **Conditions requiring user escalation:** a required test would encode unresolved product/security/data-retention behavior; a real external credential or destructive/shared database is the only proposed fixture; or a module cannot be made testable without a material public/architectural change. Ordinary test seams and dependency injection do not require escalation.
+- **Estimated size:** must-split.
+
+#### TEST-003 required sub-tickets
+
+| ID | Batch | Dependency |
+| --- | --- | --- |
+| TEST-003A | Create the complete module-test ledger, path conventions, tested pairing verifier, and change-gate; mark existing coverage honestly. | TEST-001 |
+| TEST-003B | Backend bootstrap, configuration, shared extensions, utilities, and schemas. | TEST-003A |
+| TEST-003C | Backend authentication and user model/service/route modules. | TEST-003A; authorization expectations may await SECURITY-002 decision |
+| TEST-003D | Backend evacuation-center, event, and statistics modules. | TEST-003A; database cases await TEST-002 |
+| TEST-003E | Backend household and individual modules. | TEST-003A; database cases await TEST-002 |
+| TEST-003F | Backend attendance and transfer modules. | TEST-003A; database cases await TEST-002 |
+| TEST-003G | Backend allocation and distribution modules. SECURITY-009 must complete all changed-module mappings here or in its own ticket. | TEST-003A; database cases await TEST-002 |
+| TEST-003H | Frontend shell, routing, authentication, layouts, shared hooks/stores/clients/utilities, and maintained shared UI. | TEST-003A |
+| TEST-003I | Frontend feature pages/components/stores/clients/schemas/types, split again by domain before implementation. | TEST-003A; corresponding backend contracts |
+| TEST-003J | Maintained setup/seed/maintenance/build scripts, runtime configuration modules, and final ledger reconciliation/CI enforcement. | TEST-003B–I; TEST-002 for database scripts |

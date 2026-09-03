@@ -1,0 +1,34 @@
+{
+  "modules": [
+    {
+      "path": "backend/scripts/verify_module_test_coverage.py",
+      "status": "covered",
+      "tests": ["backend/tests/test_verify_module_test_coverage.py"],
+      "behavior": "Reports every maintained executable module and rejects invalid mappings."
+    },
+    {
+      "path": "backend/wsgi.py",
+      "status": "covered",
+      "tests": ["backend/tests/test_wsgi.py"],
+      "behavior": "Exports the production WSGI application."
+    },
+    {
+      "path": "backend/app/routes/user.py",
+      "status": "covered",
+      "tests": ["backend/tests/test_user_route_guards.py"],
+      "behavior": "Rejects unauthenticated and invalid list requests before service execution."
+    },
+    {
+      "path": "backend/app/services/aid_allocation_service.py",
+      "status": "covered",
+      "tests": ["backend/tests/test_aid_allocation_update.py"],
+      "behavior": "Accepts only safe update fields and derives remaining stock server-side."
+    },
+    {
+      "path": "frontend/src/components/features/dashboard/ErrorAlert.tsx",
+      "status": "covered",
+      "tests": ["frontend/src/components/features/dashboard/ErrorAlert.test.tsx"],
+      "behavior": "Exposes visible errors as accessible alerts."
+    }
+  ]
+}
