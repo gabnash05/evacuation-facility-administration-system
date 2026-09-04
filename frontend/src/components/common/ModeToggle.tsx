@@ -14,7 +14,7 @@ export function ModeToggle({ children }: { children?: React.ReactNode }) {
     return (
         <DropdownMenu>
             <DropdownMenuTrigger asChild>
-                <div className="flex items-center gap-3 w-full text-left cursor-pointer">
+                <button type="button" className="flex items-center gap-3 w-full text-left">
                     <div className="flex items-center justify-center w-4 h-4">
                         <Sun
                             className={cn(
@@ -30,7 +30,7 @@ export function ModeToggle({ children }: { children?: React.ReactNode }) {
                         />
                     </div>
                     {children}
-                </div>
+                </button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="start" className="w-48">
                 <DropdownMenuItem onClick={() => setTheme("light")}>
