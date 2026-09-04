@@ -53,6 +53,12 @@
       "status": "covered",
       "tests": ["backend/tests/test_center_route_authorization.py"],
       "behavior": "Restricts direct center reads by center scope and mutations to super admins."
+    },
+    {
+      "path": "frontend/src/components/features/map/MonoMap.tsx",
+      "status": "covered",
+      "tests": ["frontend/src/components/features/map/MonoMap.test.tsx"],
+      "behavior": "Never interpolates center names into raw marker HTML."
     }
   ]
 }
