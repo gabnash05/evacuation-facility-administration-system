@@ -185,7 +185,7 @@
       "path": "frontend/src/schemas/user.ts",
       "status": "covered",
       "tests": ["frontend/src/schemas/user.test.ts"],
-      "behavior": "Validates basic user-management create and partial-update payloads."
+      "behavior": "Enforces role/center invariants and password updates in user-management payloads."
     },
     {
       "path": "frontend/src/schemas/individuals.ts",
