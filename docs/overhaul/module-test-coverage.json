@@ -282,6 +282,12 @@
       "status": "covered",
       "tests": ["frontend/src/hooks/useAuth.test.tsx"],
       "behavior": "Uses the canonical user center_id to scope lower-role center access."
+    },
+    {
+      "path": "frontend/src/types/user.ts",
+      "status": "covered",
+      "tests": ["frontend/src/types/user.test.ts"],
+      "behavior": "Defines canonical user, center ownership, role, and authentication response contracts."
     }
   ]
 }
