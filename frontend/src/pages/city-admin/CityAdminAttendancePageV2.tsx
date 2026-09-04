@@ -10,6 +10,7 @@ import { useIndividualStore } from "@/store/individualStore";
 import { useAttendanceStore } from "@/store/attendanceRecordsStore";
 import { useEvacuationCenterStore } from "@/store/evacuationCenterStore";
 import { debounce } from "@/utils/helpers";
+import { getActiveAttendanceRecord } from "@/utils/attendance";
 import { useAuthStore } from "@/store/authStore";
 
 export function CityAdminAttendancePage() {
@@ -35,6 +36,7 @@ export function CityAdminAttendancePage() {
         checkOutMultipleIndividuals,
         transferIndividual,
         transferMultipleIndividuals,
+        fetchIndividualAttendanceHistory,
     } = useAttendanceStore();
 
     // Use the evacuation center store
@@ -55,6 +57,7 @@ export function CityAdminAttendancePage() {
     const [selectedIndividualId, setSelectedIndividualId] = useState<number | null>(null);
     const [individualToCheckIn, setIndividualToCheckIn] = useState<any>(null);
     const [selectedRecordId, setSelectedRecordId] = useState<number | null>(null);
+    const [actionError, setActionError] = useState<string | null>(null);
     const [successToast, setSuccessToast] = useState({
         isOpen: false,
         message: "",
@@ -179,10 +182,24 @@ export function CityAdminAttendancePage() {
         setSortConfig(null);
     }, [searchQuery, statusFilter, genderFilter, ageGroupFilter, centerFilter]);
 
-    const handleOpenCheckOutModal = (individualId: number, recordId?: number) => {
-        setSelectedIndividualId(individualId);
-        setSelectedRecordId(recordId || null);
-        setIsCheckOutModalOpen(true);
+    const handleOpenCheckOutModal = async (individualId: number) => {
+        setActionError(null);
+
+        try {
+            const history = await fetchIndividualAttendanceHistory(individualId);
+            const activeRecord = getActiveAttendanceRecord(history, individualId);
+
+            if (!activeRecord) {
+                setActionError("This individual does not have an active attendance record to check out.");
+                return;
+            }
+
+            setSelectedIndividualId(individualId);
+            setSelectedRecordId(activeRecord.record_id);
+            setIsCheckOutModalOpen(true);
+        } catch (error) {
+            setActionError(error instanceof Error ? error.message : "Failed to resolve the active attendance record.");
+        }
     };
 
     const handleOpenTransferModal = (individualId: number, recordId?: number) => {
@@ -354,10 +371,10 @@ export function CityAdminAttendancePage() {
                     <p className="text-muted-foreground">View and manage individual status across centers</p>
                 </div>
 
-                {error && (
+                {(error || actionError) && (
                     <div className="bg-destructive/15 text-destructive p-4 rounded-md">
                         <div className="flex items-center gap-2">
-                            <span className="text-sm font-medium">Error: {error}</span>
+                            <span className="text-sm font-medium">Error: {error || actionError}</span>
                         </div>
                     </div>
                 )}
@@ -411,10 +428,10 @@ export function CityAdminAttendancePage() {
                                     direction: sortConfig?.direction || null
                                 }}
                                 onSort={handleSort}
-                                onCheckOut={(recordId) => {
-                                    const individual = tableData.find(i => i.record_id === recordId);
+                                onCheckOut={(individualId) => {
+                                    const individual = tableData.find(i => i.individual_id === individualId);
                                     if (individual) {
-                                        handleOpenCheckOutModal(individual.individual_id, recordId);
+                                        void handleOpenCheckOutModal(individual.individual_id);
                                     }
                                 }}
                                 onTransfer={(recordId) => {

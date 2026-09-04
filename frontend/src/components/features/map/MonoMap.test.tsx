@@ -1,6 +1,8 @@
 import { describe, expect, it, vi } from "vitest";
 
-const divIcon = vi.fn((options: { html: string }) => ({ options }));
+const { divIcon } = vi.hoisted(() => ({
+    divIcon: vi.fn((options: { html: string }) => ({ options })),
+}));
 
 vi.mock("leaflet", () => ({
     default: {

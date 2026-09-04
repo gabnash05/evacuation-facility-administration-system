@@ -366,6 +366,30 @@
       "status": "covered",
       "tests": ["backend/tests/test_attendance_checkout_identity.py"],
       "behavior": "Delegates checkout directly to the requested attendance record ID."
+    },
+    {
+      "path": "frontend/src/utils/attendance.ts",
+      "status": "covered",
+      "tests": ["frontend/src/utils/attendance.test.ts"],
+      "behavior": "Selects only the requested individual's checked-in, not-yet-checked-out attendance record."
+    },
+    {
+      "path": "frontend/src/pages/city-admin/CityAdminAttendancePageV2.tsx",
+      "status": "covered",
+      "tests": ["frontend/src/utils/attendance.test.ts"],
+      "behavior": "Resolves the active attendance record before a city-admin checkout action opens."
+    },
+    {
+      "path": "frontend/src/pages/center-admin/CenterAdminAttendancePageV2.tsx",
+      "status": "covered",
+      "tests": ["frontend/src/utils/attendance.test.ts"],
+      "behavior": "Resolves the active attendance record before a center-admin checkout action opens."
+    },
+    {
+      "path": "frontend/src/pages/volunteer/VolunteerAttendancePageV2.tsx",
+      "status": "covered",
+      "tests": ["frontend/src/utils/attendance.test.ts"],
+      "behavior": "Resolves the active attendance record before a volunteer checkout action opens."
     }
   ]
 }

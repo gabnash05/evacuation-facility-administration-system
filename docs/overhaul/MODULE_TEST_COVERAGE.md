@@ -33,7 +33,9 @@ to fail until then.
 
 ## Current progress — 2026-09-04
 
-The latest verifier run reports 57 covered modules, 152 missing modules, and
-five narrow exemptions for zero-byte backend markers. Configuration coverage
+The current mapping declares 61 covered modules, 148 missing modules, and five
+narrow exemptions for zero-byte backend markers. Its total was independently
+checked as JSON while the Python launcher is unavailable; rerun the repository
+verifier once that local environment is restored. Configuration coverage
 characterizes the current explicit token and development CORS contract; it does
 not approve the insecure defaults tracked in `SECURITY-001`.
