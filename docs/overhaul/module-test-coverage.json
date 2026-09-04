@@ -450,6 +450,12 @@
       "status": "covered",
       "tests": ["frontend/src/lib/utils.test.ts"],
       "behavior": "Combines conditional class values and resolves conflicting Tailwind utilities deterministically."
+    },
+    {
+      "path": "frontend/src/components/common/Sidebar.tsx",
+      "status": "covered",
+      "tests": ["frontend/src/components/common/Sidebar.test.tsx"],
+      "behavior": "Disables duplicate logout while pending and navigates to login only after successful logout."
     }
   ]
 }
