@@ -480,6 +480,12 @@
       "status": "covered",
       "tests": ["frontend/src/store/individualStore.test.ts"],
       "behavior": "Forwards current individual filters to retrieval and clears stale records after a failed refresh."
+    },
+    {
+      "path": "frontend/src/store/householdStore.ts",
+      "status": "covered",
+      "tests": ["frontend/src/store/householdStore.test.ts"],
+      "behavior": "Forwards current household table state to retrieval and clears stale records after a failed refresh."
     }
   ]
 }
