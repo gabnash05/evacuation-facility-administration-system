@@ -33,7 +33,7 @@ to fail until then.
 
 ## Current progress — 2026-09-04
 
-The latest verifier run reports 44 covered modules, 165 missing modules, and
+The latest verifier run reports 46 covered modules, 163 missing modules, and
 five narrow exemptions for zero-byte backend markers. Configuration coverage
 characterizes the current explicit token and development CORS contract; it does
 not approve the insecure defaults tracked in `SECURITY-001`.

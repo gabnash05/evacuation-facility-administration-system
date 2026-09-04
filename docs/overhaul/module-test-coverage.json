@@ -288,6 +288,18 @@
       "status": "covered",
       "tests": ["frontend/src/types/user.test.ts"],
       "behavior": "Defines canonical user, center ownership, role, and authentication response contracts."
+    },
+    {
+      "path": "frontend/src/types/center.ts",
+      "status": "covered",
+      "tests": ["frontend/src/types/center.test.ts"],
+      "behavior": "Defines canonical evacuation-center identifiers, capacity fields, and supported statuses."
+    },
+    {
+      "path": "frontend/src/types/event.ts",
+      "status": "covered",
+      "tests": ["frontend/src/types/event.test.ts"],
+      "behavior": "Defines supported event statuses and typed evacuation-center associations in event details."
     }
   ]
 }
