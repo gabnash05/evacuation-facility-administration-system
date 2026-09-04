@@ -354,6 +354,18 @@
       "status": "covered",
       "tests": ["frontend/src/services/attendanceRecordsService.test.ts"],
       "behavior": "Uses supported center status/event endpoints and rejects mixed-center batch check-ins before network calls."
+    },
+    {
+      "path": "backend/app/services/attendance_records_service.py",
+      "status": "covered",
+      "tests": ["backend/tests/test_attendance_checkout_identity.py"],
+      "behavior": "Treats checkout input as an attendance record ID and never reloads an unrelated individual by that ID."
+    },
+    {
+      "path": "backend/app/models/attendance_records.py",
+      "status": "covered",
+      "tests": ["backend/tests/test_attendance_checkout_identity.py"],
+      "behavior": "Delegates checkout directly to the requested attendance record ID."
     }
   ]
 }
