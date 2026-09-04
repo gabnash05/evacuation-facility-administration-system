@@ -162,6 +162,12 @@
       "status": "covered",
       "tests": ["frontend/src/utils/helpers.test.ts"],
       "behavior": "Cancels pending debounce callbacks through the public cleanup API."
+    },
+    {
+      "path": "frontend/src/schemas/centers.ts",
+      "status": "covered",
+      "tests": ["frontend/src/schemas/centers.test.ts"],
+      "behavior": "Accepts only center statuses supported by the backend and database contract."
     }
   ]
 }
