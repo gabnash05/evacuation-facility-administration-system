@@ -23,6 +23,7 @@
 | SECURITY-002 | complete | 2026-09-04 | 2026-09-04 | Implemented user-management role hierarchy and center scope selected by the user: super admins manage all users; city admins manage center admins/volunteers; center admins manage volunteers only at their own center; volunteers have no access. All endpoints resolve persisted actors and reject generic self-management. Added route, service, and parameterized-query regressions; focused tests and aggregate backend tests pass (16), Pipenv verification and module ledger pass. |
 | SECURITY-004 | complete | 2026-09-04 | 2026-09-04 | Applied the selected center policy: super-admin-only mutations; citywide reads for super/city admins; direct assigned-center reads for center admins/volunteers; no lower-role citywide/map read. Three focused route regressions and aggregate backend tests (19) pass; module ledger passes. |
 | SECURITY-010 | complete | 2026-09-04 | 2026-09-04 | Removed database-controlled center names from Leaflet raw marker HTML and CSS attributes; tooltip retains React text rendering. Added a hostile-marker regression and module mapping. Focused Vitest command exited successfully, TypeScript and whitespace checks pass; legacy map formatting remains QUALITY-001. |
+| BACKEND-001 | complete | 2026-09-04 | 2026-09-04 | Removed Flask-CORS's unsupported `allow_credentials` option and added an app-factory regression. Focused and aggregate backend tests pass (20); the former warning no longer appears. |
 
 ## Audit batches
 

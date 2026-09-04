@@ -59,6 +59,12 @@
       "status": "covered",
       "tests": ["frontend/src/components/features/map/MonoMap.test.tsx"],
       "behavior": "Never interpolates center names into raw marker HTML."
+    },
+    {
+      "path": "backend/app/__init__.py",
+      "status": "covered",
+      "tests": ["backend/tests/test_app_factory.py"],
+      "behavior": "Builds the application without invalid Flask-CORS configuration warnings."
     }
   ]
 }

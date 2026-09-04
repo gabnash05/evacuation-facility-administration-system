@@ -13,7 +13,7 @@
 | QUALITY-001 | P2 | Frontend | Formatting and lint gates fail broadly. | Prettier: 162 files; ESLint: 909 errors, 168 warnings. | open |
 | QUALITY-002 | P2 | Backend | Formatting, import sorting, and Flake8 gates fail broadly. | Black: 30 files; isort: 32 files; Flake8: 1,211 findings. | open |
 | DEVOPS-002 | P2 | Build/dev workflow | Documentation mentions Docker, but no Docker or CI configuration is present. | README and repository inventory. | open |
-| BACKEND-001 | P2 | Configuration | Flask-CORS logs an unknown `allow_credentials` option during application creation. | Executed Flask import smoke check. | open |
+| BACKEND-001 | P2 | Configuration | Flask-CORS logged an unknown `allow_credentials` option during application creation. | Fixed 2026-09-04: removed the unsupported option while retaining `supports_credentials`; factory regression now asserts no Flask-CORS warning. | resolved |
 | DEVOPS-003 | P2 | Contributor workflow | Contributor guides describe Atlassian/Jira/Bitbucket workflows although the configured remote is GitHub; branch-target and hosting guidance conflict. | `docs/README.md`, `CONTRIBUTING.md`, Git remote inspection. | open |
 | DEVOPS-004 | P2 | Reproducibility | Node runtime is not pinned and the Pipfile uses wildcard direct dependencies; the lockfiles are current but toolchain policy is incomplete. | `frontend/package.json`, `frontend/package-lock.json`, `backend/Pipfile*`. | open |
 | DEVOPS-005 | P2 | Git hooks | The frontend Husky prepare script cannot locate the parent repository `.git` from `frontend/`; its tracked hook also depends on an untracked Husky helper path. | Executed `npm ci`; `frontend/.husky/pre-commit`. | open |
