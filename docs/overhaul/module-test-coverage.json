@@ -408,6 +408,12 @@
       "status": "covered",
       "tests": ["frontend/src/components/common/SuccessToast.test.tsx"],
       "behavior": "Exposes success/error live-region semantics and delays error dismissal long enough to read it."
+    },
+    {
+      "path": "frontend/src/components/common/SearchBar.tsx",
+      "status": "covered",
+      "tests": ["frontend/src/components/common/SearchBar.test.tsx"],
+      "behavior": "Forwards controlled search input and tolerates an omitted optional callback."
     }
   ]
 }
