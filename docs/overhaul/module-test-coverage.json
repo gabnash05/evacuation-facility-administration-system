@@ -132,6 +132,18 @@
       "status": "covered",
       "tests": ["backend/tests/test_validation_schemas.py"],
       "behavior": "Rejects invalid dashboard filter identifiers."
+    },
+    {
+      "path": "backend/app/schemas/household.py",
+      "status": "covered",
+      "tests": ["backend/tests/test_household_individual_schemas.py"],
+      "behavior": "Applies household query defaults and requires at least one nested member where the contract declares it."
+    },
+    {
+      "path": "backend/app/schemas/individual.py",
+      "status": "covered",
+      "tests": ["backend/tests/test_household_individual_schemas.py"],
+      "behavior": "Rejects impossible future dates of birth."
     }
   ]
 }
