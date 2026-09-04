@@ -49,7 +49,7 @@ export function useAuth() {
                 return true;
             }
 
-            return user.centerId === centerId;
+            return user.center_id === centerId;
         },
         [user]
     );

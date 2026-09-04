@@ -276,6 +276,12 @@
       "status": "covered",
       "tests": ["frontend/src/schemas/auth.test.ts"],
       "behavior": "Rejects malformed login credentials before the authentication request is attempted."
+    },
+    {
+      "path": "frontend/src/hooks/useAuth.ts",
+      "status": "covered",
+      "tests": ["frontend/src/hooks/useAuth.test.tsx"],
+      "behavior": "Uses the canonical user center_id to scope lower-role center access."
     }
   ]
 }
