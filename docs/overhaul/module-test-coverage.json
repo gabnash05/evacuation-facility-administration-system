@@ -426,6 +426,12 @@
       "status": "covered",
       "tests": ["frontend/src/components/common/Toolbar.test.tsx"],
       "behavior": "Forwards toolbar search/add actions and honors its optional entries-selector visibility contract."
+    },
+    {
+      "path": "frontend/src/components/common/Topbar.tsx",
+      "status": "covered",
+      "tests": ["frontend/src/components/common/Topbar.test.tsx"],
+      "behavior": "Exposes the supplied page title through a semantic top-level heading."
     }
   ]
 }
