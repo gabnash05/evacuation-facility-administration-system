@@ -114,6 +114,24 @@
       "status": "covered",
       "tests": ["backend/tests/test_run.py"],
       "behavior": "Exports the configured Flask application without starting the development server on import."
+    },
+    {
+      "path": "backend/app/schemas/evacuation_center.py",
+      "status": "covered",
+      "tests": ["backend/tests/test_validation_schemas.py"],
+      "behavior": "Validates center defaults and coordinate-pair updates."
+    },
+    {
+      "path": "backend/app/schemas/event.py",
+      "status": "covered",
+      "tests": ["backend/tests/test_validation_schemas.py"],
+      "behavior": "Normalizes supported display dates and applies event defaults."
+    },
+    {
+      "path": "backend/app/schemas/stats.py",
+      "status": "covered",
+      "tests": ["backend/tests/test_validation_schemas.py"],
+      "behavior": "Rejects invalid dashboard filter identifiers."
     }
   ]
 }
