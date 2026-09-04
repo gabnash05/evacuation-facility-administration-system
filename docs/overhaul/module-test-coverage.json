@@ -342,6 +342,12 @@
       "status": "covered",
       "tests": ["frontend/src/services/statsService.test.ts"],
       "behavior": "Forwards shared center/event filters to documented statistics endpoints."
+    },
+    {
+      "path": "frontend/src/services/evacuationCenterService.ts",
+      "status": "covered",
+      "tests": ["frontend/src/services/evacuationCenterService.test.ts"],
+      "behavior": "Uses typed application events and forwards documented nearby-center query parameters."
     }
   ]
 }
