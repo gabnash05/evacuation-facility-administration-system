@@ -174,6 +174,12 @@
       "status": "covered",
       "tests": ["frontend/src/schemas/events.test.ts"],
       "behavior": "Declares valid event lifecycle statuses and positive center-link identifiers."
+    },
+    {
+      "path": "frontend/src/schemas/stats.ts",
+      "status": "covered",
+      "tests": ["frontend/src/schemas/stats.test.ts"],
+      "behavior": "Validates the event filter used across the dashboard statistics contract."
     }
   ]
 }

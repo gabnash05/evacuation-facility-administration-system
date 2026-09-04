@@ -8,6 +8,7 @@ export const StatsFilterSchema = z.object({
     gender: GenderSchema,
     age_group: AgeGroupSchema,
     center_id: z.number().nullable().optional(),
+    event_id: z.number().min(1, "Event ID must be positive").nullable().optional(),
 });
 
 export type StatsFilterFormData = z.infer<typeof StatsFilterSchema>;
