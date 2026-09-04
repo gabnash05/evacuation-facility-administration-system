@@ -150,6 +150,12 @@
       "status": "covered",
       "tests": ["backend/tests/test_distribution_schema.py"],
       "behavior": "Validates non-empty, positive distribution items and applies stable history defaults."
+    },
+    {
+      "path": "frontend/src/utils/formatters.ts",
+      "status": "covered",
+      "tests": ["frontend/src/utils/formatters.test.ts"],
+      "behavior": "Formats capacity safely when a center has zero total capacity."
     }
   ]
 }
