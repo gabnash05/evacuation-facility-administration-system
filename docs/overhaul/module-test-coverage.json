@@ -180,6 +180,12 @@
       "status": "covered",
       "tests": ["frontend/src/schemas/stats.test.ts"],
       "behavior": "Validates the event filter used across the dashboard statistics contract."
+    },
+    {
+      "path": "frontend/src/schemas/user.ts",
+      "status": "covered",
+      "tests": ["frontend/src/schemas/user.test.ts"],
+      "behavior": "Validates basic user-management create and partial-update payloads."
     }
   ]
 }
