@@ -4,6 +4,8 @@ export const createHouseholdSchema = z.object({
     household_name: z.string().min(1, "Household name is required"),
     address: z.string().min(1, "Address is required"),
     household_head_id: z.number().optional(), // Optional for initial creation
+    center_id: z.number().min(1, "Evacuation center is required"),
+    individuals: z.array(z.unknown()).min(1, "At least one household member is required"),
 });
 
 export const updateHouseholdSchema = z.object({
