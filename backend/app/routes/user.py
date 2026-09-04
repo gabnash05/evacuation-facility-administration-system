@@ -4,22 +4,25 @@ import logging
 from typing import Tuple
 
 from flask import Blueprint, jsonify, request
-from flask_jwt_extended import jwt_required
+from flask_jwt_extended import get_jwt_identity, jwt_required
 
-from app.services.user_service import (
-    create_user,
-    delete_user,
-    get_user_by_id,
-    get_users,
-    update_user,
-    deactivate_user_service,
-    reactivate_user_service,
-)
+from app.services.user_service import (create_user, deactivate_user_service,
+                                       delete_user, get_current_user,
+                                       get_user_by_id, get_users,
+                                       reactivate_user_service, update_user)
 
 # Configure logger for this module
 logger = logging.getLogger(__name__)
 
 user_bp = Blueprint("user_bp", __name__)
+
+
+def _current_actor():
+    """Resolve the JWT identity to a current persisted account."""
+    actor = get_current_user(get_jwt_identity())
+    if not actor or not actor.is_active:
+        return None
+    return actor
 
 
 @user_bp.route("/users", methods=["GET"])
@@ -69,6 +72,10 @@ def get_all_users() -> Tuple:
                 400,
             )
 
+        actor = _current_actor()
+        if not actor:
+            return jsonify({"success": False, "message": "Invalid token"}), 401
+
         logger.info(
             "Fetching users - search: %s, role: %s, status: %s, page: %s, limit: %s",
             search,
@@ -88,6 +95,7 @@ def get_all_users() -> Tuple:
             sort_by=sort_by,
             sort_order=sort_order,
             center_id=center_id,
+            actor=actor,
         )
 
         if not result["success"]:
@@ -123,9 +131,12 @@ def get_user(user_id: int) -> Tuple:
             - HTTP status code
     """
     try:
+        actor = _current_actor()
+        if not actor:
+            return jsonify({"success": False, "message": "Invalid token"}), 401
         logger.info("Fetching user with ID: %s", user_id)
 
-        result = get_user_by_id(user_id)
+        result = get_user_by_id(user_id, actor)
 
         if not result["success"]:
             return jsonify(result), 404
@@ -163,6 +174,9 @@ def create_new_user() -> Tuple:
             - HTTP status code
     """
     try:
+        actor = _current_actor()
+        if not actor:
+            return jsonify({"success": False, "message": "Invalid token"}), 401
         data = request.get_json()
 
         if not data:
@@ -170,7 +184,7 @@ def create_new_user() -> Tuple:
 
         logger.info("Creating new user: %s", data.get("email"))
 
-        result = create_user(data)
+        result = create_user(data, actor)
 
         if not result["success"]:
             return jsonify(result), 400
@@ -211,6 +225,9 @@ def update_existing_user(user_id: int) -> Tuple:
             - HTTP status code
     """
     try:
+        actor = _current_actor()
+        if not actor:
+            return jsonify({"success": False, "message": "Invalid token"}), 401
         data = request.get_json()
 
         if not data:
@@ -218,7 +235,7 @@ def update_existing_user(user_id: int) -> Tuple:
 
         logger.info("Updating user with ID: %s", user_id)
 
-        result = update_user(user_id, data)
+        result = update_user(user_id, data, actor)
 
         if not result["success"]:
             return jsonify(result), 400
@@ -253,9 +270,12 @@ def delete_existing_user(user_id: int) -> Tuple:
             - HTTP status code
     """
     try:
+        actor = _current_actor()
+        if not actor:
+            return jsonify({"success": False, "message": "Invalid token"}), 401
         logger.info("Deleting user with ID: %s", user_id)
 
-        result = delete_user(user_id)
+        result = delete_user(user_id, actor)
 
         if not result["success"]:
             return jsonify(result), 400
@@ -290,9 +310,12 @@ def deactivate_existing_user(user_id: int) -> Tuple:
             - HTTP status code
     """
     try:
+        actor = _current_actor()
+        if not actor:
+            return jsonify({"success": False, "message": "Invalid token"}), 401
         logger.info("Deactivating user with ID: %s", user_id)
 
-        result = deactivate_user_service(user_id)
+        result = deactivate_user_service(user_id, actor)
 
         if not result["success"]:
             return jsonify(result), 400
@@ -325,9 +348,12 @@ def reactivate_existing_user(user_id: int) -> Tuple:
         Tuple containing JSON response and HTTP status code
     """
     try:
+        actor = _current_actor()
+        if not actor:
+            return jsonify({"success": False, "message": "Invalid token"}), 401
         logger.info("Reactivating user with ID: %s", user_id)
 
-        result = reactivate_user_service(user_id)
+        result = reactivate_user_service(user_id, actor)
 
         if not result["success"]:
             return jsonify(result), 400

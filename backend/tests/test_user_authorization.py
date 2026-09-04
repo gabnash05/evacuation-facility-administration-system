@@ -1,0 +1,103 @@
+"""Regression tests for user-management role and center authorization."""
+
+from types import SimpleNamespace
+from unittest.mock import MagicMock, patch
+
+from app.models.user import User
+from app.services import user_service
+from tests.api_test_case import ApiTestCase
+
+
+def user(user_id, role, center_id=None, is_active=True):
+    return SimpleNamespace(
+        user_id=user_id, role=role, center_id=center_id, is_active=is_active
+    )
+
+
+class UserAuthorizationPolicyTests(ApiTestCase):
+    @patch("app.routes.user.get_current_user")
+    def test_volunteer_cannot_list_users(self, get_current_user):
+        get_current_user.return_value = user(7, "volunteer", 2)
+
+        response = self.client.get("/api/users", headers=self.authorization_headers(7))
+
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.get_json()["message"], "Insufficient permissions")
+
+    @patch("app.routes.user.get_current_user")
+    @patch("app.routes.user.create_user")
+    def test_center_admin_can_create_volunteer_at_own_center(
+        self, create_user, get_current_user
+    ):
+        actor = user(3, "center_admin", 12)
+        get_current_user.return_value = actor
+        create_user.return_value = {"success": True, "data": {"user_id": 20}}
+
+        response = self.client.post(
+            "/api/users",
+            headers=self.authorization_headers(3),
+            json={
+                "email": "volunteer@example.test",
+                "password": "secret123",
+                "role": "volunteer",
+                "center_id": 12,
+            },
+        )
+
+        self.assertEqual(response.status_code, 201)
+        create_user.assert_called_once_with(
+            {
+                "email": "volunteer@example.test",
+                "password": "secret123",
+                "role": "volunteer",
+                "center_id": 12,
+            },
+            actor,
+        )
+
+
+class UserAuthorizationHelperTests(ApiTestCase):
+    def test_center_admin_cannot_manage_other_center_or_higher_role(self):
+        actor = user(3, "center_admin", 12)
+
+        self.assertTrue(user_service._authorizes_role(actor, "volunteer", 12))
+        self.assertFalse(user_service._authorizes_role(actor, "volunteer", 13))
+        self.assertFalse(user_service._authorizes_role(actor, "center_admin", 12))
+
+    def test_center_admin_cannot_mutate_own_or_other_center_volunteer(self):
+        actor = user(3, "center_admin", 12)
+
+        self.assertIsNotNone(
+            user_service._authorize_target(actor, user(3, "center_admin", 12))
+        )
+        self.assertIsNotNone(
+            user_service._authorize_target(actor, user(8, "volunteer", 13))
+        )
+        self.assertIsNone(
+            user_service._authorize_target(actor, user(8, "volunteer", 12))
+        )
+
+
+class UserModelAuthorizationTests(ApiTestCase):
+    @patch("app.models.user.db.session.execute")
+    def test_role_scope_is_bound_as_query_parameters(self, execute):
+        count_result = MagicMock()
+        count_result.fetchone.return_value = (0,)
+        select_result = MagicMock()
+        select_result.fetchall.return_value = []
+        execute.side_effect = [count_result, select_result]
+
+        User.get_all(allowed_roles={"center_admin", "volunteer"})
+
+        count_query, count_params = execute.call_args_list[0].args
+        select_query, select_params = execute.call_args_list[1].args
+        self.assertIn("u.role IN (:allowed_role_0, :allowed_role_1)", str(count_query))
+        self.assertIn("u.role IN (:allowed_role_0, :allowed_role_1)", str(select_query))
+        self.assertEqual(
+            {count_params["allowed_role_0"], count_params["allowed_role_1"]},
+            {"center_admin", "volunteer"},
+        )
+        self.assertEqual(
+            {select_params["allowed_role_0"], select_params["allowed_role_1"]},
+            {"center_admin", "volunteer"},
+        )

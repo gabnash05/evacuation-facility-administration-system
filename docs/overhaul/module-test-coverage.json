@@ -15,8 +15,8 @@
     {
       "path": "backend/app/routes/user.py",
       "status": "covered",
-      "tests": ["backend/tests/test_user_route_guards.py"],
-      "behavior": "Rejects unauthenticated and invalid list requests before service execution."
+      "tests": ["backend/tests/test_user_route_guards.py", "backend/tests/test_user_authorization.py"],
+      "behavior": "Resolves persisted JWT actors and rejects unauthorized user-management requests."
     },
     {
       "path": "backend/app/services/aid_allocation_service.py",
@@ -35,6 +35,18 @@
       "status": "covered",
       "tests": ["frontend/src/components/features/aid-allocation/EditAllocationForm.test.tsx"],
       "behavior": "Sends only mutable allocation fields; remaining inventory is server-owned."
+    },
+    {
+      "path": "backend/app/services/user_service.py",
+      "status": "covered",
+      "tests": ["backend/tests/test_user_authorization.py"],
+      "behavior": "Enforces role hierarchy, center scope, and self-management restrictions."
+    },
+    {
+      "path": "backend/app/models/user.py",
+      "status": "covered",
+      "tests": ["backend/tests/test_user_authorization.py"],
+      "behavior": "Binds authorization role scopes as SQL parameters in list queries."
     }
   ]
 }

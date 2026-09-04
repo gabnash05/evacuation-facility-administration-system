@@ -5,7 +5,8 @@ from flask_jwt_extended import create_access_token
 from werkzeug.security import check_password_hash, generate_password_hash
 
 from app.models.user import User
-from app.schemas.user import UserCreateSchema, UserUpdateSchema, UserRegisterSchema
+from app.schemas.user import (UserCreateSchema, UserRegisterSchema,
+                              UserUpdateSchema)
 
 # Configure logger for this module
 logger = logging.getLogger(__name__)
@@ -14,6 +15,57 @@ logger = logging.getLogger(__name__)
 create_schema = UserCreateSchema()
 update_schema = UserUpdateSchema()
 register_schema = UserRegisterSchema()
+
+MANAGEABLE_ROLES = {
+    "super_admin": {"super_admin", "city_admin", "center_admin", "volunteer"},
+    "city_admin": {"center_admin", "volunteer"},
+    "center_admin": {"volunteer"},
+}
+
+
+def _authorizes_role(actor: User, role: str, center_id: Optional[int] = None) -> bool:
+    """Return whether an actor may manage a role at the requested center."""
+    if role not in MANAGEABLE_ROLES.get(actor.role, set()):
+        return False
+    return actor.role != "center_admin" or center_id == actor.center_id
+
+
+def _authorize_target(
+    actor: User,
+    target: User,
+    new_role: Optional[str] = None,
+    new_center_id: Optional[int] = None,
+) -> Optional[Dict[str, Any]]:
+    """Enforce hierarchy, center scope, and self-mutation safeguards."""
+    if target.user_id == actor.user_id:
+        return {
+            "success": False,
+            "message": "Cannot manage your own account through this endpoint",
+        }
+    if not _authorizes_role(actor, target.role, target.center_id):
+        return {
+            "success": False,
+            "message": "Insufficient permissions to manage this user",
+        }
+    if new_role and not _authorizes_role(
+        actor,
+        new_role,
+        new_center_id if new_center_id is not None else target.center_id,
+    ):
+        return {
+            "success": False,
+            "message": "Insufficient permissions to assign this role or center",
+        }
+    if (
+        actor.role == "center_admin"
+        and new_center_id is not None
+        and new_center_id != actor.center_id
+    ):
+        return {
+            "success": False,
+            "message": "Center administrators may manage volunteers only at their own center",
+        }
+    return None
 
 
 # ========================
@@ -256,6 +308,7 @@ def get_users(
     sort_by: Optional[str] = None,
     sort_order: Optional[str] = "asc",
     center_id: Optional[int] = None,
+    actor: Optional[User] = None,
 ) -> Dict[str, Any]:
     """
     Get all users with filtering, pagination, and sorting.
@@ -274,6 +327,21 @@ def get_users(
         Dictionary with users and pagination info
     """
     try:
+        if not actor or actor.role not in MANAGEABLE_ROLES:
+            return {"success": False, "message": "Insufficient permissions"}
+        allowed_roles = MANAGEABLE_ROLES[actor.role]
+        if role and role != "all" and role not in allowed_roles:
+            return {
+                "success": False,
+                "message": "Insufficient permissions to view this role",
+            }
+        if actor.role == "center_admin":
+            if center_id is not None and int(center_id) != actor.center_id:
+                return {
+                    "success": False,
+                    "message": "Insufficient permissions to view this center",
+                }
+            center_id = actor.center_id
         result = User.get_all(
             search=search,
             role=role,
@@ -283,6 +351,7 @@ def get_users(
             sort_by=sort_by,
             sort_order=sort_order,
             center_id=center_id,
+            allowed_roles=allowed_roles,
         )
 
         users_data = [user.to_schema() for user in result["users"]]
@@ -305,7 +374,7 @@ def get_users(
         return {"success": False, "message": "Failed to fetch users"}
 
 
-def get_user_by_id(user_id: int) -> Dict[str, Any]:
+def get_user_by_id(user_id: int, actor: User) -> Dict[str, Any]:
     """
     Get a specific user by ID.
 
@@ -320,6 +389,9 @@ def get_user_by_id(user_id: int) -> Dict[str, Any]:
 
         if not user:
             return {"success": False, "message": "User not found"}
+        denial = _authorize_target(actor, user)
+        if denial:
+            return denial
 
         return {"success": True, "data": user.to_schema()}
 
@@ -328,7 +400,7 @@ def get_user_by_id(user_id: int) -> Dict[str, Any]:
         return {"success": False, "message": "Failed to fetch user"}
 
 
-def create_user(data: Dict[str, Any]) -> Dict[str, Any]:
+def create_user(data: Dict[str, Any], actor: User) -> Dict[str, Any]:
     """
     Create a new user.
 
@@ -346,6 +418,12 @@ def create_user(data: Dict[str, Any]) -> Dict[str, Any]:
             return {
                 "success": False,
                 "message": f"Validation error: {str(validation_error)}",
+            }
+
+        if not _authorizes_role(actor, valid_data["role"], valid_data.get("center_id")):
+            return {
+                "success": False,
+                "message": "Insufficient permissions to create this user",
             }
 
         # Check if email already exists
@@ -369,7 +447,9 @@ def create_user(data: Dict[str, Any]) -> Dict[str, Any]:
         return {"success": False, "message": "Failed to create user"}
 
 
-def update_user(user_id: int, update_data: Dict[str, Any]) -> Dict[str, Any]:
+def update_user(
+    user_id: int, update_data: Dict[str, Any], actor: User
+) -> Dict[str, Any]:
     """
     Update a user.
 
@@ -394,6 +474,14 @@ def update_user(user_id: int, update_data: Dict[str, Any]) -> Dict[str, Any]:
         existing_user = User.get_by_id(user_id)
         if not existing_user:
             return {"success": False, "message": "User not found"}
+        denial = _authorize_target(
+            actor,
+            existing_user,
+            valid_data.get("role"),
+            valid_data.get("center_id"),
+        )
+        if denial:
+            return denial
 
         # Check for duplicate email if email is being updated
         if "email" in valid_data and valid_data["email"]:
@@ -404,8 +492,9 @@ def update_user(user_id: int, update_data: Dict[str, Any]) -> Dict[str, Any]:
         # Handle password update safely
         if "password" in valid_data:
             if valid_data["password"]:
-                valid_data["password_hash"] = generate_password_hash(valid_data["password"])
-            
+                valid_data["password_hash"] = generate_password_hash(
+                    valid_data["password"]
+                )
 
             del valid_data["password"]
 
@@ -428,7 +517,7 @@ def update_user(user_id: int, update_data: Dict[str, Any]) -> Dict[str, Any]:
         return {"success": False, "message": "Failed to update user"}
 
 
-def delete_user(user_id: int) -> Dict[str, Any]:
+def delete_user(user_id: int, actor: User) -> Dict[str, Any]:
     """
     Delete a user.
 
@@ -443,6 +532,9 @@ def delete_user(user_id: int) -> Dict[str, Any]:
         existing_user = User.get_by_id(user_id)
         if not existing_user:
             return {"success": False, "message": "User not found"}
+        denial = _authorize_target(actor, existing_user)
+        if denial:
+            return denial
 
         # Delete user
         success = User.delete(user_id)
@@ -459,7 +551,7 @@ def delete_user(user_id: int) -> Dict[str, Any]:
         return {"success": False, "message": "Failed to delete user"}
 
 
-def deactivate_user_service(user_id: int) -> Dict[str, Any]:
+def deactivate_user_service(user_id: int, actor: User) -> Dict[str, Any]:
     """
     Deactivate a user (for user management routes).
 
@@ -474,6 +566,9 @@ def deactivate_user_service(user_id: int) -> Dict[str, Any]:
         existing_user = User.get_by_id(user_id)
         if not existing_user:
             return {"success": False, "message": "User not found"}
+        denial = _authorize_target(actor, existing_user)
+        if denial:
+            return denial
 
         # Deactivate user
         updated_user = User.update_user(user_id, {"is_active": False})
@@ -494,7 +589,7 @@ def deactivate_user_service(user_id: int) -> Dict[str, Any]:
         return {"success": False, "message": "Failed to deactivate user"}
 
 
-def reactivate_user_service(user_id: int) -> Dict[str, Any]:
+def reactivate_user_service(user_id: int, actor: User) -> Dict[str, Any]:
     """
     Reactivate a user (for user management routes).
 
@@ -509,6 +604,9 @@ def reactivate_user_service(user_id: int) -> Dict[str, Any]:
         existing_user = User.get_by_id(user_id)
         if not existing_user:
             return {"success": False, "message": "User not found"}
+        denial = _authorize_target(actor, existing_user)
+        if denial:
+            return denial
 
         # Reactivate user
         updated_user = User.update_user(user_id, {"is_active": True})
