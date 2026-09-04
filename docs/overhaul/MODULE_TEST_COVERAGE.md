@@ -33,7 +33,7 @@ to fail until then.
 
 ## Current progress — 2026-09-04
 
-The current mapping declares 63 covered modules, 146 missing modules, and five
+The current mapping declares 64 covered modules, 145 missing modules, and five
 narrow exemptions for zero-byte backend markers. Its total was independently
 checked as JSON while the Python launcher is unavailable; rerun the repository
 verifier once that local environment is restored. Configuration coverage

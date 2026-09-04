@@ -402,6 +402,12 @@
       "status": "covered",
       "tests": ["frontend/src/components/features/auth/ProtectedRoute.test.tsx"],
       "behavior": "Renders loading, redirects anonymous or unauthorized visitors, and admits authenticated users with an allowed role."
+    },
+    {
+      "path": "frontend/src/components/common/SuccessToast.tsx",
+      "status": "covered",
+      "tests": ["frontend/src/components/common/SuccessToast.test.tsx"],
+      "behavior": "Exposes success/error live-region semantics and delays error dismissal long enough to read it."
     }
   ]
 }
