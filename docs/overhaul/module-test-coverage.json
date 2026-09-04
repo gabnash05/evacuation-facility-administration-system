@@ -420,6 +420,12 @@
       "status": "covered",
       "tests": ["frontend/src/components/common/TablePagination.test.tsx"],
       "behavior": "Reports empty and paginated ranges, keeps navigation bounded, and disables mutations while loading."
+    },
+    {
+      "path": "frontend/src/components/common/Toolbar.tsx",
+      "status": "covered",
+      "tests": ["frontend/src/components/common/Toolbar.test.tsx"],
+      "behavior": "Forwards toolbar search/add actions and honors its optional entries-selector visibility contract."
     }
   ]
 }

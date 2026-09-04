@@ -67,8 +67,8 @@ function TableToolbarComponent({
                         disabled={loading}
                     />
                 </div>
-                <Button 
-                    onClick={onAddItem} 
+                <Button
+                    onClick={onAddItem}
                     disabled={loading || addButtonDisabled}
                     className="gap-2"
                 >
@@ -76,28 +76,30 @@ function TableToolbarComponent({
                     {addButtonText}
                 </Button>
             </div>
-            
-            <div className="flex items-center gap-4">
-                <div className="flex items-center gap-2">
-                    <span className="text-sm text-muted-foreground">Show</span>
-                    <Select
-                        value={String(entriesPerPage)}
-                        onValueChange={(value) => onEntriesPerPageChange(Number(value))}
-                        disabled={loading}
-                    >
-                        <SelectTrigger className="w-20">
-                            <SelectValue placeholder="10" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="10">10</SelectItem>
-                            <SelectItem value="25">25</SelectItem>
-                            <SelectItem value="50">50</SelectItem>
-                            <SelectItem value="100">100</SelectItem>
-                        </SelectContent>
-                    </Select>
-                    <span className="text-sm text-muted-foreground">entries</span>
+
+            {showEntriesSelector && (
+                <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-2">
+                        <span className="text-sm text-muted-foreground">Show</span>
+                        <Select
+                            value={String(entriesPerPage)}
+                            onValueChange={value => onEntriesPerPageChange(Number(value))}
+                            disabled={loading}
+                        >
+                            <SelectTrigger className="w-20">
+                                <SelectValue placeholder="10" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="10">10</SelectItem>
+                                <SelectItem value="25">25</SelectItem>
+                                <SelectItem value="50">50</SelectItem>
+                                <SelectItem value="100">100</SelectItem>
+                            </SelectContent>
+                        </Select>
+                        <span className="text-sm text-muted-foreground">entries</span>
+                    </div>
                 </div>
-            </div>
+            )}
         </div>
     );
 }
