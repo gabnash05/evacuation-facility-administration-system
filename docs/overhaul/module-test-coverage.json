@@ -246,6 +246,18 @@
       "status": "covered",
       "tests": ["frontend/src/services/householdService.test.ts"],
       "behavior": "Maps the documented backend household list response and request parameters into the client contract."
+    },
+    {
+      "path": "frontend/src/services/api.ts",
+      "status": "covered",
+      "tests": ["frontend/src/services/api.test.ts"],
+      "behavior": "Preserves backend API errors and emits deterministic status and network fallbacks."
+    },
+    {
+      "path": "frontend/src/types/api.ts",
+      "status": "covered",
+      "tests": ["frontend/src/services/api.test.ts"],
+      "behavior": "Defines the compile-time response and pagination contracts consumed by shared API clients."
     }
   ]
 }
