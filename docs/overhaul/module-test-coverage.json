@@ -414,6 +414,12 @@
       "status": "covered",
       "tests": ["frontend/src/components/common/SearchBar.test.tsx"],
       "behavior": "Forwards controlled search input and tolerates an omitted optional callback."
+    },
+    {
+      "path": "frontend/src/components/common/TablePagination.tsx",
+      "status": "covered",
+      "tests": ["frontend/src/components/common/TablePagination.test.tsx"],
+      "behavior": "Reports empty and paginated ranges, keeps navigation bounded, and disables mutations while loading."
     }
   ]
 }
