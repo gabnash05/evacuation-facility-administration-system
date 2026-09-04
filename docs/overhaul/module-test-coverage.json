@@ -300,6 +300,12 @@
       "status": "covered",
       "tests": ["frontend/src/types/event.test.ts"],
       "behavior": "Defines supported event statuses and typed evacuation-center associations in event details."
+    },
+    {
+      "path": "backend/app/routes/auth.py",
+      "status": "covered",
+      "tests": ["backend/tests/test_auth_logout.py"],
+      "behavior": "Clears the authentication cookie with the configured secure attribute without requiring persistence."
     }
   ]
 }
