@@ -306,6 +306,18 @@
       "status": "covered",
       "tests": ["backend/tests/test_auth_logout.py"],
       "behavior": "Clears the authentication cookie with the configured secure attribute without requiring persistence."
+    },
+    {
+      "path": "frontend/src/types/stats.ts",
+      "status": "covered",
+      "tests": ["frontend/src/types/stats.test.ts"],
+      "behavior": "Defines typed center/event filters and grouped dashboard statistics responses."
+    },
+    {
+      "path": "frontend/src/types/individual.ts",
+      "status": "covered",
+      "tests": ["frontend/src/types/individual.test.ts"],
+      "behavior": "Defines individual identity, household ownership, filters, and paginated client responses."
     }
   ]
 }
