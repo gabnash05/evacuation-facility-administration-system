@@ -324,6 +324,12 @@
       "status": "covered",
       "tests": ["backend/tests/test_allocation_route_logging.py"],
       "behavior": "Audits authenticated allocation updates by stable user ID without logging email addresses."
+    },
+    {
+      "path": "frontend/src/types/attendance.ts",
+      "status": "covered",
+      "tests": ["frontend/src/types/attendance.test.ts"],
+      "behavior": "Keeps attendance record identity distinct from individual identity and constrains status/filter contracts."
     }
   ]
 }
