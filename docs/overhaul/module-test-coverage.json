@@ -108,6 +108,12 @@
       "path": "backend/app/utils/validators.py",
       "status": "exempt",
       "exception": "Zero-byte utility placeholder with no executable behavior; retain only until its owning cleanup ticket resolves it."
+    },
+    {
+      "path": "backend/run.py",
+      "status": "covered",
+      "tests": ["backend/tests/test_run.py"],
+      "behavior": "Exports the configured Flask application without starting the development server on import."
     }
   ]
 }
