@@ -44,7 +44,7 @@
 
 ## Latest implementation update
 
-`TEST-003H` now includes individual-service, individual-store, and household-store
-regressions. The machine-readable mapping declares 77 covered modules, 132 missing
-modules, and five valid exemptions; rerun the Python verifier after the local
-launcher recovery.
+`TEST-003H` now includes individual-service, individual-store, household-store, and
+attendance-store regressions. The machine-readable mapping declares 78 covered
+modules, 131 missing modules, and five valid exemptions; rerun the Python verifier
+after the local launcher recovery.
