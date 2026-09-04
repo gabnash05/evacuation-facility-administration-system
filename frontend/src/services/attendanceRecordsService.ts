@@ -88,16 +88,16 @@ export class AttendanceRecordsService {
         try {
             // Validate attendance conditions before checking in
             await this.validateAttendanceConditions(data.center_id);
-            
+
             // Get active event for the center
             const activeEvent = await this.getActiveEventForCenter(data.center_id);
-            
+
             // Automatically link to the active event
             const checkInData = {
                 ...data,
-                event_id: activeEvent.event_id
+                event_id: activeEvent.event_id,
             };
-            
+
             const response = await api.post<{
                 success: boolean;
                 data: AttendanceRecord;
@@ -123,19 +123,22 @@ export class AttendanceRecordsService {
 
             // All check-ins should be for the same center in batch operations
             const centerId = data[0].center_id;
-            
+            if (data.some(item => item.center_id !== centerId)) {
+                throw new Error("Batch check-ins must target the same center");
+            }
+
             // Validate attendance conditions before checking in
             await this.validateAttendanceConditions(centerId);
-            
+
             // Get active event for the center
             const activeEvent = await this.getActiveEventForCenter(centerId);
-            
+
             // Automatically link all to the active event
             const checkInData = data.map(item => ({
                 ...item,
-                event_id: activeEvent.event_id
+                event_id: activeEvent.event_id,
             }));
-            
+
             const response = await api.post<{
                 success: boolean;
                 data: AttendanceRecord[];
@@ -161,13 +164,15 @@ export class AttendanceRecordsService {
             // Check if the attendance record's center is still active
             const recordResponse = await this.getAttendanceRecord(recordId);
             const record = recordResponse.data;
-            
+
             // Check center status
             const centerStatus = await this.getCenterStatus(record.center_id);
-            if (centerStatus.status !== 'active') {
-                throw new Error("Cannot check out from an inactive center. The associated event may be resolved.");
+            if (centerStatus.status !== "active") {
+                throw new Error(
+                    "Cannot check out from an inactive center. The associated event may be resolved."
+                );
             }
-            
+
             const response = await api.put<{
                 success: boolean;
                 data: AttendanceRecord;
@@ -181,11 +186,13 @@ export class AttendanceRecordsService {
         }
     }
 
-    static async checkOutMultipleIndividuals(data: Array<{
-        record_id: number;
-        check_out_time?: string;
-        notes?: string;
-    }>): Promise<{
+    static async checkOutMultipleIndividuals(
+        data: Array<{
+            record_id: number;
+            check_out_time?: string;
+            notes?: string;
+        }>
+    ): Promise<{
         success: boolean;
         data: {
             successful_checkouts: Array<{
@@ -206,14 +213,16 @@ export class AttendanceRecordsService {
             for (const item of data) {
                 const recordResponse = await this.getAttendanceRecord(item.record_id);
                 const record = recordResponse.data;
-                
+
                 // Check center status
                 const centerStatus = await this.getCenterStatus(record.center_id);
-                if (centerStatus.status !== 'active') {
-                    throw new Error(`Cannot check out from center ${record.center_id}. Center is inactive.`);
+                if (centerStatus.status !== "active") {
+                    throw new Error(
+                        `Cannot check out from center ${record.center_id}. Center is inactive.`
+                    );
                 }
             }
-            
+
             const response = await api.post<{
                 success: boolean;
                 data: {
@@ -249,16 +258,16 @@ export class AttendanceRecordsService {
         try {
             // Validate destination center conditions
             await this.validateAttendanceConditions(data.transfer_to_center_id);
-            
+
             // Get active event for destination center
             const activeEvent = await this.getActiveEventForCenter(data.transfer_to_center_id);
-            
+
             // Automatically link transfer to the active event
             const transferData = {
                 ...data,
-                event_id: activeEvent.event_id
+                event_id: activeEvent.event_id,
             };
-            
+
             const response = await api.put<{
                 success: boolean;
                 data: AttendanceRecord;
@@ -296,18 +305,20 @@ export class AttendanceRecordsService {
             for (const transfer of data.transfers) {
                 await this.validateAttendanceConditions(transfer.transfer_to_center_id);
             }
-            
+
             // Get active event for each destination center and link
             const transfersWithEvents = await Promise.all(
-                data.transfers.map(async (transfer) => {
-                    const activeEvent = await this.getActiveEventForCenter(transfer.transfer_to_center_id);
+                data.transfers.map(async transfer => {
+                    const activeEvent = await this.getActiveEventForCenter(
+                        transfer.transfer_to_center_id
+                    );
                     return {
                         ...transfer,
-                        event_id: activeEvent.event_id
+                        event_id: activeEvent.event_id,
                     };
                 })
             );
-            
+
             const response = await api.post<{
                 success: boolean;
                 data: {
@@ -318,9 +329,13 @@ export class AttendanceRecordsService {
                     }>;
                 };
                 message: string;
-            }>("/attendance/transfer/batch", { transfers: transfersWithEvents }, {
-                withCredentials: true,
-            });
+            }>(
+                "/attendance/transfer/batch",
+                { transfers: transfersWithEvents },
+                {
+                    withCredentials: true,
+                }
+            );
             return response.data;
         } catch (error) {
             throw new Error(handleApiError(error));
@@ -419,13 +434,13 @@ export class AttendanceRecordsService {
             // Check if record is from a resolved event
             const recordResponse = await this.getAttendanceRecord(recordId);
             const record = recordResponse.data;
-            
+
             // Get event status
             const eventStatus = await this.getEventStatus(record.event_id);
-            if (eventStatus === 'resolved') {
+            if (eventStatus === "resolved") {
                 throw new Error("Cannot delete attendance record from a resolved event");
             }
-            
+
             const response = await api.delete<{
                 success: boolean;
                 message: string;
@@ -440,39 +455,16 @@ export class AttendanceRecordsService {
 
     // Helper methods for validation
     static async validateAttendanceConditions(centerId: number): Promise<void> {
-        try {
-            // Check if center is active and has an active event
-            const response = await api.post<{
-                success: boolean;
-                can_take_attendance: boolean;
-                message?: string;
-                center_status?: string;
-                active_event?: any;
-            }>(
-                `/attendance/validate-center/${centerId}`,
-                {},
-                { withCredentials: true }
-            );
-            
-            if (!response.data.can_take_attendance) {
-                throw new Error(response.data.message || "Cannot take attendance at this center");
-            }
-        } catch (error) {
-            if (error instanceof Error && error.message.includes("Cannot take attendance")) {
-                throw error;
-            }
-            // If validation endpoint doesn't exist, fall back to manual validation
-            await this.manualValidateAttendanceConditions(centerId);
-        }
+        await this.manualValidateAttendanceConditions(centerId);
     }
 
     private static async manualValidateAttendanceConditions(centerId: number): Promise<void> {
         // Check center status
         const centerStatus = await this.getCenterStatus(centerId);
-        if (centerStatus.status !== 'active') {
+        if (centerStatus.status !== "active") {
             throw new Error(`Center ${centerId} is not active`);
         }
-        
+
         // Check if center has an active event
         const activeEvent = await this.getActiveEventForCenter(centerId);
         if (!activeEvent) {
@@ -490,7 +482,7 @@ export class AttendanceRecordsService {
                 data: {
                     center_id: number;
                     status: string;
-                }
+                };
             }>(`/evacuation_centers/${centerId}/status`, {
                 withCredentials: true,
             });
@@ -499,7 +491,7 @@ export class AttendanceRecordsService {
             // Fallback: Assume endpoint might not exist
             return {
                 center_id: centerId,
-                status: 'unknown'
+                status: "unknown",
             };
         }
     }
@@ -510,7 +502,7 @@ export class AttendanceRecordsService {
                 success: boolean;
                 data: {
                     status: string;
-                }
+                };
             }>(`/events/${eventId}/status`, {
                 withCredentials: true,
             });
@@ -521,7 +513,7 @@ export class AttendanceRecordsService {
                 success: boolean;
                 data: {
                     status: string;
-                }
+                };
             }>(`/events/${eventId}`, {
                 withCredentials: true,
             });
@@ -534,38 +526,23 @@ export class AttendanceRecordsService {
         event_name: string;
         status: string;
     }> {
-        try {
-            const response = await api.get<{
-                success: boolean;
-                data: {
-                    event_id: number;
-                    event_name: string;
-                    status: string;
-                }
-            }>(`/centers/${centerId}/active-event`, {
-                withCredentials: true,
-            });
-            return response.data.data;
-        } catch (error) {
-            // Fallback: Get all events for center and find active one
-            const eventsResponse = await api.get<{
-                success: boolean;
-                data: Array<{
-                    event_id: number;
-                    event_name: string;
-                    status: string;
-                }>
-            }>(`/evacuation_centers/${centerId}/events`, {
-                withCredentials: true,
-            });
-            
-            const activeEvent = eventsResponse.data.data.find(event => event.status === 'active');
-            if (!activeEvent) {
-                throw new Error(`No active event found for center ${centerId}`);
-            }
-            
-            return activeEvent;
+        const eventsResponse = await api.get<{
+            success: boolean;
+            data: Array<{
+                event_id: number;
+                event_name: string;
+                status: string;
+            }>;
+        }>(`/evacuation_centers/${centerId}/events`, {
+            withCredentials: true,
+        });
+
+        const activeEvent = eventsResponse.data.data.find(event => event.status === "active");
+        if (!activeEvent) {
+            throw new Error(`No active event found for center ${centerId}`);
         }
+
+        return activeEvent;
     }
 
     // Method to check if attendance can be taken at a center
@@ -580,13 +557,13 @@ export class AttendanceRecordsService {
             const activeEvent = await this.getActiveEventForCenter(centerId);
             return {
                 canTakeAttendance: true,
-                activeEvent
+                activeEvent,
             };
         } catch (error) {
             return {
                 canTakeAttendance: false,
                 message: error instanceof Error ? error.message : "Cannot take attendance",
-                centerStatus: 'unknown'
+                centerStatus: "unknown",
             };
         }
     }
@@ -617,50 +594,54 @@ export class AttendanceRecordsService {
                     event_name: string;
                 } | null;
             }>("/events/active", { withCredentials: true });
-            
+
             if (!activeEventResponse.data.data) {
                 throw new Error("No active event found");
             }
-            
+
             const eventId = activeEventResponse.data.data.event_id;
-            
+
             // Get event attendance
             const attendanceResponse = await this.getEventAttendance(eventId, { limit: 1000 });
-            
+
             // Process attendance data
             const centersMap = new Map();
-            
+
             if (attendanceResponse.success && attendanceResponse.data.results) {
                 attendanceResponse.data.results.forEach((record: any) => {
-                    if (record.status === 'checked_in') {
+                    if (record.status === "checked_in") {
                         const centerId = record.center_id;
                         const centerName = record.center_name || `Center ${centerId}`;
-                        
+
                         if (!centersMap.has(centerId)) {
                             centersMap.set(centerId, {
                                 center_id: centerId,
                                 center_name: centerName,
                                 checked_in_count: 0,
                                 capacity: record.center_capacity || 0,
-                                occupancy_percentage: 0
+                                occupancy_percentage: 0,
                             });
                         }
-                        
+
                         const centerData = centersMap.get(centerId);
                         centerData.checked_in_count++;
-                        
+
                         // Calculate occupancy percentage
                         if (centerData.capacity > 0) {
-                            centerData.occupancy_percentage = 
-                                Math.round((centerData.checked_in_count / centerData.capacity) * 100);
+                            centerData.occupancy_percentage = Math.round(
+                                (centerData.checked_in_count / centerData.capacity) * 100
+                            );
                         }
                     }
                 });
             }
-            
+
             const attendanceByCenter = Array.from(centersMap.values());
-            const totalCheckedIn = attendanceByCenter.reduce((sum, center) => sum + center.checked_in_count, 0);
-            
+            const totalCheckedIn = attendanceByCenter.reduce(
+                (sum, center) => sum + center.checked_in_count,
+                0
+            );
+
             return {
                 success: true,
                 data: {
@@ -668,8 +649,8 @@ export class AttendanceRecordsService {
                     event_name: activeEventResponse.data.data.event_name,
                     total_checked_in: totalCheckedIn,
                     total_centers: attendanceByCenter.length,
-                    attendance_by_center: attendanceByCenter
-                }
+                    attendance_by_center: attendanceByCenter,
+                },
             };
         } catch (error) {
             throw new Error(handleApiError(error));

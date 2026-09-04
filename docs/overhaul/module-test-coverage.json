@@ -348,6 +348,12 @@
       "status": "covered",
       "tests": ["frontend/src/services/evacuationCenterService.test.ts"],
       "behavior": "Uses typed application events and forwards documented nearby-center query parameters."
+    },
+    {
+      "path": "frontend/src/services/attendanceRecordsService.ts",
+      "status": "covered",
+      "tests": ["frontend/src/services/attendanceRecordsService.test.ts"],
+      "behavior": "Uses supported center status/event endpoints and rejects mixed-center batch check-ins before network calls."
     }
   ]
 }
