@@ -1,11 +1,12 @@
 import type { PaginatedResponse } from "./api";
 import type { EvacuationCenter } from "./center";
+import type { Event as EvacuationEvent } from "./event";
 
 export interface EventCenter {
     eventId: number;
     centerId: number;
     // Optional joined fields
-    event?: Event;
+    event?: EvacuationEvent;
     center?: EvacuationCenter;
 }
 

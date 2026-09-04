@@ -330,6 +330,12 @@
       "status": "covered",
       "tests": ["frontend/src/types/attendance.test.ts"],
       "behavior": "Keeps attendance record identity distinct from individual identity and constrains status/filter contracts."
+    },
+    {
+      "path": "frontend/src/types/event-center.ts",
+      "status": "covered",
+      "tests": ["frontend/src/types/event-center.test.ts"],
+      "behavior": "Uses the application event model for typed event-center associations."
     }
   ]
 }
