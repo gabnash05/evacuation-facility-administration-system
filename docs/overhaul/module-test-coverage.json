@@ -258,6 +258,12 @@
       "status": "covered",
       "tests": ["frontend/src/services/api.test.ts"],
       "behavior": "Defines the compile-time response and pagination contracts consumed by shared API clients."
+    },
+    {
+      "path": "frontend/src/hooks/use-mobile.ts",
+      "status": "covered",
+      "tests": ["frontend/src/hooks/use-mobile.test.tsx"],
+      "behavior": "Tracks the shared responsive breakpoint and removes the media-query listener on unmount."
     }
   ]
 }
