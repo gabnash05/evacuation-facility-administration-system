@@ -156,6 +156,12 @@
       "status": "covered",
       "tests": ["frontend/src/utils/formatters.test.ts"],
       "behavior": "Formats capacity safely when a center has zero total capacity."
+    },
+    {
+      "path": "frontend/src/utils/helpers.ts",
+      "status": "covered",
+      "tests": ["frontend/src/utils/helpers.test.ts"],
+      "behavior": "Cancels pending debounce callbacks through the public cleanup API."
     }
   ]
 }
