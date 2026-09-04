@@ -474,6 +474,12 @@
       "status": "covered",
       "tests": ["frontend/src/services/individualService.test.ts"],
       "behavior": "Strips absent list filters, preserves credentialed individual endpoint contracts, and normalizes API failures."
+    },
+    {
+      "path": "frontend/src/store/individualStore.ts",
+      "status": "covered",
+      "tests": ["frontend/src/store/individualStore.test.ts"],
+      "behavior": "Forwards current individual filters to retrieval and clears stale records after a failed refresh."
     }
   ]
 }
