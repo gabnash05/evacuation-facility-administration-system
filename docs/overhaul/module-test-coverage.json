@@ -222,6 +222,18 @@
       "status": "covered",
       "tests": ["frontend/src/store/userStore.test.ts"],
       "behavior": "Refreshes authenticated user state without exposing responses or filters in browser logs."
+    },
+    {
+      "path": "frontend/src/components/features/dashboard/EventDetailsModal.tsx",
+      "status": "covered",
+      "tests": ["frontend/src/components/features/dashboard/EventDetailsModal.test.tsx"],
+      "behavior": "Displays event details without logging selected event data."
+    },
+    {
+      "path": "frontend/src/pages/volunteer/VolunteerDashboard.tsx",
+      "status": "covered",
+      "tests": ["frontend/src/pages/volunteer/VolunteerDashboard.test.tsx"],
+      "behavior": "Exposes volunteer quick actions as accessible buttons with preserved navigation behavior."
     }
   ]
 }
