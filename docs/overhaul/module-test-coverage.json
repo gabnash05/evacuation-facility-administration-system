@@ -270,6 +270,12 @@
       "status": "covered",
       "tests": ["frontend/src/services/authService.test.ts"],
       "behavior": "Returns the login contract and configures client authorization only when the server supplies a token."
+    },
+    {
+      "path": "frontend/src/schemas/auth.ts",
+      "status": "covered",
+      "tests": ["frontend/src/schemas/auth.test.ts"],
+      "behavior": "Rejects malformed login credentials before the authentication request is attempted."
     }
   ]
 }
