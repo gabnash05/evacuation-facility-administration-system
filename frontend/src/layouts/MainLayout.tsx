@@ -54,10 +54,10 @@ export default function MainLayout({ children }: MainLayoutProps) {
 
     return (
         <SidebarProvider>
-            <div className="flex min-h-screen bg-background">
+            <div className="flex min-h-screen w-full bg-background">
                 <AppSidebar role={user.role} roleLabel={roleLabel} userEmail={user.email} />
 
-                <div className="flex-1 flex flex-col overflow-hidden">
+                <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
                     <div className="flex border-b border-border">
                         <SidebarTrigger className="h-14 w-14 flex items-center justify-center shrink-0" />
                         <div className="flex-1">
@@ -65,10 +65,7 @@ export default function MainLayout({ children }: MainLayoutProps) {
                         </div>
                     </div>
 
-                    {/* 100vw - 21vw is from testing on my own device. Needs to be tested */}
-                    <main className="flex-1 p-6 w-[calc(100vw-21vw)] overflow-y-auto">
-                        {children}
-                    </main>
+                    <main className="min-w-0 flex-1 overflow-y-auto p-6">{children}</main>
                 </div>
             </div>
         </SidebarProvider>

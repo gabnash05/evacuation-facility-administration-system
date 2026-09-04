@@ -210,6 +210,12 @@
       "status": "covered",
       "tests": ["frontend/src/components/common/DataTable.test.tsx"],
       "behavior": "Exposes sortable headers as accessible controls and renders an explicit empty table state."
+    },
+    {
+      "path": "frontend/src/layouts/MainLayout.tsx",
+      "status": "covered",
+      "tests": ["frontend/src/layouts/MainLayout.test.tsx"],
+      "behavior": "Uses responsive flex sizing for main content alongside the sidebar."
     }
   ]
 }
