@@ -1,5 +1,6 @@
 import { api, handleApiError } from "./api";
 import type {
+    Household,
     HouseholdResponse,
     HouseholdsResponse,
     CreateHouseholdData,
@@ -12,16 +13,12 @@ import type { CreateIndividualData, IndividualResponse } from "@/types/individua
 interface ActualHouseholdsResponse {
     success: boolean;
     message?: string;
-    data?: any;
-    pagination?: {
-        current_page?: number;
-        page?: number;
-        per_page?: number;
-        page_count?: number;
-        total_pages?: number;
-        total_records?: number;
-        total_items?: number;
-        limit?: number;
+    data: Household[];
+    pagination: {
+        page: number;
+        per_page: number;
+        page_count: number;
+        total_records: number;
     };
 }
 
@@ -46,23 +43,16 @@ export class HouseholdService {
 
             const body = response.data;
 
-            // Handle different response structures
-            const results = Array.isArray(body.data) ? body.data : [];
-            const pagination = body.pagination || {};
-
-            // Transform to consistent frontend format
             const transformedResponse: HouseholdsResponse = {
-                success: !!body.success,
+                success: body.success,
                 message: body.message || "Success",
                 data: {
-                    results,
+                    results: body.data,
                     pagination: {
-                        current_page:
-                            pagination.current_page || pagination.page || params.page || 1,
-                        total_pages: pagination.total_pages || pagination.page_count || 1,
-                        total_items:
-                            pagination.total_items || pagination.total_records || results.length,
-                        limit: pagination.limit || pagination.per_page || params.limit || 10,
+                        current_page: body.pagination.page,
+                        total_pages: body.pagination.page_count,
+                        total_items: body.pagination.total_records,
+                        limit: body.pagination.per_page,
                     },
                 },
             };

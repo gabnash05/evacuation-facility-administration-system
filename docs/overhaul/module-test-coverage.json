@@ -197,7 +197,7 @@
       "path": "frontend/src/schemas/households.ts",
       "status": "covered",
       "tests": ["frontend/src/schemas/households.test.ts"],
-      "behavior": "Requires center ownership and at least one member for the atomic household-create workflow."
+      "behavior": "Validates complete create and update household payloads, including center ownership and at least one member, at the frontend boundary."
     },
     {
       "path": "frontend/src/components/features/map/StaticMap.tsx",
@@ -234,6 +234,18 @@
       "status": "covered",
       "tests": ["frontend/src/pages/volunteer/VolunteerDashboard.test.tsx"],
       "behavior": "Exposes volunteer quick actions as accessible buttons with preserved navigation behavior."
+    },
+    {
+      "path": "frontend/src/types/households.ts",
+      "status": "covered",
+      "tests": ["frontend/src/services/householdService.test.ts"],
+      "behavior": "Defines the full household update and list data contracts consumed by the client service."
+    },
+    {
+      "path": "frontend/src/services/householdService.ts",
+      "status": "covered",
+      "tests": ["frontend/src/services/householdService.test.ts"],
+      "behavior": "Maps the documented backend household list response and request parameters into the client contract."
     }
   ]
 }
