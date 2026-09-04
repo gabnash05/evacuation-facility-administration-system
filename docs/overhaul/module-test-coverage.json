@@ -168,6 +168,12 @@
       "status": "covered",
       "tests": ["frontend/src/schemas/centers.test.ts"],
       "behavior": "Accepts only center statuses supported by the backend and database contract."
+    },
+    {
+      "path": "frontend/src/schemas/events.ts",
+      "status": "covered",
+      "tests": ["frontend/src/schemas/events.test.ts"],
+      "behavior": "Declares valid event lifecycle statuses and positive center-link identifiers."
     }
   ]
 }
