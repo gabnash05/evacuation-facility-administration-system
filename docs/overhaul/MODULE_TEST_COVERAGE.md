@@ -17,9 +17,10 @@ missing rows. It fails stale source rows, missing mapped test paths, duplicate
 rows, invalid exemptions, and all uncovered modules. The report is generated
 output and must not be committed; the mapping is reviewed with every ticket.
 
-Current explicit mappings cover the existing WSGI, API boundary, allocation
-security, and `ErrorAlert` regressions. All other discovered modules remain
-honestly `missing` until their owning TEST-003 batch supplies meaningful tests.
+Current explicit mappings cover the existing WSGI, API boundary, configuration,
+allocation security, map rendering, and component regressions. All other
+discovered modules remain honestly `missing` until their owning TEST-003 batch
+supplies meaningful tests.
 
 ## Baseline — 2026-09-03
 
@@ -29,3 +30,10 @@ exempt. This baseline is an enforcement starting point, not a claim that the
 repository is sufficiently covered. `TEST-003B` through `TEST-003J` must close
 the missing rows in the published mapping; `--strict` is intentionally expected
 to fail until then.
+
+## Current progress — 2026-09-04
+
+The latest verifier run reports 13 covered modules, 204 missing modules, and no
+exemptions. Configuration coverage characterizes the current explicit token and
+development CORS contract; it does not approve the insecure defaults tracked in
+`SECURITY-001`.

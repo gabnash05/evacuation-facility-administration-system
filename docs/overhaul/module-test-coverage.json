@@ -71,6 +71,12 @@
       "status": "covered",
       "tests": ["backend/tests/test_user_schemas.py"],
       "behavior": "Enforces center assignment invariants for user role contracts."
+    },
+    {
+      "path": "backend/app/config.py",
+      "status": "covered",
+      "tests": ["backend/tests/test_config.py"],
+      "behavior": "Declares the current token transport and development CORS contracts explicitly."
     }
   ]
 }
