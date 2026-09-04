@@ -186,6 +186,12 @@
       "status": "covered",
       "tests": ["frontend/src/schemas/user.test.ts"],
       "behavior": "Validates basic user-management create and partial-update payloads."
+    },
+    {
+      "path": "frontend/src/schemas/individuals.ts",
+      "status": "covered",
+      "tests": ["frontend/src/schemas/individuals.test.ts"],
+      "behavior": "Aligns individual household ownership and title-case gender validation with the API contract."
     }
   ]
 }
