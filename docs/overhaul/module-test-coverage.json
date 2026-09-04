@@ -336,6 +336,12 @@
       "status": "covered",
       "tests": ["frontend/src/types/event-center.test.ts"],
       "behavior": "Uses the application event model for typed event-center associations."
+    },
+    {
+      "path": "frontend/src/services/statsService.ts",
+      "status": "covered",
+      "tests": ["frontend/src/services/statsService.test.ts"],
+      "behavior": "Forwards shared center/event filters to documented statistics endpoints."
     }
   ]
 }
