@@ -65,6 +65,12 @@
       "status": "covered",
       "tests": ["backend/tests/test_app_factory.py"],
       "behavior": "Builds the application without invalid Flask-CORS configuration warnings."
+    },
+    {
+      "path": "backend/app/schemas/user.py",
+      "status": "covered",
+      "tests": ["backend/tests/test_user_schemas.py"],
+      "behavior": "Enforces center assignment invariants for user role contracts."
     }
   ]
 }
