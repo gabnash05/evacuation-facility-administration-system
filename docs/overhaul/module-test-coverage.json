@@ -438,6 +438,12 @@
       "status": "covered",
       "tests": ["frontend/src/components/common/ModeToggle.test.tsx"],
       "behavior": "Uses a keyboard-operable native menu trigger and forwards theme selections to the theme provider."
+    },
+    {
+      "path": "frontend/src/components/common/ThemeProvider.tsx",
+      "status": "covered",
+      "tests": ["frontend/src/components/common/ThemeProvider.test.tsx"],
+      "behavior": "Restores and persists theme preference while applying explicit or system-resolved document theme classes."
     }
   ]
 }
