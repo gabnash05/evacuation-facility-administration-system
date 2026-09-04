@@ -83,6 +83,31 @@
       "status": "covered",
       "tests": ["backend/tests/test_model_extensions.py"],
       "behavior": "Owns initialized SQLAlchemy, migration, and JWT extension instances for the application."
+    },
+    {
+      "path": "backend/app/routes/__init__.py",
+      "status": "exempt",
+      "exception": "Zero-byte package marker with no executable behavior."
+    },
+    {
+      "path": "backend/app/schemas/__init__.py",
+      "status": "exempt",
+      "exception": "Zero-byte package marker with no executable behavior."
+    },
+    {
+      "path": "backend/app/services/__init__.py",
+      "status": "exempt",
+      "exception": "Zero-byte package marker with no executable behavior."
+    },
+    {
+      "path": "backend/app/utils/__init__.py",
+      "status": "exempt",
+      "exception": "Zero-byte package marker with no executable behavior."
+    },
+    {
+      "path": "backend/app/utils/validators.py",
+      "status": "exempt",
+      "exception": "Zero-byte utility placeholder with no executable behavior; retain only until its owning cleanup ticket resolves it."
     }
   ]
 }

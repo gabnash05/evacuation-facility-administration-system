@@ -24,7 +24,7 @@
 | SECURITY-004 | complete | 2026-09-04 | 2026-09-04 | Applied the selected center policy: super-admin-only mutations; citywide reads for super/city admins; direct assigned-center reads for center admins/volunteers; no lower-role citywide/map read. Three focused route regressions and aggregate backend tests (19) pass; module ledger passes. |
 | SECURITY-010 | complete | 2026-09-04 | 2026-09-04 | Removed database-controlled center names from Leaflet raw marker HTML and CSS attributes; tooltip retains React text rendering. Added a hostile-marker regression and module mapping. Focused Vitest command exited successfully, TypeScript and whitespace checks pass; legacy map formatting remains QUALITY-001. |
 | BACKEND-001 | complete | 2026-09-04 | 2026-09-04 | Removed Flask-CORS's unsupported `allow_credentials` option and added an app-factory regression. Focused and aggregate backend tests pass (20); the former warning no longer appears. |
-| TEST-003B | in progress | 2026-09-04 | — | Began backend bootstrap/config/shared contract coverage. Added user role/center schema, runtime-configuration, and shared extension-bootstrap regressions; 14 modules are now mapped and 203 remain to be covered across deterministic batches. |
+| TEST-003B | in progress | 2026-09-04 | — | Began backend bootstrap/config/shared contract coverage. Added user role/center schema, runtime-configuration, and shared extension-bootstrap regressions; recorded five zero-byte backend markers as explicit exemptions; 14 modules are mapped, 198 remain to be covered, and five are validly exempt. |
 
 ## Audit batches
 
