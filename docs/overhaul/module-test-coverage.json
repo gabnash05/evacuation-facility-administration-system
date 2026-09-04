@@ -77,6 +77,12 @@
       "status": "covered",
       "tests": ["backend/tests/test_config.py"],
       "behavior": "Declares the current token transport and development CORS contracts explicitly."
+    },
+    {
+      "path": "backend/app/models/__init__.py",
+      "status": "covered",
+      "tests": ["backend/tests/test_model_extensions.py"],
+      "behavior": "Owns initialized SQLAlchemy, migration, and JWT extension instances for the application."
     }
   ]
 }
