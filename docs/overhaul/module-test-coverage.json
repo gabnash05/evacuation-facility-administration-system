@@ -318,6 +318,12 @@
       "status": "covered",
       "tests": ["frontend/src/types/individual.test.ts"],
       "behavior": "Defines individual identity, household ownership, filters, and paginated client responses."
+    },
+    {
+      "path": "backend/app/routes/aid_allocation.py",
+      "status": "covered",
+      "tests": ["backend/tests/test_allocation_route_logging.py"],
+      "behavior": "Audits authenticated allocation updates by stable user ID without logging email addresses."
     }
   ]
 }

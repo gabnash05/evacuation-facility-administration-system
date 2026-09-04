@@ -308,7 +308,7 @@ def update_allocation_route(allocation_id: int) -> Tuple:
         
         # For Super Admin: Apply quantity validation and adjustments in service layer
         # (service.update_allocation will handle remaining_quantity adjustments when total_quantity present)
-        logger.info("User %s updating allocation: %s", current_user.email, allocation_id)
+        logger.info("User %s updating allocation: %s", current_user.user_id, allocation_id)
 
         # Update allocation
         result = update_allocation(allocation_id, data)
