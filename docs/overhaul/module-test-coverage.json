@@ -264,6 +264,12 @@
       "status": "covered",
       "tests": ["frontend/src/hooks/use-mobile.test.tsx"],
       "behavior": "Tracks the shared responsive breakpoint and removes the media-query listener on unmount."
+    },
+    {
+      "path": "frontend/src/services/authService.ts",
+      "status": "covered",
+      "tests": ["frontend/src/services/authService.test.ts"],
+      "behavior": "Returns the login contract and configures client authorization only when the server supplies a token."
     }
   ]
 }
