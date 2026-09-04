@@ -1,4 +1,6 @@
-"""Regression coverage for configured authentication cookie logout behavior."""
+"""Regression coverage for configured authentication cookie behavior."""
+
+from unittest.mock import patch
 
 from tests.api_test_case import ApiTestCase
 
@@ -16,3 +18,19 @@ class AuthLogoutTests(ApiTestCase):
         self.assertIn("Max-Age=0", cookie)
         self.assertIn("Secure", cookie)
         self.assertIn("HttpOnly", cookie)
+
+    @patch("app.routes.auth.authenticate_user")
+    @patch("app.routes.auth.logger.info")
+    def test_login_does_not_log_the_submitted_email(self, logger_info, authenticate_user):
+        authenticate_user.return_value = {
+            "success": False,
+            "message": "Invalid credentials",
+        }
+
+        response = self.client.post(
+            "/api/auth/login",
+            json={"email": "private@example.test", "password": "secret123"},
+        )
+
+        self.assertEqual(response.status_code, 401)
+        logger_info.assert_called_once_with("Login attempt received")
