@@ -390,6 +390,12 @@
       "status": "covered",
       "tests": ["frontend/src/utils/attendance.test.ts"],
       "behavior": "Resolves the active attendance record before a volunteer checkout action opens."
+    },
+    {
+      "path": "frontend/src/store/authStore.ts",
+      "status": "covered",
+      "tests": ["frontend/src/store/authStore.test.ts"],
+      "behavior": "Resolves server identity before marking login authenticated and clears authentication plus dependent stores on either logout outcome."
     }
   ]
 }
