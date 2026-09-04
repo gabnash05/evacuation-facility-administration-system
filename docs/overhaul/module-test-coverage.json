@@ -47,6 +47,12 @@
       "status": "covered",
       "tests": ["backend/tests/test_user_authorization.py"],
       "behavior": "Binds authorization role scopes as SQL parameters in list queries."
+    },
+    {
+      "path": "backend/app/routes/evacuation_centers.py",
+      "status": "covered",
+      "tests": ["backend/tests/test_center_route_authorization.py"],
+      "behavior": "Restricts direct center reads by center scope and mutations to super admins."
     }
   ]
 }
