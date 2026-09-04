@@ -26,8 +26,9 @@ class UserAuthorizationPolicyTests(ApiTestCase):
 
     @patch("app.routes.user.get_current_user")
     @patch("app.routes.user.create_user")
-    def test_center_admin_can_create_volunteer_at_own_center(
-        self, create_user, get_current_user
+    @patch("app.routes.user.logger.info")
+    def test_center_admin_can_create_volunteer_at_own_center_without_logging_email(
+        self, logger_info, create_user, get_current_user
     ):
         actor = user(3, "center_admin", 12)
         get_current_user.return_value = actor
@@ -54,6 +55,7 @@ class UserAuthorizationPolicyTests(ApiTestCase):
             },
             actor,
         )
+        logger_info.assert_called_once_with("Creating new user")
 
 
 class UserAuthorizationHelperTests(ApiTestCase):
@@ -89,6 +91,22 @@ class UserAuthorizationHelperTests(ApiTestCase):
         self.assertFalse(result["success"])
         self.assertIn("center_id is required", result["message"])
         update_user.assert_not_called()
+
+    @patch("app.services.user_service.logger.info")
+    @patch("app.services.user_service.User.create_from_schema")
+    @patch("app.services.user_service.User.get_by_email")
+    def test_registration_log_does_not_include_email(
+        self, get_by_email, create_from_schema, logger_info
+    ):
+        get_by_email.return_value = None
+        create_from_schema.return_value = user(9, "volunteer", 12)
+
+        result = user_service.register_user(
+            "private@example.test", "secret123", "volunteer", 12, user(1, "super_admin")
+        )
+
+        self.assertTrue(result["success"])
+        logger_info.assert_called_once_with("User registered successfully with role %s", "volunteer")
 
 
 class UserModelAuthorizationTests(ApiTestCase):

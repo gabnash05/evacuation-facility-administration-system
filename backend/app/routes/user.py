@@ -190,7 +190,7 @@ def create_new_user() -> Tuple:
         if not data:
             return jsonify({"success": False, "message": "No data provided"}), 400
 
-        logger.info("Creating new user: %s", data.get("email"))
+        logger.info("Creating new user")
 
         result = create_user(data, actor)
 

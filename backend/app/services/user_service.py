@@ -186,7 +186,7 @@ def register_user(
 
         new_user = User.create_from_schema(register_data)
 
-        logger.info("User registered successfully: %s with role %s", email, role)
+        logger.info("User registered successfully with role %s", role)
 
         return {
             "success": True,
@@ -433,7 +433,7 @@ def create_user(data: Dict[str, Any], actor: User) -> Dict[str, Any]:
         # Create new user
         user = User.create(valid_data)
 
-        logger.info("User created: %s", user.email)
+        logger.info("User created successfully")
 
         return {
             "success": True,
