@@ -6,10 +6,16 @@ from typing import Tuple
 from flask import Blueprint, jsonify, request
 from flask_jwt_extended import get_jwt_identity, jwt_required
 
-from app.services.user_service import (create_user, deactivate_user_service,
-                                       delete_user, get_current_user,
-                                       get_user_by_id, get_users,
-                                       reactivate_user_service, update_user)
+from app.services.user_service import (
+    create_user,
+    deactivate_user_service,
+    delete_user,
+    get_current_user,
+    get_user_by_id,
+    get_users,
+    reactivate_user_service,
+    update_user,
+)
 
 # Configure logger for this module
 logger = logging.getLogger(__name__)
@@ -55,7 +61,9 @@ def get_all_users() -> Tuple:
         limit = request.args.get("limit", 10, type=int)
         sort_by = request.args.get("sortBy", type=str)
         sort_order = request.args.get("sortOrder", type=str)
-        center_id = request.args.get("centerId", type=str)
+        center_id = request.args.get("center_id", type=int)
+        if center_id is None:
+            center_id = request.args.get("centerId", type=int)
 
         # Validate pagination parameters
         if page < 1:

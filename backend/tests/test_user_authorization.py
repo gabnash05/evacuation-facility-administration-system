@@ -77,6 +77,19 @@ class UserAuthorizationHelperTests(ApiTestCase):
             user_service._authorize_target(actor, user(8, "volunteer", 12))
         )
 
+    @patch("app.services.user_service.User.update_user")
+    @patch("app.services.user_service.User.get_by_id")
+    def test_update_rejects_a_center_role_without_a_center(
+        self, get_by_id, update_user
+    ):
+        get_by_id.return_value = user(8, "volunteer", 12)
+
+        result = user_service.update_user(8, {"center_id": None}, user(2, "city_admin"))
+
+        self.assertFalse(result["success"])
+        self.assertIn("center_id is required", result["message"])
+        update_user.assert_not_called()
+
 
 class UserModelAuthorizationTests(ApiTestCase):
     @patch("app.models.user.db.session.execute")

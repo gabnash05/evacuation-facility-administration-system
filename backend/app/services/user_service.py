@@ -5,8 +5,7 @@ from flask_jwt_extended import create_access_token
 from werkzeug.security import check_password_hash, generate_password_hash
 
 from app.models.user import User
-from app.schemas.user import (UserCreateSchema, UserRegisterSchema,
-                              UserUpdateSchema)
+from app.schemas.user import UserCreateSchema, UserRegisterSchema, UserUpdateSchema
 
 # Configure logger for this module
 logger = logging.getLogger(__name__)
@@ -474,6 +473,22 @@ def update_user(
         existing_user = User.get_by_id(user_id)
         if not existing_user:
             return {"success": False, "message": "User not found"}
+
+        effective_contract = {
+            "role": existing_user.role,
+            "center_id": existing_user.center_id,
+        }
+        for field in ("role", "center_id"):
+            if field in valid_data:
+                effective_contract[field] = valid_data[field]
+        try:
+            update_schema.load(effective_contract)
+        except Exception as validation_error:
+            return {
+                "success": False,
+                "message": f"Validation error: {str(validation_error)}",
+            }
+
         denial = _authorize_target(
             actor,
             existing_user,
