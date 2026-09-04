@@ -132,7 +132,6 @@ export const useUserStore = create<UserState>((set, get) => ({
         set({ loading: true, error: null });
         try {
             const response = await UserService.getCurrentUser();
-            console.log(response);
             set({
                 currentUser: response.data,
                 loading: false,
@@ -156,11 +155,11 @@ export const useUserStore = create<UserState>((set, get) => ({
             }
             // Refresh the user list with current center filter
             const { centerFilter } = get();
-            console.log(centerFilter)
             await get().fetchUsers(centerFilter);
             set({ loading: false });
         } catch (error) {
-            const errorMessage = error instanceof Error ? error.message : "An unknown error occurred";
+            const errorMessage =
+                error instanceof Error ? error.message : "An unknown error occurred";
             set({ error: errorMessage, loading: false });
             throw error;
         }
@@ -220,7 +219,8 @@ export const useUserStore = create<UserState>((set, get) => ({
             await get().fetchUsers(centerFilter);
             set({ loading: false });
         } catch (error) {
-            const errorMessage = error instanceof Error ? error.message : "Failed to deactivate user";
+            const errorMessage =
+                error instanceof Error ? error.message : "Failed to deactivate user";
             set({ error: errorMessage, loading: false });
             throw error;
         }
@@ -240,7 +240,8 @@ export const useUserStore = create<UserState>((set, get) => ({
             await get().fetchUsers(centerFilter);
             set({ loading: false });
         } catch (error) {
-            const errorMessage = error instanceof Error ? error.message : "Failed to reactivate user";
+            const errorMessage =
+                error instanceof Error ? error.message : "Failed to reactivate user";
             set({ error: errorMessage, loading: false });
             throw error;
         }

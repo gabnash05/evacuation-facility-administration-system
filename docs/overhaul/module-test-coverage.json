@@ -216,6 +216,12 @@
       "status": "covered",
       "tests": ["frontend/src/layouts/MainLayout.test.tsx"],
       "behavior": "Uses responsive flex sizing for main content alongside the sidebar."
+    },
+    {
+      "path": "frontend/src/store/userStore.ts",
+      "status": "covered",
+      "tests": ["frontend/src/store/userStore.test.ts"],
+      "behavior": "Refreshes authenticated user state without exposing responses or filters in browser logs."
     }
   ]
 }
