@@ -144,6 +144,12 @@
       "status": "covered",
       "tests": ["backend/tests/test_household_individual_schemas.py"],
       "behavior": "Rejects impossible future dates of birth."
+    },
+    {
+      "path": "backend/app/schemas/distribution.py",
+      "status": "covered",
+      "tests": ["backend/tests/test_distribution_schema.py"],
+      "behavior": "Validates non-empty, positive distribution items and applies stable history defaults."
     }
   ]
 }
