@@ -510,6 +510,12 @@
       "status": "covered",
       "tests": ["frontend/src/store/aidAllocationStore.test.ts"],
       "behavior": "Forwards current allocation table state, clears stale data on failure, and does not log request failures in the browser."
+    },
+    {
+      "path": "frontend/src/store/eventStore.ts",
+      "status": "covered",
+      "tests": ["frontend/src/store/eventStore.test.ts"],
+      "behavior": "Forwards explicit center-scoped event list filters and clears stale events after a failed refresh."
     }
   ]
 }
