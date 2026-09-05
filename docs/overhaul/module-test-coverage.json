@@ -522,6 +522,12 @@
       "status": "covered",
       "tests": ["frontend/src/components/features/evacuation-center/ConfirmationDialog.test.tsx"],
       "behavior": "Displays the supplied confirmation action and disables duplicate actions while saving."
+    },
+    {
+      "path": "frontend/src/components/features/evacuation-center/DuplicateCenterDialog.tsx",
+      "status": "covered",
+      "tests": ["frontend/src/components/features/evacuation-center/DuplicateCenterDialog.test.tsx"],
+      "behavior": "Identifies the conflicting center and provides an acknowledgement action."
     }
   ]
 }
