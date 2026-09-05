@@ -109,6 +109,12 @@
       "behavior": "Binds allocation-update identifiers only from an explicit model-level allowlist."
     },
     {
+      "path": "backend/app/routes/events.py",
+      "status": "covered",
+      "tests": ["backend/tests/test_event_route_lifecycle.py"],
+      "behavior": "Blocks only competing active-event creation while allowing monitoring or resolved lifecycle records."
+    },
+    {
       "path": "frontend/src/components/features/dashboard/ErrorAlert.tsx",
       "status": "covered",
       "tests": ["frontend/src/components/features/dashboard/ErrorAlert.test.tsx"],
