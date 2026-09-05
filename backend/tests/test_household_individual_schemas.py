@@ -32,9 +32,25 @@ class HouseholdAndIndividualSchemaTests(unittest.TestCase):
         with self.assertRaises(ValidationError):
             individual.IndividualCreateSchema().load(
                 {
+                    "household_id": 1,
                     "first_name": "Ana",
                     "last_name": "Santos",
                     "date_of_birth": date.today() + timedelta(days=1),
                     "relationship_to_head": "Child",
                 }
             )
+
+    def test_individual_creation_requires_a_household_identifier(self):
+        with self.assertRaises(ValidationError):
+            individual.IndividualCreateSchema().load(
+                {
+                    "first_name": "Ana",
+                    "last_name": "Santos",
+                    "relationship_to_head": "Child",
+                }
+            )
+
+    def test_individual_update_accepts_a_partial_payload(self):
+        data = individual.IndividualUpdateSchema().load({"last_name": "Cruz"})
+
+        self.assertEqual(data, {"last_name": "Cruz"})
