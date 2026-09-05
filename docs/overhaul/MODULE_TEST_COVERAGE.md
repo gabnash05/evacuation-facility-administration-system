@@ -33,7 +33,7 @@ to fail until then.
 
 ## Current progress — 2026-09-05
 
-The verifier now reports 96 covered modules, 114 missing modules, and five
+The verifier now reports 98 covered modules, 112 missing modules, and five
 narrow exemptions for zero-byte backend markers. The count was executed from
 the repository root with the Pipenv environment on 2026-09-05. Configuration
 coverage characterizes the current explicit token and development CORS contract;

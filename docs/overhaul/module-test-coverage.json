@@ -43,6 +43,18 @@
       "behavior": "Persists the validated allocation event on a distribution session."
     },
     {
+      "path": "backend/app/routes/stats_routes.py",
+      "status": "covered",
+      "tests": ["backend/tests/test_stats_route_service.py"],
+      "behavior": "Applies assigned-center scope before statistics services are invoked."
+    },
+    {
+      "path": "backend/app/services/stats_service.py",
+      "status": "covered",
+      "tests": ["backend/tests/test_stats_route_service.py"],
+      "behavior": "Forwards center, demographic, and event filters to the canonical statistics model."
+    },
+    {
       "path": "backend/app/routes/households.py",
       "status": "covered",
       "tests": ["backend/tests/test_household_route_authorization.py"],
