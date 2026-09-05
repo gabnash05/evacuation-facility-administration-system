@@ -73,6 +73,12 @@
       "behavior": "Validates nested household creation members before persistence."
     },
     {
+      "path": "backend/app/models/household.py",
+      "status": "covered",
+      "tests": ["backend/tests/test_household_model.py"],
+      "behavior": "Maps household and joined center fields without column-name collisions."
+    },
+    {
       "path": "backend/app/services/individual_service.py",
       "status": "covered",
       "tests": ["backend/tests/test_individual_search_scope.py"],

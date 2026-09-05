@@ -1,4 +1,5 @@
 from sqlalchemy import text
+
 from app.models import db
 
 
@@ -33,62 +34,62 @@ class Household(db.Model):
             SELECT 
                 h.household_id, 
                 h.household_name, 
-                h.address, 
-                h.center_id, 
+                h.address AS household_address,
+                h.center_id AS household_center_id,
                 h.household_head_id,
-                h.created_at, 
-                h.updated_at,
+                h.created_at AS household_created_at,
+                h.updated_at AS household_updated_at,
                 -- Center details
-                ec.center_id,
-                ec.center_name,
-                ec.address,
-                ec.coordinates,
-                ec.capacity,
-                ec.status,
-                ec.current_occupancy,
-                ec.photo_data,
-                ec.created_at,
-                ec.updated_at
+                ec.center_id AS center_center_id,
+                ec.center_name AS center_name,
+                ec.address AS center_address,
+                ec.coordinates AS center_coordinates,
+                ec.capacity AS center_capacity,
+                ec.status AS center_status,
+                ec.current_occupancy AS center_current_occupancy,
+                ec.photo_data AS center_photo_data,
+                ec.created_at AS center_created_at,
+                ec.updated_at AS center_updated_at
             FROM households h
             LEFT JOIN evacuation_centers ec ON h.center_id = ec.center_id
             WHERE h.household_id = :id
             """
         )
         result = db.session.execute(sql, {"id": household_id}).fetchone()
-        
+
         if not result:
             return None
-        
+
         data = result._asdict()
-        
+
         # Extract center data
         center_data = {}
-        if data['center_id']:  # The ec.center_id from the JOIN
+        if data["center_center_id"]:
             center_data = {
-                'center_id': data['center_id'],
-                'center_name': data['center_name'],
-                'address': data['address'],  # This is center address, note: same column name as household address
-                'coordinates': data['coordinates'],
-                'capacity': data['capacity'],
-                'status': data['status'],
-                'current_occupancy': data['current_occupancy'],
-                'photo_data': data['photo_data'],
-                'created_at': data['created_at'],  # This is center created_at
-                'updated_at': data['updated_at']   # This is center updated_at
+                "center_id": data["center_center_id"],
+                "center_name": data["center_name"],
+                "address": data["center_address"],
+                "coordinates": data["center_coordinates"],
+                "capacity": data["center_capacity"],
+                "status": data["center_status"],
+                "current_occupancy": data["center_current_occupancy"],
+                "photo_data": data["center_photo_data"],
+                "created_at": data["center_created_at"],
+                "updated_at": data["center_updated_at"],
             }
-        
+
         # Clean household data
         household_data = {
-            'household_id': data['household_id'],
-            'household_name': data['household_name'],
-            'address': data['address'],  # This is household address
-            'center_id': data['center_id'],
-            'household_head_id': data['household_head_id'],
-            'created_at': data['created_at'],  # This is household created_at
-            'updated_at': data['updated_at'],  # This is household updated_at
-            'center': center_data if center_data else None
+            "household_id": data["household_id"],
+            "household_name": data["household_name"],
+            "address": data["household_address"],
+            "center_id": data["household_center_id"],
+            "household_head_id": data["household_head_id"],
+            "created_at": data["household_created_at"],
+            "updated_at": data["household_updated_at"],
+            "center": center_data if center_data else None,
         }
-        
+
         return household_data
 
     @classmethod
