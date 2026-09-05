@@ -54,3 +54,21 @@ class HouseholdAndIndividualSchemaTests(unittest.TestCase):
         data = individual.IndividualUpdateSchema().load({"last_name": "Cruz"})
 
         self.assertEqual(data, {"last_name": "Cruz"})
+
+    def test_nested_household_member_does_not_require_a_household_id(self):
+        data = household.HouseholdWithIndividualsCreateSchema().load(
+            {
+                "household_name": "Santos household",
+                "address": "Barangay One, City",
+                "center_id": 1,
+                "individuals": [
+                    {
+                        "first_name": "Ana",
+                        "last_name": "Santos",
+                        "relationship_to_head": "Head",
+                    }
+                ],
+            }
+        )
+
+        self.assertNotIn("household_id", data["individuals"][0])

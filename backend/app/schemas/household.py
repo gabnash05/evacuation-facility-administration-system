@@ -1,5 +1,5 @@
 from marshmallow import Schema, fields, validate
-from app.schemas.individual import IndividualCreateSchema, IndividualUpdateSchema
+from app.schemas.individual import IndividualMemberCreateSchema, IndividualUpdateSchema
 
 
 class HouseholdQuerySchema(Schema):
@@ -31,7 +31,7 @@ class HouseholdUpdateSchema(Schema):
 
 class HouseholdWithIndividualsCreateSchema(HouseholdCreateSchema):
     individuals = fields.List(
-        fields.Nested(IndividualCreateSchema),
+        fields.Nested(IndividualMemberCreateSchema),
         required=True,
         validate=validate.Length(min=1),
     )

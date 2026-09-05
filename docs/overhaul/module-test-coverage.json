@@ -67,6 +67,12 @@
       "behavior": "Scopes household reads and writes to assigned centers and prevents volunteer deletion."
     },
     {
+      "path": "backend/app/services/household_service.py",
+      "status": "covered",
+      "tests": ["backend/tests/test_individual_service_contract.py"],
+      "behavior": "Validates nested household creation members before persistence."
+    },
+    {
       "path": "backend/app/services/individual_service.py",
       "status": "covered",
       "tests": ["backend/tests/test_individual_search_scope.py"],

@@ -2,6 +2,7 @@ import unittest
 from unittest.mock import patch
 
 from app.services.individual_service import IndividualService
+from app.services.household_service import HouseholdService
 from tests.api_test_case import ApiTestCase
 
 
@@ -26,3 +27,18 @@ class IndividualServiceContractTests(ApiTestCase):
 
         self.assertTrue(result["success"])
         self.assertEqual(create.call_args.args[0]["household_id"], 2)
+
+    @patch("app.services.household_service.Household.get_by_name")
+    def test_household_service_rejects_invalid_nested_members(self, get_by_name):
+        result, status = HouseholdService.create_household_with_individuals(
+            {
+                "household_name": "Santos household",
+                "address": "Barangay One, City",
+                "center_id": 1,
+                "individuals": [],
+            }
+        )
+
+        self.assertEqual(status, 400)
+        self.assertFalse(result["success"])
+        get_by_name.assert_not_called()
