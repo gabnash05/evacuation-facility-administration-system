@@ -133,6 +133,12 @@
       "behavior": "Enforces the configured photo byte limit and encodes accepted upload bytes deterministically."
     },
     {
+      "path": "backend/app/models/evacuation_center.py",
+      "status": "covered",
+      "tests": ["backend/tests/test_evacuation_center_model.py"],
+      "behavior": "Normalizes supported coordinate representations and rejects malformed coordinate values."
+    },
+    {
       "path": "frontend/src/components/features/dashboard/ErrorAlert.tsx",
       "status": "covered",
       "tests": ["frontend/src/components/features/dashboard/ErrorAlert.test.tsx"],
