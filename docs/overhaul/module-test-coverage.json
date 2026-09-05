@@ -546,6 +546,12 @@
       "status": "covered",
       "tests": ["frontend/src/components/features/evacuation-center/EvacuationCenterTablePagination.test.tsx"],
       "behavior": "Reports pagination ranges and keeps navigation bounded by the available page range."
+    },
+    {
+      "path": "frontend/src/components/features/evacuation-center/EvacuationCenterTableToolbar.tsx",
+      "status": "covered",
+      "tests": ["frontend/src/components/features/evacuation-center/EvacuationCenterTableToolbar.test.tsx"],
+      "behavior": "Forwards search/add actions and disables additions while loading."
     }
   ]
 }
