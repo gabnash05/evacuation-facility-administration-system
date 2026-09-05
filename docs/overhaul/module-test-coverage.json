@@ -498,6 +498,12 @@
       "status": "covered",
       "tests": ["frontend/src/services/eventService.test.ts"],
       "behavior": "Forwards credentialed event list and active-event reads and normalizes client failures."
+    },
+    {
+      "path": "frontend/src/store/statsStore.ts",
+      "status": "covered",
+      "tests": ["frontend/src/store/statsStore.test.ts"],
+      "behavior": "Forwards the current statistics filters and explicit center scope and retains fetch errors for UI feedback."
     }
   ]
 }
