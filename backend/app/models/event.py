@@ -598,19 +598,18 @@ class EventCenter(db.Model):
                         {"center_id": center_id},
                     )
         else:
-            # Remove all centers from event
-            db.session.execute(
-                text("DELETE FROM event_centers WHERE event_id = :event_id"),
-                {"event_id": event_id},
-            )
-
-            # Get all centers that were associated with this event
+            # Capture associated centers before deleting the association rows.
             centers_result = db.session.execute(
                 text("SELECT center_id FROM event_centers WHERE event_id = :event_id"),
                 {"event_id": event_id},
             ).fetchall()
 
             center_ids_removed = [row[0] for row in centers_result]
+
+            db.session.execute(
+                text("DELETE FROM event_centers WHERE event_id = :event_id"),
+                {"event_id": event_id},
+            )
 
             # For each center, check if it's still associated with any active events
             for center_id in center_ids_removed:

@@ -115,6 +115,12 @@
       "behavior": "Blocks only competing active-event creation while allowing monitoring or resolved lifecycle records."
     },
     {
+      "path": "backend/app/models/event.py",
+      "status": "covered",
+      "tests": ["backend/tests/test_event_model.py"],
+      "behavior": "Preserves center identifiers before bulk event-association deletion so post-delete lifecycle checks can run."
+    },
+    {
       "path": "frontend/src/components/features/dashboard/ErrorAlert.tsx",
       "status": "covered",
       "tests": ["frontend/src/components/features/dashboard/ErrorAlert.test.tsx"],
