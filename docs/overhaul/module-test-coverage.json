@@ -103,6 +103,12 @@
       "behavior": "Accepts only safe update fields and derives remaining stock server-side."
     },
     {
+      "path": "backend/app/models/aid_allocation.py",
+      "status": "covered",
+      "tests": ["backend/tests/test_aid_allocation_model.py"],
+      "behavior": "Binds allocation-update identifiers only from an explicit model-level allowlist."
+    },
+    {
       "path": "frontend/src/components/features/dashboard/ErrorAlert.tsx",
       "status": "covered",
       "tests": ["frontend/src/components/features/dashboard/ErrorAlert.test.tsx"],
