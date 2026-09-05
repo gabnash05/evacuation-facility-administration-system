@@ -24,6 +24,21 @@ class StatsRouteServiceTests(ApiTestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(get_occupancy_stats.call_args.kwargs["center_id"], 2)
 
+    @patch("app.routes.stats_routes.User.get_by_id")
+    @patch("app.routes.stats_routes.stats_service.get_registration_stats")
+    def test_individual_stat_endpoints_reject_invalid_event_ids(
+        self, get_registration_stats, get_by_id
+    ):
+        get_by_id.return_value = SimpleNamespace(role="city_admin", center_id=None)
+
+        response = self.client.get(
+            "/api/stats/registration-stats?event_id=0",
+            headers=self.authorization_headers(7),
+        )
+
+        self.assertEqual(response.status_code, 400)
+        get_registration_stats.assert_not_called()
+
     @patch("app.services.stats_service.Stats.get_all_stats")
     def test_dashboard_service_forwards_all_filters_to_model(self, get_all_stats):
         get_all_stats.return_value = {"occupancy": {}}
