@@ -534,6 +534,12 @@
       "status": "covered",
       "tests": ["frontend/src/components/features/evacuation-center/DeleteCenterDialog.test.tsx"],
       "behavior": "Identifies the center selected for deletion and disables duplicate destructive actions while pending."
+    },
+    {
+      "path": "frontend/src/components/features/evacuation-center/SuccessToast.tsx",
+      "status": "covered",
+      "tests": ["frontend/src/components/features/evacuation-center/SuccessToast.test.tsx"],
+      "behavior": "Renders only while open and invokes its supplied close handler after the configured duration."
     }
   ]
 }
