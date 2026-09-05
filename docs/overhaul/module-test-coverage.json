@@ -127,6 +127,12 @@
       "behavior": "Retains requested center associations through model update so capacity recalculation occurs."
     },
     {
+      "path": "backend/app/services/evacuation_center_service.py",
+      "status": "covered",
+      "tests": ["backend/tests/test_evacuation_center_service.py"],
+      "behavior": "Enforces the configured photo byte limit and encodes accepted upload bytes deterministically."
+    },
+    {
       "path": "frontend/src/components/features/dashboard/ErrorAlert.tsx",
       "status": "covered",
       "tests": ["frontend/src/components/features/dashboard/ErrorAlert.test.tsx"],
