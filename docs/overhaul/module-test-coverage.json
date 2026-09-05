@@ -540,6 +540,12 @@
       "status": "covered",
       "tests": ["frontend/src/components/features/evacuation-center/SuccessToast.test.tsx"],
       "behavior": "Renders only while open and invokes its supplied close handler after the configured duration."
+    },
+    {
+      "path": "frontend/src/components/features/evacuation-center/EvacuationCenterTablePagination.tsx",
+      "status": "covered",
+      "tests": ["frontend/src/components/features/evacuation-center/EvacuationCenterTablePagination.test.tsx"],
+      "behavior": "Reports pagination ranges and keeps navigation bounded by the available page range."
     }
   ]
 }
