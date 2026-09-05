@@ -13,6 +13,30 @@
       "behavior": "Exports the production WSGI application."
     },
     {
+      "path": "backend/app/routes/individuals.py",
+      "status": "covered",
+      "tests": ["backend/tests/test_individual_route_authorization.py"],
+      "behavior": "Scopes individual reads and writes to assigned centers and reserves global status recalculation for super admins."
+    },
+    {
+      "path": "backend/app/routes/households.py",
+      "status": "covered",
+      "tests": ["backend/tests/test_household_route_authorization.py"],
+      "behavior": "Scopes household reads and writes to assigned centers and prevents volunteer deletion."
+    },
+    {
+      "path": "backend/app/services/individual_service.py",
+      "status": "covered",
+      "tests": ["backend/tests/test_individual_search_scope.py"],
+      "behavior": "Propagates assigned-center authorization scope through list, search, and status-summary data access."
+    },
+    {
+      "path": "backend/app/models/individual.py",
+      "status": "covered",
+      "tests": ["backend/tests/test_individual_search_scope.py"],
+      "behavior": "Binds assigned-center ownership predicates in individual list, count, search, and status-summary queries."
+    },
+    {
       "path": "backend/app/routes/user.py",
       "status": "covered",
       "tests": ["backend/tests/test_user_route_guards.py", "backend/tests/test_user_authorization.py"],

@@ -31,11 +31,10 @@ repository is sufficiently covered. `TEST-003B` through `TEST-003J` must close
 the missing rows in the published mapping; `--strict` is intentionally expected
 to fail until then.
 
-## Current progress — 2026-09-04
+## Current progress — 2026-09-05
 
-The current mapping declares 87 covered modules, 122 missing modules, and five
-narrow exemptions for zero-byte backend markers. Its total was independently
-checked as JSON while the Python launcher is unavailable; rerun the repository
-verifier once that local environment is restored. Configuration coverage
-characterizes the current explicit token and development CORS contract; it does
-not approve the insecure defaults tracked in `SECURITY-001`.
+The verifier now reports 92 covered modules, 118 missing modules, and five
+narrow exemptions for zero-byte backend markers. The count was executed from
+the repository root with the Pipenv environment on 2026-09-05. Configuration
+coverage characterizes the current explicit token and development CORS contract;
+it does not approve the insecure defaults tracked in `SECURITY-001`.
