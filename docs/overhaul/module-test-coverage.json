@@ -492,6 +492,12 @@
       "status": "covered",
       "tests": ["frontend/src/store/attendanceRecordsStore.test.ts"],
       "behavior": "Preserves explicit attendance request filters when no page filter is set and clears stale records after a failed refresh."
+    },
+    {
+      "path": "frontend/src/services/eventService.ts",
+      "status": "covered",
+      "tests": ["frontend/src/services/eventService.test.ts"],
+      "behavior": "Forwards credentialed event list and active-event reads and normalizes client failures."
     }
   ]
 }
