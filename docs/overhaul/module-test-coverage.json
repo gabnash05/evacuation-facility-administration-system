@@ -25,6 +25,24 @@
       "behavior": "Scopes individual attendance histories and derives check-in and transfer audit attribution from the persisted JWT actor."
     },
     {
+      "path": "backend/app/routes/distribution.py",
+      "status": "covered",
+      "tests": ["backend/tests/test_distribution_authorization.py"],
+      "behavior": "Requires active actors and protects stock-returning status mutations."
+    },
+    {
+      "path": "backend/app/services/distribution_service.py",
+      "status": "covered",
+      "tests": ["backend/tests/test_distribution_authorization.py"],
+      "behavior": "Binds distribution household, allocation, center, and event ownership before writes."
+    },
+    {
+      "path": "backend/app/models/distribution.py",
+      "status": "covered",
+      "tests": ["backend/tests/test_distribution_authorization.py"],
+      "behavior": "Persists the validated allocation event on a distribution session."
+    },
+    {
       "path": "backend/app/routes/households.py",
       "status": "covered",
       "tests": ["backend/tests/test_household_route_authorization.py"],
