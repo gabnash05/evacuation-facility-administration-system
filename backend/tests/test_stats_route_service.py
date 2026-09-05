@@ -1,6 +1,8 @@
 from types import SimpleNamespace
 from unittest.mock import patch
+from datetime import date
 
+from app.models.stats import Stats
 from app.services import stats_service
 from tests.api_test_case import ApiTestCase
 
@@ -32,3 +34,34 @@ class StatsRouteServiceTests(ApiTestCase):
 
         self.assertTrue(result["success"])
         get_all_stats.assert_called_once_with(2, "Female", "Adult", 4)
+
+    def test_stats_age_groups_include_the_documented_boundaries(self):
+        today = date.today()
+
+        self.assertEqual(
+            Stats.get_age_group(date(today.year - 12, today.month, today.day)),
+            "Child",
+        )
+        self.assertEqual(
+            Stats.get_age_group(date(today.year - 13, today.month, today.day)),
+            "Teen",
+        )
+        self.assertEqual(
+            Stats.get_age_group(date(today.year - 60, today.month, today.day)),
+            "Senior",
+        )
+
+    def test_occupancy_model_binds_event_scope(self):
+        with self.app.app_context():
+            with patch("app.models.stats.db.session.execute") as execute:
+                execute.side_effect = [
+                    SimpleNamespace(fetchone=lambda: (100,)),
+                    SimpleNamespace(fetchone=lambda: (5,)),
+                ]
+
+                result = Stats.get_occupancy_stats(center_id=2, event_id=4)
+
+        self.assertEqual(result["current_occupancy"], 5)
+        query, parameters = execute.call_args.args
+        self.assertIn("ar.event_id = :event_id", str(query))
+        self.assertEqual(parameters["event_id"], 4)

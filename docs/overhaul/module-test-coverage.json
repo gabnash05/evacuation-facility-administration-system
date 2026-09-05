@@ -55,6 +55,12 @@
       "behavior": "Forwards center, demographic, and event filters to the canonical statistics model."
     },
     {
+      "path": "backend/app/models/stats.py",
+      "status": "covered",
+      "tests": ["backend/tests/test_stats_route_service.py"],
+      "behavior": "Classifies documented age boundaries and binds event scope in occupancy queries."
+    },
+    {
       "path": "backend/app/routes/households.py",
       "status": "covered",
       "tests": ["backend/tests/test_household_route_authorization.py"],
