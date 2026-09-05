@@ -504,6 +504,12 @@
       "status": "covered",
       "tests": ["frontend/src/store/statsStore.test.ts"],
       "behavior": "Forwards the current statistics filters and explicit center scope and retains fetch errors for UI feedback."
+    },
+    {
+      "path": "frontend/src/store/aidAllocationStore.ts",
+      "status": "covered",
+      "tests": ["frontend/src/store/aidAllocationStore.test.ts"],
+      "behavior": "Forwards current allocation table state, clears stale data on failure, and does not log request failures in the browser."
     }
   ]
 }

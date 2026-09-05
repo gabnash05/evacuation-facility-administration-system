@@ -45,6 +45,6 @@
 ## Latest implementation update
 
 `TEST-003H` now includes individual-service, individual-store, household-store,
-attendance-store, event-service, and stats-store regressions. The machine-readable
-mapping declares 80 covered modules, 129 missing modules, and five valid
-exemptions; rerun the Python verifier after the local launcher recovery.
+attendance-store, event-service, stats-store, and allocation-store regressions. The
+machine-readable mapping declares 81 covered modules, 128 missing modules, and five
+valid exemptions; rerun the Python verifier after the local launcher recovery.
