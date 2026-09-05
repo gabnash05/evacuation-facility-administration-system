@@ -19,6 +19,12 @@
       "behavior": "Scopes individual reads and writes to assigned centers and reserves global status recalculation for super admins."
     },
     {
+      "path": "backend/app/routes/attendance_records.py",
+      "status": "covered",
+      "tests": ["backend/tests/test_attendance_route_authorization.py"],
+      "behavior": "Scopes individual attendance histories and derives check-in and transfer audit attribution from the persisted JWT actor."
+    },
+    {
       "path": "backend/app/routes/households.py",
       "status": "covered",
       "tests": ["backend/tests/test_household_route_authorization.py"],
