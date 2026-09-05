@@ -344,34 +344,41 @@ class Event(db.Model):
             if active_event_result and active_event_result[0] > 0:
                 raise ValueError("There is already an active event. Only one event can be active at a time.")
 
-        # Extract center_ids from update_data before building the UPDATE query
-        center_ids = update_data.pop("center_ids", None)
+        # Keep association data separate without mutating the caller's payload.
+        center_ids = update_data.get("center_ids")
+        event_fields = {
+            field: value
+            for field, value in update_data.items()
+            if field != "center_ids"
+        }
 
         # Build dynamic UPDATE query (only for event table fields)
         set_clauses = []
         params = {"event_id": event_id}
 
-        for field, value in update_data.items():
+        for field, value in event_fields.items():
             if value is not None and field != "event_id":  # Prevent ID modification
                 set_clauses.append(f"{field} = :{field}")
                 params[field] = value
 
-        if not set_clauses:
+        if not set_clauses and center_ids is None:
             return None
 
-        # Add updated_at timestamp
-        set_clauses.append("updated_at = NOW()")
+        result = None
+        if set_clauses:
+            # Add updated_at timestamp
+            set_clauses.append("updated_at = NOW()")
 
-        query = text(
-            f"""  
-            UPDATE events 
-            SET {', '.join(set_clauses)}
-            WHERE event_id = :event_id
-            RETURNING *
-            """
-        )
+            query = text(
+                f"""
+                UPDATE events
+                SET {', '.join(set_clauses)}
+                WHERE event_id = :event_id
+                RETURNING *
+                """
+            )
 
-        result = db.session.execute(query, params).fetchone()
+            result = db.session.execute(query, params).fetchone()
 
         # Handle center associations if provided
         if center_ids is not None:  # Changed from "center_ids" in update_data
@@ -392,7 +399,7 @@ class Event(db.Model):
             cls._handle_event_resolved(event_id)
 
         db.session.commit()
-        return cls._row_to_event(result)
+        return cls._row_to_event(result) if result else current_event
 
     @classmethod
     def _handle_event_resolved(cls, event_id: int) -> None:

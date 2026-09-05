@@ -18,9 +18,10 @@ class EventCenterModelTests(ApiTestCase):
         other_active_event.scalar.return_value = 1
 
         with self.app.app_context():
-            with patch("app.models.event.db.session.execute") as execute, patch(
-                "app.models.event.db.session.commit"
-            ) as commit:
+            with (
+                patch("app.models.event.db.session.execute") as execute,
+                patch("app.models.event.db.session.commit") as commit,
+            ):
                 execute.side_effect = [
                     associated_centers,
                     delete_result,
@@ -41,4 +42,37 @@ class EventCenterModelTests(ApiTestCase):
         self.assertIn("SET status = 'inactive'", str(update_query))
         self.assertEqual(update_params, {"center_id": 2})
         self.assertEqual(execute.call_count, 5)
+        commit.assert_called_once_with()
+
+    def test_event_update_preserves_center_ids_for_the_service_and_association_work(
+        self,
+    ):
+        from app.models.event import Event
+
+        current_event = Mock(status="active")
+        updated_event = Mock(event_id=9)
+        payload = {"event_name": "Updated event", "center_ids": [2, 3]}
+        query_result = Mock()
+        query_result.fetchone.return_value = Mock()
+
+        with self.app.app_context():
+            with (
+                patch("app.models.event.Event.get_by_id", return_value=current_event),
+                patch(
+                    "app.models.event.db.session.execute", return_value=query_result
+                ) as execute,
+                patch("app.models.event.db.session.commit") as commit,
+                patch(
+                    "app.models.event.Event._row_to_event", return_value=updated_event
+                ),
+                patch("app.models.event.EventCenter.remove_centers") as remove_centers,
+                patch("app.models.event.EventCenter.add_centers") as add_centers,
+            ):
+                result = Event.update(9, payload)
+
+        self.assertIs(result, updated_event)
+        self.assertEqual(payload, {"event_name": "Updated event", "center_ids": [2, 3]})
+        remove_centers.assert_called_once_with(9)
+        add_centers.assert_called_once_with(9, [2, 3])
+        self.assertEqual(execute.call_count, 1)
         commit.assert_called_once_with()

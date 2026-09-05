@@ -118,7 +118,13 @@
       "path": "backend/app/models/event.py",
       "status": "covered",
       "tests": ["backend/tests/test_event_model.py"],
-      "behavior": "Preserves center identifiers before bulk event-association deletion so post-delete lifecycle checks can run."
+      "behavior": "Preserves association identifiers through event updates and bulk deletion so capacity and lifecycle checks can run."
+    },
+    {
+      "path": "backend/app/services/event_service.py",
+      "status": "covered",
+      "tests": ["backend/tests/test_event_service_contract.py"],
+      "behavior": "Retains requested center associations through model update so capacity recalculation occurs."
     },
     {
       "path": "frontend/src/components/features/dashboard/ErrorAlert.tsx",
