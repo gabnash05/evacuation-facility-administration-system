@@ -145,6 +145,12 @@
       "behavior": "Rejects unsafe database identifiers before attempting a connection or DDL."
     },
     {
+      "path": "backend/database/seed_db.py",
+      "status": "covered",
+      "tests": ["backend/tests/test_database_seed.py"],
+      "behavior": "Fails seed preflight before opening a database cursor when the declared SQL file is unavailable."
+    },
+    {
       "path": "frontend/src/components/features/dashboard/ErrorAlert.tsx",
       "status": "covered",
       "tests": ["frontend/src/components/features/dashboard/ErrorAlert.test.tsx"],
