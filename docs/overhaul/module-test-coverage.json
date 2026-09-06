@@ -139,6 +139,12 @@
       "behavior": "Normalizes supported coordinate representations and rejects malformed coordinate values."
     },
     {
+      "path": "backend/database/setup_db.py",
+      "status": "covered",
+      "tests": ["backend/tests/test_database_setup.py"],
+      "behavior": "Rejects unsafe database identifiers before attempting a connection or DDL."
+    },
+    {
       "path": "frontend/src/components/features/dashboard/ErrorAlert.tsx",
       "status": "covered",
       "tests": ["frontend/src/components/features/dashboard/ErrorAlert.test.tsx"],
