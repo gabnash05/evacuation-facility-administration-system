@@ -678,6 +678,48 @@
       "status": "covered",
       "tests": ["frontend/src/components/features/evacuation-center/EvacuationCenterTableToolbar.test.tsx"],
       "behavior": "Forwards search/add actions and disables additions while loading."
+    },
+    {
+      "path": "frontend/src/services/aidAllocationService.ts",
+      "status": "covered",
+      "tests": ["frontend/src/services/aidAllocationService.test.ts"],
+      "behavior": "Forwards allocation filters and credentialed JSON mutations while normalizing API failures."
+    },
+    {
+      "path": "frontend/src/services/distributionService.ts",
+      "status": "covered",
+      "tests": ["frontend/src/services/distributionService.test.ts"],
+      "behavior": "Serializes supported history filters, performs credentialed mutations, and normalizes failures."
+    },
+    {
+      "path": "frontend/src/schemas/search.ts",
+      "status": "covered",
+      "tests": ["frontend/src/schemas/search.test.ts"],
+      "behavior": "Applies stable pagination defaults and constrains center and event lifecycle filters."
+    },
+    {
+      "path": "frontend/src/schemas/index.ts",
+      "status": "covered",
+      "tests": ["frontend/src/schemas/index.test.ts"],
+      "behavior": "Exports the canonical authentication and search schema entry points."
+    },
+    {
+      "path": "frontend/src/types/aid.ts",
+      "status": "covered",
+      "tests": ["frontend/src/types/aid.test.ts"],
+      "behavior": "Types allocation inventory and constrained update and distribution status contracts."
+    },
+    {
+      "path": "frontend/src/types/allocation.ts",
+      "status": "covered",
+      "tests": ["frontend/src/types/allocation.test.ts"],
+      "behavior": "Types center-bound allocation display and creation-form contracts."
+    },
+    {
+      "path": "frontend/src/types/distribution.ts",
+      "status": "covered",
+      "tests": ["frontend/src/types/distribution.test.ts"],
+      "behavior": "Types distribution history identities, items, and lifecycle status values."
     }
   ]
 }

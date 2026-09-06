@@ -65,7 +65,11 @@ now resolves Axios 1.20.0 and React Router 7.18.3, and `npm audit --omit=dev
 --json` reports zero production vulnerabilities. `TEST-004` configures Vitest to
 use a single shared serial thread after the default worker model executed all
 tests but did not exit on Windows; `npm run test` now completes 61 files and 105
-tests in 5.64 seconds. `TEST-003H` now includes individual-service, individual-store, household-store,
+tests in 5.64 seconds. `TEST-003I-ALLOCATION-CONTRACTS` adds direct tests for
+allocation/distribution services, search/schema exports, and the corresponding
+aid/allocation/distribution type modules; full frontend coverage is now 68 files
+and 115 tests, while the verifier reports 116 covered modules, 94 missing
+modules, and five valid exemptions. `TEST-003H` now includes individual-service, individual-store, household-store,
 attendance-store, event-service, stats-store, allocation-store, event-store, and
 five evacuation-center dialog/toast regressions. `SECURITY-006` added individual
 and household authorization coverage, and `CONTRACT-004-HOUSEHOLD-CREATE` added
@@ -73,5 +77,4 @@ runtime validation for household members. `BACKEND-005-HOUSEHOLD-DETAIL` added a
 regression for distinct household/center detail values, `SECURITY-009-MODEL` closed
 the allocation model update boundary, `BACKEND-003-CREATE-GATE` aligned event
 creation with the active-event invariant, and `BACKEND-002-BULK-REMOVAL` fixed
-event-center removal ordering. The repository-root verifier now reports 109 covered
-modules, 101 missing modules, and five valid exemptions.
+event-center removal ordering.
