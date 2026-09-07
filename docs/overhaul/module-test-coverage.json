@@ -756,6 +756,12 @@
       "status": "covered",
       "tests": ["frontend/src/components/features/events/DeleteEventDialog.test.tsx"],
       "behavior": "Identifies the selected event and disables destructive and cancel actions while deletion is pending."
+    },
+    {
+      "path": "frontend/src/components/features/events/EventsTable.tsx",
+      "status": "covered",
+      "tests": ["frontend/src/components/features/events/EventsTable.test.tsx"],
+      "behavior": "Renders explicit empty state, forwards sort and row actions, and prevents active-event edit/delete while retaining resolution."
     }
   ]
 }
