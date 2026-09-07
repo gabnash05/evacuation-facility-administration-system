@@ -732,6 +732,12 @@
       "status": "covered",
       "tests": ["frontend/src/components/features/dashboard/EventHistoryTable.test.tsx"],
       "behavior": "Blocks creation while an active event exists, bounds pagination, and supplies an explicit empty state."
+    },
+    {
+      "path": "frontend/src/components/features/dashboard/StatsRow.tsx",
+      "status": "covered",
+      "tests": ["frontend/src/components/features/dashboard/StatsRow.test.tsx"],
+      "behavior": "Loads center-scoped events and statistics and delegates filtered-state reset to the canonical statistics store."
     }
   ]
 }
