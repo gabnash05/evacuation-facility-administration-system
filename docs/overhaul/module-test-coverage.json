@@ -720,6 +720,18 @@
       "status": "covered",
       "tests": ["frontend/src/types/distribution.test.ts"],
       "behavior": "Types distribution history identities, items, and lifecycle status values."
+    },
+    {
+      "path": "frontend/src/components/features/dashboard/MapPanel.tsx",
+      "status": "covered",
+      "tests": ["frontend/src/components/features/dashboard/MapPanel.test.tsx"],
+      "behavior": "Excludes invalid coordinates and centers the map on the assigned valid center while preserving the loading fallback."
+    },
+    {
+      "path": "frontend/src/components/features/dashboard/EventHistoryTable.tsx",
+      "status": "covered",
+      "tests": ["frontend/src/components/features/dashboard/EventHistoryTable.test.tsx"],
+      "behavior": "Blocks creation while an active event exists, bounds pagination, and supplies an explicit empty state."
     }
   ]
 }

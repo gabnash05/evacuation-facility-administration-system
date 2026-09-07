@@ -69,7 +69,10 @@ tests in 5.64 seconds. `TEST-003I-ALLOCATION-CONTRACTS` adds direct tests for
 allocation/distribution services, search/schema exports, and the corresponding
 aid/allocation/distribution type modules; full frontend coverage is now 68 files
 and 115 tests, while the verifier reports 116 covered modules, 94 missing
-modules, and five valid exemptions. `TEST-003H` now includes individual-service, individual-store, household-store,
+modules, and five valid exemptions. `TEST-003I-DASHBOARD` adds direct map and
+event-history component regressions; full frontend coverage is now 70 files and
+119 tests, while the verifier reports 118 covered modules, 92 missing modules,
+and five valid exemptions. `TEST-003H` now includes individual-service, individual-store, household-store,
 attendance-store, event-service, stats-store, allocation-store, event-store, and
 five evacuation-center dialog/toast regressions. `SECURITY-006` added individual
 and household authorization coverage, and `CONTRACT-004-HOUSEHOLD-CREATE` added
