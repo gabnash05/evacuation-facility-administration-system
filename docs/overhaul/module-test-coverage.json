@@ -750,6 +750,12 @@
       "status": "covered",
       "tests": ["frontend/src/test/vite-config.test.ts"],
       "behavior": "Declares the production static-asset target and deterministic serial Vitest configuration."
+    },
+    {
+      "path": "frontend/src/components/features/events/DeleteEventDialog.tsx",
+      "status": "covered",
+      "tests": ["frontend/src/components/features/events/DeleteEventDialog.test.tsx"],
+      "behavior": "Identifies the selected event and disables destructive and cancel actions while deletion is pending."
     }
   ]
 }
