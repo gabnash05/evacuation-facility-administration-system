@@ -744,6 +744,12 @@
       "status": "covered",
       "tests": ["frontend/src/components/features/evacuation-center/EvacuationCenterTable.test.tsx"],
       "behavior": "Renders an explicit empty state, forwards sort and row actions, caps visual over-capacity, and hides deletion outside the super-admin role."
+    },
+    {
+      "path": "frontend/vite.config.ts",
+      "status": "covered",
+      "tests": ["frontend/src/test/vite-config.test.ts"],
+      "behavior": "Declares the production static-asset target and deterministic serial Vitest configuration."
     }
   ]
 }
