@@ -816,6 +816,12 @@
       "status": "covered",
       "tests": ["frontend/src/components/features/household/EditHouseholdModal.test.tsx"],
       "behavior": "Presents an accessible edit dialog and does not fetch household data when no household is selected."
+    },
+    {
+      "path": "frontend/src/components/features/attendance/IndividualTablePagination.tsx",
+      "status": "covered",
+      "tests": ["frontend/src/components/features/attendance/IndividualTablePagination.test.tsx"],
+      "behavior": "Reports the displayed individual range, forwards bounded page navigation, and names and disables controls appropriately."
     }
   ]
 }
