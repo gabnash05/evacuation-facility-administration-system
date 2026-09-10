@@ -846,6 +846,12 @@
       "status": "covered",
       "tests": ["frontend/src/components/features/attendance/TransferModal.test.tsx"],
       "behavior": "Describes the transfer workflow, loads destination centers when opened, and blocks transfer without an attendance record."
+    },
+    {
+      "path": "frontend/src/components/features/attendance/CheckInModal.tsx",
+      "status": "covered",
+      "tests": ["frontend/src/components/features/attendance/CheckInModal.test.tsx"],
+      "behavior": "Preselects supplied individuals, loads an active event, and prevents check-in until active-event conditions are met."
     }
   ]
 }
