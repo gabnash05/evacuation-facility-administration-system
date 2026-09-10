@@ -792,6 +792,12 @@
       "status": "covered",
       "tests": ["frontend/src/components/features/household/DeleteHouseholdDialog.test.tsx"],
       "behavior": "Identifies the pending household deletion, states its individual-record consequence, and disables destructive and cancel actions while deletion is pending."
+    },
+    {
+      "path": "frontend/src/components/features/household/HouseholdDetailsModal.tsx",
+      "status": "covered",
+      "tests": ["frontend/src/components/features/household/HouseholdDetailsModal.test.tsx"],
+      "behavior": "Presents an accessible details dialog and renders an explicit not-found state when no household identifier is selected."
     }
   ]
 }

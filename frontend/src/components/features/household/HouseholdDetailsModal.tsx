@@ -6,6 +6,7 @@ import {
     DialogContent,
     DialogHeader,
     DialogTitle,
+    DialogDescription,
     DialogClose,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -22,7 +23,13 @@ import {
 import { useHouseholdStore } from "@/store/householdStore";
 import type { Household } from "@/types/households";
 import type { Individual } from "@/types/individual";
-import { format } from "date-fns";
+
+const fieldLabelClass = "text-sm font-medium text-muted-foreground";
+const emptyMembersClass = [
+    "text-center text-sm text-muted-foreground py-8",
+    "border-2 border-dashed border-border rounded-lg",
+].join(" ");
+const membersTableClass = "border border-border rounded-lg overflow-hidden";
 
 interface HouseholdDetailsModalProps {
     householdId: number | null;
@@ -36,7 +43,7 @@ export function HouseholdDetailsModal({
     onClose,
 }: HouseholdDetailsModalProps) {
     const { getHouseholdDetails, getHouseholdIndividuals } = useHouseholdStore();
-    
+
     const [household, setHousehold] = useState<Household | null>(null);
     const [individuals, setIndividuals] = useState<Individual[]>([]);
     const [loading, setLoading] = useState(false);
@@ -52,11 +59,13 @@ export function HouseholdDetailsModal({
                         getHouseholdDetails(householdId),
                         getHouseholdIndividuals(householdId),
                     ]);
-                    
+
                     setHousehold(householdData);
                     setIndividuals(individualsData);
-                } catch (err: any) {
-                    setError(err.message);
+                } catch (error: unknown) {
+                    setError(
+                        error instanceof Error ? error.message : "Unable to load household data."
+                    );
                 } finally {
                     setLoading(false);
                 }
@@ -89,35 +98,28 @@ export function HouseholdDetailsModal({
     // Function to calculate age from date of birth
     const calculateAge = (dateOfBirth: string | undefined): string => {
         if (!dateOfBirth) return "N/A";
-        
+
         try {
             const birthDate = new Date(dateOfBirth);
             const today = new Date();
-            
+
             // Check if the date is valid
             if (isNaN(birthDate.getTime())) return "Invalid Date";
-            
+
             let age = today.getFullYear() - birthDate.getFullYear();
             const monthDifference = today.getMonth() - birthDate.getMonth();
-            
+
             // Adjust age if birthday hasn't occurred this year yet
-            if (monthDifference < 0 || (monthDifference === 0 && today.getDate() < birthDate.getDate())) {
+            if (
+                monthDifference < 0 ||
+                (monthDifference === 0 && today.getDate() < birthDate.getDate())
+            ) {
                 age--;
             }
-            
+
             return age.toString();
         } catch {
             return "N/A";
-        }
-    };
-
-    // Function to format date (kept in case you need it elsewhere)
-    const formatDate = (dateString: string | undefined) => {
-        if (!dateString) return "N/A";
-        try {
-            return format(new Date(dateString), "PPP");
-        } catch {
-            return "Invalid Date";
         }
     };
 
@@ -128,18 +130,19 @@ export function HouseholdDetailsModal({
         <Dialog open={isOpen} onOpenChange={handleClose}>
             <DialogContent className="!max-w-[900px] w-[95vw] max-h-[90vh] overflow-y-auto">
                 <DialogHeader>
-                    <DialogTitle className="text-lg font-semibold">
-                        Household Details
-                    </DialogTitle>
+                    <DialogTitle className="text-lg font-semibold">Household Details</DialogTitle>
+                    <DialogDescription className="sr-only">
+                        View household details and associated individuals.
+                    </DialogDescription>
                 </DialogHeader>
-                
+
                 <div className="space-y-6 py-4">
                     {error && (
                         <div className="bg-destructive/15 text-destructive p-3 rounded-md text-sm">
                             {error}
                         </div>
                     )}
-                    
+
                     {loading ? (
                         <div className="py-8 text-center text-muted-foreground">
                             Loading household data...
@@ -148,12 +151,12 @@ export function HouseholdDetailsModal({
                         <>
                             {/* Household Information Section */}
                             <div className="border-b pb-6 space-y-4">
-                                <Label className="text-lg font-semibold">Household Information</Label>
+                                <Label className="text-lg font-semibold">
+                                    Household Information
+                                </Label>
                                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                                     <div className="space-y-2">
-                                        <Label className="text-sm font-medium text-muted-foreground">
-                                            Household Name
-                                        </Label>
+                                        <Label className={fieldLabelClass}>Household Name</Label>
                                         <Input
                                             value={household.household_name}
                                             readOnly
@@ -161,19 +164,17 @@ export function HouseholdDetailsModal({
                                         />
                                     </div>
                                     <div className="space-y-2">
-                                        <Label className="text-sm font-medium text-muted-foreground">
-                                            Evacuation Center
-                                        </Label>
+                                        <Label className={fieldLabelClass}>Evacuation Center</Label>
                                         <Input
-                                            value={household.center?.center_name || "Unknown center"}
+                                            value={
+                                                household.center?.center_name || "Unknown center"
+                                            }
                                             readOnly
                                             className="w-full bg-muted/50"
                                         />
                                     </div>
                                     <div className="space-y-2 lg:col-span-2">
-                                        <Label className="text-sm font-medium text-muted-foreground">
-                                            Address
-                                        </Label>
+                                        <Label className={fieldLabelClass}>Address</Label>
                                         <Input
                                             value={household.address || "No address provided"}
                                             readOnly
@@ -190,7 +191,7 @@ export function HouseholdDetailsModal({
                                     <div className="border border-border rounded-lg p-4 bg-card">
                                         <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
                                             <div className="space-y-2">
-                                                <Label className="text-sm font-medium text-muted-foreground">
+                                                <Label className={fieldLabelClass}>
                                                     First Name
                                                 </Label>
                                                 <div className="text-sm font-medium">
@@ -198,25 +199,19 @@ export function HouseholdDetailsModal({
                                                 </div>
                                             </div>
                                             <div className="space-y-2">
-                                                <Label className="text-sm font-medium text-muted-foreground">
-                                                    Last Name
-                                                </Label>
+                                                <Label className={fieldLabelClass}>Last Name</Label>
                                                 <div className="text-sm font-medium">
                                                     {householdHead.last_name}
                                                 </div>
                                             </div>
                                             <div className="space-y-2">
-                                                <Label className="text-sm font-medium text-muted-foreground">
-                                                    Age
-                                                </Label>
+                                                <Label className={fieldLabelClass}>Age</Label>
                                                 <div className="text-sm">
                                                     {calculateAge(householdHead.date_of_birth!)}
                                                 </div>
                                             </div>
                                             <div className="space-y-2">
-                                                <Label className="text-sm font-medium text-muted-foreground">
-                                                    Gender
-                                                </Label>
+                                                <Label className={fieldLabelClass}>Gender</Label>
                                                 <div className="text-sm">
                                                     {householdHead.gender || "N/A"}
                                                 </div>
@@ -233,9 +228,9 @@ export function HouseholdDetailsModal({
                                         Additional Members ({otherMembers.length})
                                     </Label>
                                 </div>
-                                
+
                                 {otherMembers.length > 0 ? (
-                                    <div className="border border-border rounded-lg overflow-hidden">
+                                    <div className={membersTableClass}>
                                         <div className="overflow-x-auto">
                                             <Table className="min-w-full">
                                                 <TableHeader>
@@ -249,9 +244,11 @@ export function HouseholdDetailsModal({
                                                 </TableHeader>
                                                 <TableBody>
                                                     {otherMembers.map((individual, index) => (
-                                                        <TableRow 
+                                                        <TableRow
                                                             key={individual.individual_id}
-                                                            className={index % 2 === 1 ? "bg-muted/30" : ""}
+                                                            className={
+                                                                index % 2 === 1 ? "bg-muted/30" : ""
+                                                            }
                                                         >
                                                             <TableCell className="py-3">
                                                                 {individual.first_name}
@@ -260,7 +257,9 @@ export function HouseholdDetailsModal({
                                                                 {individual.last_name}
                                                             </TableCell>
                                                             <TableCell className="py-3">
-                                                                {calculateAge(individual.date_of_birth!)}
+                                                                {calculateAge(
+                                                                    individual.date_of_birth!
+                                                                )}
                                                             </TableCell>
                                                             <TableCell className="py-3">
                                                                 {individual.gender || "N/A"}
@@ -275,7 +274,7 @@ export function HouseholdDetailsModal({
                                         </div>
                                     </div>
                                 ) : (
-                                    <div className="text-center text-sm text-muted-foreground py-8 border-2 border-dashed border-border rounded-lg">
+                                    <div className={emptyMembersClass}>
                                         No additional members in this household.
                                     </div>
                                 )}
