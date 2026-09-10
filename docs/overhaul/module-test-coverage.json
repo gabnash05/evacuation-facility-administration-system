@@ -834,6 +834,12 @@
       "status": "covered",
       "tests": ["frontend/src/components/features/attendance/AttendanceTableToolbar.test.tsx"],
       "behavior": "Forwards search and attendance workflow actions and disables all interactive controls during loading."
+    },
+    {
+      "path": "frontend/src/components/features/attendance/AttendanceTable.tsx",
+      "status": "covered",
+      "tests": ["frontend/src/components/features/attendance/AttendanceTable.test.tsx"],
+      "behavior": "Renders empty state, forwards sortable and checked-in actions for allowed roles, and exposes a named action menu."
     }
   ]
 }

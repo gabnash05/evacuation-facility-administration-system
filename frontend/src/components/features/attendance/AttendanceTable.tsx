@@ -26,6 +26,9 @@ import {
 import { DeleteAttendanceDialog } from "./DeleteAttendanceDialog";
 import { cn } from "@/lib/utils";
 
+const destructiveActionClass = "flex items-center gap-2 text-destructive focus:text-destructive";
+const actionMenuLabel = (individualName: string) => `Actions for ${individualName}`;
+
 export interface AttendanceRecord {
     record_id: number;
     individual_name: string;
@@ -103,9 +106,11 @@ export function AttendanceTable({
 
     // Only show delete for super_admin
     const isSuperAdmin = userRole === "super_admin";
-    
+
     // Show check-out and transfer for these roles
-    const canCheckoutTransfer = ["super_admin", "city_admin", "center_admin"].includes(userRole || "");
+    const canCheckoutTransfer = ["super_admin", "city_admin", "center_admin"].includes(
+        userRole || ""
+    );
 
     if (data.length === 0 && !loading) {
         return (
@@ -193,34 +198,42 @@ export function AttendanceTable({
                                                 <Button
                                                     variant="ghost"
                                                     size="icon"
+                                                    aria-label={actionMenuLabel(
+                                                        row.individual_name
+                                                    )}
                                                     className="h-8 w-8"
                                                 >
                                                     <MoreVertical className="h-4 w-4" />
                                                 </Button>
                                             </DropdownMenuTrigger>
                                             <DropdownMenuContent align="end">
-                                                {row.status === "checked_in" && canCheckoutTransfer && (
-                                                    <>
-                                                        <DropdownMenuItem
-                                                            onClick={() => onCheckOut(row.record_id)}
-                                                            className="flex items-center gap-2"
-                                                        >
-                                                            <LogOut className="h-4 w-4" />
-                                                            Check Out
-                                                        </DropdownMenuItem>
-                                                        <DropdownMenuItem
-                                                            onClick={() => onTransfer(row.record_id)}
-                                                            className="flex items-center gap-2"
-                                                        >
-                                                            <Move className="h-4 w-4" />
-                                                            Transfer
-                                                        </DropdownMenuItem>
-                                                    </>
-                                                )}
+                                                {row.status === "checked_in" &&
+                                                    canCheckoutTransfer && (
+                                                        <>
+                                                            <DropdownMenuItem
+                                                                onClick={() =>
+                                                                    onCheckOut(row.record_id)
+                                                                }
+                                                                className="flex items-center gap-2"
+                                                            >
+                                                                <LogOut className="h-4 w-4" />
+                                                                Check Out
+                                                            </DropdownMenuItem>
+                                                            <DropdownMenuItem
+                                                                onClick={() =>
+                                                                    onTransfer(row.record_id)
+                                                                }
+                                                                className="flex items-center gap-2"
+                                                            >
+                                                                <Move className="h-4 w-4" />
+                                                                Transfer
+                                                            </DropdownMenuItem>
+                                                        </>
+                                                    )}
                                                 {isSuperAdmin && (
                                                     <DropdownMenuItem
                                                         onClick={() => handleDeleteClick(row)}
-                                                        className="flex items-center gap-2 text-destructive focus:text-destructive"
+                                                        className={destructiveActionClass}
                                                     >
                                                         <Trash2 className="h-4 w-4" />
                                                         Delete
