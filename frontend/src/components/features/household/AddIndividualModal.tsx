@@ -9,6 +9,7 @@ import {
     DialogContent,
     DialogHeader,
     DialogTitle,
+    DialogDescription,
     DialogFooter,
 } from "@/components/ui/dialog";
 import {
@@ -94,6 +95,9 @@ export function AddIndividualModal({ isOpen, onClose, onAdd }: AddIndividualModa
             <DialogContent className="max-w-md">
                 <DialogHeader>
                     <DialogTitle>Add New Member</DialogTitle>
+                    <DialogDescription className="sr-only">
+                        Add an individual to the current household.
+                    </DialogDescription>
                 </DialogHeader>
                 <div className="space-y-4 py-4">
                     {error && <p className="text-sm text-destructive">{error}</p>}
