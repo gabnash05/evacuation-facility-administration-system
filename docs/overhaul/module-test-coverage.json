@@ -804,6 +804,12 @@
       "status": "covered",
       "tests": ["frontend/src/components/features/household/AddIndividualModal.test.tsx"],
       "behavior": "Presents an accessible add-member dialog and rejects incomplete member data before invoking the parent workflow."
+    },
+    {
+      "path": "frontend/src/components/features/household/AddHouseholdModal.tsx",
+      "status": "covered",
+      "tests": ["frontend/src/components/features/household/AddHouseholdModal.test.tsx"],
+      "behavior": "Presents an accessible creation dialog and rejects missing household-head identity before invoking household creation."
     }
   ]
 }
