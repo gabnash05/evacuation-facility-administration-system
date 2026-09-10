@@ -822,6 +822,12 @@
       "status": "covered",
       "tests": ["frontend/src/components/features/attendance/IndividualTablePagination.test.tsx"],
       "behavior": "Reports the displayed individual range, forwards bounded page navigation, and names and disables controls appropriately."
+    },
+    {
+      "path": "frontend/src/components/features/attendance/DeleteAttendanceDialog.tsx",
+      "status": "covered",
+      "tests": ["frontend/src/components/features/attendance/DeleteAttendanceDialog.test.tsx"],
+      "behavior": "Identifies the selected attendance record, states permanent-removal scope, and disables destructive and cancel actions while deletion is pending."
     }
   ]
 }
