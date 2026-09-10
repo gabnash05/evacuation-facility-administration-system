@@ -828,6 +828,12 @@
       "status": "covered",
       "tests": ["frontend/src/components/features/attendance/DeleteAttendanceDialog.test.tsx"],
       "behavior": "Identifies the selected attendance record, states permanent-removal scope, and disables destructive and cancel actions while deletion is pending."
+    },
+    {
+      "path": "frontend/src/components/features/attendance/AttendanceTableToolbar.tsx",
+      "status": "covered",
+      "tests": ["frontend/src/components/features/attendance/AttendanceTableToolbar.test.tsx"],
+      "behavior": "Forwards search and attendance workflow actions and disables all interactive controls during loading."
     }
   ]
 }
