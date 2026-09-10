@@ -7,6 +7,7 @@ import {
     DialogContent,
     DialogHeader,
     DialogTitle,
+    DialogDescription,
     DialogFooter,
     DialogClose,
 } from "@/components/ui/dialog";
@@ -33,8 +34,30 @@ import {
 } from "@/components/ui/table";
 import { useHouseholdStore } from "@/store/householdStore";
 import { useEvacuationCenterStore } from "@/store/evacuationCenterStore";
-import type { CreateIndividualData } from "@/types/individual";
+import type { CreateIndividualData, Individual } from "@/types/individual";
 import type { UpdateHouseholdData } from "@/types/households";
+
+const errorMessageClass = "bg-destructive/15 text-destructive p-3 rounded-md text-sm";
+const memberTableClass = "border border-border rounded-lg overflow-hidden";
+const destructiveIconButtonClass = "h-8 w-8 text-destructive";
+const datePickerButtonClass = "w-full justify-start text-left font-normal";
+const emptyMembersClass = [
+    "text-center text-sm text-muted-foreground py-8",
+    "border-2 border-dashed border-border rounded-lg",
+].join(" ");
+
+function RemoveMemberButton({ onRemove }: { onRemove: () => void }) {
+    return (
+        <Button
+            variant="ghost"
+            size="icon"
+            onClick={onRemove}
+            className={destructiveIconButtonClass}
+        >
+            <Trash2 className="h-4 w-4" />
+        </Button>
+    );
+}
 
 interface EditHouseholdModalProps {
     householdId: number | null;
@@ -87,9 +110,9 @@ export function EditHouseholdModal({
                     setHouseholdName(household.household_name);
                     setAddress(household.address || "");
                     setCenterId(String(household.center_id));
-                    
+
                     const headIndividual = individualsResult.find(
-                        (ind: any) => ind.individual_id === household.household_head_id
+                        ind => ind.individual_id === household.household_head_id
                     );
                     if (headIndividual) {
                         setHeadFirstName(headIndividual.first_name);
@@ -99,14 +122,13 @@ export function EditHouseholdModal({
                         if (headIndividual.date_of_birth) {
                             setHeadDob(new Date(headIndividual.date_of_birth));
                         }
-                        console.log(headIndividual)
                     }
-                    
+
                     // Filter out the head from other individuals
                     const otherIndividuals = individualsResult.filter(
-                        (ind: any) => ind.individual_id !== household.household_head_id
+                        ind => ind.individual_id !== household.household_head_id
                     );
-                    const formattedIndividuals = otherIndividuals.map((ind: any) => ({
+                    const formattedIndividuals = otherIndividuals.map((ind: Individual) => ({
                         individual_id: ind.individual_id, // Make sure to include individual_id
                         first_name: ind.first_name,
                         last_name: ind.last_name,
@@ -115,15 +137,24 @@ export function EditHouseholdModal({
                         relationship_to_head: ind.relationship_to_head,
                     }));
                     setIndividuals(formattedIndividuals);
-                } catch (err: any) {
-                    setError(err.message);
+                } catch (error: unknown) {
+                    setError(
+                        error instanceof Error ? error.message : "Unable to load household data."
+                    );
                 } finally {
                     setIsLoading(false);
                 }
             };
             fetchData();
         }
-    }, [isOpen, householdId, getHouseholdDetails, getHouseholdIndividuals, fetchAllCenters, isCenterAdminView]);
+    }, [
+        isOpen,
+        householdId,
+        getHouseholdDetails,
+        getHouseholdIndividuals,
+        fetchAllCenters,
+        isCenterAdminView,
+    ]);
 
     const resetForm = () => {
         setHouseholdName("");
@@ -187,7 +218,7 @@ export function EditHouseholdModal({
                 center_id: Number(centerId),
                 individuals: [
                     {
-                        individual_id: headIndividualId || undefined, // Include head's ID if it exists
+                        individual_id: headIndividualId || undefined,
                         first_name: headFirstName,
                         last_name: headLastName,
                         date_of_birth: headDob ? format(headDob, "yyyy-MM-dd") : undefined,
@@ -200,8 +231,8 @@ export function EditHouseholdModal({
             await updateHousehold(householdId!, updateData);
             onSuccess();
             handleClose();
-        } catch (err: any) {
-            setError(err.message);
+        } catch (error: unknown) {
+            setError(error instanceof Error ? error.message : "Unable to save household changes.");
         } finally {
             setIsSubmitting(false);
         }
@@ -218,13 +249,12 @@ export function EditHouseholdModal({
                 <DialogContent className="!max-w-[900px] w-[95vw] max-h-[90vh] overflow-y-auto">
                     <DialogHeader>
                         <DialogTitle className="text-lg font-semibold">Edit Household</DialogTitle>
+                        <DialogDescription className="sr-only">
+                            Edit the selected household and its associated members.
+                        </DialogDescription>
                     </DialogHeader>
                     <div className="space-y-6 py-4">
-                        {error && (
-                            <div className="bg-destructive/15 text-destructive p-3 rounded-md text-sm">
-                                {error}
-                            </div>
-                        )}
+                        {error && <div className={errorMessageClass}>{error}</div>}
                         {isLoading ? (
                             <div className="py-8 text-center text-muted-foreground">
                                 Loading household data...
@@ -317,7 +347,7 @@ export function EditHouseholdModal({
                                                     <Button
                                                         variant="outline"
                                                         className={cn(
-                                                            "w-full justify-start text-left font-normal",
+                                                            datePickerButtonClass,
                                                             !headDob && "text-muted-foreground"
                                                         )}
                                                     >
@@ -376,7 +406,7 @@ export function EditHouseholdModal({
                                         </Button>
                                     </div>
                                     {individuals.length > 0 ? (
-                                        <div className="border border-border rounded-lg overflow-hidden">
+                                        <div className={memberTableClass}>
                                             <div className="overflow-x-auto">
                                                 <Table className="min-w-full">
                                                     <TableHeader>
@@ -415,18 +445,13 @@ export function EditHouseholdModal({
                                                                     {ind.relationship_to_head}
                                                                 </TableCell>
                                                                 <TableCell>
-                                                                    <Button
-                                                                        variant="ghost"
-                                                                        size="icon"
-                                                                        onClick={() =>
+                                                                    <RemoveMemberButton
+                                                                        onRemove={() =>
                                                                             handleRemoveIndividual(
                                                                                 index
                                                                             )
                                                                         }
-                                                                        className="h-8 w-8 text-destructive"
-                                                                    >
-                                                                        <Trash2 className="h-4 w-4" />
-                                                                    </Button>
+                                                                    />
                                                                 </TableCell>
                                                             </TableRow>
                                                         ))}
@@ -435,7 +460,7 @@ export function EditHouseholdModal({
                                             </div>
                                         </div>
                                     ) : (
-                                        <div className="text-center text-sm text-muted-foreground py-8 border-2 border-dashed border-border rounded-lg">
+                                        <div className={emptyMembersClass}>
                                             No additional members added yet.
                                         </div>
                                     )}
