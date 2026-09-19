@@ -852,6 +852,12 @@
       "status": "covered",
       "tests": ["frontend/src/components/features/attendance/CheckInModal.test.tsx"],
       "behavior": "Preselects supplied individuals, loads an active event, and prevents check-in until active-event conditions are met."
+    },
+    {
+      "path": "frontend/src/components/features/attendance/CheckOutModal.tsx",
+      "status": "covered",
+      "tests": ["frontend/src/components/features/attendance/CheckOutModal.test.tsx"],
+      "behavior": "Completes a selected attendance-record checkout through the supplied workflow and preserves optional check-out notes."
     }
   ]
 }

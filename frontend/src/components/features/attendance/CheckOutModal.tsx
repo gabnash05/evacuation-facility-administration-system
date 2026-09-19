@@ -1,9 +1,10 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import {
     Dialog,
     DialogContent,
+    DialogDescription,
     DialogHeader,
     DialogTitle,
     DialogFooter,
@@ -17,45 +18,71 @@ import { IndividualSearchTable } from "@/components/features/attendance/Individu
 import type { Individual } from "@/types/individual";
 import type { CheckOutData } from "@/types/attendance";
 
+const errorMessage = (error: unknown, fallback: string) =>
+    error instanceof Error && error.message ? error.message : fallback;
+const restrictedCenterClass =
+    "bg-blue-50 dark:bg-blue-950 text-blue-700 dark:text-blue-300 p-3 rounded-md text-sm " +
+    "border border-blue-200 dark:border-blue-800 mb-4";
+const singleNotesPlaceholder = "Reason for check-out or additional notes (optional)";
+const batchNotesPlaceholder =
+    "Reason for check-out or additional notes (optional) - will apply to all selected individuals";
+const selectedIndividualClass = (hasRecord: boolean) =>
+    "flex justify-between items-center p-3 rounded-lg border " +
+    (hasRecord
+        ? "bg-green-50 dark:bg-green-950 border-green-200 dark:border-green-800"
+        : "bg-yellow-50 dark:bg-yellow-950 border-yellow-200 dark:border-yellow-800");
+const selectedIndividualDetailsClass = "text-sm text-muted-foreground";
+const householdDetailsClass = "flex items-center gap-1 mt-1 text-sm";
+const readyRecordClass = "text-sm text-green-600 mt-1";
+const findingRecordClass = "text-sm text-yellow-600 mt-1";
+const destructiveButtonClass = "text-destructive hover:text-destructive";
+const individualName = (individual: Individual) =>
+    [individual.first_name, individual.last_name].join(" ");
+
 interface CheckOutModalProps {
     isOpen: boolean;
     recordId: number | null;
     onClose: () => void;
     onSuccess: (checkoutCount?: number) => void;
     onCheckOut?: (recordId: number, data: CheckOutData) => Promise<void>;
-    onBatchCheckOut?: (data: Array<{
-        record_id: number;
-        notes?: string;
-    }>) => Promise<void>;
+    onBatchCheckOut?: (
+        data: Array<{
+            record_id: number;
+            notes?: string;
+        }>
+    ) => Promise<void>;
     defaultCenterId?: number;
 }
 
-export function CheckOutModal({ 
-    isOpen, 
-    onClose, 
-    onSuccess, 
-    recordId, 
-    onCheckOut, 
+export function CheckOutModal({
+    isOpen,
+    onClose,
+    onSuccess,
+    recordId,
+    onCheckOut,
     onBatchCheckOut,
-    defaultCenterId
+    defaultCenterId,
 }: CheckOutModalProps) {
-    const { checkOutIndividual, checkOutMultipleIndividuals, fetchIndividualAttendanceHistory } = useAttendanceStore();
+    const { checkOutIndividual, checkOutMultipleIndividuals, fetchIndividualAttendanceHistory } =
+        useAttendanceStore();
     const { centers, fetchAllCenters } = useEvacuationCenterStore();
 
     const [notes, setNotes] = useState("");
     const [error, setError] = useState<string | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [selectedIndividuals, setSelectedIndividuals] = useState<Individual[]>([]);
-    const [resolvedRecords, setResolvedRecords] = useState<Array<{individual: Individual, record_id: number, center_id?: number}>>([]);
+    const [resolvedRecords, setResolvedRecords] = useState<
+        Array<{ individual: Individual; record_id: number; center_id?: number }>
+    >([]);
     const [findingRecords, setFindingRecords] = useState(false);
-    
+
     // ADD LOCAL STATE FOR MODAL SEARCH (same as CheckInModal)
     const [modalSearchQuery, setModalSearchQuery] = useState("");
     const [modalPage, setModalPage] = useState(1);
     const [modalSearchResults, setModalSearchResults] = useState<Individual[]>([]);
     const [modalTotalRecords, setModalTotalRecords] = useState(0);
-    const [modalSearchLoading, setModalSearchLoading] = useState(false);
-    
+    const [modalSearchLoading] = useState(false);
+
     const searchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
     // Reset form when modal opens/closes & load centers for name lookups
@@ -67,13 +94,13 @@ export function CheckOutModal({
             setSelectedIndividuals([]);
             setResolvedRecords([]);
             setFindingRecords(false);
-            
+
             // Reset modal search state
             setModalSearchQuery("");
             setModalPage(1);
             setModalSearchResults([]);
             setModalTotalRecords(0);
-            
+
             // Clear any pending search timeout
             if (searchTimeoutRef.current) {
                 clearTimeout(searchTimeoutRef.current);
@@ -101,7 +128,7 @@ export function CheckOutModal({
         setModalPage(1);
         setModalSearchResults([]);
         setModalTotalRecords(0);
-        
+
         // Clear timeout
         if (searchTimeoutRef.current) {
             clearTimeout(searchTimeoutRef.current);
@@ -156,8 +183,8 @@ export function CheckOutModal({
             onSuccess(1);
             resetForm();
             onClose();
-        } catch (err: any) {
-            setError(err?.message || "Failed to check out individual");
+        } catch (error: unknown) {
+            setError(errorMessage(error, "Failed to check out individual"));
         } finally {
             setIsSubmitting(false);
         }
@@ -187,8 +214,8 @@ export function CheckOutModal({
             onSuccess(resolvedRecords.length);
             resetForm();
             onClose();
-        } catch (err: any) {
-            setError(err?.message || "Failed to check out individuals");
+        } catch (error: unknown) {
+            setError(errorMessage(error, "Failed to check out individuals"));
         } finally {
             setIsSubmitting(false);
         }
@@ -201,42 +228,61 @@ export function CheckOutModal({
         }
 
         setSelectedIndividuals(prev => [...prev, individual]);
-        
+
         // Find active record for this individual
         setFindingRecords(true);
         try {
             const history = await fetchIndividualAttendanceHistory(individual.individual_id);
-            const active = (history as any[]).find(r => r.status === "checked_in" && !r.check_out_time);
-            
+            const active = history.find(
+                record => record.status === "checked_in" && !record.check_out_time
+            );
+
             if (active) {
                 // Check if individual is in the default center (if defaultCenterId is provided)
                 const isInDefaultCenter = !defaultCenterId || active.center_id === defaultCenterId;
-                
+
                 if (isInDefaultCenter) {
-                    setResolvedRecords(prev => [...prev, { 
-                        individual, 
-                        record_id: active.record_id,
-                        center_id: active.center_id 
-                    }]);
+                    setResolvedRecords(prev => [
+                        ...prev,
+                        {
+                            individual,
+                            record_id: active.record_id,
+                            center_id: active.center_id,
+                        },
+                    ]);
                     setError(null);
                 } else {
                     const activeCenterDisplay = formatCenterDisplay(active.center_id);
                     const defaultCenterDisplay = formatCenterDisplay(defaultCenterId);
                     setError(
-                        `Individual ${individual.first_name} ${individual.last_name} is checked into ${activeCenterDisplay}, not your center (${defaultCenterDisplay}).`
+                        [
+                            `Individual ${individualName(individual)} is checked into`,
+                            `${activeCenterDisplay}, not your center (${defaultCenterDisplay}).`,
+                        ].join(" ")
                     );
                     // Remove individual if not in the right center
-                    setSelectedIndividuals(prev => prev.filter(ind => ind.individual_id !== individual.individual_id));
+                    setSelectedIndividuals(prev =>
+                        prev.filter(ind => ind.individual_id !== individual.individual_id)
+                    );
                 }
             } else {
-                setError(`Individual ${individual.first_name} ${individual.last_name} has no active check-in record to check out.`);
+                setError(
+                    [
+                        `Individual ${individualName(individual)}`,
+                        "has no active check-in record to check out.",
+                    ].join(" ")
+                );
                 // Remove individual if no active record found
-                setSelectedIndividuals(prev => prev.filter(ind => ind.individual_id !== individual.individual_id));
+                setSelectedIndividuals(prev =>
+                    prev.filter(ind => ind.individual_id !== individual.individual_id)
+                );
             }
-        } catch (err: any) {
-            setError(err?.message || "Failed to retrieve attendance history");
+        } catch (error: unknown) {
+            setError(errorMessage(error, "Failed to retrieve attendance history"));
             // Remove individual if error
-            setSelectedIndividuals(prev => prev.filter(ind => ind.individual_id !== individual.individual_id));
+            setSelectedIndividuals(prev =>
+                prev.filter(ind => ind.individual_id !== individual.individual_id)
+            );
         } finally {
             setFindingRecords(false);
         }
@@ -244,7 +290,9 @@ export function CheckOutModal({
 
     const handleRemoveIndividual = (individualId: number) => {
         setSelectedIndividuals(prev => prev.filter(ind => ind.individual_id !== individualId));
-        setResolvedRecords(prev => prev.filter(record => record.individual.individual_id !== individualId));
+        setResolvedRecords(prev =>
+            prev.filter(record => record.individual.individual_id !== individualId)
+        );
     };
 
     const handleClearAllIndividuals = () => {
@@ -258,26 +306,24 @@ export function CheckOutModal({
         page: number;
         limit: number;
     }): Promise<{ success: boolean; data: Individual[]; totalRecords: number }> => {
-        console.log("handleModalSearch called with:", params);
-        
         // Don't update state if nothing changed
         if (modalSearchQuery === params.search && modalPage === params.page) {
             return {
                 success: true,
                 data: modalSearchResults,
-                totalRecords: modalTotalRecords
+                totalRecords: modalTotalRecords,
             };
         }
-        
+
         // Update local state
         setModalSearchQuery(params.search);
         setModalPage(params.page);
-        
+
         // Clear any existing timeout
         if (searchTimeoutRef.current) {
             clearTimeout(searchTimeoutRef.current);
         }
-        
+
         // If search is empty, clear results immediately
         if (params.search.trim() === "") {
             setModalSearchResults([]);
@@ -285,63 +331,64 @@ export function CheckOutModal({
             return {
                 success: true,
                 data: [],
-                totalRecords: 0
+                totalRecords: 0,
             };
         }
-        
+
         // Return a promise that resolves with the search results
-        return new Promise<{ success: boolean; data: Individual[]; totalRecords: number }>((resolve) => {
-            searchTimeoutRef.current = setTimeout(async () => {
-                try {
-                    const { IndividualService } = await import("@/services/individualService");
-                    const response = await IndividualService.getIndividuals({
-                        search: params.search,
-                        page: params.page,
-                        limit: params.limit,
-                        sortBy: "last_name",
-                        sortOrder: "asc",
-                    });
-                    
-                    if (response.success && response.data) {
-                        const results = response.data.results || [];
-                        const total = response.data.pagination?.total_items || 0;
-                        
-                        setModalSearchResults(results);
-                        setModalTotalRecords(total);
-                        resolve({
-                            success: true,
-                            data: results,
-                            totalRecords: total
+        return new Promise<{ success: boolean; data: Individual[]; totalRecords: number }>(
+            resolve => {
+                searchTimeoutRef.current = setTimeout(async () => {
+                    try {
+                        const { IndividualService } = await import("@/services/individualService");
+                        const response = await IndividualService.getIndividuals({
+                            search: params.search,
+                            page: params.page,
+                            limit: params.limit,
+                            sortBy: "last_name",
+                            sortOrder: "asc",
                         });
-                    } else {
+
+                        if (response.success && response.data) {
+                            const results = response.data.results || [];
+                            const total = response.data.pagination?.total_items || 0;
+
+                            setModalSearchResults(results);
+                            setModalTotalRecords(total);
+                            resolve({
+                                success: true,
+                                data: results,
+                                totalRecords: total,
+                            });
+                        } else {
+                            resolve({
+                                success: false,
+                                data: [],
+                                totalRecords: 0,
+                            });
+                        }
+                    } catch {
                         resolve({
                             success: false,
                             data: [],
-                            totalRecords: 0
+                            totalRecords: 0,
                         });
                     }
-                } catch (error) {
-                    console.error("Search failed:", error);
-                    resolve({
-                        success: false,
-                        data: [],
-                        totalRecords: 0
-                    });
-                }
-            }, 500);
-        });
+                }, 500);
+            }
+        );
     };
 
     // HANDLE PAGE CHANGE
     const handleModalPageChange = (page: number) => {
         setModalPage(page);
-        
+
         // Clear any pending search timeout
         if (searchTimeoutRef.current) {
             clearTimeout(searchTimeoutRef.current);
             searchTimeoutRef.current = null;
         }
-        
+
         // If search is empty, clear results immediately
         if (modalSearchQuery.trim() === "") {
             setModalSearchResults([]);
@@ -351,7 +398,7 @@ export function CheckOutModal({
             handleModalSearch({
                 search: modalSearchQuery,
                 page: page,
-                limit: 10
+                limit: 10,
             });
         }
     };
@@ -361,15 +408,20 @@ export function CheckOutModal({
             return isSubmitting ? "Checking Out..." : "Check Out";
         } else {
             const count = resolvedRecords.length;
-            return isSubmitting 
-                ? `Checking Out ${count} Individual${count !== 1 ? 's' : ''}...` 
-                : `Check Out ${count} Individual${count !== 1 ? 's' : ''}`;
+            return isSubmitting
+                ? `Checking Out ${count} Individual${count !== 1 ? "s" : ""}...`
+                : `Check Out ${count} Individual${count !== 1 ? "s" : ""}`;
         }
     };
 
+    const removeIndividualLabel = (individual: Individual) =>
+        `Remove ${individualName(individual)}`;
+
+    const recordCenterLabel = (centerId: number) => ` • Center: ${formatCenterDisplay(centerId)}`;
+
     // Info message about center restriction
     const centerRestrictionInfo = defaultCenterId ? (
-        <div className="bg-blue-50 dark:bg-blue-950 text-blue-700 dark:text-blue-300 p-3 rounded-md text-sm border border-blue-200 dark:border-blue-800 mb-4">
+        <div className={restrictedCenterClass}>
             <div className="font-medium">Check-out Restriction:</div>
             <div>
                 You can only check out individuals currently checked into{" "}
@@ -385,10 +437,16 @@ export function CheckOutModal({
                     <DialogTitle className="text-lg font-semibold">
                         {recordId ? "Check Out Individual" : "Check Out Individuals"}
                     </DialogTitle>
+                    <DialogDescription className="sr-only">
+                        Complete an individual or batch evacuation-center check-out.
+                    </DialogDescription>
                 </DialogHeader>
                 <div className="space-y-6 py-4">
                     {error && (
-                        <div className="bg-destructive/15 text-destructive p-3 rounded-md text-sm">
+                        <div
+                            role="alert"
+                            className="bg-destructive/15 text-destructive p-3 rounded-md text-sm"
+                        >
                             {error}
                         </div>
                     )}
@@ -399,16 +457,17 @@ export function CheckOutModal({
                         // Single checkout UI
                         <div className="space-y-4">
                             <p className="text-sm text-muted-foreground">
-                                Are you sure you want to check out this individual? This will mark their
-                                attendance as completed.
+                                Are you sure you want to check out this individual? This will mark
+                                their attendance as completed.
                             </p>
 
                             <div className="space-y-2">
                                 <Label className="text-sm font-medium">Notes</Label>
                                 <Textarea
+                                    aria-label="Check-out notes"
                                     value={notes}
                                     onChange={e => setNotes(e.target.value)}
-                                    placeholder="Reason for check-out or additional notes (optional)"
+                                    placeholder={singleNotesPlaceholder}
                                     className="w-full min-h-[80px]"
                                     maxLength={100}
                                 />
@@ -425,7 +484,8 @@ export function CheckOutModal({
                                 <div className="space-y-3 border-b pb-6">
                                     <div className="flex justify-between items-center">
                                         <Label className="text-base font-semibold">
-                                            Selected Individuals ({resolvedRecords.length} ready for check-out)
+                                            Selected Individuals ({resolvedRecords.length} ready for
+                                            check-out)
                                         </Label>
                                         <Button
                                             variant="outline"
@@ -439,37 +499,51 @@ export function CheckOutModal({
                                     </div>
                                     <div className="space-y-2 max-h-40 overflow-y-auto">
                                         {selectedIndividuals.map(individual => {
-                                            const record = resolvedRecords.find(r => r.individual.individual_id === individual.individual_id);
+                                            const record = resolvedRecords.find(
+                                                r =>
+                                                    r.individual.individual_id ===
+                                                    individual.individual_id
+                                            );
                                             return (
                                                 <div
                                                     key={individual.individual_id}
-                                                    className={`flex justify-between items-center p-3 rounded-lg border ${
-                                                        record
-                                                            ? "bg-green-50 dark:bg-green-950 border-green-200 dark:border-green-800"
-                                                            : "bg-yellow-50 dark:bg-yellow-950 border-yellow-200 dark:border-yellow-800"
-                                                    }`}
+                                                    className={selectedIndividualClass(
+                                                        Boolean(record)
+                                                    )}
                                                 >
                                                     <div className="flex-1">
                                                         <div className="font-medium">
-                                                            {individual.first_name} {individual.last_name}
+                                                            {individual.first_name}{" "}
+                                                            {individual.last_name}
                                                         </div>
-                                                        <div className="text-sm text-muted-foreground">
+                                                        <div
+                                                            className={
+                                                                selectedIndividualDetailsClass
+                                                            }
+                                                        >
                                                             ID: {individual.individual_id}
-                                                            {individual.gender && ` • ${individual.gender}`}
+                                                            {individual.gender &&
+                                                                ` • ${individual.gender}`}
                                                             {individual.date_of_birth &&
-                                                                ` • DOB: ${new Date(individual.date_of_birth).toLocaleDateString()}`}
+                                                                ` • DOB: ${new Date(
+                                                                    individual.date_of_birth
+                                                                ).toLocaleDateString()}`}
                                                         </div>
-                                                        <div className="flex items-center gap-1 mt-1 text-sm">
+                                                        <div className={householdDetailsClass}>
                                                             <Home className="h-3 w-3" />
                                                             Household ID: {individual.household_id}
                                                         </div>
                                                         {record ? (
-                                                            <div className="text-sm text-green-600 mt-1">
-                                                                ✓ Ready to check out (Record #{record.record_id})
-                                                                {record.center_id && ` • Center: ${formatCenterDisplay(record.center_id)}`}
+                                                            <div className={readyRecordClass}>
+                                                                ✓ Ready to check out (Record #
+                                                                {record.record_id})
+                                                                {record.center_id &&
+                                                                    recordCenterLabel(
+                                                                        record.center_id
+                                                                    )}
                                                             </div>
                                                         ) : (
-                                                            <div className="text-sm text-yellow-600 mt-1">
+                                                            <div className={findingRecordClass}>
                                                                 ⏳ Finding active record...
                                                             </div>
                                                         )}
@@ -477,8 +551,15 @@ export function CheckOutModal({
                                                     <Button
                                                         variant="ghost"
                                                         size="sm"
-                                                        onClick={() => handleRemoveIndividual(individual.individual_id)}
-                                                        className="text-destructive hover:text-destructive"
+                                                        onClick={() =>
+                                                            handleRemoveIndividual(
+                                                                individual.individual_id
+                                                            )
+                                                        }
+                                                        aria-label={removeIndividualLabel(
+                                                            individual
+                                                        )}
+                                                        className={destructiveButtonClass}
                                                     >
                                                         <X className="h-4 w-4" />
                                                     </Button>
@@ -489,7 +570,7 @@ export function CheckOutModal({
                                 </div>
                             )}
 
-                            {/* Individual Search and Selection - Using same pattern as CheckInModal */}
+                            {/* Individual search and selection */}
                             <div className="space-y-4 border-b pb-6">
                                 <Label className="text-base font-semibold">
                                     Search and Select Individuals to Check Out *
@@ -502,7 +583,7 @@ export function CheckOutModal({
                                     modalPage={modalPage}
                                     onModalPageChange={handleModalPageChange}
                                     isLoading={modalSearchLoading}
-                                    errorMessage={''}
+                                    errorMessage={""}
                                 />
 
                                 {findingRecords && (
@@ -517,9 +598,10 @@ export function CheckOutModal({
                                 <div className="space-y-2">
                                     <Label className="text-sm font-medium">Notes</Label>
                                     <Textarea
+                                        aria-label="Batch check-out notes"
                                         value={notes}
                                         onChange={e => setNotes(e.target.value)}
-                                        placeholder="Reason for check-out or additional notes (optional) - will apply to all selected individuals"
+                                        placeholder={batchNotesPlaceholder}
                                         className="w-full min-h-[80px]"
                                         maxLength={100}
                                     />
