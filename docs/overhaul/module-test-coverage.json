@@ -888,6 +888,12 @@
       "status": "covered",
       "tests": ["frontend/src/components/features/transfer/EvacuationCentersList.test.tsx"],
       "behavior": "Handles zero-capacity centers without non-finite percentages, filters empty results, and forwards selected centers."
+    },
+    {
+      "path": "frontend/src/components/ui/alert.tsx",
+      "status": "covered",
+      "tests": ["frontend/src/components/ui/alert.test.tsx"],
+      "behavior": "Renders title and description content as an accessible alert, including the destructive variant."
     }
   ]
 }
