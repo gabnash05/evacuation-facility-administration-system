@@ -858,6 +858,12 @@
       "status": "covered",
       "tests": ["frontend/src/components/features/attendance/CheckOutModal.test.tsx"],
       "behavior": "Completes a selected attendance-record checkout through the supplied workflow and preserves optional check-out notes."
+    },
+    {
+      "path": "frontend/src/components/features/attendance/AttendanceTableToolbarV2.tsx",
+      "status": "covered",
+      "tests": ["frontend/src/components/features/attendance/AttendanceTableToolbarV2.test.tsx"],
+      "behavior": "Forwards named search and attendance actions, exposes filter state, and disables all workflow controls while loading."
     }
   ]
 }
