@@ -900,6 +900,12 @@
       "status": "covered",
       "tests": ["frontend/src/components/ui/avatar.test.tsx"],
       "behavior": "Renders fallback content within the composable avatar root."
+    },
+    {
+      "path": "frontend/src/components/ui/badge.tsx",
+      "status": "covered",
+      "tests": ["frontend/src/components/ui/badge.test.tsx"],
+      "behavior": "Renders semantic badge content with its selected visual variant."
     }
   ]
 }
