@@ -140,3 +140,12 @@ frontend suite pass (110 test files, 170 tests).
 reconciliation now reports 215 executable modules, 159 covered modules, 51
 unmapped modules, and five valid exemptions. Focused Vitest, targeted ESLint,
 TypeScript, and the full frontend suite pass (111 test files, 171 tests).
+
+`FRONTEND-018` is complete: route/import search confirmed that
+`CityAdminDashboardSample` was unreferenced and that the profile/settings files
+were zero-byte stubs, so the three dead sources were retired. TypeScript, the
+full frontend suite (111 files, 171 tests), and production Vite build pass. The
+repository-wide ESLint gate remains a recorded unrelated baseline failure (763
+errors, 158 warnings) and is not masked by this deletion. The direct-test
+reconciliation now reports 212 executable modules, 159 covered modules, 48
+unmapped modules, and five valid exemptions.
