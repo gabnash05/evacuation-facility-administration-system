@@ -918,6 +918,18 @@
       "status": "covered",
       "tests": ["frontend/src/components/ui/input.test.tsx"],
       "behavior": "Forwards controlled changes and preserves disabled input state."
+    },
+    {
+      "path": "frontend/src/components/ui/label.tsx",
+      "status": "covered",
+      "tests": ["frontend/src/components/ui/label.test.tsx"],
+      "behavior": "Associates visible label text with its referenced form control."
+    },
+    {
+      "path": "frontend/src/components/ui/separator.tsx",
+      "status": "covered",
+      "tests": ["frontend/src/components/ui/separator.test.tsx"],
+      "behavior": "Renders a semantic non-decorative separator with its selected orientation."
     }
   ]
 }
