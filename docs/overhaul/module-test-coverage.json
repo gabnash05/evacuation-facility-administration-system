@@ -1019,6 +1019,12 @@
       "status": "covered",
       "tests": ["frontend/src/components/ui/skeleton.test.tsx"],
       "behavior": "Renders the loading affordance while forwarding standard element properties."
+    },
+    {
+      "path": "frontend/src/components/ui/card.tsx",
+      "status": "covered",
+      "tests": ["frontend/src/components/ui/card.test.tsx"],
+      "behavior": "Composes each named card region and forwards standard element properties."
     }
   ]
 }

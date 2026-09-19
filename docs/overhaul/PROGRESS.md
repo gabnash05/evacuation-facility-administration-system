@@ -108,3 +108,9 @@ authoritative coverage check for this host.
 Vitest, targeted ESLint, TypeScript, and the full frontend suite pass (106 test
 files, 166 tests). Expected mock-error output from the pre-existing allocation
 and expired-session regression paths remains non-failing suite noise.
+
+`TEST-003I-FRONTEND-MODULE-COVERAGE` also directly covers every composition
+region of the shared `Card` primitive. Read-only reconciliation now reports 215
+executable modules, 155 covered modules, 55 unmapped modules, and five valid
+exemptions. Focused Vitest, targeted ESLint, TypeScript, and the full frontend
+suite pass (107 test files, 167 tests).
