@@ -912,6 +912,12 @@
       "status": "covered",
       "tests": ["frontend/src/components/ui/button.test.tsx"],
       "behavior": "Forwards enabled clicks and prevents interaction while disabled."
+    },
+    {
+      "path": "frontend/src/components/ui/input.tsx",
+      "status": "covered",
+      "tests": ["frontend/src/components/ui/input.test.tsx"],
+      "behavior": "Forwards controlled changes and preserves disabled input state."
     }
   ]
 }
