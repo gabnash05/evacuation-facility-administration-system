@@ -114,3 +114,10 @@ region of the shared `Card` primitive. Read-only reconciliation now reports 215
 executable modules, 155 covered modules, 55 unmapped modules, and five valid
 exemptions. Focused Vitest, targeted ESLint, TypeScript, and the full frontend
 suite pass (107 test files, 167 tests).
+
+`TEST-003I-FRONTEND-MODULE-COVERAGE` also directly covers the shared
+`Checkbox` primitive's accessible selection and disabled-state behavior.
+Read-only reconciliation now reports 215 executable modules, 156 covered
+modules, 54 unmapped modules, and five valid exemptions. Focused Vitest,
+targeted ESLint, TypeScript, and the full frontend suite pass (108 test files,
+168 tests).
