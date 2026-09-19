@@ -936,6 +936,12 @@
       "status": "covered",
       "tests": ["frontend/src/components/ui/textarea.test.tsx"],
       "behavior": "Forwards controlled changes and retains disabled text-area state."
+    },
+    {
+      "path": "frontend/src/components/ui/progress.tsx",
+      "status": "covered",
+      "tests": ["frontend/src/components/ui/progress.test.tsx"],
+      "behavior": "Exposes its numeric value to assistive technology and aligns the indicator with that value."
     }
   ]
 }
