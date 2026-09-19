@@ -149,3 +149,11 @@ repository-wide ESLint gate remains a recorded unrelated baseline failure (763
 errors, 158 warnings) and is not masked by this deletion. The direct-test
 reconciliation now reports 212 executable modules, 159 covered modules, 48
 unmapped modules, and five valid exemptions.
+
+`TEST-003I-FRONTEND-MODULE-COVERAGE` now directly covers the shared `Dialog`
+primitive's accessible modal behavior, built-in close action, and intentional
+close-control omission. Focused Vitest, targeted ESLint, TypeScript, and the
+full frontend suite pass (112 files, 173 tests) with the test fixtures meeting
+Radix's required dialog-description contract. Read-only reconciliation reports
+212 executable modules, 160 covered modules, 47 unmapped modules, and five
+valid exemptions.

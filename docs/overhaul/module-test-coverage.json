@@ -1049,6 +1049,12 @@
       "status": "covered",
       "tests": ["frontend/src/components/ui/scroll-area.test.tsx"],
       "behavior": "Renders an accessible viewport and forwards caller properties."
+    },
+    {
+      "path": "frontend/src/components/ui/dialog.tsx",
+      "status": "covered",
+      "tests": ["frontend/src/components/ui/dialog.test.tsx"],
+      "behavior": "Opens a labelled modal, closes through its built-in control, and supports intentional close-control omission."
     }
   ]
 }
