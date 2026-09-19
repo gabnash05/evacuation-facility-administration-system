@@ -134,3 +134,9 @@ selection state and its visible-panel transition. Read-only reconciliation now
 reports 215 executable modules, 158 covered modules, 52 unmapped modules, and
 five valid exemptions. Focused Vitest, targeted ESLint, TypeScript, and the full
 frontend suite pass (110 test files, 170 tests).
+
+`TEST-003I-FRONTEND-MODULE-COVERAGE` also directly covers the shared
+`ScrollArea` root's accessible viewport and property forwarding. Read-only
+reconciliation now reports 215 executable modules, 159 covered modules, 51
+unmapped modules, and five valid exemptions. Focused Vitest, targeted ESLint,
+TypeScript, and the full frontend suite pass (111 test files, 171 tests).

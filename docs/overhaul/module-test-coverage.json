@@ -1043,6 +1043,12 @@
       "status": "covered",
       "tests": ["frontend/src/components/ui/tabs.test.tsx"],
       "behavior": "Exposes selected tab state and switches the visible panel."
+    },
+    {
+      "path": "frontend/src/components/ui/scroll-area.tsx",
+      "status": "covered",
+      "tests": ["frontend/src/components/ui/scroll-area.test.tsx"],
+      "behavior": "Renders an accessible viewport and forwards caller properties."
     }
   ]
 }
