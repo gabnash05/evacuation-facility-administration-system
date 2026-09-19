@@ -128,3 +128,9 @@ forwarding. Read-only reconciliation now reports 215 executable modules, 157
 covered modules, 53 unmapped modules, and five valid exemptions. Focused
 Vitest, targeted ESLint, TypeScript, and the full frontend suite pass (109 test
 files, 169 tests).
+
+`TEST-003I-FRONTEND-MODULE-COVERAGE` also directly covers shared `Tabs`
+selection state and its visible-panel transition. Read-only reconciliation now
+reports 215 executable modules, 158 covered modules, 52 unmapped modules, and
+five valid exemptions. Focused Vitest, targeted ESLint, TypeScript, and the full
+frontend suite pass (110 test files, 170 tests).
