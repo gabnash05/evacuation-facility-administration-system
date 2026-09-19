@@ -882,6 +882,12 @@
       "status": "covered",
       "tests": ["frontend/src/components/features/transfer/TransferReasonSelect.test.tsx"],
       "behavior": "Exposes a named controlled transfer-reason selector and prevents selection when disabled."
+    },
+    {
+      "path": "frontend/src/components/features/transfer/EvacuationCentersList.tsx",
+      "status": "covered",
+      "tests": ["frontend/src/components/features/transfer/EvacuationCentersList.test.tsx"],
+      "behavior": "Handles zero-capacity centers without non-finite percentages, filters empty results, and forwards selected centers."
     }
   ]
 }
