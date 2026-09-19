@@ -7,7 +7,7 @@ import {
     LogOut,
     Move,
     Trash2,
-    CheckCircle
+    CheckCircle,
 } from "lucide-react";
 import {
     Table,
@@ -26,6 +26,13 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { DeleteAttendanceDialog } from "./DeleteAttendanceDialog";
 import { cn } from "@/lib/utils";
+
+const mutedTextClass = "text-sm text-muted-foreground";
+const sortableHeaderButtonClass =
+    "flex h-auto w-full items-center justify-between rounded-none px-4 py-2";
+const headerContentClass = "flex items-center justify-between px-4 py-2";
+const destructiveMenuItemClass = "flex items-center gap-2 text-destructive focus:text-destructive";
+const actionMenuLabel = (individualName: string) => `Actions for ${individualName}`;
 
 export interface AttendanceRecord {
     record_id: number;
@@ -97,11 +104,11 @@ export function AttendanceTable({
         if (!sortConfig || sortConfig.key !== key || sortConfig.direction === null) {
             return <ChevronsUpDown className="h-4 w-4 text-muted-foreground" />;
         }
-        
+
         if (sortConfig.direction === "asc") {
             return <ChevronUp className="h-4 w-4" />;
         }
-        
+
         return <ChevronDown className="h-4 w-4" />;
     };
 
@@ -139,42 +146,52 @@ export function AttendanceTable({
 
     const getStatusBadge = (status: string) => {
         // Status map with clean labels and colors
-        const statusMap: Record<string, { label: string, bg: string, text: string, border: string }> = {
-            "checked_in": {
+        const statusMap: Record<
+            string,
+            { label: string; bg: string; text: string; border: string }
+        > = {
+            checked_in: {
                 label: "Checked In",
                 bg: "bg-green-100",
                 text: "text-green-800",
-                border: "border border-green-200"
+                border: "border border-green-200",
             },
-            "checked_out": {
+            checked_out: {
                 label: "Checked Out",
                 bg: "bg-gray-100",
                 text: "text-gray-800",
-                border: "border border-gray-200"
+                border: "border border-gray-200",
             },
-            "transferred": {
+            transferred: {
                 label: "Transferred",
                 bg: "bg-orange-100",
                 text: "text-orange-800",
-                border: "border border-orange-200"
-            }
+                border: "border border-orange-200",
+            },
         };
-        
+
         // Get status config or create default
         const statusConfig = statusMap[status] || {
-            label: status 
+            label: status
                 ? status
-                    .split('_')
-                    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-                    .join(' ')
-                : 'Unknown',
+                      .split("_")
+                      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+                      .join(" ")
+                : "Unknown",
             bg: "bg-gray-100",
             text: "text-gray-800",
-            border: "border border-gray-200"
+            border: "border border-gray-200",
         };
-        
+
         return (
-            <span className={`px-3 py-1.5 rounded-full text-sm font-medium ${statusConfig.bg} ${statusConfig.text} ${statusConfig.border}`}>
+            <span
+                className={cn(
+                    "px-3 py-1.5 rounded-full text-sm font-medium",
+                    statusConfig.bg,
+                    statusConfig.text,
+                    statusConfig.border
+                )}
+            >
                 {statusConfig.label}
             </span>
         );
@@ -191,14 +208,33 @@ export function AttendanceTable({
                                     key={header.key}
                                     className={cn(
                                         "font-semibold text-foreground",
-                                        header.sortable && "cursor-pointer hover:bg-muted"
+                                        header.sortable && "p-0 hover:bg-muted"
                                     )}
-                                    onClick={header.sortable ? () => onSort(header.key) : undefined}
+                                    aria-sort={
+                                        header.sortable && sortConfig?.key === header.key
+                                            ? sortConfig.direction === "asc"
+                                                ? "ascending"
+                                                : sortConfig.direction === "desc"
+                                                  ? "descending"
+                                                  : "none"
+                                            : undefined
+                                    }
                                 >
-                                    <div className="flex items-center justify-between">
-                                        <span>{header.label}</span>
-                                        {header.sortable && getSortIcon(header.key)}
-                                    </div>
+                                    {header.sortable ? (
+                                        <Button
+                                            type="button"
+                                            variant="ghost"
+                                            className={sortableHeaderButtonClass}
+                                            onClick={() => onSort(header.key)}
+                                        >
+                                            <span>{header.label}</span>
+                                            {getSortIcon(header.key)}
+                                        </Button>
+                                    ) : (
+                                        <div className={headerContentClass}>
+                                            <span>{header.label}</span>
+                                        </div>
+                                    )}
                                 </TableHead>
                             ))}
                             <TableHead className="text-right font-semibold text-foreground">
@@ -221,11 +257,13 @@ export function AttendanceTable({
                         ) : (
                             data.map((row, index) => {
                                 // Determine if actions should be shown
-                                const actionState = showActions ? showActions(row) : {
-                                    canCheckOut: row.can_check_out || false,
-                                    canTransfer: row.can_transfer || false,
-                                    canCheckIn: false,
-                                };
+                                const actionState = showActions
+                                    ? showActions(row)
+                                    : {
+                                          canCheckOut: row.can_check_out || false,
+                                          canTransfer: row.can_transfer || false,
+                                          canCheckIn: false,
+                                      };
 
                                 return (
                                     <TableRow
@@ -242,23 +280,30 @@ export function AttendanceTable({
                                                 ) : header.key === "age" ? (
                                                     <span className="font-medium">{row.age}</span>
                                                 ) : header.key === "last_check_in_time" ? (
-                                                    // Check if it's already formatted (from our mapping)
-                                                    typeof row.last_check_in_time === 'string' && 
-                                                    (row.last_check_in_time === "Never" || row.last_check_in_time.includes(",")) ? (
-                                                        <span className="text-sm text-muted-foreground">
+                                                    typeof row.last_check_in_time === "string" &&
+                                                    (row.last_check_in_time === "Never" ||
+                                                        row.last_check_in_time.includes(",")) ? (
+                                                        <span className={mutedTextClass}>
                                                             {row.last_check_in_time}
                                                         </span>
                                                     ) : row.last_check_in_time ? (
-                                                        <span className="text-sm text-muted-foreground">
-                                                            {new Date(row.last_check_in_time).toLocaleString()}
+                                                        <span className={mutedTextClass}>
+                                                            {new Date(
+                                                                row.last_check_in_time
+                                                            ).toLocaleString()}
                                                         </span>
                                                     ) : (
-                                                        <span className="text-sm text-muted-foreground">Never</span>
+                                                        <span className={mutedTextClass}>
+                                                            Never
+                                                        </span>
                                                     )
-                                                ) : header.key === "current_status" || header.key === "current_center_name" ? (
+                                                ) : header.key === "current_status" ||
+                                                  header.key === "current_center_name" ? (
                                                     // Handle center name and status display
                                                     <span>
-                                                        {row[header.key as keyof AttendanceRecord] || "—"}
+                                                        {row[
+                                                            header.key as keyof AttendanceRecord
+                                                        ] || "—"}
                                                     </span>
                                                 ) : (
                                                     // Default display
@@ -273,6 +318,9 @@ export function AttendanceTable({
                                                         variant="ghost"
                                                         size="icon"
                                                         className="h-8 w-8"
+                                                        aria-label={actionMenuLabel(
+                                                            row.individual_name
+                                                        )}
                                                     >
                                                         <MoreVertical className="h-4 w-4" />
                                                     </Button>
@@ -280,7 +328,9 @@ export function AttendanceTable({
                                                 <DropdownMenuContent align="end">
                                                     {actionState.canCheckOut && (
                                                         <DropdownMenuItem
-                                                            onClick={() => onCheckOut(row.record_id)}
+                                                            onClick={() =>
+                                                                onCheckOut(row.record_id)
+                                                            }
                                                             className="flex items-center gap-2"
                                                         >
                                                             <LogOut className="h-4 w-4" />
@@ -289,7 +339,9 @@ export function AttendanceTable({
                                                     )}
                                                     {actionState.canTransfer && (
                                                         <DropdownMenuItem
-                                                            onClick={() => onTransfer(row.record_id)}
+                                                            onClick={() =>
+                                                                onTransfer(row.record_id)
+                                                            }
                                                             className="flex items-center gap-2"
                                                         >
                                                             <Move className="h-4 w-4" />
@@ -299,7 +351,9 @@ export function AttendanceTable({
                                                     {/* ADD CHECK IN OPTION */}
                                                     {actionState.canCheckIn && onCheckIn && (
                                                         <DropdownMenuItem
-                                                            onClick={() => onCheckIn(row.individual_id, row)}
+                                                            onClick={() =>
+                                                                onCheckIn(row.individual_id, row)
+                                                            }
                                                             className="flex items-center gap-2"
                                                         >
                                                             <CheckCircle className="h-4 w-4" />
@@ -309,7 +363,7 @@ export function AttendanceTable({
                                                     {isSuperAdmin && (
                                                         <DropdownMenuItem
                                                             onClick={() => handleDeleteClick(row)}
-                                                            className="flex items-center gap-2 text-destructive focus:text-destructive"
+                                                            className={destructiveMenuItemClass}
                                                         >
                                                             <Trash2 className="h-4 w-4" />
                                                             Delete
