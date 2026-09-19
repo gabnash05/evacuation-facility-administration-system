@@ -1031,6 +1031,12 @@
       "status": "covered",
       "tests": ["frontend/src/components/ui/checkbox.test.tsx"],
       "behavior": "Reports selection changes accessibly and retains disabled state."
+    },
+    {
+      "path": "frontend/src/components/ui/table.tsx",
+      "status": "covered",
+      "tests": ["frontend/src/components/ui/table.test.tsx"],
+      "behavior": "Preserves semantic table regions, table heading scope, caption, and caller properties."
     }
   ]
 }

@@ -121,3 +121,10 @@ Read-only reconciliation now reports 215 executable modules, 156 covered
 modules, 54 unmapped modules, and five valid exemptions. Focused Vitest,
 targeted ESLint, TypeScript, and the full frontend suite pass (108 test files,
 168 tests).
+
+`TEST-003I-FRONTEND-MODULE-COVERAGE` also directly covers the shared `Table`
+primitive's semantic regions, heading scope, caption, and caller-property
+forwarding. Read-only reconciliation now reports 215 executable modules, 157
+covered modules, 53 unmapped modules, and five valid exemptions. Focused
+Vitest, targeted ESLint, TypeScript, and the full frontend suite pass (109 test
+files, 169 tests).
