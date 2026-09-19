@@ -101,3 +101,10 @@ full frontend validation passes 104 files and 164 tests; TypeScript and each
 touched module's Prettier/ESLint checks pass. The configured Python verifier
 remains host-denied, so the equivalent read-only Node reconciliation is the
 authoritative coverage check for this host.
+
+`TEST-003I-FRONTEND-MODULE-COVERAGE` now also directly covers the shared
+`Skeleton` primitive. Read-only reconciliation reports 215 executable modules,
+154 covered modules, 56 unmapped modules, and five valid exemptions. Focused
+Vitest, targeted ESLint, TypeScript, and the full frontend suite pass (106 test
+files, 166 tests). Expected mock-error output from the pre-existing allocation
+and expired-session regression paths remains non-failing suite noise.

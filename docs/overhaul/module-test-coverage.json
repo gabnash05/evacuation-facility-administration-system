@@ -93,7 +93,10 @@
     {
       "path": "backend/app/routes/user.py",
       "status": "covered",
-      "tests": ["backend/tests/test_user_route_guards.py", "backend/tests/test_user_authorization.py"],
+      "tests": [
+        "backend/tests/test_user_route_guards.py",
+        "backend/tests/test_user_authorization.py"
+      ],
       "behavior": "Resolves persisted JWT actors and rejects unauthorized user-management requests."
     },
     {
@@ -153,13 +156,17 @@
     {
       "path": "frontend/src/components/features/dashboard/ErrorAlert.tsx",
       "status": "covered",
-      "tests": ["frontend/src/components/features/dashboard/ErrorAlert.test.tsx"],
+      "tests": [
+        "frontend/src/components/features/dashboard/ErrorAlert.test.tsx"
+      ],
       "behavior": "Exposes visible errors as accessible alerts."
     },
     {
       "path": "frontend/src/components/features/aid-allocation/EditAllocationForm.tsx",
       "status": "covered",
-      "tests": ["frontend/src/components/features/aid-allocation/EditAllocationForm.test.tsx"],
+      "tests": [
+        "frontend/src/components/features/aid-allocation/EditAllocationForm.test.tsx"
+      ],
       "behavior": "Sends only mutable allocation fields; remaining inventory is server-owned."
     },
     {
@@ -352,7 +359,9 @@
     {
       "path": "frontend/src/components/features/dashboard/EventDetailsModal.tsx",
       "status": "covered",
-      "tests": ["frontend/src/components/features/dashboard/EventDetailsModal.test.tsx"],
+      "tests": [
+        "frontend/src/components/features/dashboard/EventDetailsModal.test.tsx"
+      ],
       "behavior": "Displays event details without logging selected event data."
     },
     {
@@ -526,7 +535,9 @@
     {
       "path": "frontend/src/components/features/auth/ProtectedRoute.tsx",
       "status": "covered",
-      "tests": ["frontend/src/components/features/auth/ProtectedRoute.test.tsx"],
+      "tests": [
+        "frontend/src/components/features/auth/ProtectedRoute.test.tsx"
+      ],
       "behavior": "Renders loading, redirects anonymous or unauthorized visitors, and admits authenticated users with an allowed role."
     },
     {
@@ -646,37 +657,49 @@
     {
       "path": "frontend/src/components/features/evacuation-center/ConfirmationDialog.tsx",
       "status": "covered",
-      "tests": ["frontend/src/components/features/evacuation-center/ConfirmationDialog.test.tsx"],
+      "tests": [
+        "frontend/src/components/features/evacuation-center/ConfirmationDialog.test.tsx"
+      ],
       "behavior": "Displays the supplied confirmation action and disables duplicate actions while saving."
     },
     {
       "path": "frontend/src/components/features/evacuation-center/DuplicateCenterDialog.tsx",
       "status": "covered",
-      "tests": ["frontend/src/components/features/evacuation-center/DuplicateCenterDialog.test.tsx"],
+      "tests": [
+        "frontend/src/components/features/evacuation-center/DuplicateCenterDialog.test.tsx"
+      ],
       "behavior": "Identifies the conflicting center and provides an acknowledgement action."
     },
     {
       "path": "frontend/src/components/features/evacuation-center/DeleteCenterDialog.tsx",
       "status": "covered",
-      "tests": ["frontend/src/components/features/evacuation-center/DeleteCenterDialog.test.tsx"],
+      "tests": [
+        "frontend/src/components/features/evacuation-center/DeleteCenterDialog.test.tsx"
+      ],
       "behavior": "Identifies the center selected for deletion and disables duplicate destructive actions while pending."
     },
     {
       "path": "frontend/src/components/features/evacuation-center/SuccessToast.tsx",
       "status": "covered",
-      "tests": ["frontend/src/components/features/evacuation-center/SuccessToast.test.tsx"],
+      "tests": [
+        "frontend/src/components/features/evacuation-center/SuccessToast.test.tsx"
+      ],
       "behavior": "Renders only while open and invokes its supplied close handler after the configured duration."
     },
     {
       "path": "frontend/src/components/features/evacuation-center/EvacuationCenterTablePagination.tsx",
       "status": "covered",
-      "tests": ["frontend/src/components/features/evacuation-center/EvacuationCenterTablePagination.test.tsx"],
+      "tests": [
+        "frontend/src/components/features/evacuation-center/EvacuationCenterTablePagination.test.tsx"
+      ],
       "behavior": "Reports pagination ranges and keeps navigation bounded by the available page range."
     },
     {
       "path": "frontend/src/components/features/evacuation-center/EvacuationCenterTableToolbar.tsx",
       "status": "covered",
-      "tests": ["frontend/src/components/features/evacuation-center/EvacuationCenterTableToolbar.test.tsx"],
+      "tests": [
+        "frontend/src/components/features/evacuation-center/EvacuationCenterTableToolbar.test.tsx"
+      ],
       "behavior": "Forwards search/add actions and disables additions while loading."
     },
     {
@@ -730,7 +753,9 @@
     {
       "path": "frontend/src/components/features/dashboard/EventHistoryTable.tsx",
       "status": "covered",
-      "tests": ["frontend/src/components/features/dashboard/EventHistoryTable.test.tsx"],
+      "tests": [
+        "frontend/src/components/features/dashboard/EventHistoryTable.test.tsx"
+      ],
       "behavior": "Blocks creation while an active event exists, bounds pagination, and supplies an explicit empty state."
     },
     {
@@ -742,7 +767,9 @@
     {
       "path": "frontend/src/components/features/evacuation-center/EvacuationCenterTable.tsx",
       "status": "covered",
-      "tests": ["frontend/src/components/features/evacuation-center/EvacuationCenterTable.test.tsx"],
+      "tests": [
+        "frontend/src/components/features/evacuation-center/EvacuationCenterTable.test.tsx"
+      ],
       "behavior": "Renders an explicit empty state, forwards sort and row actions, caps visual over-capacity, and hides deletion outside the super-admin role."
     },
     {
@@ -754,7 +781,9 @@
     {
       "path": "frontend/src/components/features/events/DeleteEventDialog.tsx",
       "status": "covered",
-      "tests": ["frontend/src/components/features/events/DeleteEventDialog.test.tsx"],
+      "tests": [
+        "frontend/src/components/features/events/DeleteEventDialog.test.tsx"
+      ],
       "behavior": "Identifies the selected event and disables destructive and cancel actions while deletion is pending."
     },
     {
@@ -766,127 +795,169 @@
     {
       "path": "frontend/src/components/features/household/DataTablePagination.tsx",
       "status": "covered",
-      "tests": ["frontend/src/components/features/household/DataTablePagination.test.tsx"],
+      "tests": [
+        "frontend/src/components/features/household/DataTablePagination.test.tsx"
+      ],
       "behavior": "Reports the one-based table page range and enforces supplied previous and next navigation bounds."
     },
     {
       "path": "frontend/src/components/features/household/HouseholdTablePagination.tsx",
       "status": "covered",
-      "tests": ["frontend/src/components/features/household/HouseholdTablePagination.test.tsx"],
+      "tests": [
+        "frontend/src/components/features/household/HouseholdTablePagination.test.tsx"
+      ],
       "behavior": "Renders a bounded sliding page window, forwards selected pages, and disables all navigation during loading."
     },
     {
       "path": "frontend/src/components/features/household/HouseholdTableToolbar.tsx",
       "status": "covered",
-      "tests": ["frontend/src/components/features/household/HouseholdTableToolbar.test.tsx"],
+      "tests": [
+        "frontend/src/components/features/household/HouseholdTableToolbar.test.tsx"
+      ],
       "behavior": "Keeps household search controlled, forwards add requests, and disables search, addition, and page-size selection during loading."
     },
     {
       "path": "frontend/src/components/features/household/HouseholdTable.tsx",
       "status": "covered",
-      "tests": ["frontend/src/components/features/household/HouseholdTable.test.tsx"],
+      "tests": [
+        "frontend/src/components/features/household/HouseholdTable.test.tsx"
+      ],
       "behavior": "Renders empty and populated states, forwards sort, row, and edit actions, restricts deletion by role, and labels each action menu for assistive technology."
     },
     {
       "path": "frontend/src/components/features/household/DeleteHouseholdDialog.tsx",
       "status": "covered",
-      "tests": ["frontend/src/components/features/household/DeleteHouseholdDialog.test.tsx"],
+      "tests": [
+        "frontend/src/components/features/household/DeleteHouseholdDialog.test.tsx"
+      ],
       "behavior": "Identifies the pending household deletion, states its individual-record consequence, and disables destructive and cancel actions while deletion is pending."
     },
     {
       "path": "frontend/src/components/features/household/HouseholdDetailsModal.tsx",
       "status": "covered",
-      "tests": ["frontend/src/components/features/household/HouseholdDetailsModal.test.tsx"],
+      "tests": [
+        "frontend/src/components/features/household/HouseholdDetailsModal.test.tsx"
+      ],
       "behavior": "Presents an accessible details dialog and renders an explicit not-found state when no household identifier is selected."
     },
     {
       "path": "frontend/src/components/features/household/AddIndividualModal.tsx",
       "status": "covered",
-      "tests": ["frontend/src/components/features/household/AddIndividualModal.test.tsx"],
+      "tests": [
+        "frontend/src/components/features/household/AddIndividualModal.test.tsx"
+      ],
       "behavior": "Presents an accessible add-member dialog and rejects incomplete member data before invoking the parent workflow."
     },
     {
       "path": "frontend/src/components/features/household/AddHouseholdModal.tsx",
       "status": "covered",
-      "tests": ["frontend/src/components/features/household/AddHouseholdModal.test.tsx"],
+      "tests": [
+        "frontend/src/components/features/household/AddHouseholdModal.test.tsx"
+      ],
       "behavior": "Presents an accessible creation dialog and rejects missing household-head identity before invoking household creation."
     },
     {
       "path": "frontend/src/components/features/household/EditHouseholdModal.tsx",
       "status": "covered",
-      "tests": ["frontend/src/components/features/household/EditHouseholdModal.test.tsx"],
+      "tests": [
+        "frontend/src/components/features/household/EditHouseholdModal.test.tsx"
+      ],
       "behavior": "Presents an accessible edit dialog and does not fetch household data when no household is selected."
     },
     {
       "path": "frontend/src/components/features/attendance/IndividualTablePagination.tsx",
       "status": "covered",
-      "tests": ["frontend/src/components/features/attendance/IndividualTablePagination.test.tsx"],
+      "tests": [
+        "frontend/src/components/features/attendance/IndividualTablePagination.test.tsx"
+      ],
       "behavior": "Reports the displayed individual range, forwards bounded page navigation, and names and disables controls appropriately."
     },
     {
       "path": "frontend/src/components/features/attendance/DeleteAttendanceDialog.tsx",
       "status": "covered",
-      "tests": ["frontend/src/components/features/attendance/DeleteAttendanceDialog.test.tsx"],
+      "tests": [
+        "frontend/src/components/features/attendance/DeleteAttendanceDialog.test.tsx"
+      ],
       "behavior": "Identifies the selected attendance record, states permanent-removal scope, and disables destructive and cancel actions while deletion is pending."
     },
     {
       "path": "frontend/src/components/features/attendance/AttendanceTableToolbar.tsx",
       "status": "covered",
-      "tests": ["frontend/src/components/features/attendance/AttendanceTableToolbar.test.tsx"],
+      "tests": [
+        "frontend/src/components/features/attendance/AttendanceTableToolbar.test.tsx"
+      ],
       "behavior": "Forwards search and attendance workflow actions and disables all interactive controls during loading."
     },
     {
       "path": "frontend/src/components/features/attendance/AttendanceTable.tsx",
       "status": "covered",
-      "tests": ["frontend/src/components/features/attendance/AttendanceTable.test.tsx"],
+      "tests": [
+        "frontend/src/components/features/attendance/AttendanceTable.test.tsx"
+      ],
       "behavior": "Renders empty state, forwards sortable and checked-in actions for allowed roles, and exposes a named action menu."
     },
     {
       "path": "frontend/src/components/features/attendance/TransferModal.tsx",
       "status": "covered",
-      "tests": ["frontend/src/components/features/attendance/TransferModal.test.tsx"],
+      "tests": [
+        "frontend/src/components/features/attendance/TransferModal.test.tsx"
+      ],
       "behavior": "Describes the transfer workflow, loads destination centers when opened, and blocks transfer without an attendance record."
     },
     {
       "path": "frontend/src/components/features/attendance/CheckInModal.tsx",
       "status": "covered",
-      "tests": ["frontend/src/components/features/attendance/CheckInModal.test.tsx"],
+      "tests": [
+        "frontend/src/components/features/attendance/CheckInModal.test.tsx"
+      ],
       "behavior": "Preselects supplied individuals, loads an active event, and prevents check-in until active-event conditions are met."
     },
     {
       "path": "frontend/src/components/features/attendance/CheckOutModal.tsx",
       "status": "covered",
-      "tests": ["frontend/src/components/features/attendance/CheckOutModal.test.tsx"],
+      "tests": [
+        "frontend/src/components/features/attendance/CheckOutModal.test.tsx"
+      ],
       "behavior": "Completes a selected attendance-record checkout through the supplied workflow and preserves optional check-out notes."
     },
     {
       "path": "frontend/src/components/features/attendance/AttendanceTableToolbarV2.tsx",
       "status": "covered",
-      "tests": ["frontend/src/components/features/attendance/AttendanceTableToolbarV2.test.tsx"],
+      "tests": [
+        "frontend/src/components/features/attendance/AttendanceTableToolbarV2.test.tsx"
+      ],
       "behavior": "Forwards named search and attendance actions, exposes filter state, and disables all workflow controls while loading."
     },
     {
       "path": "frontend/src/components/features/attendance/AttendanceTableV2.tsx",
       "status": "covered",
-      "tests": ["frontend/src/components/features/attendance/AttendanceTableV2.test.tsx"],
+      "tests": [
+        "frontend/src/components/features/attendance/AttendanceTableV2.test.tsx"
+      ],
       "behavior": "Uses keyboard-operable sortable headers with correct sort state and exposes a named per-individual action menu."
     },
     {
       "path": "frontend/src/components/features/attendance/IndividualSearchTable.tsx",
       "status": "covered",
-      "tests": ["frontend/src/components/features/attendance/IndividualSearchTable.test.tsx"],
+      "tests": [
+        "frontend/src/components/features/attendance/IndividualSearchTable.test.tsx"
+      ],
       "behavior": "Provides named search controls, clears controlled search state, and prevents reselection of already selected individuals."
     },
     {
       "path": "frontend/src/components/features/transfer/TransferReasonSelect.tsx",
       "status": "covered",
-      "tests": ["frontend/src/components/features/transfer/TransferReasonSelect.test.tsx"],
+      "tests": [
+        "frontend/src/components/features/transfer/TransferReasonSelect.test.tsx"
+      ],
       "behavior": "Exposes a named controlled transfer-reason selector and prevents selection when disabled."
     },
     {
       "path": "frontend/src/components/features/transfer/EvacuationCentersList.tsx",
       "status": "covered",
-      "tests": ["frontend/src/components/features/transfer/EvacuationCentersList.test.tsx"],
+      "tests": [
+        "frontend/src/components/features/transfer/EvacuationCentersList.test.tsx"
+      ],
       "behavior": "Handles zero-capacity centers without non-finite percentages, filters empty results, and forwards selected centers."
     },
     {
@@ -942,6 +1013,12 @@
       "status": "covered",
       "tests": ["frontend/src/components/ui/progress.test.tsx"],
       "behavior": "Exposes its numeric value to assistive technology and aligns the indicator with that value."
+    },
+    {
+      "path": "frontend/src/components/ui/skeleton.tsx",
+      "status": "covered",
+      "tests": ["frontend/src/components/ui/skeleton.test.tsx"],
+      "behavior": "Renders the loading affordance while forwarding standard element properties."
     }
   ]
 }
