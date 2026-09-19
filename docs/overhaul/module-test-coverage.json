@@ -930,6 +930,12 @@
       "status": "covered",
       "tests": ["frontend/src/components/ui/separator.test.tsx"],
       "behavior": "Renders a semantic non-decorative separator with its selected orientation."
+    },
+    {
+      "path": "frontend/src/components/ui/textarea.tsx",
+      "status": "covered",
+      "tests": ["frontend/src/components/ui/textarea.test.tsx"],
+      "behavior": "Forwards controlled changes and retains disabled text-area state."
     }
   ]
 }
