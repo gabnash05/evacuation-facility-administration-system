@@ -91,3 +91,13 @@ pagination) and `71380da` (household-table pagination). The configured Python
 module-verifier interpreter is presently denied by the host; an equivalent
 read-only Node reconciliation was used to confirm mapping integrity, while the
 Python/Pipenv host-tooling fault remains distinct from repository test results.
+
+`TEST-003I-FRONTEND-MODULE-COVERAGE` continues the required one-test-file-per-
+executable-frontend-module program. Published tickets now cover legacy and V2
+attendance tables/toolbars/dialogs/search, transfer controls, and eight shared
+UI primitives. The current Node reconciliation reports 215 executable modules,
+152 covered modules, 58 unmapped modules, and five valid exemptions. The latest
+full frontend validation passes 104 files and 164 tests; TypeScript and each
+touched module's Prettier/ESLint checks pass. The configured Python verifier
+remains host-denied, so the equivalent read-only Node reconciliation is the
+authoritative coverage check for this host.
