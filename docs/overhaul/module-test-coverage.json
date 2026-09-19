@@ -870,6 +870,12 @@
       "status": "covered",
       "tests": ["frontend/src/components/features/attendance/AttendanceTableV2.test.tsx"],
       "behavior": "Uses keyboard-operable sortable headers with correct sort state and exposes a named per-individual action menu."
+    },
+    {
+      "path": "frontend/src/components/features/attendance/IndividualSearchTable.tsx",
+      "status": "covered",
+      "tests": ["frontend/src/components/features/attendance/IndividualSearchTable.test.tsx"],
+      "behavior": "Provides named search controls, clears controlled search state, and prevents reselection of already selected individuals."
     }
   ]
 }
