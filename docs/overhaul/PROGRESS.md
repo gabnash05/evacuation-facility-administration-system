@@ -204,3 +204,11 @@ uses valid list structure and alert semantics, and removes raw failure logging.
 Focused Vitest, targeted ESLint, TypeScript, and the full frontend suite pass
 (119 files, 180 tests). Read-only reconciliation reports 212 executable
 modules, 167 covered modules, 40 unmapped modules, and five valid exemptions.
+
+`TEST-003I-FRONTEND-MODULE-COVERAGE` now directly covers event-center
+selection and excludes already-associated centers. `FRONTEND-044` adds a modal
+description, error alert semantics, and named add/remove actions; contained
+local class composition also restores targeted lint compliance. Focused Vitest,
+targeted ESLint, TypeScript, and the full frontend suite pass (120 files, 182
+tests). Read-only reconciliation reports 212 executable modules, 168 covered
+modules, 39 unmapped modules, and five valid exemptions.
