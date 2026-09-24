@@ -164,3 +164,9 @@ forwarding through a deterministic Radix boundary mock. Focused Vitest,
 targeted ESLint, TypeScript, and the complete frontend suite pass (113 files,
 174 tests). Read-only reconciliation reports 212 executable modules, 161
 covered modules, 46 unmapped modules, and five valid exemptions.
+
+`TEST-003I-FRONTEND-MODULE-COVERAGE` now also directly covers the shared
+`Sheet` primitive's labelled open/close behavior and left-side rendering.
+Focused Vitest, targeted ESLint, TypeScript, and the full frontend suite pass
+(114 files, 175 tests). Read-only reconciliation reports 212 executable
+modules, 162 covered modules, 45 unmapped modules, and five valid exemptions.
