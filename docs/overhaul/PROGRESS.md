@@ -212,3 +212,11 @@ local class composition also restores targeted lint compliance. Focused Vitest,
 targeted ESLint, TypeScript, and the full frontend suite pass (120 files, 182
 tests). Read-only reconciliation reports 212 executable modules, 168 covered
 modules, 39 unmapped modules, and five valid exemptions.
+
+`TEST-003I-FRONTEND-MODULE-COVERAGE` now directly covers allocation deletion
+confirmation, including allocation identification, separate actions, and
+pending-action lockout. Contained class composition restores targeted lint
+compliance. Focused Vitest, targeted ESLint, TypeScript, and the full frontend
+suite pass (121 files, 184 tests). Read-only reconciliation reports 212
+executable modules, 169 covered modules, 38 unmapped modules, and five valid
+exemptions.

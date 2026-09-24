@@ -1103,6 +1103,12 @@
       "status": "covered",
       "tests": ["frontend/src/components/features/events/AddCenterModal.test.tsx"],
       "behavior": "Describes center selection, excludes already associated centers, and submits the selected set."
+    },
+    {
+      "path": "frontend/src/components/features/aid-allocation/DeleteAidDialog.tsx",
+      "status": "covered",
+      "tests": ["frontend/src/components/features/aid-allocation/DeleteAidDialog.test.tsx"],
+      "behavior": "Identifies the pending allocation deletion, keeps cancel and confirm distinct, and prevents duplicate actions while pending."
     }
   ]
 }
