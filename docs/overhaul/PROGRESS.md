@@ -157,3 +157,10 @@ full frontend suite pass (112 files, 173 tests) with the test fixtures meeting
 Radix's required dialog-description contract. Read-only reconciliation reports
 212 executable modules, 160 covered modules, 47 unmapped modules, and five
 valid exemptions.
+
+`TEST-003I-FRONTEND-MODULE-COVERAGE` now also directly covers the shared
+`Popover` wrapper's trigger, anchor, labelled content, defaults, and property
+forwarding through a deterministic Radix boundary mock. Focused Vitest,
+targeted ESLint, TypeScript, and the complete frontend suite pass (113 files,
+174 tests). Read-only reconciliation reports 212 executable modules, 161
+covered modules, 46 unmapped modules, and five valid exemptions.

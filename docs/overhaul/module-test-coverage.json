@@ -1055,6 +1055,12 @@
       "status": "covered",
       "tests": ["frontend/src/components/ui/dialog.test.tsx"],
       "behavior": "Opens a labelled modal, closes through its built-in control, and supports intentional close-control omission."
+    },
+    {
+      "path": "frontend/src/components/ui/popover.tsx",
+      "status": "covered",
+      "tests": ["frontend/src/components/ui/popover.test.tsx"],
+      "behavior": "Forwards trigger, anchor, labelled content, and default content configuration through the component boundary."
     }
   ]
 }
