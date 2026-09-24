@@ -150,6 +150,13 @@ errors, 158 warnings) and is not masked by this deletion. The direct-test
 reconciliation now reports 212 executable modules, 159 covered modules, 48
 unmapped modules, and five valid exemptions.
 
+`TEST-003I-FRONTEND-MODULE-COVERAGE` now directly covers user-table sorting and
+role-scoped row actions. `FRONTEND-046` replaces click-only sorting headers
+with accessible buttons, exposes sort direction, and uniquely names row action
+menus. Focused Vitest, targeted ESLint, TypeScript, and the full frontend suite
+pass (123 files, 188 tests). Read-only reconciliation reports 212 executable
+modules, 171 covered modules, 36 unmapped modules, and five valid exemptions.
+
 `TEST-003I-FRONTEND-MODULE-COVERAGE` now directly covers the shared `Dialog`
 primitive's accessible modal behavior, built-in close action, and intentional
 close-control omission. Focused Vitest, targeted ESLint, TypeScript, and the
