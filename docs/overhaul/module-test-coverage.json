@@ -1067,6 +1067,12 @@
       "status": "covered",
       "tests": ["frontend/src/components/ui/sheet.test.tsx"],
       "behavior": "Opens a labelled side panel, applies its selected side, and closes through the built-in action."
+    },
+    {
+      "path": "frontend/src/components/ui/tooltip.tsx",
+      "status": "covered",
+      "tests": ["frontend/src/components/ui/tooltip.test.tsx"],
+      "behavior": "Forwards a labelled trigger, guidance content, and default offset through the component boundary."
     }
   ]
 }

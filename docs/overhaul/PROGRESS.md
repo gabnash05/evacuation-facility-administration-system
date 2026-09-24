@@ -170,3 +170,10 @@ covered modules, 46 unmapped modules, and five valid exemptions.
 Focused Vitest, targeted ESLint, TypeScript, and the full frontend suite pass
 (114 files, 175 tests). Read-only reconciliation reports 212 executable
 modules, 162 covered modules, 45 unmapped modules, and five valid exemptions.
+
+`TEST-003I-FRONTEND-MODULE-COVERAGE` now also directly covers the shared
+`Tooltip` wrapper's labelled trigger, guidance content, and default offset
+through an isolated Radix boundary mock. Focused Vitest, targeted ESLint,
+TypeScript, and the full frontend suite pass (115 files, 176 tests). Read-only
+reconciliation reports 212 executable modules, 163 covered modules, 44
+unmapped modules, and five valid exemptions.
