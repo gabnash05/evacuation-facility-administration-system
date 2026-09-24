@@ -190,3 +190,10 @@ cancel/confirm paths. Focused Vitest, targeted ESLint, TypeScript, and the full
 frontend suite pass (117 files, 178 tests). Read-only reconciliation reports
 212 executable modules, 165 covered modules, 42 unmapped modules, and five
 valid exemptions.
+
+`TEST-003I-FRONTEND-MODULE-COVERAGE` now directly covers the user-management
+deactivation confirmation dialog's accessible description and separate
+cancel/confirm paths. The direct audit also removed its unused `User` import.
+Focused Vitest, targeted ESLint, TypeScript, and the full frontend suite pass
+(118 files, 179 tests). Read-only reconciliation reports 212 executable
+modules, 166 covered modules, 41 unmapped modules, and five valid exemptions.
