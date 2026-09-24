@@ -1073,6 +1073,12 @@
       "status": "covered",
       "tests": ["frontend/src/components/ui/tooltip.test.tsx"],
       "behavior": "Forwards a labelled trigger, guidance content, and default offset through the component boundary."
+    },
+    {
+      "path": "frontend/src/main.tsx",
+      "status": "covered",
+      "tests": ["frontend/src/main.test.tsx"],
+      "behavior": "Mounts the application through the required browser root element."
     }
   ]
 }

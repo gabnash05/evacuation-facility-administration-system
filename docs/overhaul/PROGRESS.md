@@ -177,3 +177,9 @@ through an isolated Radix boundary mock. Focused Vitest, targeted ESLint,
 TypeScript, and the full frontend suite pass (115 files, 176 tests). Read-only
 reconciliation reports 212 executable modules, 163 covered modules, 44
 unmapped modules, and five valid exemptions.
+
+`TEST-003I-FRONTEND-MODULE-COVERAGE` now directly covers the browser entry
+module's React-root mount while isolating routed application dependencies.
+Focused Vitest, targeted ESLint, TypeScript, and the full frontend suite pass
+(116 files, 177 tests). Read-only reconciliation reports 212 executable
+modules, 164 covered modules, 43 unmapped modules, and five valid exemptions.
