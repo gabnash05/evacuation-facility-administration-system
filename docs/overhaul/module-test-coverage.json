@@ -1091,6 +1091,12 @@
       "status": "covered",
       "tests": ["frontend/src/components/features/user-management/DeactivateConfirmationModal.test.tsx"],
       "behavior": "Describes the account-state action and keeps cancel and confirm callbacks distinct."
+    },
+    {
+      "path": "frontend/src/components/features/events/ResolveEventModal.tsx",
+      "status": "covered",
+      "tests": ["frontend/src/components/features/events/ResolveEventModal.test.tsx"],
+      "behavior": "Describes the resolution workflow, names the end-date control, and resets through cancellation."
     }
   ]
 }

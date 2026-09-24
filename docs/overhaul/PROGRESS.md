@@ -197,3 +197,10 @@ cancel/confirm paths. The direct audit also removed its unused `User` import.
 Focused Vitest, targeted ESLint, TypeScript, and the full frontend suite pass
 (118 files, 179 tests). Read-only reconciliation reports 212 executable
 modules, 166 covered modules, 41 unmapped modules, and five valid exemptions.
+
+`TEST-003I-FRONTEND-MODULE-COVERAGE` now directly covers the event-resolution
+workflow. `FRONTEND-043` adds a dialog description, names its date trigger,
+uses valid list structure and alert semantics, and removes raw failure logging.
+Focused Vitest, targeted ESLint, TypeScript, and the full frontend suite pass
+(119 files, 180 tests). Read-only reconciliation reports 212 executable
+modules, 167 covered modules, 40 unmapped modules, and five valid exemptions.
