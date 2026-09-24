@@ -220,3 +220,12 @@ compliance. Focused Vitest, targeted ESLint, TypeScript, and the full frontend
 suite pass (121 files, 184 tests). Read-only reconciliation reports 212
 executable modules, 169 covered modules, 38 unmapped modules, and five valid
 exemptions.
+
+`TEST-003I-FRONTEND-MODULE-COVERAGE` now directly covers the add/edit-user
+modal's account-creation description, named role selector, and center loading.
+`FRONTEND-045` corrects invalid description nesting, gives submission errors
+alert semantics, names both selectors, and keeps the submitted user payload
+within its create/update contract. Focused Vitest, targeted ESLint, TypeScript,
+and the full frontend suite pass (122 files, 185 tests). Read-only
+reconciliation reports 212 executable modules, 170 covered modules, 37
+unmapped modules, and five valid exemptions.
