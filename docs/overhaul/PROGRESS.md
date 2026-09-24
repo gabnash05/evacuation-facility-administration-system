@@ -183,3 +183,10 @@ module's React-root mount while isolating routed application dependencies.
 Focused Vitest, targeted ESLint, TypeScript, and the full frontend suite pass
 (116 files, 177 tests). Read-only reconciliation reports 212 executable
 modules, 164 covered modules, 43 unmapped modules, and five valid exemptions.
+
+`TEST-003I-FRONTEND-MODULE-COVERAGE` now directly covers the user-management
+destructive-action confirmation dialog's accessible description and separate
+cancel/confirm paths. Focused Vitest, targeted ESLint, TypeScript, and the full
+frontend suite pass (117 files, 178 tests). Read-only reconciliation reports
+212 executable modules, 165 covered modules, 42 unmapped modules, and five
+valid exemptions.
