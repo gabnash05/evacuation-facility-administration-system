@@ -243,3 +243,10 @@ isolated Radix boundary. Focused Vitest, targeted ESLint, TypeScript, and the
 full frontend suite pass (124 files, 189 tests). Read-only reconciliation
 reports 212 executable modules, 172 covered modules, 35 unmapped modules, and
 five valid exemptions.
+
+`TEST-003I-FRONTEND-MODULE-COVERAGE` now directly covers the shared
+DropdownMenu wrapper's trigger, item forwarding, and default content offset
+through an isolated Radix boundary. Focused Vitest, targeted ESLint, TypeScript,
+and the full frontend suite pass (125 files, 190 tests). Read-only
+reconciliation reports 212 executable modules, 173 covered modules, 34
+unmapped modules, and five valid exemptions.

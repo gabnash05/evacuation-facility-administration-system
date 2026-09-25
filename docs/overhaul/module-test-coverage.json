@@ -1127,6 +1127,12 @@
       "status": "covered",
       "tests": ["frontend/src/components/ui/select.test.tsx"],
       "behavior": "Forwards selected value and trigger size through the shared Select boundary."
+    },
+    {
+      "path": "frontend/src/components/ui/dropdown-menu.tsx",
+      "status": "covered",
+      "tests": ["frontend/src/components/ui/dropdown-menu.test.tsx"],
+      "behavior": "Forwards menu trigger/item semantics and default content offset through the shared boundary."
     }
   ]
 }
