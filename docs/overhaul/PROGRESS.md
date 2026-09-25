@@ -236,3 +236,10 @@ within its create/update contract. Focused Vitest, targeted ESLint, TypeScript,
 and the full frontend suite pass (122 files, 185 tests). Read-only
 reconciliation reports 212 executable modules, 170 covered modules, 37
 unmapped modules, and five valid exemptions.
+
+`TEST-003I-FRONTEND-MODULE-COVERAGE` now directly covers the shared Select
+wrapper's labelled small trigger and forwarded selected value through an
+isolated Radix boundary. Focused Vitest, targeted ESLint, TypeScript, and the
+full frontend suite pass (124 files, 189 tests). Read-only reconciliation
+reports 212 executable modules, 172 covered modules, 35 unmapped modules, and
+five valid exemptions.

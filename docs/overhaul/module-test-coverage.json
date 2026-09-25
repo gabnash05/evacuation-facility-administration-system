@@ -1121,6 +1121,12 @@
       "status": "covered",
       "tests": ["frontend/src/components/features/user-management/UserTable.test.tsx"],
       "behavior": "Exposes keyboard-accessible sorting, sort state, and user-specific role-scoped actions."
+    },
+    {
+      "path": "frontend/src/components/ui/select.tsx",
+      "status": "covered",
+      "tests": ["frontend/src/components/ui/select.test.tsx"],
+      "behavior": "Forwards selected value and trigger size through the shared Select boundary."
     }
   ]
 }
