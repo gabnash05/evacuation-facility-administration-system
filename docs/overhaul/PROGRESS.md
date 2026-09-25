@@ -250,3 +250,10 @@ through an isolated Radix boundary. Focused Vitest, targeted ESLint, TypeScript,
 and the full frontend suite pass (125 files, 190 tests). Read-only
 reconciliation reports 212 executable modules, 173 covered modules, 34
 unmapped modules, and five valid exemptions.
+
+`TEST-003I-FRONTEND-MODULE-COVERAGE` now directly covers the shared Calendar
+wrapper's default visible-day/caption behavior and caller class forwarding
+through an isolated DayPicker boundary. Focused Vitest, targeted ESLint,
+TypeScript, and the full frontend suite pass (126 files, 191 tests). Read-only
+reconciliation reports 212 executable modules, 174 covered modules, 33
+unmapped modules, and five valid exemptions.

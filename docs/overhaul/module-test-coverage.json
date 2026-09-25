@@ -1133,6 +1133,12 @@
       "status": "covered",
       "tests": ["frontend/src/components/ui/dropdown-menu.test.tsx"],
       "behavior": "Forwards menu trigger/item semantics and default content offset through the shared boundary."
+    },
+    {
+      "path": "frontend/src/components/ui/calendar.tsx",
+      "status": "covered",
+      "tests": ["frontend/src/components/ui/calendar.test.tsx"],
+      "behavior": "Forwards shared visible-day and caption defaults plus caller classes to the calendar boundary."
     }
   ]
 }
