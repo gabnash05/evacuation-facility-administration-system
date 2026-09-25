@@ -257,3 +257,10 @@ through an isolated DayPicker boundary. Focused Vitest, targeted ESLint,
 TypeScript, and the full frontend suite pass (126 files, 191 tests). Read-only
 reconciliation reports 212 executable modules, 174 covered modules, 33
 unmapped modules, and five valid exemptions.
+
+`TEST-003I-FRONTEND-MODULE-COVERAGE` now directly covers CreateEventModal's
+description and named controls. `FRONTEND-047` adds accessible form semantics,
+safe error handling, and zero-capacity-safe occupancy behavior. Focused Vitest,
+targeted ESLint, TypeScript, and the full frontend suite pass (127 files, 192
+tests). Read-only reconciliation reports 212 executable modules, 175 covered
+modules, 32 unmapped modules, and five valid exemptions.

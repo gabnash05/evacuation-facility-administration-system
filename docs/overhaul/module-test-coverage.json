@@ -1139,6 +1139,12 @@
       "status": "covered",
       "tests": ["frontend/src/components/ui/calendar.test.tsx"],
       "behavior": "Forwards shared visible-day and caption defaults plus caller classes to the calendar boundary."
+    },
+    {
+      "path": "frontend/src/components/features/events/CreateEventModal.tsx",
+      "status": "covered",
+      "tests": ["frontend/src/components/features/events/CreateEventModal.test.tsx"],
+      "behavior": "Describes event creation and exposes named primary form controls."
     }
   ]
 }
