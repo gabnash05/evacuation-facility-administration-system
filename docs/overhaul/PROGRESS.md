@@ -264,3 +264,11 @@ safe error handling, and zero-capacity-safe occupancy behavior. Focused Vitest,
 targeted ESLint, TypeScript, and the full frontend suite pass (127 files, 192
 tests). Read-only reconciliation reports 212 executable modules, 175 covered
 modules, 32 unmapped modules, and five valid exemptions.
+
+`TEST-003I-FRONTEND-MODULE-COVERAGE` now directly covers TransferIndividualModal's
+described empty opening state and disabled empty-transfer action. `FRONTEND-048`
+adds dialog and error semantics, removes dead and unchecked transfer-boundary
+code, and normalizes transfer-status rendering. Focused Vitest, targeted ESLint,
+TypeScript, and the full frontend suite pass (128 files, 193 tests). Read-only
+reconciliation reports 212 executable modules, 176 covered modules, 31 unmapped
+modules, and five valid exemptions.

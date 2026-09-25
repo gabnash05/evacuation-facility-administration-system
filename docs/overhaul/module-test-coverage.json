@@ -1145,6 +1145,12 @@
       "status": "covered",
       "tests": ["frontend/src/components/features/events/CreateEventModal.test.tsx"],
       "behavior": "Describes event creation and exposes named primary form controls."
+    },
+    {
+      "path": "frontend/src/components/features/transfer/TransferIndividualModal.tsx",
+      "status": "covered",
+      "tests": ["frontend/src/components/features/transfer/TransferIndividualModal.test.tsx"],
+      "behavior": "Describes the transfer workflow and prevents empty transfer submission."
     }
   ]
 }
