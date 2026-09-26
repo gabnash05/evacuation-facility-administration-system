@@ -45,6 +45,6 @@ describe("CheckOutModal", () => {
         await waitFor(() => expect(onCheckOut).toHaveBeenCalledWith(9, { notes: "Returned home" }));
         expect(onSuccess).toHaveBeenCalledWith(1);
         expect(onClose).toHaveBeenCalledOnce();
-        expect(fetchAllCenters).toHaveBeenCalledOnce();
+        await waitFor(() => expect(fetchAllCenters).toHaveBeenCalledOnce());
     });
 });

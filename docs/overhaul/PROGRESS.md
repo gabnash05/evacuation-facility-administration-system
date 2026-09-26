@@ -305,3 +305,11 @@ and page-size controls and types its filter callback. Focused Vitest, targeted
 ESLint, TypeScript, and the full frontend suite pass (132 files, 198 tests).
 Read-only reconciliation reports 212 executable modules, 180 covered modules, 26
 unmapped modules, and six valid exemptions.
+
+`TEST-003I-FRONTEND-MODULE-COVERAGE` now directly covers AidAllocationTable's
+empty state, sort forwarding, and zero-quantity rendering. `TEST-005` restores a
+shared-worker mock before each ModeToggle test and waits for CheckOutModal's async
+center-load effect, eliminating aggregate-suite timing flakiness. Focused Vitest,
+targeted ESLint, TypeScript, and the full frontend suite pass (133 files, 199
+tests). Read-only reconciliation reports 212 executable modules, 181 covered
+modules, 25 unmapped modules, and six valid exemptions.

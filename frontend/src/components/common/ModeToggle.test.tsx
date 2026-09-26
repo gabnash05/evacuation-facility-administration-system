@@ -1,5 +1,5 @@
 import { fireEvent, render, screen } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const { setTheme, useTheme } = vi.hoisted(() => ({
     setTheme: vi.fn(),
@@ -11,6 +11,11 @@ vi.mock("@/components/common/ThemeProvider", () => ({ useTheme }));
 import { ModeToggle } from "./ModeToggle";
 
 describe("ModeToggle", () => {
+    beforeEach(() => {
+        setTheme.mockClear();
+        useTheme.mockImplementation(() => ({ theme: "light", setTheme }));
+    });
+
     it("uses a native menu button and applies the selected theme", () => {
         render(<ModeToggle>Appearance</ModeToggle>);
 
