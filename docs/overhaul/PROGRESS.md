@@ -278,3 +278,11 @@ public login and unauthorized routes. Focused Vitest, targeted ESLint, TypeScrip
 and the full frontend suite pass (129 files, 195 tests). Read-only reconciliation
 reports 212 executable modules, 177 covered modules, 30 unmapped modules, and
 five valid exemptions.
+
+`TEST-003I-FRONTEND-MODULE-COVERAGE` now directly covers AddEvacuationCenterForm's
+described opening state, required fields, and map-location submission gate.
+`FRONTEND-049` adds dialog semantics, accepts valid zero coordinates, and makes
+unknown submission failures visible without browser-console logging. Focused
+Vitest, targeted ESLint, TypeScript, and the full frontend suite pass (130 files,
+196 tests). Read-only reconciliation reports 212 executable modules, 178 covered
+modules, 29 unmapped modules, and five valid exemptions.
