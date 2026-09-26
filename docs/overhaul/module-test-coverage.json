@@ -1168,6 +1168,12 @@
       "path": "frontend/src/test/setup.ts",
       "status": "exempt",
       "exception": "Vitest global cleanup configuration with no independently callable application behavior; it is exercised by every frontend test run."
+    },
+    {
+      "path": "frontend/src/pages/auth/LoginPage.tsx",
+      "status": "covered",
+      "tests": ["frontend/src/pages/auth/LoginPage.test.tsx"],
+      "behavior": "Rejects invalid credentials locally and explains required corrections."
     }
   ]
 }

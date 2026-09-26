@@ -11,6 +11,8 @@ import { useAuthStore } from "@/store/authStore";
 import { StaticMap } from "@/components/features/map/StaticMap";
 import efasLogo from "@/assets/logo/efas-logo.png"; // Import the logo
 
+const errorMessageClass = "rounded-md bg-destructive/15 p-3 text-sm text-destructive";
+
 export default function LoginPage() {
     const navigate = useNavigate();
     const { isLoading, error, login } = useAuth();
@@ -77,7 +79,6 @@ export default function LoginPage() {
             }
         } catch (err) {
             setLoginError(err instanceof Error ? err.message : "Login failed");
-            console.error("Login failed:", err);
         }
     };
 
@@ -89,15 +90,9 @@ export default function LoginPage() {
                     <CardHeader className="space-y-1">
                         {/* Add the logo here */}
                         <div className="flex justify-center">
-                            <img 
-                                src={efasLogo} 
-                                alt="EFAS Logo" 
-                                className="h-40 w-auto"
-                            />
+                            <img src={efasLogo} alt="EFAS Logo" className="h-40 w-auto" />
                         </div>
-                        <CardTitle className="text-2xl font-bold text-center">
-                            EFAS
-                        </CardTitle>
+                        <CardTitle className="text-2xl font-bold text-center">EFAS</CardTitle>
                         <CardDescription className="text-center">
                             Enter your credentials to access the EFAS system
                         </CardDescription>
@@ -143,12 +138,12 @@ export default function LoginPage() {
 
                             {/* Error messages */}
                             {loginError && (
-                                <div className="p-3 text-sm text-destructive bg-destructive/15 rounded-md">
+                                <div className={errorMessageClass} role="alert">
                                     {loginError}
                                 </div>
                             )}
                             {error && (
-                                <div className="p-3 text-sm text-destructive bg-destructive/15 rounded-md">
+                                <div className={errorMessageClass} role="alert">
                                     {error}
                                 </div>
                             )}
@@ -173,10 +168,7 @@ export default function LoginPage() {
             {/* Right side - Static Map */}
             <div className="flex-1 bg-muted hidden lg:flex items-center justify-center p-8">
                 <div className="w-full h-full max-w-2xl rounded-lg overflow-hidden shadow-lg">
-                    <StaticMap 
-                        center={[8.230205, 124.249607]}
-                        zoom={13}
-                    />
+                    <StaticMap center={[8.230205, 124.249607]} zoom={13} />
                 </div>
             </div>
         </div>
