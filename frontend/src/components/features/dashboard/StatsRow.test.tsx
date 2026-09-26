@@ -1,5 +1,5 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const { statsStore, eventStore } = vi.hoisted(() => ({
     statsStore: vi.fn(),
@@ -12,6 +12,11 @@ vi.mock("@/store/eventStore", () => ({ useEventStore: eventStore }));
 import { StatsRow } from "./StatsRow";
 
 describe("StatsRow", () => {
+    beforeEach(() => {
+        statsStore.mockReset();
+        eventStore.mockReset();
+    });
+
     it("loads center-scoped events and statistics, then resets active filters", async () => {
         const fetchEvents = vi.fn().mockResolvedValue(undefined);
         const fetchStats = vi.fn().mockResolvedValue(undefined);

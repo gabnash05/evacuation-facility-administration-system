@@ -313,3 +313,11 @@ center-load effect, eliminating aggregate-suite timing flakiness. Focused Vitest
 targeted ESLint, TypeScript, and the full frontend suite pass (133 files, 199
 tests). Read-only reconciliation reports 212 executable modules, 181 covered
 modules, 25 unmapped modules, and six valid exemptions.
+
+`TEST-003I-FRONTEND-MODULE-COVERAGE` now directly covers AidAllocationForm's
+described opening state and incomplete-submit guard. `FRONTEND-053` adds the
+missing description, types the allocation boundary, and removes local lint debt.
+`TEST-005` additionally resets StatsRow's shared store mocks before each test.
+Focused Vitest, targeted ESLint, TypeScript, and the full frontend suite pass
+(134 files, 200 tests). Read-only reconciliation reports 212 executable modules,
+182 covered modules, 24 unmapped modules, and six valid exemptions.
