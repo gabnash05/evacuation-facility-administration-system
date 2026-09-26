@@ -298,3 +298,10 @@ announces user-facing errors. Focused Vitest, targeted ESLint, TypeScript, and t
 full frontend suite pass (131 files, 197 tests). Read-only reconciliation reports
 212 executable modules, 179 covered modules, 27 unmapped modules, and six valid
 exemptions.
+
+`TEST-003I-FRONTEND-MODULE-COVERAGE` now directly covers AidAllocationToolbar's
+search, allocation action, and loading lockout. `FRONTEND-051` names its search
+and page-size controls and types its filter callback. Focused Vitest, targeted
+ESLint, TypeScript, and the full frontend suite pass (132 files, 198 tests).
+Read-only reconciliation reports 212 executable modules, 180 covered modules, 26
+unmapped modules, and six valid exemptions.
