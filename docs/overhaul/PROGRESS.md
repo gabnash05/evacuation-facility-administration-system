@@ -286,3 +286,8 @@ unknown submission failures visible without browser-console logging. Focused
 Vitest, targeted ESLint, TypeScript, and the full frontend suite pass (130 files,
 196 tests). Read-only reconciliation reports 212 executable modules, 178 covered
 modules, 29 unmapped modules, and five valid exemptions.
+
+`TEST-003I-FRONTEND-MODULE-COVERAGE` classifies the Vitest global cleanup setup
+as a valid configuration exemption rather than inventing a superficial direct test.
+Read-only reconciliation reports 212 executable modules, 178 covered modules, 28
+unmapped modules, and six valid exemptions.

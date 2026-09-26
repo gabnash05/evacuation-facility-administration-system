@@ -1163,6 +1163,11 @@
       "status": "covered",
       "tests": ["frontend/src/components/features/evacuation-center/AddEvacuationCenterForm.test.tsx"],
       "behavior": "Describes center creation and blocks submission until a map location is selected."
+    },
+    {
+      "path": "frontend/src/test/setup.ts",
+      "status": "exempt",
+      "exception": "Vitest global cleanup configuration with no independently callable application behavior; it is exercised by every frontend test run."
     }
   ]
 }
