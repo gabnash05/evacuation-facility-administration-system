@@ -330,9 +330,7 @@ targeted ESLint, TypeScript, and the full frontend suite pass (135 files, 202
 tests). Read-only reconciliation reports 212 executable modules, 183 covered
 modules, 23 unmapped modules, and six valid exemptions.
 
-`TEST-006` records a confirmed test-infrastructure constraint: this Windows
-runner leaks cross-file module mocks with `isolate: false`, while the currently
-documented `isolate: true` workaround hangs before completion. The attempted
-CityAdminCentersPage coverage probe was intentionally reverted and not counted;
-next coverage tickets must avoid this mock pattern until the runner ticket is
-completed.
+`TEST-006` fixes frontend test isolation: the default runner now uses one
+isolated fork worker, which prevents cross-file mock leakage without the Windows
+thread-worker teardown hang. The full suite passes under that configuration
+(135 files, 202 tests; 417.92 seconds).
