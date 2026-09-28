@@ -1216,6 +1216,12 @@
       "status": "covered",
       "tests": ["frontend/src/pages/center-admin/CenterAdminDashboard.test.tsx"],
       "behavior": "Renders a clear unassigned-center state without asserting an optional center identifier."
+    },
+    {
+      "path": "frontend/src/pages/volunteer/VolunteerHouseholdsPage.tsx",
+      "status": "covered",
+      "tests": ["frontend/src/pages/volunteer/VolunteerHouseholdsPage.test.tsx"],
+      "behavior": "Blocks household management when the volunteer lacks an assigned evacuation center."
     }
   ]
 }

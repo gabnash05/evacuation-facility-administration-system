@@ -292,6 +292,13 @@ as a valid configuration exemption rather than inventing a superficial direct te
 Read-only reconciliation reports 212 executable modules, 178 covered modules, 28
 unmapped modules, and six valid exemptions.
 
+`TEST-003I-FRONTEND-MODULE-COVERAGE` now directly covers the volunteer household
+page's unassigned-center guard. `FRONTEND-058` removes its local lint debt.
+Focused Vitest, targeted ESLint, TypeScript, and the full frontend suite pass
+(139 files, 206 tests; 253.92 seconds). Read-only reconciliation reports 212
+executable modules, 187 covered modules, 19 unmapped modules, and six valid
+exemptions.
+
 `TEST-003I-FRONTEND-MODULE-COVERAGE` now directly covers LoginPage's client-side
 credential validation. `FRONTEND-050` removes browser-console login failures and
 announces user-facing errors. Focused Vitest, targeted ESLint, TypeScript, and the
