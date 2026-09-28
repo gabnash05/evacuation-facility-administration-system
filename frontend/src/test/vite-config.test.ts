@@ -12,8 +12,8 @@ describe("Vite and Vitest configuration", () => {
         });
         expect(config.test).toMatchObject({
             environment: "jsdom",
-            pool: "threads",
-            isolate: false,
+            pool: "forks",
+            isolate: true,
             fileParallelism: false,
             maxWorkers: 1,
             clearMocks: true,

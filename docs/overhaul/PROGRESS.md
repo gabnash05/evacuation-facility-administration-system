@@ -334,3 +334,11 @@ modules, 23 unmapped modules, and six valid exemptions.
 isolated fork worker, which prevents cross-file mock leakage without the Windows
 thread-worker teardown hang. The full suite passes under that configuration
 (135 files, 202 tests; 417.92 seconds).
+
+`TEST-003I-FRONTEND-MODULE-COVERAGE` now directly covers
+CityAdminCentersPage's initial center fetch and management entry state.
+`FRONTEND-055` removes stale implementation comments and documents unavoidable
+import-specifier length exceptions. Focused Vitest, targeted ESLint, and
+TypeScript and the full frontend suite pass (136 files, 203 tests; 373.75
+seconds). Read-only reconciliation reports 212 executable modules, 184 covered
+modules, 22 unmapped modules, and six valid exemptions.

@@ -1198,6 +1198,12 @@
       "status": "covered",
       "tests": ["frontend/src/pages/center-admin/CenterAdminAidAllocationPage.test.tsx"],
       "behavior": "Rejects center-admin access without an assigned center and renders the assigned-center allocation view."
+    },
+    {
+      "path": "frontend/src/pages/city-admin/CityAdminCentersPage.tsx",
+      "status": "covered",
+      "tests": ["frontend/src/pages/city-admin/CityAdminCentersPage.test.tsx"],
+      "behavior": "Loads center data and presents the city-admin center-management entry view."
     }
   ]
 }

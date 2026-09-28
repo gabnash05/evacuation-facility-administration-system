@@ -1,14 +1,22 @@
 // evacuation-facility-administration-system/frontend/src/pages/city-admin/CityAdminCentersPage.tsx
 import { useEffect, useMemo, useState } from "react";
+// Alias import string cannot be wrapped without changing the module specifier.
+// eslint-disable-next-line max-len
 import { EvacuationCenterTable } from "@/components/features/evacuation-center/EvacuationCenterTable";
+// Alias import string cannot be wrapped without changing the module specifier.
+// eslint-disable-next-line max-len
 import { EvacuationCenterTableToolbar } from "@/components/features/evacuation-center/EvacuationCenterTableToolbar";
 import { TablePagination } from "@/components/common/TablePagination";
+// Alias import string cannot be wrapped without changing the module specifier.
+// eslint-disable-next-line max-len
 import { AddEvacuationCenterForm } from "@/components/features/evacuation-center/AddEvacuationCenterForm";
 import { SuccessToast } from "@/components/features/evacuation-center/SuccessToast";
-import { EvacuationCenterDetailsModal } from "@/components/features/evacuation-center/EvacuationCenterDetailsModal"; // NEW IMPORT
+// Alias import string cannot be wrapped without changing the module specifier.
+// eslint-disable-next-line max-len
+import { EvacuationCenterDetailsModal } from "@/components/features/evacuation-center/EvacuationCenterDetailsModal";
 import { useEvacuationCenterStore } from "@/store/evacuationCenterStore";
 import { debounce } from "@/utils/helpers";
-import type { EvacuationCenter } from "@/types/center"; // NEW IMPORT
+import type { EvacuationCenter } from "@/types/center";
 import { useAuthStore } from "@/store/authStore";
 
 export function CityAdminCentersPage() {
@@ -37,8 +45,8 @@ export function CityAdminCentersPage() {
         isOpen: false,
         message: "",
     });
-    const [selectedCenter, setSelectedCenter] = useState<EvacuationCenter | null>(null); // NEW STATE
-    const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false); // NEW STATE
+    const [selectedCenter, setSelectedCenter] = useState<EvacuationCenter | null>(null);
+    const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
 
     const debouncedFetchCenters = useMemo(
         () => debounce(() => fetchCenters(), 500),
