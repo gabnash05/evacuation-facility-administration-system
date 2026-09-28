@@ -349,3 +349,10 @@ effect, stale/dead bindings, and local type/lint debt. Focused Vitest, targeted
 ESLint, TypeScript, and the full frontend suite pass (137 files, 204 tests;
 341.97 seconds). Read-only reconciliation reports 212 executable modules, 185
 covered modules, 21 unmapped modules, and six valid exemptions.
+
+`TEST-003I-FRONTEND-MODULE-COVERAGE` now directly covers the center-dashboard
+unassigned-center state. `FRONTEND-057` removes an unsafe optional center-ID
+assertion and local lint debt. Focused Vitest, targeted ESLint, and TypeScript
+and the full frontend suite pass (138 files, 205 tests; 296.99 seconds).
+Read-only reconciliation reports 212 executable modules, 186 covered modules, 20
+unmapped modules, and six valid exemptions.

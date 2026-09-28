@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect } from "react";
 import { EventDetailsModal } from "@/components/features/dashboard/EventDetailsModal";
 import { MapPanel } from "@/components/features/dashboard/MapPanel";
-import { StatsRow } from "@/components/features/dashboard/StatsRow"; // Updated import
+import { StatsRow } from "@/components/features/dashboard/StatsRow";
 import { EventHistoryTable } from "@/components/features/dashboard/EventHistoryTable";
 import { ErrorAlert } from "@/components/features/dashboard/ErrorAlert";
 import { useEventStore } from "@/store/eventStore";
@@ -20,6 +20,11 @@ interface SelectedCenter {
     latitude?: number;
     longitude?: number;
 }
+
+const emptyCenterStateClass = [
+    "relative w-full h-[43vh] border-b border-border flex items-center justify-center",
+    "bg-muted/30 text-muted-foreground",
+].join(" ");
 
 export function CenterAdminDashboard() {
     const { user } = useAuth();
@@ -110,13 +115,25 @@ export function CenterAdminDashboard() {
     const getCenterStatusStyles = (status: string) => {
         switch (status.toLowerCase()) {
             case "active":
-                return "bg-green-100 text-green-700 border-green-100 dark:bg-green-900 dark:text-green-200 dark:border-green-900";
+                return [
+                    "bg-green-100 text-green-700 border-green-100",
+                    "dark:bg-green-900 dark:text-green-200 dark:border-green-900",
+                ].join(" ");
             case "inactive":
-                return "bg-orange-100 text-orange-700 border-orange-100 dark:bg-orange-900 dark:text-orange-200 dark:border-orange-900";
+                return [
+                    "bg-orange-100 text-orange-700 border-orange-100",
+                    "dark:bg-orange-900 dark:text-orange-200 dark:border-orange-900",
+                ].join(" ");
             case "closed":
-                return "bg-red-100 text-red-700 border-red-100 dark:bg-red-900 dark:text-red-200 dark:border-red-900";
+                return [
+                    "bg-red-100 text-red-700 border-red-100",
+                    "dark:bg-red-900 dark:text-red-200 dark:border-red-900",
+                ].join(" ");
             default:
-                return "bg-gray-100 text-gray-700 border-gray-100 dark:bg-gray-900 dark:text-gray-200 dark:border-gray-900";
+                return [
+                    "bg-gray-100 text-gray-700 border-gray-100",
+                    "dark:bg-gray-900 dark:text-gray-200 dark:border-gray-900",
+                ].join(" ");
         }
     };
 
@@ -189,10 +206,10 @@ export function CenterAdminDashboard() {
                     getCenterStatusStyles={getCenterStatusStyles}
                     getUsageColor={getUsageColor}
                     centers={mapCenters.length > 0 ? mapCenters : evacuationCenters}
-                    highlightCenterId={user?.center_id!}
+                    highlightCenterId={user?.center_id ?? undefined}
                 />
             ) : (
-                <div className="relative w-full h-[43vh] border-b border-border flex items-center justify-center bg-muted/30 text-muted-foreground">
+                <div className={emptyCenterStateClass}>
                     {isLoadingCenter ? (
                         <p>Loading center data...</p>
                     ) : (
