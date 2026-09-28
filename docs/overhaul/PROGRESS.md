@@ -321,3 +321,11 @@ missing description, types the allocation boundary, and removes local lint debt.
 Focused Vitest, targeted ESLint, TypeScript, and the full frontend suite pass
 (134 files, 200 tests). Read-only reconciliation reports 212 executable modules,
 182 covered modules, 24 unmapped modules, and six valid exemptions.
+
+`TEST-003I-FRONTEND-MODULE-COVERAGE` now directly covers
+CenterAdminAidAllocationPage's denied and assigned-center entry paths.
+`FRONTEND-054` removes its stale effect dependency, unused error binding, and
+local lint violations without changing allocation contracts. Focused Vitest,
+targeted ESLint, TypeScript, and the full frontend suite pass (135 files, 202
+tests). Read-only reconciliation reports 212 executable modules, 183 covered
+modules, 23 unmapped modules, and six valid exemptions.
