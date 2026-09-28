@@ -342,3 +342,10 @@ import-specifier length exceptions. Focused Vitest, targeted ESLint, and
 TypeScript and the full frontend suite pass (136 files, 203 tests; 373.75
 seconds). Read-only reconciliation reports 212 executable modules, 184 covered
 modules, 22 unmapped modules, and six valid exemptions.
+
+`TEST-003I-FRONTEND-MODULE-COVERAGE` now directly covers the city dashboard's
+single event-refresh invariant. `FRONTEND-056` removes its duplicate event-fetch
+effect, stale/dead bindings, and local type/lint debt. Focused Vitest, targeted
+ESLint, TypeScript, and the full frontend suite pass (137 files, 204 tests;
+341.97 seconds). Read-only reconciliation reports 212 executable modules, 185
+covered modules, 21 unmapped modules, and six valid exemptions.

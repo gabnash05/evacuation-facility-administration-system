@@ -1204,6 +1204,12 @@
       "status": "covered",
       "tests": ["frontend/src/pages/city-admin/CityAdminCentersPage.test.tsx"],
       "behavior": "Loads center data and presents the city-admin center-management entry view."
+    },
+    {
+      "path": "frontend/src/pages/city-admin/CityAdminDashboard.tsx",
+      "status": "covered",
+      "tests": ["frontend/src/pages/city-admin/CityAdminDashboard.test.tsx"],
+      "behavior": "Fetches city-admin event data once for each initial dashboard effect cycle."
     }
   ]
 }
