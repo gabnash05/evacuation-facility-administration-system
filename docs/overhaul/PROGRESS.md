@@ -363,3 +363,10 @@ assertion and local lint debt. Focused Vitest, targeted ESLint, and TypeScript
 and the full frontend suite pass (138 files, 205 tests; 296.99 seconds).
 Read-only reconciliation reports 212 executable modules, 186 covered modules, 20
 unmapped modules, and six valid exemptions.
+
+`TEST-003I-FRONTEND-MODULE-COVERAGE` now directly covers the center-admin
+household page's unassigned-center guard. `FRONTEND-059` removes its local lint
+debt. Focused Vitest, targeted ESLint, TypeScript, and the full frontend suite
+pass (140 files, 207 tests; 250.41 seconds). Read-only reconciliation reports
+212 executable modules, 188 covered modules, 18 unmapped modules, and six valid
+exemptions.

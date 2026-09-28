@@ -36,7 +36,9 @@ export function CenterAdminHouseholdsPage() {
         message: "",
     });
     const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
-    const [selectedHouseholdForDetails, setSelectedHouseholdForDetails] = useState<number | null>(null);
+    const [selectedHouseholdForDetails, setSelectedHouseholdForDetails] = useState<number | null>(
+        null
+    );
 
     const { user } = useAuthStore();
     const centerId = user?.center_id;
