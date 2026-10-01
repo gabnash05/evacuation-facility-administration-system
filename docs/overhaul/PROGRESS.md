@@ -370,3 +370,10 @@ debt. Focused Vitest, targeted ESLint, TypeScript, and the full frontend suite
 pass (140 files, 207 tests; 250.41 seconds). Read-only reconciliation reports
 212 executable modules, 188 covered modules, 18 unmapped modules, and six valid
 exemptions.
+
+`TEST-003I-FRONTEND-MODULE-COVERAGE` now directly covers the city-admin
+household page's initial data-load invariant. `FRONTEND-060` removes its local
+lint debt. Focused Vitest, targeted ESLint, TypeScript, and the full frontend
+suite pass (141 files, 208 tests; 246.35 seconds). Read-only reconciliation
+reports 212 executable modules, 189 covered modules, 17 unmapped modules, and
+six valid exemptions.

@@ -1228,6 +1228,12 @@
       "status": "covered",
       "tests": ["frontend/src/pages/center-admin/CenterAdminHouseholds.test.tsx"],
       "behavior": "Blocks household management when the center administrator lacks an assigned evacuation center."
+    },
+    {
+      "path": "frontend/src/pages/city-admin/CityAdminHouseholdsPage.tsx",
+      "status": "covered",
+      "tests": ["frontend/src/pages/city-admin/CityAdminHouseholdsPage.test.tsx"],
+      "behavior": "Loads the city-admin household-management view and fetches its initial household data."
     }
   ]
 }
