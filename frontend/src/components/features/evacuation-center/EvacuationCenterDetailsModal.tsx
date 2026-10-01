@@ -1,7 +1,13 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogHeader,
+    DialogTitle,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
@@ -43,26 +49,24 @@ const formatDateForDisplay = (dateString: string): string => {
     return `${day}/${month}/${year}`;
 };
 
-
 // Helper function to calculate age from date of birth
 const calculateAge = (dateOfBirth: string): string => {
     if (!dateOfBirth) return "N/A";
-    
+
     const birthDate = new Date(dateOfBirth);
     if (isNaN(birthDate.getTime())) return "N/A";
-    
+
     const today = new Date();
     let age = today.getFullYear() - birthDate.getFullYear();
     const monthDiff = today.getMonth() - birthDate.getMonth();
-    
+
     // Adjust age if birthday hasn't occurred yet this year
     if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
         age--;
     }
-    
+
     return age.toString();
 };
-
 
 // Helper function to capitalize status for display
 const capitalizeStatus = (status: string): string => {
@@ -90,28 +94,40 @@ export function EvacuationCenterDetailsModal({
     const [activeTab, setActiveTab] = useState("details");
 
     // Get attendance store functions
-    const { currentAttendees, fetchCurrentAttendees, setFilters } = useAttendanceStore();
+    const {
+        currentAttendees,
+        error: attendanceStoreError,
+        fetchCurrentAttendees,
+        setFilters,
+    } = useAttendanceStore();
 
     // FIX: Add back the events data fetching
     useEffect(() => {
+        let active = true;
         const fetchCenterEvents = async () => {
             if (!center || !isOpen) return;
 
             setEventsLoading(true);
             setError(null);
+            setEvents([]);
 
             try {
                 const response = await eventService.getEventsByCenterId(center.center_id);
-                setEvents(response.data);
+                if (active) setEvents(response.data);
             } catch (err) {
-                console.error("Error fetching center events:", err);
-                setError("Failed to load event history");
+                if (active) {
+                    console.error("Error fetching center events:", err);
+                    setError("Failed to load event history");
+                }
             } finally {
-                setEventsLoading(false);
+                if (active) setEventsLoading(false);
             }
         };
 
         fetchCenterEvents();
+        return () => {
+            active = false;
+        };
     }, [center, isOpen]);
 
     // Fetch current attendees when attendance tab is active
@@ -204,8 +220,8 @@ export function EvacuationCenterDetailsModal({
         if (!sortConfig || !sortConfig.direction) return 0;
 
         const { key, direction } = sortConfig;
-        let aValue: any = a[key as keyof Event];
-        let bValue: any = b[key as keyof Event];
+        let aValue: string | number = a[key as keyof Event] ?? "";
+        let bValue: string | number = b[key as keyof Event] ?? "";
 
         // Handle date sorting
         if (key === "date_declared" || key === "end_date") {
@@ -226,11 +242,15 @@ export function EvacuationCenterDetailsModal({
 
     if (!center) return null;
 
+    const hasLocation = Number.isFinite(center.latitude) && Number.isFinite(center.longitude);
+
     // Prepare the center for MonoMap display
     const centerForMap = {
         id: center.center_id,
         name: center.center_name,
-        position: [center.latitude || 8.230205, center.longitude || 124.249607] as [number, number],
+        position: hasLocation
+            ? ([center.latitude, center.longitude] as [number, number])
+            : ([8.230205, 124.249607] as [number, number]),
         currentCapacity: center.current_occupancy,
         maxCapacity: center.capacity,
         address: center.address,
@@ -238,11 +258,11 @@ export function EvacuationCenterDetailsModal({
     };
 
     // Only include the center in the map if it has valid coordinates
-    const mapCenters = center.latitude && center.longitude ? [centerForMap] : [];
+    const mapCenters = hasLocation ? [centerForMap] : [];
 
     // Set map center to the center's location or default
-    const mapCenter: [number, number] = center.latitude && center.longitude 
-        ? [center.latitude, center.longitude] 
+    const mapCenter: [number, number] = hasLocation
+        ? [center.latitude, center.longitude]
         : [8.230205, 124.249607];
 
     // Center Details Content
@@ -254,14 +274,14 @@ export function EvacuationCenterDetailsModal({
                 <div className="xl:col-span-1 space-y-3">
                     <Label className="text-sm font-medium">Location</Label>
                     <div className="border border-border rounded-lg bg-muted/50 h-80 relative">
-                        <MonoMap 
+                        <MonoMap
                             centers={mapCenters}
                             center={mapCenter}
-                            zoom={center.latitude && center.longitude ? 15 : 13}
+                            zoom={hasLocation ? 15 : 13}
                             onCenterClick={() => {}}
                             className="h-full"
                         />
-                        {!center.latitude || !center.longitude ? (
+                        {!hasLocation ? (
                             <div className="absolute inset-0 flex items-center justify-center bg-background/80 z-10">
                                 <div className="text-center p-4">
                                     <MapPin className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
@@ -272,7 +292,7 @@ export function EvacuationCenterDetailsModal({
                             </div>
                         ) : null}
                     </div>
-                    {center.latitude && center.longitude && (
+                    {hasLocation && (
                         <div className="text-xs text-muted-foreground flex items-center gap-2 mt-1">
                             <MapPin className="h-3 w-3" />
                             <span>Lat: {center.latitude.toFixed(6)}°</span>
@@ -346,17 +366,17 @@ export function EvacuationCenterDetailsModal({
                                             "h-3 rounded-full",
                                             center.capacity > 0
                                                 ? Math.round(
-                                                    (center.current_occupancy / center.capacity) *
-                                                        100
-                                                ) >= 80
+                                                      (center.current_occupancy / center.capacity) *
+                                                          100
+                                                  ) >= 80
                                                     ? "bg-red-600"
                                                     : Math.round(
                                                             (center.current_occupancy /
                                                                 center.capacity) *
                                                                 100
                                                         ) >= 60
-                                                    ? "bg-yellow-500"
-                                                    : "bg-green-500"
+                                                      ? "bg-yellow-500"
+                                                      : "bg-green-500"
                                                 : "bg-gray-400"
                                         )}
                                         style={{
@@ -445,14 +465,15 @@ export function EvacuationCenterDetailsModal({
                     )}
                     {!eventsLoading && (
                         <div className="text-sm text-muted-foreground">
-                            {events.length} event{events.length !== 1 ? "s" : ""} associated with this center
+                            {events.length} event{events.length !== 1 ? "s" : ""} associated with
+                            this center
                         </div>
                     )}
                 </div>
             </div>
 
             {error && (
-                <div className="bg-destructive/15 text-destructive p-3 rounded-md">
+                <div role="alert" className="bg-destructive/15 text-destructive p-3 rounded-md">
                     <div className="flex items-center gap-2">
                         <span className="text-sm">{error}</span>
                     </div>
@@ -589,16 +610,17 @@ export function EvacuationCenterDetailsModal({
                     )}
                     {!attendanceLoading && (
                         <div className="text-sm text-muted-foreground">
-                            {currentAttendees.length} individual{currentAttendees.length !== 1 ? "s" : ""} currently at this center
+                            {currentAttendees.length} individual
+                            {currentAttendees.length !== 1 ? "s" : ""} currently at this center
                         </div>
                     )}
                 </div>
             </div>
 
-            {error && (
-                <div className="bg-destructive/15 text-destructive p-3 rounded-md">
+            {(error || attendanceStoreError) && (
+                <div role="alert" className="bg-destructive/15 text-destructive p-3 rounded-md">
                     <div className="flex items-center gap-2">
-                        <span className="text-sm">{error}</span>
+                        <span className="text-sm">{error || attendanceStoreError}</span>
                     </div>
                 </div>
             )}
@@ -610,18 +632,10 @@ export function EvacuationCenterDetailsModal({
                             <TableHead className="font-semibold min-w-[120px]">
                                 First Name
                             </TableHead>
-                            <TableHead className="font-semibold min-w-[120px]">
-                                Last Name
-                            </TableHead>
-                            <TableHead className="font-semibold min-w-[120px]">
-                                Household
-                            </TableHead>
-                            <TableHead className="font-semibold min-w-[100px]">
-                                Age
-                            </TableHead>
-                            <TableHead className="font-semibold min-w-[100px]">
-                                Gender
-                            </TableHead>
+                            <TableHead className="font-semibold min-w-[120px]">Last Name</TableHead>
+                            <TableHead className="font-semibold min-w-[120px]">Household</TableHead>
+                            <TableHead className="font-semibold min-w-[100px]">Age</TableHead>
+                            <TableHead className="font-semibold min-w-[100px]">Gender</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -650,10 +664,10 @@ export function EvacuationCenterDetailsModal({
                         ) : (
                             currentAttendees.map((attendee, index) => {
                                 // Parse individual_name to get first and last name
-                                const individualName = attendee.individual_name || '';
-                                const nameParts = individualName.split(' ');
-                                const firstName = nameParts[0] || 'N/A';
-                                const lastName = nameParts.slice(1).join(' ') || 'N/A';
+                                const individualName = attendee.individual_name || "";
+                                const nameParts = individualName.split(" ");
+                                const firstName = nameParts[0] || "N/A";
+                                const lastName = nameParts.slice(1).join(" ") || "N/A";
 
                                 return (
                                     <TableRow
@@ -663,17 +677,15 @@ export function EvacuationCenterDetailsModal({
                                             index % 2 === 1 ? "bg-muted/50" : ""
                                         )}
                                     >
-                                        <TableCell className="min-w-[120px]">
-                                            {firstName}
-                                        </TableCell>
-                                        <TableCell className="min-w-[120px]">
-                                            {lastName}
-                                        </TableCell>
+                                        <TableCell className="min-w-[120px]">{firstName}</TableCell>
+                                        <TableCell className="min-w-[120px]">{lastName}</TableCell>
                                         <TableCell className="min-w-[120px]">
                                             {attendee.household_name || "N/A"}
                                         </TableCell>
                                         <TableCell className="min-w-[100px]">
-                                            {attendee.date_of_birth ? calculateAge(attendee.date_of_birth) : "N/A"}
+                                            {attendee.date_of_birth
+                                                ? calculateAge(attendee.date_of_birth)
+                                                : "N/A"}
                                         </TableCell>
                                         <TableCell className="min-w-[100px]">
                                             {attendee.gender || "N/A"}
@@ -703,6 +715,9 @@ export function EvacuationCenterDetailsModal({
                             <DialogTitle className="text-xl font-semibold">
                                 Evacuation Center Details
                             </DialogTitle>
+                            <DialogDescription>
+                                Review this center's location, events, and current attendees.
+                            </DialogDescription>
                         </DialogHeader>
                     </div>
 
@@ -720,7 +735,10 @@ export function EvacuationCenterDetailsModal({
                     {/* Scrollable Content */}
                     <div className="flex-1 overflow-hidden px-6 pb-6">
                         <Tabs value={activeTab} className="w-full h-full">
-                            <TabsContent value="details" className="h-full m-0 pt-4 overflow-hidden">
+                            <TabsContent
+                                value="details"
+                                className="h-full m-0 pt-4 overflow-hidden"
+                            >
                                 <div className="h-full overflow-y-auto pr-2 -mr-2">
                                     {centerDetailsContent}
                                 </div>
@@ -732,7 +750,10 @@ export function EvacuationCenterDetailsModal({
                                 </div>
                             </TabsContent>
 
-                            <TabsContent value="attendance" className="h-full m-0 pt-4 overflow-hidden">
+                            <TabsContent
+                                value="attendance"
+                                className="h-full m-0 pt-4 overflow-hidden"
+                            >
                                 <div className="h-full overflow-y-auto pr-2 -mr-2">
                                     {attendanceContent}
                                 </div>

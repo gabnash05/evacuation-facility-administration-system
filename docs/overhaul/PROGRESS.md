@@ -404,4 +404,15 @@ and silent generic save failures. Touched-file Vitest (3 files, 6 tests),
 ESLint, Prettier, TypeScript, the production build, and the read-only module
 coverage verifier pass. The verifier reports 212 executable modules, 193 covered,
 13 unmapped, and six valid exemptions. The full frontend suite passed (145
-files, 217 tests; 335.97 seconds). Publish after final diff review.
+files, 217 tests; 335.97 seconds). Focused commit `a363c6d` was pushed to
+`codex/overhaul-foundation` and is included in draft PR #6.
+
+`TEST-003I-FRONTEND-MODULE-COVERAGE` now directly covers
+EvacuationCenterDetailsModal. `FRONTEND-063` fixes valid zero-coordinate map
+rendering, prevents stale event responses after center changes, and provides
+an accessible dialog description and error alerts. `FRONTEND-064` makes the
+attendance tab display the shared store's swallowed fetch error. Focused Vitest
+(1 file, 4 tests), targeted ESLint, TypeScript, production build, and the read-only
+module verifier pass. The verifier reports 212 executable modules, 194 covered,
+12 unmapped, and six valid exemptions. The final full frontend suite passed
+(146 files, 221 tests; 371.50 seconds). Publish after final diff review.

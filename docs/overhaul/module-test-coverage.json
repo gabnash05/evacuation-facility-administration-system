@@ -1171,6 +1171,12 @@
       "behavior": "Accepts zero-valued coordinates, prevents stale-location saves, supports keyboard location selection, describes dialog views, and announces failed updates."
     },
     {
+      "path": "frontend/src/components/features/evacuation-center/EvacuationCenterDetailsModal.tsx",
+      "status": "covered",
+      "tests": ["frontend/src/components/features/evacuation-center/EvacuationCenterDetailsModal.test.tsx"],
+      "behavior": "Displays zero-valued center coordinates, loads attendance on demand, announces event and attendance errors, and ignores stale event responses after center changes."
+    },
+    {
       "path": "frontend/src/components/features/map/MapLocationPicker.tsx",
       "status": "covered",
       "tests": ["frontend/src/components/features/map/MapLocationPicker.test.tsx"],
