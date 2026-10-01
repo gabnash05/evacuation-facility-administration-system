@@ -4,6 +4,7 @@ import { Label } from "@/components/ui/label";
 import {
     Dialog,
     DialogContent,
+    DialogDescription,
     DialogHeader,
     DialogTitle,
     DialogFooter,
@@ -78,8 +79,8 @@ export function TransferModal({ isOpen, onClose, onSuccess, recordId }: Transfer
             await transferIndividual(recordId, transferData);
             onSuccess();
             handleClose();
-        } catch (err: any) {
-            setError(err.message);
+        } catch (error: unknown) {
+            setError(error instanceof Error ? error.message : "Unable to transfer the individual.");
         } finally {
             setIsSubmitting(false);
         }
@@ -90,10 +91,16 @@ export function TransferModal({ isOpen, onClose, onSuccess, recordId }: Transfer
             <DialogContent className="!max-w-[500px] w-[95vw] max-h-[90vh] overflow-y-auto">
                 <DialogHeader>
                     <DialogTitle className="text-lg font-semibold">Transfer Individual</DialogTitle>
+                    <DialogDescription className="sr-only">
+                        Move the selected individual to another evacuation center.
+                    </DialogDescription>
                 </DialogHeader>
                 <div className="space-y-6 py-4">
                     {error && (
-                        <div className="bg-destructive/15 text-destructive p-3 rounded-md text-sm">
+                        <div
+                            role="alert"
+                            className="bg-destructive/15 text-destructive p-3 rounded-md text-sm"
+                        >
                             {error}
                         </div>
                     )}
@@ -110,7 +117,7 @@ export function TransferModal({ isOpen, onClose, onSuccess, recordId }: Transfer
                                 onValueChange={setTransferToCenterId}
                                 disabled={centersLoading}
                             >
-                                <SelectTrigger className="w-full">
+                                <SelectTrigger aria-label="Destination center" className="w-full">
                                     <SelectValue
                                         placeholder={
                                             centersLoading

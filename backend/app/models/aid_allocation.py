@@ -1,12 +1,27 @@
 """Aid Allocation models for EFAS."""
 
-from typing import Any, Dict, List, Optional
-from datetime import datetime
-from sqlalchemy import text
-from app.models import db
 import logging
+from datetime import datetime
+from typing import Any, Dict, List, Optional
+
+from sqlalchemy import text
+
+from app.models import db
 
 logger = logging.getLogger(__name__)
+
+ALLOCATION_MUTABLE_FIELDS = frozenset(
+    {
+        "category_id",
+        "resource_name",
+        "description",
+        "total_quantity",
+        "distribution_type",
+        "suggested_amount",
+        "status",
+        "notes",
+    }
+)
 
 
 class AidCategory(db.Model):
@@ -184,26 +199,31 @@ class Allocation(db.Model):
             raise ValueError(f"Failed to create allocation: {str(e)}")
 
     @classmethod
-    def update(cls, allocation_id: int, update_data: Dict[str, Any]) -> Optional["Allocation"]:
+    def update(
+        cls, allocation_id: int, update_data: Dict[str, Any]
+    ) -> Optional["Allocation"]:
         """Update allocation."""
+        unsupported_fields = set(update_data).difference(ALLOCATION_MUTABLE_FIELDS)
+        if unsupported_fields:
+            raise ValueError("Unsupported allocation update fields")
+
         current_allocation = cls.get_by_id(allocation_id)
         if not current_allocation:
             return None
 
-        # Prevent updating certain fields
-        restricted_fields = ["center_id", "event_id", "allocated_by_user_id", "remaining_quantity"]
-        for field in restricted_fields:
-            if field in update_data:
-                del update_data[field]
+        safe_update_data = {
+            field: update_data[field]
+            for field in ALLOCATION_MUTABLE_FIELDS
+            if field in update_data
+        }
 
         # Build dynamic UPDATE query
         set_clauses = []
         params = {"allocation_id": allocation_id}
 
-        for field, value in update_data.items():
-            if field != "allocation_id":
-                set_clauses.append(f"{field} = :{field}")
-                params[field] = value
+        for field, value in safe_update_data.items():
+            set_clauses.append(f"{field} = :{field}")
+            params[field] = value
 
         if not set_clauses:
             return None

@@ -10,7 +10,6 @@ import { DeleteEventDialog } from "@/components/features/events/DeleteEventDialo
 import { SuccessToast } from "@/components/features/evacuation-center/SuccessToast";
 import { useEventStore } from "@/store/eventStore";
 import { useEvacuationCenterStore } from "@/store/evacuationCenterStore";
-import { useAttendanceStore } from "@/store/attendanceRecordsStore";
 import { formatDate } from "@/utils/formatters";
 import type { Event, EventDetails } from "@/types/event";
 import { useAuthStore } from "@/store/authStore";
@@ -24,6 +23,15 @@ interface SelectedCenter {
     latitude?: number;
     longitude?: number;
 }
+
+type EventSubmission = {
+    event_name: string;
+    event_type: string;
+    date_declared: string;
+    end_date: string | null;
+    center_ids: number[];
+    status?: Event["status"];
+};
 
 export function CityAdminDashboard() {
     const [isPanelVisible, setIsPanelVisible] = useState(true);
@@ -49,9 +57,6 @@ export function CityAdminDashboard() {
         fetchAllCenters,
         fetchCitySummary,
     } = useEvacuationCenterStore();
-
-    // Use attendance store to validate attendance conditions
-    const { validateAttendanceConditions } = useAttendanceStore();
 
     const { fetchActiveEvent } = useEventStore();
 
@@ -83,9 +88,7 @@ export function CityAdminDashboard() {
         getEventDetails,
         createEvent,
         updateEvent,
-        resolveEvent,
         deleteEvent,
-        clearError,
         validateEventCreation,
     } = useEventStore();
 
@@ -115,17 +118,6 @@ export function CityAdminDashboard() {
             try {
                 setIsLoadingCenter(true);
                 await fetchCitySummary();
-
-                // Update selectedCenter with city summary data
-                if (citySummary) {
-                    setSelectedCenter({
-                        name: "Iligan City",
-                        address: "",
-                        status: citySummary.status as "active" | "inactive" | "closed",
-                        capacity: citySummary.total_capacity,
-                        current_occupancy: citySummary.total_current_occupancy,
-                    });
-                }
             } catch (error) {
                 console.error("Failed to fetch city summary:", error);
             } finally {
@@ -158,31 +150,37 @@ export function CityAdminDashboard() {
                 console.error("Failed to fetch active event:", error);
             }
         };
-        
+
         initActiveEvent();
     }, [fetchActiveEvent]);
 
-    // Also add this for good measure in your existing events useEffect:
     useEffect(() => {
         fetchEvents();
-        fetchActiveEvent(); // Add this line
+        fetchActiveEvent();
     }, [fetchEvents, fetchActiveEvent, searchQuery, currentPage, entriesPerPage, sortConfig]);
-
-    // Fetch events when dependencies change
-    useEffect(() => {
-        fetchEvents();
-    }, [fetchEvents, searchQuery, currentPage, entriesPerPage, sortConfig]);
 
     const getCenterStatusStyles = (status: string) => {
         switch (status.toLowerCase()) {
             case "active":
-                return "bg-green-100 text-green-700 border-green-100 dark:bg-green-900 dark:text-green-200 dark:border-green-900";
+                return [
+                    "bg-green-100 text-green-700 border-green-100",
+                    "dark:bg-green-900 dark:text-green-200 dark:border-green-900",
+                ].join(" ");
             case "inactive":
-                return "bg-orange-100 text-orange-700 border-orange-100 dark:bg-orange-900 dark:text-orange-200 dark:border-orange-900";
+                return [
+                    "bg-orange-100 text-orange-700 border-orange-100",
+                    "dark:bg-orange-900 dark:text-orange-200 dark:border-orange-900",
+                ].join(" ");
             case "closed":
-                return "bg-red-100 text-red-700 border-red-100 dark:bg-red-900 dark:text-red-200 dark:border-red-900";
+                return [
+                    "bg-red-100 text-red-700 border-red-100",
+                    "dark:bg-red-900 dark:text-red-200 dark:border-red-900",
+                ].join(" ");
             default:
-                return "bg-gray-100 text-gray-700 border-gray-100 dark:bg-gray-900 dark:text-gray-200 dark:border-gray-900";
+                return [
+                    "bg-gray-100 text-gray-700 border-gray-100",
+                    "dark:bg-gray-900 dark:text-gray-200 dark:border-gray-900",
+                ].join(" ");
         }
     };
 
@@ -202,7 +200,7 @@ export function CityAdminDashboard() {
                 setTimeout(() => setCreateError(null), 5000);
                 return;
             }
-            
+
             setIsCreateModalOpen(true);
             setCreateError(null);
         } catch (error) {
@@ -212,7 +210,7 @@ export function CityAdminDashboard() {
         }
     };
 
-    const handleCreateEvent = async (eventData: any) => {
+    const handleCreateEvent = async (eventData: EventSubmission) => {
         try {
             const result = await createEvent({
                 event_name: eventData.event_name,
@@ -228,7 +226,7 @@ export function CityAdminDashboard() {
             } else {
                 throw new Error(result.message || "Failed to create event");
             }
-        } catch (err: any) {
+        } catch (err) {
             console.error("Create event error:", err);
             throw err;
         }
@@ -236,17 +234,17 @@ export function CityAdminDashboard() {
 
     const handleEditEvent = async (event: Event) => {
         // Check if event can be edited (not resolved)
-        if (event.status === 'resolved') {
+        if (event.status === "resolved") {
             setCreateError("Cannot edit a resolved event");
             setTimeout(() => setCreateError(null), 5000);
             return;
         }
-        
+
         setEditingEvent(event);
         setIsEditModalOpen(true);
     };
 
-    const handleUpdateEvent = async (eventData: any) => {
+    const handleUpdateEvent = async (eventData: EventSubmission) => {
         if (!editingEvent) return;
 
         if (
@@ -273,7 +271,7 @@ export function CityAdminDashboard() {
             } else {
                 throw new Error(result.message || "Failed to update event");
             }
-        } catch (err: any) {
+        } catch (err) {
             console.error("Update event error:", err);
             throw err;
         }
@@ -281,7 +279,7 @@ export function CityAdminDashboard() {
 
     const handleResolveEvent = async (event: Event) => {
         // Check if event can be resolved (not already resolved)
-        if (event.status === 'resolved') {
+        if (event.status === "resolved") {
             setCreateError("Event is already resolved");
             setTimeout(() => setCreateError(null), 5000);
             return;
@@ -291,21 +289,14 @@ export function CityAdminDashboard() {
         setIsResolveModalOpen(true);
     };
 
-    const handleConfirmResolve = async () => {
-        if (!resolvingEvent) return;
-
-        // Note: The actual resolve logic is handled in the ResolveEventModal component
-        // This function just sets up the modal
-    };
-
     const handleDeleteEvent = async (event: Event) => {
         // Check if event can be deleted (not resolved)
-        if (event.status === 'resolved') {
+        if (event.status === "resolved") {
             setCreateError("Cannot delete a resolved event");
             setTimeout(() => setCreateError(null), 5000);
             return;
         }
-        
+
         setDeletingEvent(event);
         setIsDeleteDialogOpen(true);
     };
@@ -316,16 +307,19 @@ export function CityAdminDashboard() {
         setDeleteLoading(true);
         try {
             const result = await deleteEvent(deletingEvent.event_id);
-            
+
             if (result.success) {
                 setSuccessToast({ isOpen: true, message: "Event deleted successfully" });
             } else {
-                setSuccessToast({ isOpen: true, message: result.message || "Failed to delete event" });
+                setSuccessToast({
+                    isOpen: true,
+                    message: result.message || "Failed to delete event",
+                });
             }
-            
+
             setIsDeleteDialogOpen(false);
             setDeletingEvent(null);
-        } catch (err: any) {
+        } catch (err) {
             console.error("Delete event error:", err);
             setSuccessToast({ isOpen: true, message: "Failed to delete event" });
         } finally {

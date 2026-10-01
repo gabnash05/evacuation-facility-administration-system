@@ -12,7 +12,7 @@ export const createCenterSchema = z.object({
         .refine(val => val >= 0, "Current occupancy cannot be negative")
         .optional()
         .default(0),
-    status: z.enum(["active", "inactive", "closed", "open"]).default("active"),
+    status: z.enum(["active", "inactive", "closed"]).default("active"),
 });
 
 export const updateCenterSchema = z.object({
@@ -34,7 +34,7 @@ export const updateCenterSchema = z.object({
         .min(0, "Current occupancy cannot be negative")
         .refine(val => val >= 0, "Current occupancy cannot be negative")
         .optional(),
-    status: z.enum(["active", "inactive", "closed", "open"]).optional(),
+    status: z.enum(["active", "inactive", "closed"]).optional(),
 });
 
 export type CreateCenterFormData = z.infer<typeof createCenterSchema>;

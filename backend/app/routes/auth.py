@@ -51,7 +51,7 @@ def login() -> Tuple:
         email = data.get("email")
         password = data.get("password")
 
-        logger.info("Login attempt for email: %s", email)
+        logger.info("Login attempt received")
 
         # Authenticate user
         auth_result = authenticate_user(email, password)

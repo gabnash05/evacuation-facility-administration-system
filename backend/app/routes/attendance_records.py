@@ -27,11 +27,43 @@ from app.services.attendance_records_service import (
     check_in_multiple_individuals,
 )
 from app.services.user_service import get_current_user
+from app.models.individual import Individual
 
 # Configure logger for this module
 logger = logging.getLogger(__name__)
 
 attendance_record_bp = Blueprint("attendance_record_bp", __name__)
+
+
+def _current_actor():
+    """Resolve the JWT identity to an active persisted account."""
+    identity = get_jwt_identity()
+    try:
+        user_id = int(identity)
+    except (TypeError, ValueError):
+        return None
+    actor = get_current_user(user_id)
+    return actor if actor and actor.is_active else None
+
+
+def _actor_or_response():
+    actor = _current_actor()
+    if not actor:
+        return None, (jsonify({"success": False, "message": "Invalid token"}), 401)
+    return actor, None
+
+
+def _may_access_individual_history(actor, individual_id):
+    individual = Individual.get_by_id(individual_id)
+    household = individual and individual.get("household")
+    return (
+        individual
+        and household
+        and (
+            actor.role in {"super_admin", "city_admin"}
+            or actor.center_id == household["center_id"]
+        )
+    )
 
 
 @attendance_record_bp.route("/attendance", methods=["GET"])
@@ -428,10 +460,10 @@ def check_in_individual_route() -> Tuple:
         if not data:
             return jsonify({"success": False, "message": "No data provided"}), 400
 
-        # Get current user ID from JWT token if recorded_by_user_id not provided
-        current_user_id = get_jwt_identity()
-        if "recorded_by_user_id" not in data:
-            data["recorded_by_user_id"] = current_user_id
+        actor, response = _actor_or_response()
+        if response:
+            return response
+        data["recorded_by_user_id"] = actor.user_id
 
         # Validate required fields
         required_fields = ["individual_id", "center_id"]
@@ -448,7 +480,7 @@ def check_in_individual_route() -> Tuple:
             }), 400
 
         # Get current user for role-based access control
-        current_user = get_current_user(current_user_id)
+        current_user = actor
         
         if current_user and current_user.role in ['center_admin', 'volunteer'] and current_user.center_id:
             if data["center_id"] != current_user.center_id:
@@ -531,11 +563,9 @@ def check_in_multiple_individuals_route() -> Tuple:
                 "message": "Maximum batch size is 50 individuals per request"
             }), 400
 
-        # Get current user ID from JWT token
-        current_user_id = get_jwt_identity()
-        
-        # Get current user for role-based access control
-        current_user = get_current_user(current_user_id)
+        current_user, response = _actor_or_response()
+        if response:
+            return response
         
         # Validate and prepare check-in data
         validated_data = []
@@ -556,9 +586,7 @@ def check_in_multiple_individuals_route() -> Tuple:
                         "message": f"Missing required field '{field}' for individual at index {i}"
                     }), 400
 
-            # Set default recorded_by_user_id if not provided
-            if "recorded_by_user_id" not in item:
-                item["recorded_by_user_id"] = current_user_id
+            item["recorded_by_user_id"] = current_user.user_id
 
             validated_data.append(item)
 
@@ -1024,9 +1052,7 @@ def transfer_individual_route(record_id: int) -> Tuple:
                     403,
                 )
 
-        # Default recorded_by_user_id to the authenticated user if not provided
-        if "recorded_by_user_id" not in data:
-            data["recorded_by_user_id"] = current_user_id_int
+        data["recorded_by_user_id"] = current_user.user_id
 
         logger.info("Transferring individual from record %s to center %s", 
                    record_id, data.get("transfer_to_center_id"))
@@ -1154,9 +1180,7 @@ def transfer_multiple_individuals_route() -> Tuple:
                     "message": f"Cannot transfer to center {transfer_item['transfer_to_center_id']}. Center must be active and have an active event."
                 }), 400
 
-            # Set default recorded_by_user_id if not provided
-            if "recorded_by_user_id" not in transfer_item:
-                transfer_item["recorded_by_user_id"] = current_user_id_int
+            transfer_item["recorded_by_user_id"] = current_user.user_id
 
             validated_transfers.append(transfer_item)
 
@@ -1343,6 +1367,11 @@ def get_individual_attendance_history_route(individual_id: int) -> Tuple:
             - HTTP status code
     """
     try:
+        actor, response = _actor_or_response()
+        if response:
+            return response
+        if not _may_access_individual_history(actor, individual_id):
+            return jsonify({"success": False, "message": "Insufficient permissions"}), 403
         logger.info("Fetching attendance history for individual: %s", individual_id)
 
         result = get_individual_attendance_history(individual_id)

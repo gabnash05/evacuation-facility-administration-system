@@ -149,9 +149,7 @@ export function VolunteerDashboard() {
                         Your Assigned Evacuation Center
                     </h3>
                     <div className="flex items-center gap-4">
-                        <div className="text-2xl font-bold text-primary">
-                            {volunteerCenterName}
-                        </div>
+                        <div className="text-2xl font-bold text-primary">{volunteerCenterName}</div>
                     </div>
                 </div>
 
@@ -179,12 +177,14 @@ export function VolunteerDashboard() {
                         },
                     ].map((action, i) => (
                         <div key={i} className="flex flex-col items-center gap-2">
-                            <div
+                            <button
+                                type="button"
+                                aria-label={action.label}
                                 className={`${action.color} w-20 h-20 rounded-lg flex items-center justify-center text-white shadow-md hover:shadow-lg transition-shadow cursor-pointer relative`}
                                 onClick={action.onClick}
                             >
-                                <action.icon className="w-10 h-10" />
-                            </div>
+                                <action.icon className="w-10 h-10" aria-hidden="true" />
+                            </button>
                             <p className="text-sm font-medium text-center">{action.label}</p>
                         </div>
                     ))}

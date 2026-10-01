@@ -21,8 +21,6 @@ interface EventDetailsModalProps {
 export function EventDetailsModal({ isOpen, onClose, eventData }: EventDetailsModalProps) {
     if (!eventData) return null;
 
-    console.log("Event Details Modal Data:", eventData);
-
     const getStatusColor = (status: string) => {
         switch (status.toLowerCase()) {
             case "active":

@@ -7,6 +7,19 @@ import { useIndividualStore } from "@/store/individualStore";
 import { IndividualTablePagination } from "./IndividualTablePagination";
 import type { Individual } from "@/types/individual";
 
+const loadingSpinnerClass =
+    "animate-spin rounded-full h-6 w-6 border-b-2 border-primary mx-auto mb-2";
+const resultButtonClass = (isSelected: boolean) =>
+    "w-full p-3 text-left transition-colors focus:outline-none focus:ring-2 focus:ring-primary " +
+    `focus:ring-inset ${isSelected ? "bg-primary/20 cursor-not-allowed" : "hover:bg-muted/50"}`;
+const resultNameClass = "font-medium flex items-center gap-2";
+const selectedIconClass = "h-4 w-4 text-green-600";
+const individualDetailsClass = "text-sm text-muted-foreground";
+const householdBadgeClass = "text-xs text-muted-foreground bg-muted px-2 py-1 rounded shrink-0";
+const selectedBadgeClass = "text-xs text-green-600 bg-green-100 px-2 py-1 rounded";
+const formatDateOfBirth = (dateOfBirth: string) =>
+    ` DOB: ${new Date(dateOfBirth).toLocaleDateString()}`;
+
 interface IndividualSearchTableProps {
     onSelectIndividual: (individual: Individual) => void;
     selectedIndividuals: Individual[];
@@ -28,23 +41,17 @@ interface IndividualSearchTableProps {
 export function IndividualSearchTable({
     onSelectIndividual,
     selectedIndividuals,
-    modalSearchQuery,
-    onModalSearchChange,
-    modalPage,
-    onModalPageChange,
     onSearch,
     isLoading,
     errorMessage,
 }: IndividualSearchTableProps) {
     // Determine if we're in modal context
     const isModalContext = onSearch !== undefined;
-    
+
     // Store reference for modal context
-    const { 
+    const {
         paginatedIndividuals,
         totalRecords,
-        currentPage,
-        searchQuery,
         loading,
         error,
         searchIndividuals: storeSearchIndividuals,
@@ -57,15 +64,15 @@ export function IndividualSearchTable({
     const [localSearchResults, setLocalSearchResults] = useState<Individual[]>([]);
     const [localTotalRecords, setLocalTotalRecords] = useState<number>(0);
     const [isSearching, setIsSearching] = useState<boolean>(false);
-    
+
     const limit = 10;
     const searchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     // Initialize from props when they change, but only update local state
     // when the incoming prop actually differs from the current local value.
 
-    const displayData = isModalContext ? localSearchResults : (paginatedIndividuals || []);
+    const displayData = isModalContext ? localSearchResults : paginatedIndividuals || [];
     const displayTotalRecords = isModalContext ? localTotalRecords : totalRecords;
-    const displayLoading = isModalContext ? (isLoading || isSearching) : loading;
+    const displayLoading = isModalContext ? isLoading || isSearching : loading;
     const displayError = isModalContext ? errorMessage : error;
 
     // Debounced effect to perform searches based on local state.
@@ -103,8 +110,7 @@ export function IndividualSearchTable({
                         setLocalSearchResults([]);
                         setLocalTotalRecords(0);
                     }
-                } catch (err) {
-                    console.error("Modal search failed:", err);
+                } catch {
                     setLocalSearchResults([]);
                     setLocalTotalRecords(0);
                 } finally {
@@ -126,16 +132,16 @@ export function IndividualSearchTable({
                         sortBy: "last_name",
                         sortOrder: "asc",
                     });
-                } catch (err) {
-                    console.error("Page search failed:", err);
+                } catch {
+                    // The store owns page-search error state.
                 }
             }, 300);
             return cleanup;
         }
 
         return cleanup;
-    // We only need to run when localSearchQuery/localPage change or when the
-    // search function reference changes.
+        // We only need to run when localSearchQuery/localPage change or when the
+        // search function reference changes.
     }, [localSearchQuery, localPage, isModalContext, onSearch, limit, storeSearchIndividuals]);
 
     const totalPages = Math.ceil(displayTotalRecords / limit);
@@ -175,6 +181,7 @@ export function IndividualSearchTable({
                         value={localSearchQuery}
                         onChange={e => handleSearchChange(e.target.value)}
                         className="pl-10 w-full"
+                        aria-label="Search individuals"
                     />
                     {localSearchQuery && (
                         <Button
@@ -182,6 +189,7 @@ export function IndividualSearchTable({
                             size="sm"
                             onClick={handleClearSearch}
                             className="absolute right-2 top-2 h-6 w-6 p-0"
+                            aria-label="Clear individual search"
                         >
                             <X className="h-3 w-3" />
                         </Button>
@@ -191,11 +199,11 @@ export function IndividualSearchTable({
                 <div className="border rounded-lg">
                     {displayLoading ? (
                         <div className="p-8 text-center text-muted-foreground">
-                            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary mx-auto mb-2"></div>
+                            <div className={loadingSpinnerClass}></div>
                             Searching individuals...
                         </div>
                     ) : displayError ? (
-                        <div className="p-4 text-center text-destructive">
+                        <div role="alert" className="p-4 text-center text-destructive">
                             Error loading individuals: {displayError}
                         </div>
                     ) : displayData.length === 0 ? (
@@ -208,39 +216,41 @@ export function IndividualSearchTable({
                         <>
                             <div className="max-h-60 overflow-y-auto divide-y">
                                 {displayData.map(individual => {
-                                    const isSelected = isIndividualSelected(individual.individual_id);
+                                    const isSelected = isIndividualSelected(
+                                        individual.individual_id
+                                    );
                                     return (
                                         <button
                                             key={individual.individual_id}
                                             onClick={() => onSelectIndividual(individual)}
                                             disabled={isSelected}
-                                            className={`w-full p-3 text-left transition-colors focus:outline-none focus:ring-2 focus:ring-primary focus:ring-inset ${
-                                                isSelected
-                                                    ? "bg-primary/20 cursor-not-allowed"
-                                                    : "hover:bg-muted/50"
-                                            }`}
+                                            className={resultButtonClass(isSelected)}
                                         >
                                             <div className="flex justify-between items-start">
                                                 <div className="text-left flex-1">
-                                                    <div className="font-medium flex items-center gap-2">
-                                                        {individual.first_name} {individual.last_name}
+                                                    <div className={resultNameClass}>
+                                                        {individual.first_name}{" "}
+                                                        {individual.last_name}
                                                         {isSelected && (
-                                                            <Check className="h-4 w-4 text-green-600" />
+                                                            <Check className={selectedIconClass} />
                                                         )}
                                                     </div>
-                                                    <div className="text-sm text-muted-foreground">
+                                                    <div className={individualDetailsClass}>
                                                         ID: {individual.individual_id} •
-                                                        {individual.gender && ` ${individual.gender} •`}
+                                                        {individual.gender &&
+                                                            ` ${individual.gender} •`}
                                                         {individual.date_of_birth &&
-                                                            ` DOB: ${new Date(individual.date_of_birth).toLocaleDateString()}`}
+                                                            formatDateOfBirth(
+                                                                individual.date_of_birth
+                                                            )}
                                                     </div>
                                                 </div>
                                                 <div className="flex items-center gap-2">
-                                                    <div className="text-xs text-muted-foreground bg-muted px-2 py-1 rounded shrink-0">
+                                                    <div className={householdBadgeClass}>
                                                         Household {individual.household_id}
                                                     </div>
                                                     {isSelected && (
-                                                        <div className="text-xs text-green-600 bg-green-100 px-2 py-1 rounded">
+                                                        <div className={selectedBadgeClass}>
                                                             Selected
                                                         </div>
                                                     )}

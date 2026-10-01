@@ -544,29 +544,7 @@ class AttendanceRecord(db.Model):
         check_out_time: str,
         notes: Optional[str] = None
     ) -> Optional["AttendanceRecord"]:
-        """Check out an individual by finding their current check-in record."""
-        
-        # Find the active check-in record for this individual
-        current_record_query = text("""
-            SELECT record_id 
-            FROM attendance_records 
-            WHERE individual_id = :individual_id 
-            AND status = 'checked_in' 
-            AND check_out_time IS NULL
-            ORDER BY check_in_time DESC
-            LIMIT 1
-        """)
-        
-        result = db.session.execute(
-            current_record_query,
-            {"individual_id": record_id}
-        ).fetchone()
-        
-        if not result:
-            raise ValueError("No active check-in found for this individual")
-        
-        record_id = result[0]
-        
+        """Check out the specified active attendance record."""
         return cls._check_out_by_record_id(record_id, check_out_time, notes)
     
 

@@ -42,11 +42,11 @@ export interface UpdateIndividualData {
 }
 
 export interface UpdateHouseholdData {
-    household_name?: string;
-    address?: string;
+    household_name: string;
+    address: string;
     household_head_id?: number;
-    center_id?: number;
-    individuals?: UpdateIndividualData[];
+    center_id: number;
+    individuals: UpdateIndividualData[];
 }
 
 // API Response types

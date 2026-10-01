@@ -13,7 +13,9 @@ import {
 } from "@/components/ui/select";
 import { useAuthStore } from "@/store/authStore";
 import { AddEditUserModal } from "@/components/features/user-management/AddEditUserModal";
+// eslint-disable-next-line max-len
 import { DeleteConfirmationModal } from "@/components/features/user-management/DeleteConfirmationModal";
+// eslint-disable-next-line max-len
 import { DeactivateConfirmationModal } from "@/components/features/user-management/DeactivateConfirmationModal";
 import type { User } from "@/types/user";
 
@@ -32,6 +34,10 @@ export function CenterAdminUserManagementPage() {
         setEntriesPerPage,
         setSortConfig,
         setCenterFilter,
+        roleFilter,
+        statusFilter,
+        setRoleFilter,
+        setStatusFilter,
         fetchUsers,
         deleteUser,
         deactivateUser,
@@ -49,10 +55,6 @@ export function CenterAdminUserManagementPage() {
     const [isDeactivateModalOpen, setIsDeactivateModalOpen] = useState(false);
     const [selectedUser, setSelectedUser] = useState<User | null>(null);
     
-    // Filter States
-    const [roleFilter, setRoleFilter] = useState<string>("all");
-    const [statusFilter, setStatusFilter] = useState<string>("all");
-
     // Debounce the fetch function to prevent API spamming
     const debouncedFetchUsers = useMemo(
         () => debounce(() => fetchUsers(userCenterId), 500),
@@ -68,6 +70,7 @@ export function CenterAdminUserManagementPage() {
 
     // Data Fetching Effect
     useEffect(() => {
+        if (!userCenterId) return;
         if (
             searchQuery ||
             entriesPerPage !== 10 ||
@@ -176,7 +179,7 @@ export function CenterAdminUserManagementPage() {
         <div className="flex gap-2">
             <Select 
                 value={roleFilter} 
-                onValueChange={(val) => { setRoleFilter(val); setCurrentPage(1); }} 
+                onValueChange={(value) => setRoleFilter(value === "volunteer" ? value : "all")}
                 disabled={loading}
             >
                 <SelectTrigger className="w-[140px]">
@@ -185,13 +188,14 @@ export function CenterAdminUserManagementPage() {
                 <SelectContent>
                     <SelectItem value="all">All Roles</SelectItem>
                     <SelectItem value="volunteer">Volunteer</SelectItem>
-                    <SelectItem value="center_admin">Center Admin</SelectItem> 
                 </SelectContent>
             </Select>
 
             <Select
                 value={statusFilter}
-                onValueChange={(val) => { setStatusFilter(val); setCurrentPage(1); }}
+                onValueChange={(value) =>
+                    setStatusFilter(value === "active" || value === "inactive" ? value : "all")
+                }
                 disabled={loading}
             >
                 <SelectTrigger className="w-[140px]">
@@ -205,6 +209,14 @@ export function CenterAdminUserManagementPage() {
             </Select>
         </div>
     );
+
+    if (!userCenterId) {
+        return (
+            <div className="p-6" role="alert">
+                No evacuation center assigned to your account.
+            </div>
+        );
+    }
 
     return (
         <div className="w-full min-w-0 bg-background flex flex-col relative p-6">
@@ -221,7 +233,10 @@ export function CenterAdminUserManagementPage() {
                 onClose={() => setIsDeleteModalOpen(false)}
                 onConfirm={handleConfirmDelete}
                 title="Delete Volunteer"
-                description={`Are you sure you want to permanently delete "${selectedUser?.email}"? This action cannot be undone.`}
+                description={
+                    `Are you sure you want to permanently delete "${selectedUser?.email}"? ` +
+                    "This action cannot be undone."
+                }
             />
 
             <DeactivateConfirmationModal
@@ -268,7 +283,9 @@ export function CenterAdminUserManagementPage() {
                     {/* Table */}
                     <div className="border-b border-border">
                         {loading ? (
-                            <div className="p-8 text-center text-muted-foreground">Loading personnel...</div>
+                            <div className="p-8 text-center text-muted-foreground">
+                                Loading personnel...
+                            </div>
                         ) : (
                             <UserTable
                                 data={users}

@@ -56,6 +56,7 @@ function AttendanceTableToolbarComponent({
                     value={searchQuery}
                     onChange={e => onSearchChange(e.target.value)}
                     className="w-full md:w-64"
+                    disabled={loading}
                 />
                 <div className="flex items-center gap-2">
                     <Button onClick={onCheckIn} disabled={loading}>

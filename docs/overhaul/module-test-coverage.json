@@ -1,0 +1,1269 @@
+{
+  "modules": [
+    {
+      "path": "backend/scripts/verify_module_test_coverage.py",
+      "status": "covered",
+      "tests": ["backend/tests/test_verify_module_test_coverage.py"],
+      "behavior": "Reports every maintained executable module and rejects invalid mappings."
+    },
+    {
+      "path": "backend/wsgi.py",
+      "status": "covered",
+      "tests": ["backend/tests/test_wsgi.py"],
+      "behavior": "Exports the production WSGI application."
+    },
+    {
+      "path": "backend/app/routes/individuals.py",
+      "status": "covered",
+      "tests": ["backend/tests/test_individual_route_authorization.py"],
+      "behavior": "Scopes individual reads and writes to assigned centers and reserves global status recalculation for super admins."
+    },
+    {
+      "path": "backend/app/routes/attendance_records.py",
+      "status": "covered",
+      "tests": ["backend/tests/test_attendance_route_authorization.py"],
+      "behavior": "Scopes individual attendance histories and derives check-in and transfer audit attribution from the persisted JWT actor."
+    },
+    {
+      "path": "backend/app/routes/distribution.py",
+      "status": "covered",
+      "tests": ["backend/tests/test_distribution_authorization.py"],
+      "behavior": "Requires active actors and protects stock-returning status mutations."
+    },
+    {
+      "path": "backend/app/services/distribution_service.py",
+      "status": "covered",
+      "tests": ["backend/tests/test_distribution_authorization.py"],
+      "behavior": "Binds distribution household, allocation, center, and event ownership before writes."
+    },
+    {
+      "path": "backend/app/models/distribution.py",
+      "status": "covered",
+      "tests": ["backend/tests/test_distribution_authorization.py"],
+      "behavior": "Persists the validated allocation event on a distribution session."
+    },
+    {
+      "path": "backend/app/routes/stats_routes.py",
+      "status": "covered",
+      "tests": ["backend/tests/test_stats_route_service.py"],
+      "behavior": "Applies assigned-center scope before statistics services are invoked."
+    },
+    {
+      "path": "backend/app/services/stats_service.py",
+      "status": "covered",
+      "tests": ["backend/tests/test_stats_route_service.py"],
+      "behavior": "Forwards center, demographic, and event filters to the canonical statistics model."
+    },
+    {
+      "path": "backend/app/models/stats.py",
+      "status": "covered",
+      "tests": ["backend/tests/test_stats_route_service.py"],
+      "behavior": "Classifies documented age boundaries and binds event scope in occupancy queries."
+    },
+    {
+      "path": "backend/app/routes/households.py",
+      "status": "covered",
+      "tests": ["backend/tests/test_household_route_authorization.py"],
+      "behavior": "Scopes household reads and writes to assigned centers and prevents volunteer deletion."
+    },
+    {
+      "path": "backend/app/services/household_service.py",
+      "status": "covered",
+      "tests": ["backend/tests/test_individual_service_contract.py"],
+      "behavior": "Validates nested household creation members before persistence."
+    },
+    {
+      "path": "backend/app/models/household.py",
+      "status": "covered",
+      "tests": ["backend/tests/test_household_model.py"],
+      "behavior": "Maps household and joined center fields without column-name collisions."
+    },
+    {
+      "path": "backend/app/services/individual_service.py",
+      "status": "covered",
+      "tests": ["backend/tests/test_individual_search_scope.py"],
+      "behavior": "Propagates assigned-center authorization scope through list, search, and status-summary data access."
+    },
+    {
+      "path": "backend/app/models/individual.py",
+      "status": "covered",
+      "tests": ["backend/tests/test_individual_search_scope.py"],
+      "behavior": "Binds assigned-center ownership predicates in individual list, count, search, and status-summary queries."
+    },
+    {
+      "path": "backend/app/routes/user.py",
+      "status": "covered",
+      "tests": [
+        "backend/tests/test_user_route_guards.py",
+        "backend/tests/test_user_authorization.py"
+      ],
+      "behavior": "Resolves persisted JWT actors and rejects unauthorized user-management requests."
+    },
+    {
+      "path": "backend/app/services/aid_allocation_service.py",
+      "status": "covered",
+      "tests": ["backend/tests/test_aid_allocation_update.py"],
+      "behavior": "Accepts only safe update fields and derives remaining stock server-side."
+    },
+    {
+      "path": "backend/app/models/aid_allocation.py",
+      "status": "covered",
+      "tests": ["backend/tests/test_aid_allocation_model.py"],
+      "behavior": "Binds allocation-update identifiers only from an explicit model-level allowlist."
+    },
+    {
+      "path": "backend/app/routes/events.py",
+      "status": "covered",
+      "tests": ["backend/tests/test_event_route_lifecycle.py"],
+      "behavior": "Blocks only competing active-event creation while allowing monitoring or resolved lifecycle records."
+    },
+    {
+      "path": "backend/app/models/event.py",
+      "status": "covered",
+      "tests": ["backend/tests/test_event_model.py"],
+      "behavior": "Preserves association identifiers through event updates and bulk deletion so capacity and lifecycle checks can run."
+    },
+    {
+      "path": "backend/app/services/event_service.py",
+      "status": "covered",
+      "tests": ["backend/tests/test_event_service_contract.py"],
+      "behavior": "Retains requested center associations through model update so capacity recalculation occurs."
+    },
+    {
+      "path": "backend/app/services/evacuation_center_service.py",
+      "status": "covered",
+      "tests": ["backend/tests/test_evacuation_center_service.py"],
+      "behavior": "Enforces the configured photo byte limit and encodes accepted upload bytes deterministically."
+    },
+    {
+      "path": "backend/app/models/evacuation_center.py",
+      "status": "covered",
+      "tests": ["backend/tests/test_evacuation_center_model.py"],
+      "behavior": "Normalizes supported coordinate representations and rejects malformed coordinate values."
+    },
+    {
+      "path": "backend/database/setup_db.py",
+      "status": "covered",
+      "tests": ["backend/tests/test_database_setup.py"],
+      "behavior": "Rejects unsafe database identifiers before attempting a connection or DDL."
+    },
+    {
+      "path": "backend/database/seed_db.py",
+      "status": "covered",
+      "tests": ["backend/tests/test_database_seed.py"],
+      "behavior": "Fails seed preflight before opening a database cursor when the declared SQL file is unavailable."
+    },
+    {
+      "path": "frontend/src/components/features/dashboard/ErrorAlert.tsx",
+      "status": "covered",
+      "tests": [
+        "frontend/src/components/features/dashboard/ErrorAlert.test.tsx"
+      ],
+      "behavior": "Exposes visible errors as accessible alerts."
+    },
+    {
+      "path": "frontend/src/components/features/aid-allocation/EditAllocationForm.tsx",
+      "status": "covered",
+      "tests": [
+        "frontend/src/components/features/aid-allocation/EditAllocationForm.test.tsx"
+      ],
+      "behavior": "Sends only mutable allocation fields; remaining inventory is server-owned."
+    },
+    {
+      "path": "backend/app/services/user_service.py",
+      "status": "covered",
+      "tests": ["backend/tests/test_user_authorization.py"],
+      "behavior": "Enforces role hierarchy, center scope, and self-management restrictions."
+    },
+    {
+      "path": "backend/app/models/user.py",
+      "status": "covered",
+      "tests": ["backend/tests/test_user_authorization.py"],
+      "behavior": "Binds authorization role scopes as SQL parameters in list queries."
+    },
+    {
+      "path": "backend/app/routes/evacuation_centers.py",
+      "status": "covered",
+      "tests": ["backend/tests/test_center_route_authorization.py"],
+      "behavior": "Restricts direct center reads by center scope and mutations to super admins."
+    },
+    {
+      "path": "frontend/src/components/features/map/MonoMap.tsx",
+      "status": "covered",
+      "tests": ["frontend/src/components/features/map/MonoMap.test.tsx"],
+      "behavior": "Never interpolates center names into raw marker HTML."
+    },
+    {
+      "path": "backend/app/__init__.py",
+      "status": "covered",
+      "tests": ["backend/tests/test_app_factory.py"],
+      "behavior": "Builds the application without invalid Flask-CORS configuration warnings."
+    },
+    {
+      "path": "backend/app/schemas/user.py",
+      "status": "covered",
+      "tests": ["backend/tests/test_user_schemas.py"],
+      "behavior": "Enforces center assignment invariants for user role contracts."
+    },
+    {
+      "path": "backend/app/config.py",
+      "status": "covered",
+      "tests": ["backend/tests/test_config.py"],
+      "behavior": "Declares the current token transport and development CORS contracts explicitly."
+    },
+    {
+      "path": "backend/app/models/__init__.py",
+      "status": "covered",
+      "tests": ["backend/tests/test_model_extensions.py"],
+      "behavior": "Owns initialized SQLAlchemy, migration, and JWT extension instances for the application."
+    },
+    {
+      "path": "backend/app/routes/__init__.py",
+      "status": "exempt",
+      "exception": "Zero-byte package marker with no executable behavior."
+    },
+    {
+      "path": "backend/app/schemas/__init__.py",
+      "status": "exempt",
+      "exception": "Zero-byte package marker with no executable behavior."
+    },
+    {
+      "path": "backend/app/services/__init__.py",
+      "status": "exempt",
+      "exception": "Zero-byte package marker with no executable behavior."
+    },
+    {
+      "path": "backend/app/utils/__init__.py",
+      "status": "exempt",
+      "exception": "Zero-byte package marker with no executable behavior."
+    },
+    {
+      "path": "backend/app/utils/validators.py",
+      "status": "exempt",
+      "exception": "Zero-byte utility placeholder with no executable behavior; retain only until its owning cleanup ticket resolves it."
+    },
+    {
+      "path": "backend/run.py",
+      "status": "covered",
+      "tests": ["backend/tests/test_run.py"],
+      "behavior": "Exports the configured Flask application without starting the development server on import."
+    },
+    {
+      "path": "backend/app/schemas/evacuation_center.py",
+      "status": "covered",
+      "tests": ["backend/tests/test_validation_schemas.py"],
+      "behavior": "Validates center defaults and coordinate-pair updates."
+    },
+    {
+      "path": "backend/app/schemas/event.py",
+      "status": "covered",
+      "tests": ["backend/tests/test_validation_schemas.py"],
+      "behavior": "Normalizes supported display dates and applies event defaults."
+    },
+    {
+      "path": "backend/app/schemas/stats.py",
+      "status": "covered",
+      "tests": ["backend/tests/test_validation_schemas.py"],
+      "behavior": "Rejects invalid dashboard filter identifiers."
+    },
+    {
+      "path": "backend/app/schemas/household.py",
+      "status": "covered",
+      "tests": ["backend/tests/test_household_individual_schemas.py"],
+      "behavior": "Applies household query defaults and requires at least one nested member where the contract declares it."
+    },
+    {
+      "path": "backend/app/schemas/individual.py",
+      "status": "covered",
+      "tests": ["backend/tests/test_household_individual_schemas.py"],
+      "behavior": "Rejects impossible future dates of birth."
+    },
+    {
+      "path": "backend/app/schemas/distribution.py",
+      "status": "covered",
+      "tests": ["backend/tests/test_distribution_schema.py"],
+      "behavior": "Validates non-empty, positive distribution items and applies stable history defaults."
+    },
+    {
+      "path": "frontend/src/utils/formatters.ts",
+      "status": "covered",
+      "tests": ["frontend/src/utils/formatters.test.ts"],
+      "behavior": "Formats capacity safely when a center has zero total capacity."
+    },
+    {
+      "path": "frontend/src/utils/helpers.ts",
+      "status": "covered",
+      "tests": ["frontend/src/utils/helpers.test.ts"],
+      "behavior": "Cancels pending debounce callbacks through the public cleanup API."
+    },
+    {
+      "path": "frontend/src/schemas/centers.ts",
+      "status": "covered",
+      "tests": ["frontend/src/schemas/centers.test.ts"],
+      "behavior": "Accepts only center statuses supported by the backend and database contract."
+    },
+    {
+      "path": "frontend/src/schemas/events.ts",
+      "status": "covered",
+      "tests": ["frontend/src/schemas/events.test.ts"],
+      "behavior": "Declares valid event lifecycle statuses and positive center-link identifiers."
+    },
+    {
+      "path": "frontend/src/schemas/stats.ts",
+      "status": "covered",
+      "tests": ["frontend/src/schemas/stats.test.ts"],
+      "behavior": "Validates the event filter used across the dashboard statistics contract."
+    },
+    {
+      "path": "frontend/src/schemas/user.ts",
+      "status": "covered",
+      "tests": ["frontend/src/schemas/user.test.ts"],
+      "behavior": "Enforces role/center invariants and password updates in user-management payloads."
+    },
+    {
+      "path": "frontend/src/schemas/individuals.ts",
+      "status": "covered",
+      "tests": ["frontend/src/schemas/individuals.test.ts"],
+      "behavior": "Aligns individual household ownership and title-case gender validation with the API contract."
+    },
+    {
+      "path": "frontend/src/schemas/households.ts",
+      "status": "covered",
+      "tests": ["frontend/src/schemas/households.test.ts"],
+      "behavior": "Validates complete create and update household payloads, including center ownership and at least one member, at the frontend boundary."
+    },
+    {
+      "path": "frontend/src/components/features/map/StaticMap.tsx",
+      "status": "covered",
+      "tests": ["frontend/src/components/features/map/StaticMap.test.tsx"],
+      "behavior": "Forwards supplied static markers to the rendered map instead of using unrelated placeholder data."
+    },
+    {
+      "path": "frontend/src/components/common/DataTable.tsx",
+      "status": "covered",
+      "tests": ["frontend/src/components/common/DataTable.test.tsx"],
+      "behavior": "Exposes sortable headers as accessible controls and renders an explicit empty table state."
+    },
+    {
+      "path": "frontend/src/layouts/MainLayout.tsx",
+      "status": "covered",
+      "tests": ["frontend/src/layouts/MainLayout.test.tsx"],
+      "behavior": "Uses responsive flex sizing for main content alongside the sidebar."
+    },
+    {
+      "path": "frontend/src/store/userStore.ts",
+      "status": "covered",
+      "tests": ["frontend/src/store/userStore.test.ts"],
+      "behavior": "Refreshes authenticated user state without exposing responses or filters in browser logs."
+    },
+    {
+      "path": "frontend/src/components/features/dashboard/EventDetailsModal.tsx",
+      "status": "covered",
+      "tests": [
+        "frontend/src/components/features/dashboard/EventDetailsModal.test.tsx"
+      ],
+      "behavior": "Displays event details without logging selected event data."
+    },
+    {
+      "path": "frontend/src/pages/volunteer/VolunteerDashboard.tsx",
+      "status": "covered",
+      "tests": ["frontend/src/pages/volunteer/VolunteerDashboard.test.tsx"],
+      "behavior": "Exposes volunteer quick actions as accessible buttons with preserved navigation behavior."
+    },
+    {
+      "path": "frontend/src/types/households.ts",
+      "status": "covered",
+      "tests": ["frontend/src/services/householdService.test.ts"],
+      "behavior": "Defines the full household update and list data contracts consumed by the client service."
+    },
+    {
+      "path": "frontend/src/services/householdService.ts",
+      "status": "covered",
+      "tests": ["frontend/src/services/householdService.test.ts"],
+      "behavior": "Maps the documented backend household list response and request parameters into the client contract."
+    },
+    {
+      "path": "frontend/src/services/api.ts",
+      "status": "covered",
+      "tests": ["frontend/src/services/api.test.ts"],
+      "behavior": "Preserves backend API errors and emits deterministic status and network fallbacks."
+    },
+    {
+      "path": "frontend/src/types/api.ts",
+      "status": "covered",
+      "tests": ["frontend/src/services/api.test.ts"],
+      "behavior": "Defines the compile-time response and pagination contracts consumed by shared API clients."
+    },
+    {
+      "path": "frontend/src/hooks/use-mobile.ts",
+      "status": "covered",
+      "tests": ["frontend/src/hooks/use-mobile.test.tsx"],
+      "behavior": "Tracks the shared responsive breakpoint and removes the media-query listener on unmount."
+    },
+    {
+      "path": "frontend/src/services/authService.ts",
+      "status": "covered",
+      "tests": ["frontend/src/services/authService.test.ts"],
+      "behavior": "Returns the login contract and configures client authorization only when the server supplies a token."
+    },
+    {
+      "path": "frontend/src/schemas/auth.ts",
+      "status": "covered",
+      "tests": ["frontend/src/schemas/auth.test.ts"],
+      "behavior": "Rejects malformed login credentials before the authentication request is attempted."
+    },
+    {
+      "path": "frontend/src/hooks/useAuth.ts",
+      "status": "covered",
+      "tests": ["frontend/src/hooks/useAuth.test.tsx"],
+      "behavior": "Uses the canonical user center_id to scope lower-role center access."
+    },
+    {
+      "path": "frontend/src/types/user.ts",
+      "status": "covered",
+      "tests": ["frontend/src/types/user.test.ts"],
+      "behavior": "Defines canonical user, center ownership, role, and authentication response contracts."
+    },
+    {
+      "path": "frontend/src/types/center.ts",
+      "status": "covered",
+      "tests": ["frontend/src/types/center.test.ts"],
+      "behavior": "Defines canonical evacuation-center identifiers, capacity fields, and supported statuses."
+    },
+    {
+      "path": "frontend/src/types/event.ts",
+      "status": "covered",
+      "tests": ["frontend/src/types/event.test.ts"],
+      "behavior": "Defines supported event statuses and typed evacuation-center associations in event details."
+    },
+    {
+      "path": "backend/app/routes/auth.py",
+      "status": "covered",
+      "tests": ["backend/tests/test_auth_logout.py"],
+      "behavior": "Clears the authentication cookie with the configured secure attribute without requiring persistence."
+    },
+    {
+      "path": "frontend/src/types/stats.ts",
+      "status": "covered",
+      "tests": ["frontend/src/types/stats.test.ts"],
+      "behavior": "Defines typed center/event filters and grouped dashboard statistics responses."
+    },
+    {
+      "path": "frontend/src/types/individual.ts",
+      "status": "covered",
+      "tests": ["frontend/src/types/individual.test.ts"],
+      "behavior": "Defines individual identity, household ownership, filters, and paginated client responses."
+    },
+    {
+      "path": "backend/app/routes/aid_allocation.py",
+      "status": "covered",
+      "tests": ["backend/tests/test_allocation_route_logging.py"],
+      "behavior": "Audits authenticated allocation updates by stable user ID without logging email addresses."
+    },
+    {
+      "path": "frontend/src/types/attendance.ts",
+      "status": "covered",
+      "tests": ["frontend/src/types/attendance.test.ts"],
+      "behavior": "Keeps attendance record identity distinct from individual identity and constrains status/filter contracts."
+    },
+    {
+      "path": "frontend/src/types/event-center.ts",
+      "status": "covered",
+      "tests": ["frontend/src/types/event-center.test.ts"],
+      "behavior": "Uses the application event model for typed event-center associations."
+    },
+    {
+      "path": "frontend/src/services/statsService.ts",
+      "status": "covered",
+      "tests": ["frontend/src/services/statsService.test.ts"],
+      "behavior": "Forwards shared center/event filters to documented statistics endpoints."
+    },
+    {
+      "path": "frontend/src/services/evacuationCenterService.ts",
+      "status": "covered",
+      "tests": ["frontend/src/services/evacuationCenterService.test.ts"],
+      "behavior": "Uses typed application events and forwards documented nearby-center query parameters."
+    },
+    {
+      "path": "frontend/src/services/attendanceRecordsService.ts",
+      "status": "covered",
+      "tests": ["frontend/src/services/attendanceRecordsService.test.ts"],
+      "behavior": "Uses supported center status/event endpoints and rejects mixed-center batch check-ins before network calls."
+    },
+    {
+      "path": "backend/app/services/attendance_records_service.py",
+      "status": "covered",
+      "tests": ["backend/tests/test_attendance_checkout_identity.py"],
+      "behavior": "Treats checkout input as an attendance record ID and never reloads an unrelated individual by that ID."
+    },
+    {
+      "path": "backend/app/models/attendance_records.py",
+      "status": "covered",
+      "tests": ["backend/tests/test_attendance_checkout_identity.py"],
+      "behavior": "Delegates checkout directly to the requested attendance record ID."
+    },
+    {
+      "path": "frontend/src/utils/attendance.ts",
+      "status": "covered",
+      "tests": ["frontend/src/utils/attendance.test.ts"],
+      "behavior": "Selects only the requested individual's checked-in, not-yet-checked-out attendance record."
+    },
+    {
+      "path": "frontend/src/pages/city-admin/CityAdminAttendancePageV2.tsx",
+      "status": "covered",
+      "tests": ["frontend/src/utils/attendance.test.ts"],
+      "behavior": "Resolves the active attendance record before a city-admin checkout action opens."
+    },
+    {
+      "path": "frontend/src/pages/center-admin/CenterAdminAttendancePageV2.tsx",
+      "status": "covered",
+      "tests": ["frontend/src/utils/attendance.test.ts"],
+      "behavior": "Resolves the active attendance record before a center-admin checkout action opens."
+    },
+    {
+      "path": "frontend/src/pages/volunteer/VolunteerAttendancePageV2.tsx",
+      "status": "covered",
+      "tests": ["frontend/src/utils/attendance.test.ts"],
+      "behavior": "Resolves the active attendance record before a volunteer checkout action opens."
+    },
+    {
+      "path": "frontend/src/store/authStore.ts",
+      "status": "covered",
+      "tests": ["frontend/src/store/authStore.test.ts"],
+      "behavior": "Resolves server identity before marking login authenticated and clears authentication plus dependent stores on either logout outcome."
+    },
+    {
+      "path": "frontend/src/components/features/auth/ProtectedRoute.tsx",
+      "status": "covered",
+      "tests": [
+        "frontend/src/components/features/auth/ProtectedRoute.test.tsx"
+      ],
+      "behavior": "Renders loading, redirects anonymous or unauthorized visitors, and admits authenticated users with an allowed role."
+    },
+    {
+      "path": "frontend/src/components/common/SuccessToast.tsx",
+      "status": "covered",
+      "tests": ["frontend/src/components/common/SuccessToast.test.tsx"],
+      "behavior": "Exposes success/error live-region semantics and delays error dismissal long enough to read it."
+    },
+    {
+      "path": "frontend/src/components/common/SearchBar.tsx",
+      "status": "covered",
+      "tests": ["frontend/src/components/common/SearchBar.test.tsx"],
+      "behavior": "Forwards controlled search input and tolerates an omitted optional callback."
+    },
+    {
+      "path": "frontend/src/components/common/TablePagination.tsx",
+      "status": "covered",
+      "tests": ["frontend/src/components/common/TablePagination.test.tsx"],
+      "behavior": "Reports empty and paginated ranges, keeps navigation bounded, and disables mutations while loading."
+    },
+    {
+      "path": "frontend/src/components/common/Toolbar.tsx",
+      "status": "covered",
+      "tests": ["frontend/src/components/common/Toolbar.test.tsx"],
+      "behavior": "Forwards toolbar search/add actions and honors its optional entries-selector visibility contract."
+    },
+    {
+      "path": "frontend/src/components/common/Topbar.tsx",
+      "status": "covered",
+      "tests": ["frontend/src/components/common/Topbar.test.tsx"],
+      "behavior": "Exposes the supplied page title through a semantic top-level heading."
+    },
+    {
+      "path": "frontend/src/components/common/ModeToggle.tsx",
+      "status": "covered",
+      "tests": ["frontend/src/components/common/ModeToggle.test.tsx"],
+      "behavior": "Uses a keyboard-operable native menu trigger and forwards theme selections to the theme provider."
+    },
+    {
+      "path": "frontend/src/components/common/ThemeProvider.tsx",
+      "status": "covered",
+      "tests": ["frontend/src/components/common/ThemeProvider.test.tsx"],
+      "behavior": "Restores and persists theme preference while applying explicit or system-resolved document theme classes."
+    },
+    {
+      "path": "frontend/src/lib/utils.ts",
+      "status": "covered",
+      "tests": ["frontend/src/lib/utils.test.ts"],
+      "behavior": "Combines conditional class values and resolves conflicting Tailwind utilities deterministically."
+    },
+    {
+      "path": "frontend/src/components/common/Sidebar.tsx",
+      "status": "covered",
+      "tests": ["frontend/src/components/common/Sidebar.test.tsx"],
+      "behavior": "Disables duplicate logout while pending and navigates to login only after successful logout."
+    },
+    {
+      "path": "frontend/src/store/evacuationCenterStore.ts",
+      "status": "covered",
+      "tests": ["frontend/src/store/evacuationCenterStore.test.ts"],
+      "behavior": "Forwards current paginated query state to center retrieval and clears stale list state when retrieval fails."
+    },
+    {
+      "path": "frontend/src/services/userService.ts",
+      "status": "covered",
+      "tests": ["frontend/src/services/userService.test.ts"],
+      "behavior": "Uses credentialed user-management endpoints, forwards list filters, and normalizes API failures."
+    },
+    {
+      "path": "frontend/src/services/individualService.ts",
+      "status": "covered",
+      "tests": ["frontend/src/services/individualService.test.ts"],
+      "behavior": "Strips absent list filters, preserves credentialed individual endpoint contracts, and normalizes API failures."
+    },
+    {
+      "path": "frontend/src/store/individualStore.ts",
+      "status": "covered",
+      "tests": ["frontend/src/store/individualStore.test.ts"],
+      "behavior": "Forwards current individual filters to retrieval and clears stale records after a failed refresh."
+    },
+    {
+      "path": "frontend/src/store/householdStore.ts",
+      "status": "covered",
+      "tests": ["frontend/src/store/householdStore.test.ts"],
+      "behavior": "Forwards current household table state to retrieval and clears stale records after a failed refresh."
+    },
+    {
+      "path": "frontend/src/store/attendanceRecordsStore.ts",
+      "status": "covered",
+      "tests": ["frontend/src/store/attendanceRecordsStore.test.ts"],
+      "behavior": "Preserves explicit attendance request filters when no page filter is set and clears stale records after a failed refresh."
+    },
+    {
+      "path": "frontend/src/services/eventService.ts",
+      "status": "covered",
+      "tests": ["frontend/src/services/eventService.test.ts"],
+      "behavior": "Forwards credentialed event list and active-event reads and normalizes client failures."
+    },
+    {
+      "path": "frontend/src/store/statsStore.ts",
+      "status": "covered",
+      "tests": ["frontend/src/store/statsStore.test.ts"],
+      "behavior": "Forwards the current statistics filters and explicit center scope and retains fetch errors for UI feedback."
+    },
+    {
+      "path": "frontend/src/store/aidAllocationStore.ts",
+      "status": "covered",
+      "tests": ["frontend/src/store/aidAllocationStore.test.ts"],
+      "behavior": "Forwards current allocation table state, clears stale data on failure, and does not log request failures in the browser."
+    },
+    {
+      "path": "frontend/src/store/eventStore.ts",
+      "status": "covered",
+      "tests": ["frontend/src/store/eventStore.test.ts"],
+      "behavior": "Forwards explicit center-scoped event list filters and clears stale events after a failed refresh."
+    },
+    {
+      "path": "frontend/src/components/features/evacuation-center/ConfirmationDialog.tsx",
+      "status": "covered",
+      "tests": [
+        "frontend/src/components/features/evacuation-center/ConfirmationDialog.test.tsx"
+      ],
+      "behavior": "Displays the supplied confirmation action and disables duplicate actions while saving."
+    },
+    {
+      "path": "frontend/src/components/features/evacuation-center/DuplicateCenterDialog.tsx",
+      "status": "covered",
+      "tests": [
+        "frontend/src/components/features/evacuation-center/DuplicateCenterDialog.test.tsx"
+      ],
+      "behavior": "Identifies the conflicting center and provides an acknowledgement action."
+    },
+    {
+      "path": "frontend/src/components/features/evacuation-center/DeleteCenterDialog.tsx",
+      "status": "covered",
+      "tests": [
+        "frontend/src/components/features/evacuation-center/DeleteCenterDialog.test.tsx"
+      ],
+      "behavior": "Identifies the center selected for deletion and disables duplicate destructive actions while pending."
+    },
+    {
+      "path": "frontend/src/components/features/evacuation-center/SuccessToast.tsx",
+      "status": "covered",
+      "tests": [
+        "frontend/src/components/features/evacuation-center/SuccessToast.test.tsx"
+      ],
+      "behavior": "Renders only while open and invokes its supplied close handler after the configured duration."
+    },
+    {
+      "path": "frontend/src/components/features/evacuation-center/EvacuationCenterTablePagination.tsx",
+      "status": "covered",
+      "tests": [
+        "frontend/src/components/features/evacuation-center/EvacuationCenterTablePagination.test.tsx"
+      ],
+      "behavior": "Reports pagination ranges and keeps navigation bounded by the available page range."
+    },
+    {
+      "path": "frontend/src/components/features/evacuation-center/EvacuationCenterTableToolbar.tsx",
+      "status": "covered",
+      "tests": [
+        "frontend/src/components/features/evacuation-center/EvacuationCenterTableToolbar.test.tsx"
+      ],
+      "behavior": "Forwards search/add actions and disables additions while loading."
+    },
+    {
+      "path": "frontend/src/services/aidAllocationService.ts",
+      "status": "covered",
+      "tests": ["frontend/src/services/aidAllocationService.test.ts"],
+      "behavior": "Forwards allocation filters and credentialed JSON mutations while normalizing API failures."
+    },
+    {
+      "path": "frontend/src/services/distributionService.ts",
+      "status": "covered",
+      "tests": ["frontend/src/services/distributionService.test.ts"],
+      "behavior": "Serializes supported history filters, performs credentialed mutations, and normalizes failures."
+    },
+    {
+      "path": "frontend/src/schemas/search.ts",
+      "status": "covered",
+      "tests": ["frontend/src/schemas/search.test.ts"],
+      "behavior": "Applies stable pagination defaults and constrains center and event lifecycle filters."
+    },
+    {
+      "path": "frontend/src/schemas/index.ts",
+      "status": "covered",
+      "tests": ["frontend/src/schemas/index.test.ts"],
+      "behavior": "Exports the canonical authentication and search schema entry points."
+    },
+    {
+      "path": "frontend/src/types/aid.ts",
+      "status": "covered",
+      "tests": ["frontend/src/types/aid.test.ts"],
+      "behavior": "Types allocation inventory and constrained update and distribution status contracts."
+    },
+    {
+      "path": "frontend/src/types/allocation.ts",
+      "status": "covered",
+      "tests": ["frontend/src/types/allocation.test.ts"],
+      "behavior": "Types center-bound allocation display and creation-form contracts."
+    },
+    {
+      "path": "frontend/src/types/distribution.ts",
+      "status": "covered",
+      "tests": ["frontend/src/types/distribution.test.ts"],
+      "behavior": "Types distribution history identities, items, and lifecycle status values."
+    },
+    {
+      "path": "frontend/src/components/features/dashboard/MapPanel.tsx",
+      "status": "covered",
+      "tests": ["frontend/src/components/features/dashboard/MapPanel.test.tsx"],
+      "behavior": "Excludes invalid coordinates and centers the map on the assigned valid center while preserving the loading fallback."
+    },
+    {
+      "path": "frontend/src/components/features/dashboard/EventHistoryTable.tsx",
+      "status": "covered",
+      "tests": [
+        "frontend/src/components/features/dashboard/EventHistoryTable.test.tsx"
+      ],
+      "behavior": "Blocks creation while an active event exists, bounds pagination, and supplies an explicit empty state."
+    },
+    {
+      "path": "frontend/src/components/features/dashboard/StatsRow.tsx",
+      "status": "covered",
+      "tests": ["frontend/src/components/features/dashboard/StatsRow.test.tsx"],
+      "behavior": "Loads center-scoped events and statistics and delegates filtered-state reset to the canonical statistics store."
+    },
+    {
+      "path": "frontend/src/components/features/evacuation-center/EvacuationCenterTable.tsx",
+      "status": "covered",
+      "tests": [
+        "frontend/src/components/features/evacuation-center/EvacuationCenterTable.test.tsx"
+      ],
+      "behavior": "Renders an explicit empty state, forwards sort and row actions, caps visual over-capacity, and hides deletion outside the super-admin role."
+    },
+    {
+      "path": "frontend/vite.config.ts",
+      "status": "covered",
+      "tests": ["frontend/src/test/vite-config.test.ts"],
+      "behavior": "Declares the production static-asset target and deterministic serial Vitest configuration."
+    },
+    {
+      "path": "frontend/src/components/features/events/DeleteEventDialog.tsx",
+      "status": "covered",
+      "tests": [
+        "frontend/src/components/features/events/DeleteEventDialog.test.tsx"
+      ],
+      "behavior": "Identifies the selected event and disables destructive and cancel actions while deletion is pending."
+    },
+    {
+      "path": "frontend/src/components/features/events/EventsTable.tsx",
+      "status": "covered",
+      "tests": ["frontend/src/components/features/events/EventsTable.test.tsx"],
+      "behavior": "Renders explicit empty state, forwards sort and row actions, and prevents active-event edit/delete while retaining resolution."
+    },
+    {
+      "path": "frontend/src/components/features/household/DataTablePagination.tsx",
+      "status": "covered",
+      "tests": [
+        "frontend/src/components/features/household/DataTablePagination.test.tsx"
+      ],
+      "behavior": "Reports the one-based table page range and enforces supplied previous and next navigation bounds."
+    },
+    {
+      "path": "frontend/src/components/features/household/HouseholdTablePagination.tsx",
+      "status": "covered",
+      "tests": [
+        "frontend/src/components/features/household/HouseholdTablePagination.test.tsx"
+      ],
+      "behavior": "Renders a bounded sliding page window, forwards selected pages, and disables all navigation during loading."
+    },
+    {
+      "path": "frontend/src/components/features/household/HouseholdTableToolbar.tsx",
+      "status": "covered",
+      "tests": [
+        "frontend/src/components/features/household/HouseholdTableToolbar.test.tsx"
+      ],
+      "behavior": "Keeps household search controlled, forwards add requests, and disables search, addition, and page-size selection during loading."
+    },
+    {
+      "path": "frontend/src/components/features/household/HouseholdTable.tsx",
+      "status": "covered",
+      "tests": [
+        "frontend/src/components/features/household/HouseholdTable.test.tsx"
+      ],
+      "behavior": "Renders empty and populated states, forwards sort, row, and edit actions, restricts deletion by role, and labels each action menu for assistive technology."
+    },
+    {
+      "path": "frontend/src/components/features/household/DeleteHouseholdDialog.tsx",
+      "status": "covered",
+      "tests": [
+        "frontend/src/components/features/household/DeleteHouseholdDialog.test.tsx"
+      ],
+      "behavior": "Identifies the pending household deletion, states its individual-record consequence, and disables destructive and cancel actions while deletion is pending."
+    },
+    {
+      "path": "frontend/src/components/features/household/HouseholdDetailsModal.tsx",
+      "status": "covered",
+      "tests": [
+        "frontend/src/components/features/household/HouseholdDetailsModal.test.tsx"
+      ],
+      "behavior": "Presents an accessible details dialog and renders an explicit not-found state when no household identifier is selected."
+    },
+    {
+      "path": "frontend/src/components/features/household/AddIndividualModal.tsx",
+      "status": "covered",
+      "tests": [
+        "frontend/src/components/features/household/AddIndividualModal.test.tsx"
+      ],
+      "behavior": "Presents an accessible add-member dialog and rejects incomplete member data before invoking the parent workflow."
+    },
+    {
+      "path": "frontend/src/components/features/household/AddHouseholdModal.tsx",
+      "status": "covered",
+      "tests": [
+        "frontend/src/components/features/household/AddHouseholdModal.test.tsx"
+      ],
+      "behavior": "Presents an accessible creation dialog and rejects missing household-head identity before invoking household creation."
+    },
+    {
+      "path": "frontend/src/components/features/household/EditHouseholdModal.tsx",
+      "status": "covered",
+      "tests": [
+        "frontend/src/components/features/household/EditHouseholdModal.test.tsx"
+      ],
+      "behavior": "Presents an accessible edit dialog and does not fetch household data when no household is selected."
+    },
+    {
+      "path": "frontend/src/components/features/attendance/IndividualTablePagination.tsx",
+      "status": "covered",
+      "tests": [
+        "frontend/src/components/features/attendance/IndividualTablePagination.test.tsx"
+      ],
+      "behavior": "Reports the displayed individual range, forwards bounded page navigation, and names and disables controls appropriately."
+    },
+    {
+      "path": "frontend/src/components/features/attendance/DeleteAttendanceDialog.tsx",
+      "status": "covered",
+      "tests": [
+        "frontend/src/components/features/attendance/DeleteAttendanceDialog.test.tsx"
+      ],
+      "behavior": "Identifies the selected attendance record, states permanent-removal scope, and disables destructive and cancel actions while deletion is pending."
+    },
+    {
+      "path": "frontend/src/components/features/attendance/AttendanceTableToolbar.tsx",
+      "status": "covered",
+      "tests": [
+        "frontend/src/components/features/attendance/AttendanceTableToolbar.test.tsx"
+      ],
+      "behavior": "Forwards search and attendance workflow actions and disables all interactive controls during loading."
+    },
+    {
+      "path": "frontend/src/components/features/attendance/AttendanceTable.tsx",
+      "status": "covered",
+      "tests": [
+        "frontend/src/components/features/attendance/AttendanceTable.test.tsx"
+      ],
+      "behavior": "Renders empty state, forwards sortable and checked-in actions for allowed roles, and exposes a named action menu."
+    },
+    {
+      "path": "frontend/src/components/features/attendance/TransferModal.tsx",
+      "status": "covered",
+      "tests": [
+        "frontend/src/components/features/attendance/TransferModal.test.tsx"
+      ],
+      "behavior": "Describes the transfer workflow, loads destination centers when opened, and blocks transfer without an attendance record."
+    },
+    {
+      "path": "frontend/src/components/features/attendance/CheckInModal.tsx",
+      "status": "covered",
+      "tests": [
+        "frontend/src/components/features/attendance/CheckInModal.test.tsx"
+      ],
+      "behavior": "Preselects supplied individuals, loads an active event, and prevents check-in until active-event conditions are met."
+    },
+    {
+      "path": "frontend/src/components/features/attendance/CheckOutModal.tsx",
+      "status": "covered",
+      "tests": [
+        "frontend/src/components/features/attendance/CheckOutModal.test.tsx"
+      ],
+      "behavior": "Completes a selected attendance-record checkout through the supplied workflow and preserves optional check-out notes."
+    },
+    {
+      "path": "frontend/src/components/features/attendance/AttendanceTableToolbarV2.tsx",
+      "status": "covered",
+      "tests": [
+        "frontend/src/components/features/attendance/AttendanceTableToolbarV2.test.tsx"
+      ],
+      "behavior": "Forwards named search and attendance actions, exposes filter state, and disables all workflow controls while loading."
+    },
+    {
+      "path": "frontend/src/components/features/attendance/AttendanceTableV2.tsx",
+      "status": "covered",
+      "tests": [
+        "frontend/src/components/features/attendance/AttendanceTableV2.test.tsx"
+      ],
+      "behavior": "Uses keyboard-operable sortable headers with correct sort state and exposes a named per-individual action menu."
+    },
+    {
+      "path": "frontend/src/components/features/attendance/IndividualSearchTable.tsx",
+      "status": "covered",
+      "tests": [
+        "frontend/src/components/features/attendance/IndividualSearchTable.test.tsx"
+      ],
+      "behavior": "Provides named search controls, clears controlled search state, and prevents reselection of already selected individuals."
+    },
+    {
+      "path": "frontend/src/components/features/transfer/TransferReasonSelect.tsx",
+      "status": "covered",
+      "tests": [
+        "frontend/src/components/features/transfer/TransferReasonSelect.test.tsx"
+      ],
+      "behavior": "Exposes a named controlled transfer-reason selector and prevents selection when disabled."
+    },
+    {
+      "path": "frontend/src/components/features/transfer/EvacuationCentersList.tsx",
+      "status": "covered",
+      "tests": [
+        "frontend/src/components/features/transfer/EvacuationCentersList.test.tsx"
+      ],
+      "behavior": "Handles zero-capacity centers without non-finite percentages, filters empty results, and forwards selected centers."
+    },
+    {
+      "path": "frontend/src/components/ui/alert.tsx",
+      "status": "covered",
+      "tests": ["frontend/src/components/ui/alert.test.tsx"],
+      "behavior": "Renders title and description content as an accessible alert, including the destructive variant."
+    },
+    {
+      "path": "frontend/src/components/ui/avatar.tsx",
+      "status": "covered",
+      "tests": ["frontend/src/components/ui/avatar.test.tsx"],
+      "behavior": "Renders fallback content within the composable avatar root."
+    },
+    {
+      "path": "frontend/src/components/ui/badge.tsx",
+      "status": "covered",
+      "tests": ["frontend/src/components/ui/badge.test.tsx"],
+      "behavior": "Renders semantic badge content with its selected visual variant."
+    },
+    {
+      "path": "frontend/src/components/ui/button.tsx",
+      "status": "covered",
+      "tests": ["frontend/src/components/ui/button.test.tsx"],
+      "behavior": "Forwards enabled clicks and prevents interaction while disabled."
+    },
+    {
+      "path": "frontend/src/components/ui/input.tsx",
+      "status": "covered",
+      "tests": ["frontend/src/components/ui/input.test.tsx"],
+      "behavior": "Forwards controlled changes and preserves disabled input state."
+    },
+    {
+      "path": "frontend/src/components/ui/label.tsx",
+      "status": "covered",
+      "tests": ["frontend/src/components/ui/label.test.tsx"],
+      "behavior": "Associates visible label text with its referenced form control."
+    },
+    {
+      "path": "frontend/src/components/ui/separator.tsx",
+      "status": "covered",
+      "tests": ["frontend/src/components/ui/separator.test.tsx"],
+      "behavior": "Renders a semantic non-decorative separator with its selected orientation."
+    },
+    {
+      "path": "frontend/src/components/ui/textarea.tsx",
+      "status": "covered",
+      "tests": ["frontend/src/components/ui/textarea.test.tsx"],
+      "behavior": "Forwards controlled changes and retains disabled text-area state."
+    },
+    {
+      "path": "frontend/src/components/ui/progress.tsx",
+      "status": "covered",
+      "tests": ["frontend/src/components/ui/progress.test.tsx"],
+      "behavior": "Exposes its numeric value to assistive technology and aligns the indicator with that value."
+    },
+    {
+      "path": "frontend/src/components/ui/skeleton.tsx",
+      "status": "covered",
+      "tests": ["frontend/src/components/ui/skeleton.test.tsx"],
+      "behavior": "Renders the loading affordance while forwarding standard element properties."
+    },
+    {
+      "path": "frontend/src/components/ui/card.tsx",
+      "status": "covered",
+      "tests": ["frontend/src/components/ui/card.test.tsx"],
+      "behavior": "Composes each named card region and forwards standard element properties."
+    },
+    {
+      "path": "frontend/src/components/ui/checkbox.tsx",
+      "status": "covered",
+      "tests": ["frontend/src/components/ui/checkbox.test.tsx"],
+      "behavior": "Reports selection changes accessibly and retains disabled state."
+    },
+    {
+      "path": "frontend/src/components/ui/table.tsx",
+      "status": "covered",
+      "tests": ["frontend/src/components/ui/table.test.tsx"],
+      "behavior": "Preserves semantic table regions, table heading scope, caption, and caller properties."
+    },
+    {
+      "path": "frontend/src/components/ui/tabs.tsx",
+      "status": "covered",
+      "tests": ["frontend/src/components/ui/tabs.test.tsx"],
+      "behavior": "Exposes selected tab state and switches the visible panel."
+    },
+    {
+      "path": "frontend/src/components/ui/scroll-area.tsx",
+      "status": "covered",
+      "tests": ["frontend/src/components/ui/scroll-area.test.tsx"],
+      "behavior": "Renders an accessible viewport and forwards caller properties."
+    },
+    {
+      "path": "frontend/src/components/ui/dialog.tsx",
+      "status": "covered",
+      "tests": ["frontend/src/components/ui/dialog.test.tsx"],
+      "behavior": "Opens a labelled modal, closes through its built-in control, and supports intentional close-control omission."
+    },
+    {
+      "path": "frontend/src/components/ui/popover.tsx",
+      "status": "covered",
+      "tests": ["frontend/src/components/ui/popover.test.tsx"],
+      "behavior": "Forwards trigger, anchor, labelled content, and default content configuration through the component boundary."
+    },
+    {
+      "path": "frontend/src/components/ui/sheet.tsx",
+      "status": "covered",
+      "tests": ["frontend/src/components/ui/sheet.test.tsx"],
+      "behavior": "Opens a labelled side panel, applies its selected side, and closes through the built-in action."
+    },
+    {
+      "path": "frontend/src/components/ui/tooltip.tsx",
+      "status": "covered",
+      "tests": ["frontend/src/components/ui/tooltip.test.tsx"],
+      "behavior": "Forwards a labelled trigger, guidance content, and default offset through the component boundary."
+    },
+    {
+      "path": "frontend/src/main.tsx",
+      "status": "covered",
+      "tests": ["frontend/src/main.test.tsx"],
+      "behavior": "Mounts the application through the required browser root element."
+    },
+    {
+      "path": "frontend/src/components/features/user-management/DeleteConfirmationModal.tsx",
+      "status": "covered",
+      "tests": ["frontend/src/components/features/user-management/DeleteConfirmationModal.test.tsx"],
+      "behavior": "Describes the destructive action and keeps cancel and confirm callbacks distinct."
+    },
+    {
+      "path": "frontend/src/components/features/user-management/DeactivateConfirmationModal.tsx",
+      "status": "covered",
+      "tests": ["frontend/src/components/features/user-management/DeactivateConfirmationModal.test.tsx"],
+      "behavior": "Describes the account-state action and keeps cancel and confirm callbacks distinct."
+    },
+    {
+      "path": "frontend/src/components/features/events/ResolveEventModal.tsx",
+      "status": "covered",
+      "tests": ["frontend/src/components/features/events/ResolveEventModal.test.tsx"],
+      "behavior": "Describes the resolution workflow, names the end-date control, and resets through cancellation."
+    },
+    {
+      "path": "frontend/src/components/features/events/AddCenterModal.tsx",
+      "status": "covered",
+      "tests": ["frontend/src/components/features/events/AddCenterModal.test.tsx"],
+      "behavior": "Describes center selection, excludes already associated centers, and submits the selected set."
+    },
+    {
+      "path": "frontend/src/components/features/aid-allocation/DeleteAidDialog.tsx",
+      "status": "covered",
+      "tests": ["frontend/src/components/features/aid-allocation/DeleteAidDialog.test.tsx"],
+      "behavior": "Identifies the pending allocation deletion, keeps cancel and confirm distinct, and prevents duplicate actions while pending."
+    },
+    {
+      "path": "frontend/src/components/features/user-management/AddEditUserModal.tsx",
+      "status": "covered",
+      "tests": ["frontend/src/components/features/user-management/AddEditUserModal.test.tsx"],
+      "behavior": "Describes account creation, names the role selector, and loads available centers."
+    },
+    {
+      "path": "frontend/src/components/features/user-management/UserTable.tsx",
+      "status": "covered",
+      "tests": ["frontend/src/components/features/user-management/UserTable.test.tsx"],
+      "behavior": "Exposes keyboard-accessible sorting, sort state, and user-specific role-scoped actions."
+    },
+    {
+      "path": "frontend/src/components/ui/select.tsx",
+      "status": "covered",
+      "tests": ["frontend/src/components/ui/select.test.tsx"],
+      "behavior": "Forwards selected value and trigger size through the shared Select boundary."
+    },
+    {
+      "path": "frontend/src/components/ui/dropdown-menu.tsx",
+      "status": "covered",
+      "tests": ["frontend/src/components/ui/dropdown-menu.test.tsx"],
+      "behavior": "Forwards menu trigger/item semantics and default content offset through the shared boundary."
+    },
+    {
+      "path": "frontend/src/components/ui/calendar.tsx",
+      "status": "covered",
+      "tests": ["frontend/src/components/ui/calendar.test.tsx"],
+      "behavior": "Forwards shared visible-day and caption defaults plus caller classes to the calendar boundary."
+    },
+    {
+      "path": "frontend/src/components/features/events/CreateEventModal.tsx",
+      "status": "covered",
+      "tests": ["frontend/src/components/features/events/CreateEventModal.test.tsx"],
+      "behavior": "Describes event creation and exposes named primary form controls."
+    },
+    {
+      "path": "frontend/src/components/features/transfer/TransferIndividualModal.tsx",
+      "status": "covered",
+      "tests": ["frontend/src/components/features/transfer/TransferIndividualModal.test.tsx"],
+      "behavior": "Describes the transfer workflow and prevents empty transfer submission."
+    },
+    {
+      "path": "frontend/src/App.tsx",
+      "status": "covered",
+      "tests": ["frontend/src/App.test.tsx"],
+      "behavior": "Renders public login and unauthorized routes."
+    },
+    {
+      "path": "frontend/src/components/features/evacuation-center/AddEvacuationCenterForm.tsx",
+      "status": "covered",
+      "tests": ["frontend/src/components/features/evacuation-center/AddEvacuationCenterForm.test.tsx"],
+      "behavior": "Describes center creation, blocks submission without a map location, and clears parent coordinates when a selection is removed."
+    },
+    {
+      "path": "frontend/src/components/features/evacuation-center/EditEvacuationCenterForm.tsx",
+      "status": "covered",
+      "tests": ["frontend/src/components/features/evacuation-center/EditEvacuationCenterForm.test.tsx"],
+      "behavior": "Accepts zero-valued coordinates, prevents stale-location saves, supports keyboard location selection, describes dialog views, and announces failed updates."
+    },
+    {
+      "path": "frontend/src/components/features/evacuation-center/EvacuationCenterDetailsModal.tsx",
+      "status": "covered",
+      "tests": ["frontend/src/components/features/evacuation-center/EvacuationCenterDetailsModal.test.tsx"],
+      "behavior": "Displays zero-valued center coordinates, loads attendance on demand, announces event and attendance errors, and ignores stale event responses after center changes."
+    },
+    {
+      "path": "frontend/src/components/features/map/MapLocationPicker.tsx",
+      "status": "covered",
+      "tests": ["frontend/src/components/features/map/MapLocationPicker.test.tsx"],
+      "behavior": "Reports map clicks, drags, and clears; renders valid zero-valued coordinates; and follows changed initial-location props."
+    },
+    {
+      "path": "frontend/src/test/setup.ts",
+      "status": "exempt",
+      "exception": "Vitest global cleanup configuration with no independently callable application behavior; it is exercised by every frontend test run."
+    },
+    {
+      "path": "frontend/src/pages/auth/LoginPage.tsx",
+      "status": "covered",
+      "tests": ["frontend/src/pages/auth/LoginPage.test.tsx"],
+      "behavior": "Rejects invalid credentials locally and explains required corrections."
+    },
+    {
+      "path": "frontend/src/components/features/aid-allocation/AidAllocationToolbar.tsx",
+      "status": "covered",
+      "tests": ["frontend/src/components/features/aid-allocation/AidAllocationToolbar.test.tsx"],
+      "behavior": "Forwards search and allocation actions and disables mutable controls while loading."
+    },
+    {
+      "path": "frontend/src/components/features/aid-allocation/AidAllocationTable.tsx",
+      "status": "covered",
+      "tests": ["frontend/src/components/features/aid-allocation/AidAllocationTable.test.tsx"],
+      "behavior": "Renders empty data safely, forwards sort actions, and guards zero-quantity display."
+    },
+    {
+      "path": "frontend/src/components/features/aid-allocation/AidAllocationForm.tsx",
+      "status": "covered",
+      "tests": ["frontend/src/components/features/aid-allocation/AidAllocationForm.test.tsx"],
+      "behavior": "Describes allocation creation and blocks incomplete submissions before payload creation."
+    },
+    {
+      "path": "frontend/src/pages/center-admin/CenterAdminAidAllocationPage.tsx",
+      "status": "covered",
+      "tests": ["frontend/src/pages/center-admin/CenterAdminAidAllocationPage.test.tsx"],
+      "behavior": "Rejects center-admin access without an assigned center and renders the assigned-center allocation view."
+    },
+    {
+      "path": "frontend/src/pages/city-admin/CityAdminCentersPage.tsx",
+      "status": "covered",
+      "tests": ["frontend/src/pages/city-admin/CityAdminCentersPage.test.tsx"],
+      "behavior": "Loads center data and presents the city-admin center-management entry view."
+    },
+    {
+      "path": "frontend/src/pages/city-admin/CityAdminDashboard.tsx",
+      "status": "covered",
+      "tests": ["frontend/src/pages/city-admin/CityAdminDashboard.test.tsx"],
+      "behavior": "Fetches city-admin event data once for each initial dashboard effect cycle."
+    },
+    {
+      "path": "frontend/src/pages/center-admin/CenterAdminDashboard.tsx",
+      "status": "covered",
+      "tests": ["frontend/src/pages/center-admin/CenterAdminDashboard.test.tsx"],
+      "behavior": "Renders a clear unassigned-center state without asserting an optional center identifier."
+    },
+    {
+      "path": "frontend/src/pages/volunteer/VolunteerHouseholdsPage.tsx",
+      "status": "covered",
+      "tests": ["frontend/src/pages/volunteer/VolunteerHouseholdsPage.test.tsx"],
+      "behavior": "Blocks household management when the volunteer lacks an assigned evacuation center."
+    },
+    {
+      "path": "frontend/src/pages/center-admin/CenterAdminHouseholds.tsx",
+      "status": "covered",
+      "tests": ["frontend/src/pages/center-admin/CenterAdminHouseholds.test.tsx"],
+      "behavior": "Blocks household management when the center administrator lacks an assigned evacuation center."
+    },
+    {
+      "path": "frontend/src/pages/city-admin/CityAdminHouseholdsPage.tsx",
+      "status": "covered",
+      "tests": ["frontend/src/pages/city-admin/CityAdminHouseholdsPage.test.tsx"],
+      "behavior": "Loads the city-admin household-management view and fetches its initial household data."
+    },
+    {
+      "path": "frontend/src/pages/center-admin/CenterAdminUserManagementPage.tsx",
+      "status": "covered",
+      "tests": ["frontend/src/pages/center-admin/CenterAdminUserManagementPage.test.tsx"],
+      "behavior": "Lists personnel at the assigned center and blocks access when no center is assigned."
+    },
+    {
+      "path": "frontend/src/pages/city-admin/CityAdminUserMangementPage.tsx",
+      "status": "covered",
+      "tests": ["frontend/src/pages/city-admin/CityAdminUserMangementPage.test.tsx"],
+      "behavior": "Loads city-admin users and exposes only authorized role and status filters."
+    }
+  ]
+}

@@ -31,6 +31,8 @@ export type SortConfig = {
     direction: "asc" | "desc" | null;
 } | null;
 
+const destructiveActionClass = "flex items-center gap-2 text-destructive focus:text-destructive";
+
 interface HouseholdTableProps {
     data: Household[];
     headers: { key: string; label: string; sortable: boolean }[];
@@ -91,11 +93,6 @@ export function HouseholdTable({
     const canDelete =
         userRole === "super_admin" || userRole === "city_admin" || userRole === "center_admin";
 
-    const handleDropdownClick = (e: React.MouseEvent, householdId: number) => {
-        e.stopPropagation();
-        onRowClick(householdId);
-    };
-
     if (data.length === 0 && !loading) {
         return (
             <div className="p-8 text-center">
@@ -150,24 +147,24 @@ export function HouseholdTable({
                                         "hover:bg-muted/50 cursor-pointer", // Added cursor-pointer
                                         index % 2 === 1 && "bg-muted/30"
                                     )}
-                                    onClick={() => onRowClick(row.household_id)} // Added row click handler
+                                    onClick={() => onRowClick(row.household_id)}
                                 >
                                     {headers.map(header => (
                                         <TableCell key={header.key} className="py-3">
                                             {row[header.key as keyof Household]}
                                         </TableCell>
                                     ))}
-                                    <TableCell 
+                                    <TableCell
                                         className="text-right"
-                                        onClick={(e) => e.stopPropagation()} // Prevent row click when clicking actions
+                                        onClick={e => e.stopPropagation()}
                                     >
                                         <DropdownMenu>
                                             <DropdownMenuTrigger asChild>
                                                 <Button
                                                     variant="ghost"
                                                     size="icon"
+                                                    aria-label={`Actions for ${row.householdName}`}
                                                     className="h-8 w-8"
-                                                    onClick={(e) => e.stopPropagation()} // Prevent row click
                                                 >
                                                     <MoreVertical className="h-4 w-4" />
                                                 </Button>
@@ -183,7 +180,7 @@ export function HouseholdTable({
                                                 {canDelete && (
                                                     <DropdownMenuItem
                                                         onClick={() => handleDeleteClick(row)}
-                                                        className="flex items-center gap-2 text-destructive focus:text-destructive"
+                                                        className={destructiveActionClass}
                                                     >
                                                         <Trash2 className="h-4 w-4" />
                                                         Delete

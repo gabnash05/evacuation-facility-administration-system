@@ -30,11 +30,12 @@ export function CenterAdminAidAllocationPage() {
     const [filteredAllocations, setFilteredAllocations] = useState(allocations);
 
     const debouncedFetchData = useMemo(
-        () => debounce(() => {
-            if (user?.center_id) {
-                fetchCenterAllocations(user.center_id);
-            }
-        }, 500),
+        () =>
+            debounce(() => {
+                if (user?.center_id) {
+                    fetchCenterAllocations(user.center_id);
+                }
+            }, 500),
         [user?.center_id, fetchCenterAllocations]
     );
 
@@ -48,54 +49,57 @@ export function CenterAdminAidAllocationPage() {
     useEffect(() => {
         if (!user?.center_id) return;
         fetchCenterAllocations(user.center_id);
-    }, [user?.center_id, currentPage, entriesPerPage, sortConfig, searchQuery, fetchCenterAllocations]);
+    }, [
+        user?.center_id,
+        currentPage,
+        entriesPerPage,
+        sortConfig,
+        searchQuery,
+        fetchCenterAllocations,
+    ]);
 
     useEffect(() => {
-        applyFilters();
-    }, [allocations, searchQuery]);
-
-    const applyFilters = () => {
         if (!searchQuery) {
             setFilteredAllocations(allocations);
             return;
         }
 
         const q = searchQuery.toLowerCase().trim();
-        
+
         const filtered = allocations.filter(allocation => {
             const formatDateForDisplay = (dateString: string) => {
                 if (!dateString) return "";
                 try {
                     const date = new Date(dateString);
-                    return date.toLocaleDateString('en-US', {
-                        year: 'numeric',
-                        month: 'long',
-                        day: 'numeric'
+                    return date.toLocaleDateString("en-US", {
+                        year: "numeric",
+                        month: "long",
+                        day: "numeric",
                     });
-                } catch (error) {
+                } catch {
                     return "";
                 }
             };
 
             const formattedDate = formatDateForDisplay(allocation.created_at);
             if (formattedDate.toLowerCase().includes(q)) return true;
-            
+
             if (allocation.center_name?.toLowerCase().includes(q)) return true;
-            
+
             if (allocation.resource_name?.toLowerCase().includes(q)) return true;
-            
+
             const total = allocation.total_quantity || 0;
             const remaining = allocation.remaining_quantity || 0;
             const quantityText = `${remaining} / ${total}`;
             if (quantityText.includes(q)) return true;
-            
+
             if (allocation.status?.toLowerCase().includes(q)) return true;
-            
+
             return false;
         });
 
         setFilteredAllocations(filtered);
-    };
+    }, [allocations, searchQuery]);
 
     const handleSort = (column: string) => {
         if (sortConfig?.key !== column) {
@@ -128,7 +132,7 @@ export function CenterAdminAidAllocationPage() {
     const allocationColumns = [
         { key: "created_at", label: "Date", sortable: true },
         { key: "center_name", label: "Center", sortable: true },
-        { key: "category_name", label: "Category", sortable: true},
+        { key: "category_name", label: "Category", sortable: true },
         { key: "resource_name", label: "Relief Type", sortable: true },
         { key: "remaining_quantity", label: "Quantity", sortable: true },
         { key: "status", label: "Status", sortable: true },
@@ -175,7 +179,9 @@ export function CenterAdminAidAllocationPage() {
                         <AidDistributionToolbar
                             searchQuery={searchQuery}
                             onSearchChange={handleSearchChange}
-                            onAddAllocation={() => { /* view-only: no-op */ }}
+                            onAddAllocation={() => {
+                                /* view-only: no-op */
+                            }}
                             entriesPerPage={entriesPerPage}
                             onEntriesPerPageChange={handleEntriesPerPageChange}
                             loading={loading}
@@ -189,9 +195,7 @@ export function CenterAdminAidAllocationPage() {
                     <div className="border-b border-border">
                         {loading && allocations.length === 0 ? (
                             <div className="p-8 text-center">
-                                <div className="text-muted-foreground">
-                                    Loading allocations...
-                                </div>
+                                <div className="text-muted-foreground">Loading allocations...</div>
                             </div>
                         ) : (
                             <AidDistributionTable
@@ -201,7 +205,7 @@ export function CenterAdminAidAllocationPage() {
                                 onSort={handleSort}
                                 sortColumn={sortConfig?.key}
                                 sortDirection={sortConfig?.direction || undefined}
-                                showActions={false} 
+                                showActions={false}
                             />
                         )}
                     </div>

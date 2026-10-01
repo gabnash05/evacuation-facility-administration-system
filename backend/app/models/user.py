@@ -239,6 +239,7 @@ class User(db.Model):
         sort_by: Optional[str] = None,
         sort_order: Optional[str] = "asc",
         center_id: Optional[int] = None,
+        allowed_roles: Optional[set[str]] = None,
     ) -> Dict[str, Any]:
         """Get all users with pagination, search, and sorting."""
         # Base query with join to get center name
@@ -266,6 +267,15 @@ class User(db.Model):
             base_query += " AND u.role = :role"
             count_query += " AND u.role = :role"
             params["role"] = role
+        elif allowed_roles is not None:
+            role_params = []
+            for index, allowed_role in enumerate(sorted(allowed_roles)):
+                parameter = f"allowed_role_{index}"
+                role_params.append(f":{parameter}")
+                params[parameter] = allowed_role
+            clause = f" AND u.role IN ({', '.join(role_params)})"
+            base_query += clause
+            count_query += clause
 
         # Add status filter
         if status and status != "all":

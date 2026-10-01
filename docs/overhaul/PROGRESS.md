@@ -1,0 +1,418 @@
+# Overhaul Progress Ledger
+
+| ID                            | Status      | Started    | Completed  | Evidence / next action                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
+| ----------------------------- | ----------- | ---------- | ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| FOUNDATION-001                | complete    | 2026-09-02 | 2026-09-02 | Created all required control artifacts, recorded verified baseline results, and validated the docs-only worktree change.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
+| AUDIT-001                     | complete    | 2026-09-02 | 2026-09-02 | Reviewed and ledgered all 28 batch-0 files. Logged tooling, documentation, and configuration drift.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
+| AUDIT-002                     | complete    | 2026-09-02 | 2026-09-02 | Reviewed and ledgered 15 backend bootstrap/auth/user files. Confirmed missing WSGI app, user-management authorization bypass, insecure token/configuration defaults, user-contract drift, and persistence hazards.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
+| AUDIT-003                     | complete    | 2026-09-02 | 2026-09-02 | Reviewed and ledgered all five tracked database artifacts. Confirmed absent migration history, PostgreSQL/PostGIS versus SQLite runtime incompatibility, non-idempotent bootstrap, and unsafe/partial seeding behavior.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
+| AUDIT-004                     | complete    | 2026-09-02 | 2026-09-02 | Reviewed and ledgered 12 backend center/event/stats files. Confirmed unrestricted center management, non-atomic event/center lifecycle work, contradictory spatial contracts, destructive center deletion policy, and response/filter drift.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
+| AUDIT-005                     | complete    | 2026-09-02 | 2026-09-02 | Reviewed and ledgered eight backend household/individual files and their models. Confirmed unrestricted PII CRUD/recalculation, schema-route drift, pagination/filter mismatch, and incomplete transaction/relationship safeguards.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
+| AUDIT-006                     | complete    | 2026-09-02 | 2026-09-03 | Reviewed three backend files; recorded ATTENDANCE-001/002, SECURITY-007, CONTRACT-005, and BACKEND-006.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
+| AUDIT-007                     | complete    | 2026-09-03 | 2026-09-03 | Reviewed seven backend files; recorded SECURITY-008/009, DISTRIBUTION-001, CONTRACT-006, and BACKEND-007.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| AUDIT-008                     | complete    | 2026-09-03 | 2026-09-03 | Reviewed 54 frontend shell/auth/shared files; recorded FRONTEND-001 through FRONTEND-004 and classified 24 shadcn/Radix files as a generated component group.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
+| AUDIT-009                     | complete    | 2026-09-03 | 2026-09-03 | Reviewed all remaining frontend feature, map, residual route, client/state/type, and utility files. Coverage ledger reconciles all 253 tracked snapshot files.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
+| PLANNING-001                  | complete    | 2026-09-03 | 2026-09-03 | Reconciled audit completion and added the ordered implementation roadmap. DEVOPS-001 is the highest-priority unblocked implementation ticket.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
+| DEVOPS-001                    | complete    | 2026-09-03 | 2026-09-03 | Restored `backend/wsgi.py` as the factory-created production app. Verified `from wsgi import app` (84 routes), Black, isort, and diff whitespace checks. Committed as `571701d` and published, with TEST-001A, on `origin/codex/overhaul-foundation`. The existing Flask-CORS warning remains tracked as BACKEND-001.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
+| TEST-001A                     | complete    | 2026-09-03 | 2026-09-03 | Added `pipenv run test` using stdlib discovery plus the WSGI regression. Passed 1 test, Black, isort, Pipenv verification, and diff whitespace checks. Database-backed and frontend testing remain later TEST-001 splits.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| TEST-001B                     | complete    | 2026-09-03 | 2026-09-03 | Added locked Vitest/jsdom/Testing Library dependencies, one-shot/watch test commands, explicit test setup, and two `ErrorAlert` component regressions. The tests exposed and fixed missing alert semantics (FRONTEND-019). Clean `npm ci --ignore-scripts` and the focused verbose suite pass; `npm run test` (2 tests), `npm run type-check`, targeted Prettier check, `npm run build`, and `git diff --check` pass. Build reports recorded P4 dynamic-import/chunk-size optimization work (FRONTEND-020). Committed as `d68cb9a` and published to `origin/codex/overhaul-foundation`.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
+| TEST-001C                     | complete    | 2026-09-03 | 2026-09-03 | Added a test-only Flask config, reusable API test base, and user-list JWT/validation boundary regressions. Focused tests and `pipenv run test` (3 tests), Black, isort, Pipenv verification, and whitespace validation pass. Tests made no database query/schema/migration/seed or external request. The pre-existing Flask-CORS warning is still BACKEND-001. Committed as `e496fd8` and published to `origin/codex/overhaul-foundation`.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
+| TEST-001                      | complete    | 2026-09-03 | 2026-09-03 | TEST-001A/B/C establish deterministic backend unittest discovery, Flask API test-client/JWT helpers, and frontend Vitest/jsdom component testing. Database-backed test isolation remains the separate TEST-002 dependency of DATABASE-002; feature, authorization, contract, and browser coverage are required within their owning tickets.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
+| TEST-003A                     | complete    | 2026-09-03 | 2026-09-03 | Added the repository-native module/test mapping, baseline ledger documentation, and a tested verifier. The baseline reports 217 executable modules: 5 mapped and 212 explicitly missing; deterministic coverage batches must close the gaps before strict enforcement is enabled. Published as `d960f0d`.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| SECURITY-009                  | complete    | 2026-09-03 | 2026-09-03 | Replaced untrusted dynamic allocation-update identifiers with a fixed server-owned allowlist; rejected client `remaining_quantity`; derived remaining stock from persisted values; and removed the browser-derived field. Added six backend regression cases and one mapped component regression. Focused and aggregate backend tests (11), Pipenv verification, targeted formatting, frontend type-check, and whitespace checks pass; the pre-existing Flask-CORS warning remains BACKEND-001.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| SECURITY-002                  | complete    | 2026-09-04 | 2026-09-04 | Implemented user-management role hierarchy and center scope selected by the user: super admins manage all users; city admins manage center admins/volunteers; center admins manage volunteers only at their own center; volunteers have no access. All endpoints resolve persisted actors and reject generic self-management. Added route, service, and parameterized-query regressions; focused tests and aggregate backend tests pass (16), Pipenv verification and module ledger pass.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| SECURITY-004                  | complete    | 2026-09-04 | 2026-09-04 | Applied the selected center policy: super-admin-only mutations; citywide reads for super/city admins; direct assigned-center reads for center admins/volunteers; no lower-role citywide/map read. Three focused route regressions and aggregate backend tests (19) pass; module ledger passes.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
+| SECURITY-010                  | complete    | 2026-09-04 | 2026-09-04 | Removed database-controlled center names from Leaflet raw marker HTML and CSS attributes; tooltip retains React text rendering. Added a hostile-marker regression and module mapping. Focused Vitest command exited successfully, TypeScript and whitespace checks pass; legacy map formatting remains QUALITY-001.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
+| BACKEND-001                   | complete    | 2026-09-04 | 2026-09-04 | Removed Flask-CORS's unsupported `allow_credentials` option and added an app-factory regression. Focused and aggregate backend tests pass (20); the former warning no longer appears.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
+| SECURITY-006                  | complete    | 2026-09-05 | 2026-09-05 | Applied the selected policy to household and individual PII: super/city admins are citywide; center admins and volunteers are limited to household-owned data at their assigned center; volunteers cannot delete; global individual-status recalculation is super-admin-only. Added 17 focused route/model/service regressions. Full backend suite passes (61 tests); Black, Black-compatible isort, Pipenv verify, diff whitespace, and module coverage verification pass. The module verifier reports 92 covered, 118 missing, and five exempt modules.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| SECURITY-007                  | complete    | 2026-09-05 | 2026-09-05 | Scoped individual attendance history to the selected household-center policy and made check-in/transfer audit attribution server-owned for single and batch requests. Added four API regressions; the complete backend suite passes (65 tests).                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| SECURITY-008                  | complete    | 2026-09-05 | 2026-09-05 | Enforced active distribution actors and household/request/allocation center and event ownership before distribution writes; status mutations are now super-admin-only; validated event IDs are persisted rather than defaulted. Added three regressions; complete backend suite passes (68 tests), and module verification reports 96 covered, 114 missing, and five exempt modules.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
+| TEST-003B-STAT                | complete    | 2026-09-05 | 2026-09-05 | Added API-boundary, service-forwarding, and model-query regressions for dashboard statistics center scope, age boundaries, and filters. Focused tests and the full backend suite pass (72 tests); module verification reports 99 covered, 111 missing, and five exempt modules.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| CONTRACT-003-STAT             | complete    | 2026-09-05 | 2026-09-05 | Standardized occupancy, registration, and aid-distribution statistics filter validation with the established dashboard schema. Regression coverage rejects invalid event identifiers before service invocation; the complete backend suite passes (73 tests).                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
+| CONTRACT-004-INDIVIDUAL       | complete    | 2026-09-05 | 2026-09-05 | Required the documented household ID for individual creation and separated partial-update validation from the create contract. Focused tests and the full backend suite pass (76 tests).                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
+| CONTRACT-004-HOUSEHOLD-CREATE | complete    | 2026-09-05 | 2026-09-05 | Split nested household-member creation from standalone individual creation, so standalone payloads require a household ID while nested members do not. Household creation and household-member creation now validate their runtime schemas before persistence. Focused tests and the complete backend suite pass (78 tests); module verification reports 100 covered, 110 missing, and five exempt modules.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
+| BACKEND-005-HOUSEHOLD-DETAIL  | complete    | 2026-09-05 | 2026-09-05 | Aliased every overlapping household/center column in the household-detail join, so household address and timestamps cannot be overwritten by joined center fields. Focused tests and the complete backend suite pass (80 tests); module verification reports 101 covered, 109 missing, and five exempt modules.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| SECURITY-009-MODEL            | complete    | 2026-09-05 | 2026-09-05 | Closed the remaining model-level dynamic allocation-update boundary with an explicit mutable-field allowlist. Unknown fields are rejected before the model loads or writes an allocation, and valid payloads remain unchanged while only allowlisted identifiers reach SQL. Focused tests and the complete backend suite pass (82 tests); module verification reports 102 covered, 108 missing, and five exempt modules.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
+| BACKEND-003-CREATE-GATE       | complete    | 2026-09-05 | 2026-09-05 | Aligned the route-level active-event gate with the model lifecycle rule: a second active event is rejected, while monitoring/resolved creations proceed to schema/service validation. Focused tests and the complete backend suite pass (84 tests); module verification reports 103 covered, 107 missing, and five exempt modules.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
+| BACKEND-002-BULK-REMOVAL      | complete    | 2026-09-05 | 2026-09-05 | Read event-center association IDs before deleting them, allowing subsequent active-event checks to deactivate only centers no longer associated with an active event. Focused tests and the complete backend suite pass (85 tests); module verification reports 104 covered, 106 missing, and five exempt modules.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
+| BACKEND-002-CAPACITY-UPDATE   | complete    | 2026-09-05 | 2026-09-05 | Preserved event update association IDs without mutating the validated service payload, restoring capacity recalculation after center changes. Focused tests and the complete backend suite pass (87 tests); module verification reports 105 covered, 105 missing, and five exempt modules.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
+| TEST-003D-CENTER-SERVICE      | complete    | 2026-09-05 | 2026-09-05 | Added deterministic coverage for evacuation-center photo byte-limit rejection and base64 encoding. Focused tests and the complete backend suite pass (89 tests); module verification reports 106 covered, 104 missing, and five exempt modules.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| TEST-003D-CENTER-MODEL        | complete    | 2026-09-05 | 2026-09-05 | Added deterministic coordinate-normalization coverage for supported string/sequence values and malformed inputs. Focused tests and the complete backend suite pass (91 tests); module verification reports 107 covered, 103 missing, and five exempt modules.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
+| DATABASE-005-IDENTIFIER       | complete    | 2026-09-06 | 2026-09-06 | Rejected unsafe `DB_NAME` values before setup opens a connection or composes database DDL. Focused tests and the complete backend suite pass (93 tests); module verification reports 108 covered, 102 missing, and five exempt modules.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
+| TEST-003J-SEED-PREFLIGHT      | complete    | 2026-09-06 | 2026-09-06 | Added a deterministic seed-file preflight regression proving a missing file fails before a cursor is opened. Focused tests and the complete backend suite pass (94 tests); module verification reports 109 covered, 101 missing, and five exempt modules.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| TEST-003B                     | in progress | 2026-09-04 | —          | Began backend bootstrap/config/shared contract coverage. Added user role/center schema, runtime-configuration, shared extension-bootstrap, development-entry-point, backend validation, shared utility, authentication/logout plus user-service/route privacy regressions, allocation audit-log privacy coverage, record-ID checkout regressions, household-member contract regressions, household-detail persistence mapping, allocation model mutation coverage, event lifecycle route coverage, and event-center removal coverage; also completed related frontend contract coverage. Recorded five zero-byte backend markers as explicit exemptions. The repository-root verifier now reports 104 covered modules, 106 missing modules, and five valid exemptions.                                                                                                                                                                                                                                                                                                           |
+| TEST-003H                     | in progress | 2026-09-04 | —          | Began shared frontend client coverage with deterministic API error-response, user/center/event/event-center/stats/individual/attendance type-contract, responsive-hook, authentication-service, login-schema, center-scope authorization, statistics-service, center-service, attendance-service, active-attendance-record resolver, persisted-auth-store, protected-route, live-feedback, controlled-search, pagination, toolbar, topbar, theme-toggle, theme-provider, class-composition, sidebar-logout, center-store, user-service, individual-service, and individual-store regressions; removed three confirmed unimported legacy frontend files after a successful production build. The V2 role pages now resolve an actual active attendance record before checkout instead of substituting an individual ID. Repaired the MonoMap regression mock's Vitest hoisting so the aggregate suite can execute. This ticket will continue in bounded shell/auth/shared-client batches; the repository-root verifier reports 104 covered, 106 missing, and five exempt modules. |
+
+## Audit batches
+
+| Batch | Scope                                                                | Status                                      |
+| ----- | -------------------------------------------------------------------- | ------------------------------------------- |
+| 0     | Root files, existing documentation, manifests, scripts, Git metadata | complete                                    |
+| 1     | Backend bootstrap, configuration, auth, users                        | complete                                    |
+| 2     | Database SQL, setup, seed, schema/migration lifecycle                | complete                                    |
+| 3     | Backend centers, events, stats, maps                                 | complete                                    |
+| 4     | Households and individuals                                           | complete                                    |
+| 5     | Attendance and transfers                                             | complete                                    |
+| 6     | Aid allocation and distribution                                      | complete                                    |
+| 7     | Frontend shell, routing, shared UI, auth, styles                     | complete                                    |
+| 8     | Frontend role features, services, stores, hooks, types, utilities    | complete                                    |
+| 9     | Dependencies, DevOps, security, agent readiness                      | complete (baseline/audit evidence recorded) |
+
+## Latest implementation update
+
+`DEPENDENCY-001` is complete for production dependencies: the frontend lockfile
+now resolves Axios 1.20.0 and React Router 7.18.3, and `npm audit --omit=dev
+--json` reports zero production vulnerabilities. `TEST-004` configures Vitest to
+use a single shared serial thread after the default worker model executed all
+tests but did not exit on Windows; `npm run test` now completes 61 files and 105
+tests in 5.64 seconds. `TEST-003I-ALLOCATION-CONTRACTS` adds direct tests for
+allocation/distribution services, search/schema exports, and the corresponding
+aid/allocation/distribution type modules; full frontend coverage is now 68 files
+and 115 tests, while the verifier reports 116 covered modules, 94 missing
+modules, and five valid exemptions. `TEST-003I-DASHBOARD` adds direct map and
+event-history component regressions; full frontend coverage is now 70 files and
+119 tests, while the verifier reports 118 covered modules, 92 missing modules,
+and five valid exemptions. `TEST-003H` now includes individual-service, individual-store, household-store,
+attendance-store, event-service, stats-store, allocation-store, event-store, and
+five evacuation-center dialog/toast regressions. `SECURITY-006` added individual
+and household authorization coverage, and `CONTRACT-004-HOUSEHOLD-CREATE` added
+runtime validation for household members. `BACKEND-005-HOUSEHOLD-DETAIL` added a
+regression for distinct household/center detail values, `SECURITY-009-MODEL` closed
+the allocation model update boundary, `BACKEND-003-CREATE-GATE` aligned event
+creation with the active-event invariant, and `BACKEND-002-BULK-REMOVAL` fixed
+event-center removal ordering.
+
+`TEST-003I-HOUSEHOLD-PAGINATION` adds direct regression coverage for both
+household pagination components. The latest full frontend run passes 77 files
+and 129 tests, TypeScript, targeted ESLint, and Prettier pass, and the
+machine-readable ledger reconciles 125 covered modules, 85 missing modules, and
+five valid exemptions. Published focused commits: `281bc35` (data-table
+pagination) and `71380da` (household-table pagination). The configured Python
+module-verifier interpreter is presently denied by the host; an equivalent
+read-only Node reconciliation was used to confirm mapping integrity, while the
+Python/Pipenv host-tooling fault remains distinct from repository test results.
+
+`TEST-003I-FRONTEND-MODULE-COVERAGE` continues the required one-test-file-per-
+executable-frontend-module program. Published tickets now cover legacy and V2
+attendance tables/toolbars/dialogs/search, transfer controls, and eight shared
+UI primitives. The current Node reconciliation reports 215 executable modules,
+152 covered modules, 58 unmapped modules, and five valid exemptions. The latest
+full frontend validation passes 104 files and 164 tests; TypeScript and each
+touched module's Prettier/ESLint checks pass. The configured Python verifier
+remains host-denied, so the equivalent read-only Node reconciliation is the
+authoritative coverage check for this host.
+
+`TEST-003I-FRONTEND-MODULE-COVERAGE` now also directly covers the shared
+`Skeleton` primitive. Read-only reconciliation reports 215 executable modules,
+154 covered modules, 56 unmapped modules, and five valid exemptions. Focused
+Vitest, targeted ESLint, TypeScript, and the full frontend suite pass (106 test
+files, 166 tests). Expected mock-error output from the pre-existing allocation
+and expired-session regression paths remains non-failing suite noise.
+
+`TEST-003I-FRONTEND-MODULE-COVERAGE` also directly covers every composition
+region of the shared `Card` primitive. Read-only reconciliation now reports 215
+executable modules, 155 covered modules, 55 unmapped modules, and five valid
+exemptions. Focused Vitest, targeted ESLint, TypeScript, and the full frontend
+suite pass (107 test files, 167 tests).
+
+`TEST-003I-FRONTEND-MODULE-COVERAGE` also directly covers the shared
+`Checkbox` primitive's accessible selection and disabled-state behavior.
+Read-only reconciliation now reports 215 executable modules, 156 covered
+modules, 54 unmapped modules, and five valid exemptions. Focused Vitest,
+targeted ESLint, TypeScript, and the full frontend suite pass (108 test files,
+168 tests).
+
+`TEST-003I-FRONTEND-MODULE-COVERAGE` also directly covers the shared `Table`
+primitive's semantic regions, heading scope, caption, and caller-property
+forwarding. Read-only reconciliation now reports 215 executable modules, 157
+covered modules, 53 unmapped modules, and five valid exemptions. Focused
+Vitest, targeted ESLint, TypeScript, and the full frontend suite pass (109 test
+files, 169 tests).
+
+`TEST-003I-FRONTEND-MODULE-COVERAGE` also directly covers shared `Tabs`
+selection state and its visible-panel transition. Read-only reconciliation now
+reports 215 executable modules, 158 covered modules, 52 unmapped modules, and
+five valid exemptions. Focused Vitest, targeted ESLint, TypeScript, and the full
+frontend suite pass (110 test files, 170 tests).
+
+`TEST-003I-FRONTEND-MODULE-COVERAGE` also directly covers the shared
+`ScrollArea` root's accessible viewport and property forwarding. Read-only
+reconciliation now reports 215 executable modules, 159 covered modules, 51
+unmapped modules, and five valid exemptions. Focused Vitest, targeted ESLint,
+TypeScript, and the full frontend suite pass (111 test files, 171 tests).
+
+`FRONTEND-018` is complete: route/import search confirmed that
+`CityAdminDashboardSample` was unreferenced and that the profile/settings files
+were zero-byte stubs, so the three dead sources were retired. TypeScript, the
+full frontend suite (111 files, 171 tests), and production Vite build pass. The
+repository-wide ESLint gate remains a recorded unrelated baseline failure (763
+errors, 158 warnings) and is not masked by this deletion. The direct-test
+reconciliation now reports 212 executable modules, 159 covered modules, 48
+unmapped modules, and five valid exemptions.
+
+`TEST-003I-FRONTEND-MODULE-COVERAGE` now directly covers user-table sorting and
+role-scoped row actions. `FRONTEND-046` replaces click-only sorting headers
+with accessible buttons, exposes sort direction, and uniquely names row action
+menus. Focused Vitest, targeted ESLint, TypeScript, and the full frontend suite
+pass (123 files, 188 tests). Read-only reconciliation reports 212 executable
+modules, 171 covered modules, 36 unmapped modules, and five valid exemptions.
+
+`TEST-003I-FRONTEND-MODULE-COVERAGE` now directly covers the shared `Dialog`
+primitive's accessible modal behavior, built-in close action, and intentional
+close-control omission. Focused Vitest, targeted ESLint, TypeScript, and the
+full frontend suite pass (112 files, 173 tests) with the test fixtures meeting
+Radix's required dialog-description contract. Read-only reconciliation reports
+212 executable modules, 160 covered modules, 47 unmapped modules, and five
+valid exemptions.
+
+`TEST-003I-FRONTEND-MODULE-COVERAGE` now also directly covers the shared
+`Popover` wrapper's trigger, anchor, labelled content, defaults, and property
+forwarding through a deterministic Radix boundary mock. Focused Vitest,
+targeted ESLint, TypeScript, and the complete frontend suite pass (113 files,
+174 tests). Read-only reconciliation reports 212 executable modules, 161
+covered modules, 46 unmapped modules, and five valid exemptions.
+
+`TEST-003I-FRONTEND-MODULE-COVERAGE` now also directly covers the shared
+`Sheet` primitive's labelled open/close behavior and left-side rendering.
+Focused Vitest, targeted ESLint, TypeScript, and the full frontend suite pass
+(114 files, 175 tests). Read-only reconciliation reports 212 executable
+modules, 162 covered modules, 45 unmapped modules, and five valid exemptions.
+
+`TEST-003I-FRONTEND-MODULE-COVERAGE` now also directly covers the shared
+`Tooltip` wrapper's labelled trigger, guidance content, and default offset
+through an isolated Radix boundary mock. Focused Vitest, targeted ESLint,
+TypeScript, and the full frontend suite pass (115 files, 176 tests). Read-only
+reconciliation reports 212 executable modules, 163 covered modules, 44
+unmapped modules, and five valid exemptions.
+
+`TEST-003I-FRONTEND-MODULE-COVERAGE` now directly covers the browser entry
+module's React-root mount while isolating routed application dependencies.
+Focused Vitest, targeted ESLint, TypeScript, and the full frontend suite pass
+(116 files, 177 tests). Read-only reconciliation reports 212 executable
+modules, 164 covered modules, 43 unmapped modules, and five valid exemptions.
+
+`TEST-003I-FRONTEND-MODULE-COVERAGE` now directly covers the user-management
+destructive-action confirmation dialog's accessible description and separate
+cancel/confirm paths. Focused Vitest, targeted ESLint, TypeScript, and the full
+frontend suite pass (117 files, 178 tests). Read-only reconciliation reports
+212 executable modules, 165 covered modules, 42 unmapped modules, and five
+valid exemptions.
+
+`TEST-003I-FRONTEND-MODULE-COVERAGE` now directly covers the user-management
+deactivation confirmation dialog's accessible description and separate
+cancel/confirm paths. The direct audit also removed its unused `User` import.
+Focused Vitest, targeted ESLint, TypeScript, and the full frontend suite pass
+(118 files, 179 tests). Read-only reconciliation reports 212 executable
+modules, 166 covered modules, 41 unmapped modules, and five valid exemptions.
+
+`TEST-003I-FRONTEND-MODULE-COVERAGE` now directly covers the event-resolution
+workflow. `FRONTEND-043` adds a dialog description, names its date trigger,
+uses valid list structure and alert semantics, and removes raw failure logging.
+Focused Vitest, targeted ESLint, TypeScript, and the full frontend suite pass
+(119 files, 180 tests). Read-only reconciliation reports 212 executable
+modules, 167 covered modules, 40 unmapped modules, and five valid exemptions.
+
+`TEST-003I-FRONTEND-MODULE-COVERAGE` now directly covers event-center
+selection and excludes already-associated centers. `FRONTEND-044` adds a modal
+description, error alert semantics, and named add/remove actions; contained
+local class composition also restores targeted lint compliance. Focused Vitest,
+targeted ESLint, TypeScript, and the full frontend suite pass (120 files, 182
+tests). Read-only reconciliation reports 212 executable modules, 168 covered
+modules, 39 unmapped modules, and five valid exemptions.
+
+`TEST-003I-FRONTEND-MODULE-COVERAGE` now directly covers allocation deletion
+confirmation, including allocation identification, separate actions, and
+pending-action lockout. Contained class composition restores targeted lint
+compliance. Focused Vitest, targeted ESLint, TypeScript, and the full frontend
+suite pass (121 files, 184 tests). Read-only reconciliation reports 212
+executable modules, 169 covered modules, 38 unmapped modules, and five valid
+exemptions.
+
+`TEST-003I-FRONTEND-MODULE-COVERAGE` now directly covers the add/edit-user
+modal's account-creation description, named role selector, and center loading.
+`FRONTEND-045` corrects invalid description nesting, gives submission errors
+alert semantics, names both selectors, and keeps the submitted user payload
+within its create/update contract. Focused Vitest, targeted ESLint, TypeScript,
+and the full frontend suite pass (122 files, 185 tests). Read-only
+reconciliation reports 212 executable modules, 170 covered modules, 37
+unmapped modules, and five valid exemptions.
+
+`TEST-003I-FRONTEND-MODULE-COVERAGE` now directly covers the shared Select
+wrapper's labelled small trigger and forwarded selected value through an
+isolated Radix boundary. Focused Vitest, targeted ESLint, TypeScript, and the
+full frontend suite pass (124 files, 189 tests). Read-only reconciliation
+reports 212 executable modules, 172 covered modules, 35 unmapped modules, and
+five valid exemptions.
+
+`TEST-003I-FRONTEND-MODULE-COVERAGE` now directly covers the shared
+DropdownMenu wrapper's trigger, item forwarding, and default content offset
+through an isolated Radix boundary. Focused Vitest, targeted ESLint, TypeScript,
+and the full frontend suite pass (125 files, 190 tests). Read-only
+reconciliation reports 212 executable modules, 173 covered modules, 34
+unmapped modules, and five valid exemptions.
+
+`TEST-003I-FRONTEND-MODULE-COVERAGE` now directly covers the shared Calendar
+wrapper's default visible-day/caption behavior and caller class forwarding
+through an isolated DayPicker boundary. Focused Vitest, targeted ESLint,
+TypeScript, and the full frontend suite pass (126 files, 191 tests). Read-only
+reconciliation reports 212 executable modules, 174 covered modules, 33
+unmapped modules, and five valid exemptions.
+
+`TEST-003I-FRONTEND-MODULE-COVERAGE` now directly covers CreateEventModal's
+description and named controls. `FRONTEND-047` adds accessible form semantics,
+safe error handling, and zero-capacity-safe occupancy behavior. Focused Vitest,
+targeted ESLint, TypeScript, and the full frontend suite pass (127 files, 192
+tests). Read-only reconciliation reports 212 executable modules, 175 covered
+modules, 32 unmapped modules, and five valid exemptions.
+
+`TEST-003I-FRONTEND-MODULE-COVERAGE` now directly covers TransferIndividualModal's
+described empty opening state and disabled empty-transfer action. `FRONTEND-048`
+adds dialog and error semantics, removes dead and unchecked transfer-boundary
+code, and normalizes transfer-status rendering. Focused Vitest, targeted ESLint,
+TypeScript, and the full frontend suite pass (128 files, 193 tests). Read-only
+reconciliation reports 212 executable modules, 176 covered modules, 31 unmapped
+modules, and five valid exemptions.
+
+`TEST-003I-FRONTEND-MODULE-COVERAGE` now directly covers the application shell's
+public login and unauthorized routes. Focused Vitest, targeted ESLint, TypeScript,
+and the full frontend suite pass (129 files, 195 tests). Read-only reconciliation
+reports 212 executable modules, 177 covered modules, 30 unmapped modules, and
+five valid exemptions.
+
+`TEST-003I-FRONTEND-MODULE-COVERAGE` now directly covers AddEvacuationCenterForm's
+described opening state, required fields, and map-location submission gate.
+`FRONTEND-049` adds dialog semantics, accepts valid zero coordinates, and makes
+unknown submission failures visible without browser-console logging. Focused
+Vitest, targeted ESLint, TypeScript, and the full frontend suite pass (130 files,
+196 tests). Read-only reconciliation reports 212 executable modules, 178 covered
+modules, 29 unmapped modules, and five valid exemptions.
+
+`TEST-003I-FRONTEND-MODULE-COVERAGE` classifies the Vitest global cleanup setup
+as a valid configuration exemption rather than inventing a superficial direct test.
+Read-only reconciliation reports 212 executable modules, 178 covered modules, 28
+unmapped modules, and six valid exemptions.
+
+`TEST-003I-FRONTEND-MODULE-COVERAGE` now directly covers the volunteer household
+page's unassigned-center guard. `FRONTEND-058` removes its local lint debt.
+Focused Vitest, targeted ESLint, TypeScript, and the full frontend suite pass
+(139 files, 206 tests; 253.92 seconds). Read-only reconciliation reports 212
+executable modules, 187 covered modules, 19 unmapped modules, and six valid
+exemptions.
+
+`TEST-003I-FRONTEND-MODULE-COVERAGE` now directly covers LoginPage's client-side
+credential validation. `FRONTEND-050` removes browser-console login failures and
+announces user-facing errors. Focused Vitest, targeted ESLint, TypeScript, and the
+full frontend suite pass (131 files, 197 tests). Read-only reconciliation reports
+212 executable modules, 179 covered modules, 27 unmapped modules, and six valid
+exemptions.
+
+`TEST-003I-FRONTEND-MODULE-COVERAGE` now directly covers AidAllocationToolbar's
+search, allocation action, and loading lockout. `FRONTEND-051` names its search
+and page-size controls and types its filter callback. Focused Vitest, targeted
+ESLint, TypeScript, and the full frontend suite pass (132 files, 198 tests).
+Read-only reconciliation reports 212 executable modules, 180 covered modules, 26
+unmapped modules, and six valid exemptions.
+
+`TEST-003I-FRONTEND-MODULE-COVERAGE` now directly covers AidAllocationTable's
+empty state, sort forwarding, and zero-quantity rendering. `TEST-005` restores a
+shared-worker mock before each ModeToggle test and waits for CheckOutModal's async
+center-load effect, eliminating aggregate-suite timing flakiness. Focused Vitest,
+targeted ESLint, TypeScript, and the full frontend suite pass (133 files, 199
+tests). Read-only reconciliation reports 212 executable modules, 181 covered
+modules, 25 unmapped modules, and six valid exemptions.
+
+`TEST-003I-FRONTEND-MODULE-COVERAGE` now directly covers AidAllocationForm's
+described opening state and incomplete-submit guard. `FRONTEND-053` adds the
+missing description, types the allocation boundary, and removes local lint debt.
+`TEST-005` additionally resets StatsRow's shared store mocks before each test.
+Focused Vitest, targeted ESLint, TypeScript, and the full frontend suite pass
+(134 files, 200 tests). Read-only reconciliation reports 212 executable modules,
+182 covered modules, 24 unmapped modules, and six valid exemptions.
+
+`TEST-003I-FRONTEND-MODULE-COVERAGE` now directly covers
+CenterAdminAidAllocationPage's denied and assigned-center entry paths.
+`FRONTEND-054` removes its stale effect dependency, unused error binding, and
+local lint violations without changing allocation contracts. Focused Vitest,
+targeted ESLint, TypeScript, and the full frontend suite pass (135 files, 202
+tests). Read-only reconciliation reports 212 executable modules, 183 covered
+modules, 23 unmapped modules, and six valid exemptions.
+
+`TEST-006` fixes frontend test isolation: the default runner now uses one
+isolated fork worker, which prevents cross-file mock leakage without the Windows
+thread-worker teardown hang. The full suite passes under that configuration
+(135 files, 202 tests; 417.92 seconds).
+
+`TEST-003I-FRONTEND-MODULE-COVERAGE` now directly covers
+CityAdminCentersPage's initial center fetch and management entry state.
+`FRONTEND-055` removes stale implementation comments and documents unavoidable
+import-specifier length exceptions. Focused Vitest, targeted ESLint, and
+TypeScript and the full frontend suite pass (136 files, 203 tests; 373.75
+seconds). Read-only reconciliation reports 212 executable modules, 184 covered
+modules, 22 unmapped modules, and six valid exemptions.
+
+`TEST-003I-FRONTEND-MODULE-COVERAGE` now directly covers the city dashboard's
+single event-refresh invariant. `FRONTEND-056` removes its duplicate event-fetch
+effect, stale/dead bindings, and local type/lint debt. Focused Vitest, targeted
+ESLint, TypeScript, and the full frontend suite pass (137 files, 204 tests;
+341.97 seconds). Read-only reconciliation reports 212 executable modules, 185
+covered modules, 21 unmapped modules, and six valid exemptions.
+
+`TEST-003I-FRONTEND-MODULE-COVERAGE` now directly covers the center-dashboard
+unassigned-center state. `FRONTEND-057` removes an unsafe optional center-ID
+assertion and local lint debt. Focused Vitest, targeted ESLint, and TypeScript
+and the full frontend suite pass (138 files, 205 tests; 296.99 seconds).
+Read-only reconciliation reports 212 executable modules, 186 covered modules, 20
+unmapped modules, and six valid exemptions.
+
+`TEST-003I-FRONTEND-MODULE-COVERAGE` now directly covers the center-admin
+household page's unassigned-center guard. `FRONTEND-059` removes its local lint
+debt. Focused Vitest, targeted ESLint, TypeScript, and the full frontend suite
+pass (140 files, 207 tests; 250.41 seconds). Read-only reconciliation reports
+212 executable modules, 188 covered modules, 18 unmapped modules, and six valid
+exemptions.
+
+`TEST-003I-FRONTEND-MODULE-COVERAGE` now directly covers the city-admin
+household page's initial data-load invariant. `FRONTEND-060` removes its local
+lint debt. Focused Vitest, targeted ESLint, TypeScript, and the full frontend
+suite pass (141 files, 208 tests; 246.35 seconds). Read-only reconciliation
+reports 212 executable modules, 189 covered modules, 17 unmapped modules, and
+six valid exemptions.
+
+`TEST-003I-FRONTEND-MODULE-COVERAGE` now directly covers both administrative
+user-management pages. `FRONTEND-061` connects role/status controls to the
+existing server filters, limits role choices to each actor's manageable roles,
+and blocks the center page when no center is assigned. `TEST-007` extends the
+cold event-modal import timeout after a documented aggregate flake. Focused
+Vitest (4 files, 6 tests), targeted ESLint, TypeScript, the full frontend suite
+(143 files, 212 tests; 345.24 seconds), and the production build pass. The
+first build attempt was denied access to generated `backend/app/static/assets`;
+the identical build passed with approved filesystem access. Read-only
+reconciliation reports 212 executable modules, 191 covered modules, 15
+unmapped modules, and six valid exemptions.
+
+The published `codex/overhaul-foundation` branch is tracked by draft GitHub
+PR #6 (`https://github.com/gabnash05/evacuation-facility-administration-system/pull/6`)
+against `main`. GitHub reported the PR open, mergeable, and without status
+checks on 2026-10-01. The draft remains ineligible for merge while P1 findings
+and required validation remain open.
+
+`TEST-003I-FRONTEND-MODULE-COVERAGE` now directly covers MapLocationPicker and
+EditEvacuationCenterForm, and expands AddEvacuationCenterForm coverage.
+`FRONTEND-062` fixes stale parent coordinates after clearing a map selection,
+zero-valued coordinates in edit, missing keyboard/accessible-dialog behavior,
+and silent generic save failures. Touched-file Vitest (3 files, 6 tests),
+ESLint, Prettier, TypeScript, the production build, and the read-only module
+coverage verifier pass. The verifier reports 212 executable modules, 193 covered,
+13 unmapped, and six valid exemptions. The full frontend suite passed (145
+files, 217 tests; 335.97 seconds). Focused commit `a363c6d` was pushed to
+`codex/overhaul-foundation` and is included in draft PR #6.
+
+`TEST-003I-FRONTEND-MODULE-COVERAGE` now directly covers
+EvacuationCenterDetailsModal. `FRONTEND-063` fixes valid zero-coordinate map
+rendering, prevents stale event responses after center changes, and provides
+an accessible dialog description and error alerts. `FRONTEND-064` makes the
+attendance tab display the shared store's swallowed fetch error. Focused Vitest
+(1 file, 4 tests), targeted ESLint, TypeScript, production build, and the read-only
+module verifier pass. The verifier reports 212 executable modules, 194 covered,
+12 unmapped, and six valid exemptions. The final full frontend suite passed
+(146 files, 221 tests; 371.50 seconds). Publish after final diff review.

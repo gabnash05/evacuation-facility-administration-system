@@ -85,7 +85,7 @@ interface AttendanceState {
     setCurrentPage: (page: number) => void;
     setEntriesPerPage: (entries: number) => void;
     setSortConfig: (config: { key: string; direction: "asc" | "desc" | null } | null) => void;
-    
+
     // Separate filter actions for different contexts
     setAttendancePageFilters: (filters: {
         centerId?: number | null;
@@ -95,7 +95,7 @@ interface AttendanceState {
         status?: string | null;
         date?: string | null;
     }) => void;
-    
+
     setModalFilters: (filters: {
         centerId?: number | null;
         individualId?: number | null;
@@ -104,7 +104,7 @@ interface AttendanceState {
         status?: string | null;
         date?: string | null;
     }) => void;
-    
+
     // Backward compatibility alias (uses attendance page filters)
     setFilters: (filters: {
         centerId?: number | null;
@@ -122,7 +122,7 @@ interface AttendanceState {
     fetchTransferRecords: (params?: GetTransferRecordsParams) => Promise<void>;
     fetchAttendanceSummary: (centerId: number, eventId?: number) => Promise<void>;
     fetchIndividualAttendanceHistory: (individualId: number) => Promise<AttendanceRecord[]>;
-    
+
     // Event-related actions
     fetchActiveEvent: () => Promise<void>;
     validateAttendanceConditions: (centerId: number) => Promise<{
@@ -143,21 +143,29 @@ interface AttendanceState {
         data?: AttendanceRecord[];
         message?: string;
     }>;
-    checkOutIndividual: (recordId: number, data?: CheckOutData) => Promise<{
+    checkOutIndividual: (
+        recordId: number,
+        data?: CheckOutData
+    ) => Promise<{
         success: boolean;
         data?: AttendanceRecord;
         message?: string;
     }>;
-    checkOutMultipleIndividuals: (data: Array<{
-        record_id: number;
-        check_out_time?: string;
-        notes?: string;
-    }>) => Promise<{
+    checkOutMultipleIndividuals: (
+        data: Array<{
+            record_id: number;
+            check_out_time?: string;
+            notes?: string;
+        }>
+    ) => Promise<{
         success: boolean;
         data?: any;
         message?: string;
     }>;
-    transferIndividual: (recordId: number, data: TransferData) => Promise<{
+    transferIndividual: (
+        recordId: number,
+        data: TransferData
+    ) => Promise<{
         success: boolean;
         data?: AttendanceRecord;
         message?: string;
@@ -188,7 +196,7 @@ interface AttendanceState {
         data?: any;
         message?: string;
     }>;
-    
+
     resetState: () => void;
     resetAttendancePageFilters: () => void;
     resetModalFilters: () => void;
@@ -270,13 +278,8 @@ export const useAttendanceStore = create<AttendanceState>((set, get) => ({
     },
 
     fetchAttendanceRecords: async (params: GetAttendanceParams = {}) => {
-        const {
-            searchQuery,
-            currentPage,
-            entriesPerPage,
-            sortConfig,
-            attendancePageFilters,
-        } = get();
+        const { searchQuery, currentPage, entriesPerPage, sortConfig, attendancePageFilters } =
+            get();
 
         set({ loading: true, error: null });
 
@@ -292,7 +295,8 @@ export const useAttendanceStore = create<AttendanceState>((set, get) => ({
                     center_id: attendancePageFilters.centerId || undefined,
                     individual_id: attendancePageFilters.individualId || undefined,
                     event_id: attendancePageFilters.eventId || undefined,
-                    household_id: attendancePageFilters.householdId || undefined,
+                    household_id:
+                        attendancePageFilters.householdId ?? params.household_id ?? undefined,
                     status: (attendancePageFilters.status as any) || undefined,
                     date: attendancePageFilters.date || undefined,
                 });
@@ -446,7 +450,7 @@ export const useAttendanceStore = create<AttendanceState>((set, get) => ({
 
         try {
             const response = await EventService.getActiveEvent();
-            
+
             set({
                 activeEvent: response.data,
                 loading: false,
@@ -465,11 +469,11 @@ export const useAttendanceStore = create<AttendanceState>((set, get) => ({
 
         try {
             const validation = await AttendanceRecordsService.canTakeAttendance(centerId);
-            
+
             set({
                 attendanceValidation: {
                     centerId,
-                    ...validation
+                    ...validation,
                 },
                 canTakeAttendance: validation.canTakeAttendance,
                 loading: false,
@@ -477,20 +481,21 @@ export const useAttendanceStore = create<AttendanceState>((set, get) => ({
 
             return validation;
         } catch (error) {
-            const errorMessage = error instanceof Error ? error.message : "Failed to validate attendance conditions";
+            const errorMessage =
+                error instanceof Error ? error.message : "Failed to validate attendance conditions";
             set({
                 error: errorMessage,
                 loading: false,
                 attendanceValidation: {
                     centerId,
                     canTakeAttendance: false,
-                    message: errorMessage
+                    message: errorMessage,
                 },
                 canTakeAttendance: false,
             });
             return {
                 canTakeAttendance: false,
-                message: errorMessage
+                message: errorMessage,
             };
         }
     },
@@ -518,17 +523,18 @@ export const useAttendanceStore = create<AttendanceState>((set, get) => ({
             return {
                 success: true,
                 data: response.data,
-                message: response.message
+                message: response.message,
             };
         } catch (error) {
-            const errorMessage = error instanceof Error ? error.message : "Failed to check in individual";
+            const errorMessage =
+                error instanceof Error ? error.message : "Failed to check in individual";
             set({
                 error: errorMessage,
                 loading: false,
             });
             return {
                 success: false,
-                message: errorMessage
+                message: errorMessage,
             };
         }
     },
@@ -561,17 +567,18 @@ export const useAttendanceStore = create<AttendanceState>((set, get) => ({
             return {
                 success: true,
                 data: response.data,
-                message: response.message
+                message: response.message,
             };
         } catch (error) {
-            const errorMessage = error instanceof Error ? error.message : "Failed to check in individuals";
+            const errorMessage =
+                error instanceof Error ? error.message : "Failed to check in individuals";
             set({
                 error: errorMessage,
                 loading: false,
             });
             return {
                 success: false,
-                message: errorMessage
+                message: errorMessage,
             };
         }
     },
@@ -594,22 +601,23 @@ export const useAttendanceStore = create<AttendanceState>((set, get) => ({
             return {
                 success: true,
                 data: response.data,
-                message: response.message
+                message: response.message,
             };
         } catch (error) {
-            const errorMessage = error instanceof Error ? error.message : "Failed to check out individual";
+            const errorMessage =
+                error instanceof Error ? error.message : "Failed to check out individual";
             set({
                 error: errorMessage,
                 loading: false,
             });
             return {
                 success: false,
-                message: errorMessage
+                message: errorMessage,
             };
         }
     },
 
-    checkOutMultipleIndividuals: async (data) => {
+    checkOutMultipleIndividuals: async data => {
         set({ loading: true, error: null });
 
         try {
@@ -627,17 +635,18 @@ export const useAttendanceStore = create<AttendanceState>((set, get) => ({
             return {
                 success: true,
                 data: response.data,
-                message: response.message
+                message: response.message,
             };
         } catch (error) {
-            const errorMessage = error instanceof Error ? error.message : "Failed to check out individuals";
+            const errorMessage =
+                error instanceof Error ? error.message : "Failed to check out individuals";
             set({
                 error: errorMessage,
                 loading: false,
             });
             return {
                 success: false,
-                message: errorMessage
+                message: errorMessage,
             };
         }
     },
@@ -667,30 +676,35 @@ export const useAttendanceStore = create<AttendanceState>((set, get) => ({
             return {
                 success: true,
                 data: response.data,
-                message: response.message
+                message: response.message,
             };
         } catch (error) {
-            const errorMessage = error instanceof Error ? error.message : "Failed to transfer individual";
+            const errorMessage =
+                error instanceof Error ? error.message : "Failed to transfer individual";
             set({
                 error: errorMessage,
                 loading: false,
             });
             return {
                 success: false,
-                message: errorMessage
+                message: errorMessage,
             };
         }
     },
 
-    transferMultipleIndividuals: async (data) => {
+    transferMultipleIndividuals: async data => {
         set({ loading: true, error: null });
 
         try {
             // Validate all destination centers
             for (const transfer of data.transfers) {
-                const validation = await get().validateAttendanceConditions(transfer.transfer_to_center_id);
+                const validation = await get().validateAttendanceConditions(
+                    transfer.transfer_to_center_id
+                );
                 if (!validation.canTakeAttendance) {
-                    throw new Error(`Cannot transfer to center ${transfer.transfer_to_center_id}: ${validation.message}`);
+                    throw new Error(
+                        `Cannot transfer to center ${transfer.transfer_to_center_id}: ${validation.message}`
+                    );
                 }
             }
 
@@ -709,17 +723,18 @@ export const useAttendanceStore = create<AttendanceState>((set, get) => ({
             return {
                 success: true,
                 data: response.data,
-                message: response.message
+                message: response.message,
             };
         } catch (error) {
-            const errorMessage = error instanceof Error ? error.message : "Failed to transfer individuals";
+            const errorMessage =
+                error instanceof Error ? error.message : "Failed to transfer individuals";
             set({
                 error: errorMessage,
                 loading: false,
             });
             return {
                 success: false,
-                message: errorMessage
+                message: errorMessage,
             };
         }
     },
@@ -744,17 +759,18 @@ export const useAttendanceStore = create<AttendanceState>((set, get) => ({
             set({ loading: false });
             return {
                 success: true,
-                message: response.message
+                message: response.message,
             };
         } catch (error) {
-            const errorMessage = error instanceof Error ? error.message : "Failed to delete attendance record";
+            const errorMessage =
+                error instanceof Error ? error.message : "Failed to delete attendance record";
             set({
                 error: errorMessage,
                 loading: false,
             });
             return {
                 success: false,
-                message: errorMessage
+                message: errorMessage,
             };
         }
     },
@@ -795,17 +811,18 @@ export const useAttendanceStore = create<AttendanceState>((set, get) => ({
             set({ loading: false });
             return {
                 success: true,
-                data: response.data
+                data: response.data,
             };
         } catch (error) {
-            const errorMessage = error instanceof Error ? error.message : "Failed to get current event attendance";
+            const errorMessage =
+                error instanceof Error ? error.message : "Failed to get current event attendance";
             set({
                 error: errorMessage,
                 loading: false,
             });
             return {
                 success: false,
-                message: errorMessage
+                message: errorMessage,
             };
         }
     },

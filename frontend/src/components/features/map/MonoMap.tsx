@@ -36,12 +36,12 @@ const getCapacityColor = (currentCapacity: number, maxCapacity: number, isDark: 
 };
 
 // Create icon with tooltip that shows name by default
-const createMarkerIcon = (name: string, color: string, currentCapacity: number, maxCapacity: number, isHighlighted: boolean = false) => {
+export const createMarkerIcon = (color: string, currentCapacity: number, maxCapacity: number, isHighlighted: boolean = false) => {
     const percentage = Math.round((currentCapacity / maxCapacity) * 100);
     
     return L.divIcon({
         html: `
-            <div class="group relative cursor-pointer" data-name="${name}" data-capacity="${percentage}% • ${currentCapacity}/${maxCapacity}">
+            <div class="group relative cursor-pointer" data-capacity="${percentage}% • ${currentCapacity}/${maxCapacity}">
                 <!-- Main marker -->
                 <div class="relative w-7 h-7 rounded-full border-2 border-white shadow-lg transition-all duration-200 group-hover:scale-110"
                      style="background-color: ${color}">
@@ -192,7 +192,7 @@ export default function MonoMap({
                 {centers.map((center) => {
                     const isHighlighted = center.id === highlightCenterId;
                     const color = getCapacityColor(center.currentCapacity, center.maxCapacity, isDark, isHighlighted);
-                    const icon = createMarkerIcon(center.name, color, center.currentCapacity, center.maxCapacity, isHighlighted);
+                    const icon = createMarkerIcon(color, center.currentCapacity, center.maxCapacity, isHighlighted);
                     const percentage = Math.round((center.currentCapacity / center.maxCapacity) * 100);
                     
                     return (

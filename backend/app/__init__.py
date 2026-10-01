@@ -41,8 +41,7 @@ def create_app(config_class=Config):
         methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
         allow_headers=["Content-Type", "Authorization"],
         supports_credentials=True,
-        expose_headers=["Set-Cookie"],
-        allow_credentials=True)
+        expose_headers=["Set-Cookie"])
 
     # Register API blueprints FIRST (before catch-all route)    
     from app.routes.auth import auth_bp

@@ -7,8 +7,6 @@ import {
     DialogFooter,
     DialogDescription,
 } from "@/components/ui/dialog";
-import type { User } from "@/types/user";
-
 interface DeactivateConfirmationModalProps {
     isOpen: boolean;
     onClose: () => void;
@@ -17,7 +15,13 @@ interface DeactivateConfirmationModalProps {
     description: string;
 }
 
-export function DeactivateConfirmationModal({ isOpen, onClose, onConfirm, title, description }: DeactivateConfirmationModalProps) {
+export function DeactivateConfirmationModal({
+    isOpen,
+    onClose,
+    onConfirm,
+    title,
+    description,
+}: DeactivateConfirmationModalProps) {
     return (
         <Dialog open={isOpen} onOpenChange={onClose}>
             <DialogContent className="sm:max-w-[425px]">

@@ -24,7 +24,7 @@ class DistributionSession(db.Model):
                 "household_id": data["household_id"],
                 "user_id": data["user_id"],
                 "center_id": data["center_id"],
-                "event_id": data.get("event_id", 1), 
+                "event_id": data["event_id"],
                 "notes": data.get("notes", "")
             }
             result = db.session.execute(sql, params).fetchone()
@@ -160,7 +160,7 @@ class Distribution(db.Model):
     def get_by_id(cls, distribution_id):
         try:
             sql = text("""
-                SELECT d.*, ds.household_id, ds.session_id 
+                SELECT d.*, ds.household_id, ds.session_id, ds.center_id, ds.event_id
                 FROM distributions d
                 JOIN distribution_sessions ds ON d.session_id = ds.session_id
                 WHERE d.distribution_id = :id

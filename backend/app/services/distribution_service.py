@@ -11,6 +11,8 @@ class DistributionService:
     @staticmethod
     def record_distribution(user, data):
         try:
+            if not user or not user.is_active:
+                return {"success": False, "message": "Invalid token"}, 401
             # 1. Get Household
             household = Household.get_by_id(data["household_id"])
             if not household:
@@ -20,12 +22,30 @@ class DistributionService:
             distribution_center_id = household.get('center_id')
             if not distribution_center_id:
                  raise Exception("Could not determine the center for this household.")
+            if data["center_id"] != distribution_center_id:
+                return {"success": False, "message": "Household center does not match request center"}, 403
+            if user.role in {"center_admin", "volunteer"} and user.center_id != distribution_center_id:
+                return {"success": False, "message": "Insufficient permissions"}, 403
+
+            event_ids = set()
+            for item in data["items"]:
+                allocation = Allocation.get_by_id(item["allocation_id"])
+                if not allocation:
+                    return {"success": False, "message": "Allocation not found"}, 404
+                if allocation.center_id != distribution_center_id:
+                    return {"success": False, "message": "Allocation center does not match household center"}, 403
+                if allocation.status != "active":
+                    return {"success": False, "message": "Allocation is not active"}, 400
+                event_ids.add(allocation.event_id)
+            if len(event_ids) != 1:
+                return {"success": False, "message": "Distribution items must belong to one event"}, 400
 
             # 3. Create Session
             session_data = {
                 "household_id": data["household_id"],
                 "user_id": user.user_id,
                 "center_id": distribution_center_id, 
+                "event_id": event_ids.pop(),
                 "notes": data.get("notes")
             }
             session = DistributionSession.create(session_data)

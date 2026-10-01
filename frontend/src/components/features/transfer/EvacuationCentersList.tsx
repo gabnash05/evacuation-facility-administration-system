@@ -1,5 +1,4 @@
 // components/features/transfer/EvacuationCentersList.tsx
-import { useState } from "react";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
     Table,
@@ -9,6 +8,17 @@ import {
     TableHeader,
     TableRow,
 } from "@/components/ui/table";
+
+const capacityBarContainerClass = "w-24 h-2 bg-gray-200 rounded-full overflow-hidden";
+const capacityBadgeClass = (percentage: number) =>
+    "text-sm font-medium px-2 py-1 rounded " +
+    (percentage >= 80
+        ? "bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-200"
+        : percentage >= 50
+          ? "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200"
+          : "bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-200");
+const rowClass = (index: number, isSelected: boolean) =>
+    `${index % 2 === 1 ? "bg-muted/30" : ""} ${isSelected ? "bg-blue-50 dark:bg-blue-950" : ""}`;
 
 interface Center {
     center_id: number;
@@ -22,7 +32,6 @@ interface EvacuationCentersListProps {
     selectedCenterId: number | null;
     onCenterSelect: (centerId: number | null) => void;
     searchQuery?: string;
-    onSearchChange?: (query: string) => void;
 }
 
 export function EvacuationCentersList({
@@ -30,18 +39,17 @@ export function EvacuationCentersList({
     selectedCenterId,
     onCenterSelect,
     searchQuery = "",
-    onSearchChange,
 }: EvacuationCentersListProps) {
     const getCapacityColor = (occupancy: number, capacity: number) => {
-        const percentage = (occupancy / capacity) * 100;
-        
+        const percentage = capacity > 0 ? (occupancy / capacity) * 100 : 0;
+
         if (percentage >= 80) return "bg-red-500";
         if (percentage >= 50) return "bg-yellow-500";
         return "bg-green-500";
     };
 
     const getCapacityPercentage = (occupancy: number, capacity: number) => {
-        return Math.round((occupancy / capacity) * 100);
+        return capacity > 0 ? Math.round((occupancy / capacity) * 100) : 0;
     };
 
     // Filter centers based on search query
@@ -73,53 +81,52 @@ export function EvacuationCentersList({
                             </TableRow>
                         ) : (
                             filteredCenters.map((center: Center, index: number) => {
-                            const percentage = getCapacityPercentage(
-                                center.current_occupancy,
-                                center.capacity
-                            );
-                            const isSelected = selectedCenterId === center.center_id;
+                                const percentage = getCapacityPercentage(
+                                    center.current_occupancy,
+                                    center.capacity
+                                );
+                                const isSelected = selectedCenterId === center.center_id;
 
-                            return (
-                                <TableRow
-                                    key={center.center_id}
-                                    className={`${index % 2 === 1 ? "bg-muted/30" : ""} ${isSelected ? "bg-blue-50 dark:bg-blue-950" : ""}`}
-                                >
-                                    <TableCell>
-                                        <Checkbox
-                                            checked={isSelected}
-                                            onCheckedChange={() => 
-                                                onCenterSelect(isSelected ? null : center.center_id)
-                                            }
-                                            aria-label={`Select ${center.center_name}`}
-                                        />
-                                    </TableCell>
-                                    <TableCell className="font-medium">
-                                        {center.center_name}
-                                    </TableCell>
-                                    <TableCell>
-                                        <div className="flex items-center justify-center gap-3">
-                                            <div className="w-24 h-2 bg-gray-200 rounded-full overflow-hidden">
-                                                <div
-                                                    className={`h-full ${getCapacityColor(center.current_occupancy, center.capacity)}`}
-                                                    style={{ width: `${Math.min(percentage, 100)}%` }}
-                                                />
+                                return (
+                                    <TableRow
+                                        key={center.center_id}
+                                        className={rowClass(index, isSelected)}
+                                    >
+                                        <TableCell>
+                                            <Checkbox
+                                                checked={isSelected}
+                                                onCheckedChange={() =>
+                                                    onCenterSelect(
+                                                        isSelected ? null : center.center_id
+                                                    )
+                                                }
+                                                aria-label={`Select ${center.center_name}`}
+                                            />
+                                        </TableCell>
+                                        <TableCell className="font-medium">
+                                            {center.center_name}
+                                        </TableCell>
+                                        <TableCell>
+                                            <div className="flex items-center justify-center gap-3">
+                                                <div className={capacityBarContainerClass}>
+                                                    <div
+                                                        className={`h-full ${getCapacityColor(
+                                                            center.current_occupancy,
+                                                            center.capacity
+                                                        )}`}
+                                                        style={{
+                                                            width: `${Math.min(percentage, 100)}%`,
+                                                        }}
+                                                    />
+                                                </div>
+                                                <span className={capacityBadgeClass(percentage)}>
+                                                    {percentage}%
+                                                </span>
                                             </div>
-                                            <span
-                                                className={`text-sm font-medium px-2 py-1 rounded ${
-                                                    percentage >= 80
-                                                        ? "bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-200"
-                                                        : percentage >= 50
-                                                          ? "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200"
-                                                          : "bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-200"
-                                                }`}
-                                            >
-                                                {percentage}%
-                                            </span>
-                                        </div>
-                                    </TableCell>
-                                </TableRow>
-                            );
-                        })
+                                        </TableCell>
+                                    </TableRow>
+                                );
+                            })
                         )}
                     </TableBody>
                 </Table>

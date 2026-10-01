@@ -5,15 +5,17 @@ import { Label } from "@/components/ui/label";
 import {
     Dialog,
     DialogContent,
+    DialogDescription,
     DialogHeader,
     DialogTitle,
     DialogFooter,
     DialogClose,
 } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
-import { ArrowRightLeft, X, Home, Users } from "lucide-react";
+import { ArrowRightLeft, X } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
 import { useAttendanceStore } from "@/store/attendanceRecordsStore";
 import { useEvacuationCenterStore } from "@/store/evacuationCenterStore";
 import { useIndividualStore } from "@/store/individualStore";
@@ -29,8 +31,8 @@ interface TransferIndividualModalProps {
     onClose: () => void;
     onSuccess: (transferCount?: number) => void;
     defaultCenterId?: number;
-    sourceCenterId?: number; // NEW: Add sourceCenterId prop to restrict transfers from this center only
-    initialIndividualId?: number | null; // NEW: Prefill a specific individual for transfer
+    sourceCenterId?: number;
+    initialIndividualId?: number | null;
     onTransfer?: (recordId: number, data: TransferData) => Promise<void>;
     onBatchTransfer?: (data: {
         transfers: Array<{
@@ -62,26 +64,21 @@ export function TransferIndividualModal({
     onTransfer,
     onBatchTransfer,
 }: TransferIndividualModalProps) {
-    const { 
-        currentAttendees, 
-        fetchCurrentAttendees,
-        fetchIndividualAttendanceHistory,
-        loading: attendanceLoading 
-    } = useAttendanceStore();
+    const { fetchCurrentAttendees, fetchIndividualAttendanceHistory } = useAttendanceStore();
 
     const [centerSearchQuery, setCenterSearchQuery] = useState("");
     const { centers, fetchAllCenters, loading: centersLoading } = useEvacuationCenterStore();
-    const { clearSearch, fetchIndividualById } = useIndividualStore();
+    const { fetchIndividualById } = useIndividualStore();
     const { activeEvent, fetchActiveEvent } = useEventStore(); // ADDED: Use event store
-    
+
     const [selectedIndividuals, setSelectedIndividuals] = useState<ProcessedIndividual[]>([]);
     const [selectedCenterId, setSelectedCenterId] = useState<number | null>(null);
     const [transferReason, setTransferReason] = useState<TransferReason | "">("");
     const [notes, setNotes] = useState("");
     const [error, setError] = useState<string | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
-    const [processingRecords, setProcessingRecords] = useState(false);
-    const [validationError, setValidationError] = useState<string | null>(null); // ADDED: For center validation
+    const [, setProcessingRecords] = useState(false);
+    const [validationError, setValidationError] = useState<string | null>(null);
 
     // ADD LOCAL STATE FOR MODAL SEARCH (like CheckInModal)
     const [modalSearchQuery, setModalSearchQuery] = useState("");
@@ -89,8 +86,11 @@ export function TransferIndividualModal({
     const [modalSearchResults, setModalSearchResults] = useState<Individual[]>([]);
     const [modalTotalRecords, setModalTotalRecords] = useState(0);
     const [modalSearchLoading, setModalSearchLoading] = useState(false);
-    
+
     const searchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const handleSelectIndividualRef = useRef<(individual: Individual) => Promise<void>>(
+        async () => undefined
+    );
 
     // NEW: Helper to get center names
     const getCenterNameById = (centerId?: number | null) => {
@@ -105,10 +105,11 @@ export function TransferIndividualModal({
         return name || `Center #${centerId}`;
     };
 
-    const sourceCenterName = sourceCenterId ? getCenterNameById(sourceCenterId) : undefined;
+    const getOriginalCenterDisplay = (individual: ProcessedIndividual) =>
+        individual.original_center_name || formatCenterDisplay(individual.original_center_id);
 
     // NEW: Filter centers to exclude the source center if provided
-    const filteredCenters = sourceCenterId 
+    const filteredCenters = sourceCenterId
         ? centers.filter(center => center.center_id !== sourceCenterId)
         : centers;
 
@@ -120,7 +121,7 @@ export function TransferIndividualModal({
         const initializeModal = async () => {
             // Fetch active event when modal opens
             await fetchActiveEvent();
-            
+
             // Fetch current attendees from the source center if provided
             if (sourceCenterId) {
                 await fetchCurrentAttendees({
@@ -134,11 +135,14 @@ export function TransferIndividualModal({
                 try {
                     const individual = await fetchIndividualById(initialIndividualId);
                     if (individual) {
-                        await handleSelectIndividual(individual);
+                        await handleSelectIndividualRef.current(individual);
                     }
                 } catch (err) {
-                    // Any errors are already handled in the store; optionally surface a generic error
-                    setError(err instanceof Error ? err.message : "Failed to prefill individual for transfer");
+                    setError(
+                        err instanceof Error
+                            ? err.message
+                            : "Failed to prefill individual for transfer"
+                    );
                 }
             }
         };
@@ -148,7 +152,16 @@ export function TransferIndividualModal({
         } else {
             resetForm();
         }
-    }, [isOpen, sourceCenterId, defaultCenterId, initialIndividualId, fetchCurrentAttendees, fetchAllCenters, fetchIndividualById, fetchActiveEvent]);
+    }, [
+        isOpen,
+        sourceCenterId,
+        defaultCenterId,
+        initialIndividualId,
+        fetchCurrentAttendees,
+        fetchAllCenters,
+        fetchIndividualById,
+        fetchActiveEvent,
+    ]);
 
     // Validate destination center conditions when selected
     useEffect(() => {
@@ -161,15 +174,18 @@ export function TransferIndividualModal({
                         setValidationError("Destination center is not active");
                         return;
                     }
-                    
+
                     // Check if there's an active event
                     if (!activeEvent) {
-                        setValidationError("No active event found. An event must be active to transfer individuals.");
+                        setValidationError(
+                            "No active event found. " +
+                                "An event must be active to transfer individuals."
+                        );
                         return;
                     }
-                    
+
                     setValidationError(null);
-                } catch (err) {
+                } catch {
                     setValidationError("Failed to validate destination center");
                 }
             };
@@ -186,13 +202,13 @@ export function TransferIndividualModal({
         setError(null);
         setValidationError(null);
         setProcessingRecords(false);
-        
+
         // Reset modal search state
         setModalSearchQuery("");
         setModalPage(1);
         setModalSearchResults([]);
         setModalTotalRecords(0);
-        
+
         // Clear any pending search timeout
         if (searchTimeoutRef.current) {
             clearTimeout(searchTimeoutRef.current);
@@ -216,7 +232,11 @@ export function TransferIndividualModal({
 
     const handleSelectIndividual = async (individual: Individual) => {
         // Check if individual is already selected
-        if (selectedIndividuals.find(ind => ind.individual.individual_id === individual.individual_id)) {
+        if (
+            selectedIndividuals.find(
+                ind => ind.individual.individual_id === individual.individual_id
+            )
+        ) {
             return;
         }
 
@@ -230,77 +250,80 @@ export function TransferIndividualModal({
         const newIndividual: ProcessedIndividual = {
             individual,
             record_id: null,
-            status: "loading"
+            status: "loading",
         };
-        
+
         setSelectedIndividuals(prev => [...prev, newIndividual]);
-        
+
         // Find active record for this individual
         try {
             const history = await fetchIndividualAttendanceHistory(individual.individual_id);
-            const activeRecord = (history as any[]).find(
-                (record: AttendanceRecord) => 
-                    record.status === "checked_in" && 
+            const activeRecord = (history as AttendanceRecord[]).find(
+                (record: AttendanceRecord) =>
+                    record.status === "checked_in" &&
                     !record.check_out_time &&
-                    record.event_id === activeEvent.event_id // Check if record belongs to active event
+                    record.event_id === activeEvent.event_id
             );
-            
+
             if (activeRecord) {
                 // NEW: Check if individual is in the source center (if sourceCenterId is provided)
-                const isInSourceCenter = !sourceCenterId || activeRecord.center_id === sourceCenterId;
-                
-                setSelectedIndividuals(prev => 
-                    prev.map(ind => 
+                const isInSourceCenter =
+                    !sourceCenterId || activeRecord.center_id === sourceCenterId;
+
+                setSelectedIndividuals(prev =>
+                    prev.map(ind =>
                         ind.individual.individual_id === individual.individual_id
                             ? {
-                                ...ind,
-                                record_id: activeRecord.record_id,
-                                original_center_name: activeRecord.center_name,
-                                original_center_id: activeRecord.center_id,
-                                status: isInSourceCenter ? "ready" : "wrong_center",
-                                error: isInSourceCenter
-                                    ? undefined
-                                    : `Individual is not checked into your center (${sourceCenterName || "your assigned center"})`
-                            }
+                                  ...ind,
+                                  record_id: activeRecord.record_id,
+                                  original_center_name: activeRecord.center_name,
+                                  original_center_id: activeRecord.center_id,
+                                  status: isInSourceCenter ? "ready" : "wrong_center",
+                                  error: isInSourceCenter
+                                      ? undefined
+                                      : "Individual is not checked into your assigned center.",
+                              }
                             : ind
                     )
                 );
-                
+
                 if (!isInSourceCenter) {
-                    setError(`Individual ${individual.first_name} ${individual.last_name} is not checked into your center.`);
+                    setError("Individual is not checked into your assigned center.");
                 } else {
                     setError(null);
                 }
             } else {
-                setSelectedIndividuals(prev => 
-                    prev.map(ind => 
+                setSelectedIndividuals(prev =>
+                    prev.map(ind =>
                         ind.individual.individual_id === individual.individual_id
                             ? {
-                                ...ind,
-                                status: "error",
-                                error: "No active check-in record for current event"
-                            }
+                                  ...ind,
+                                  status: "error",
+                                  error: "No active check-in record for current event",
+                              }
                             : ind
                     )
                 );
             }
-        } catch (err: any) {
-            setSelectedIndividuals(prev => 
-                prev.map(ind => 
+        } catch {
+            setSelectedIndividuals(prev =>
+                prev.map(ind =>
                     ind.individual.individual_id === individual.individual_id
                         ? {
-                            ...ind,
-                            status: "error",
-                            error: "Failed to retrieve attendance history"
-                        }
+                              ...ind,
+                              status: "error",
+                              error: "Failed to retrieve attendance history",
+                          }
                         : ind
                 )
             );
         }
     };
 
+    handleSelectIndividualRef.current = handleSelectIndividual;
+
     const handleRemoveIndividual = (individualId: number) => {
-        setSelectedIndividuals(prev => 
+        setSelectedIndividuals(prev =>
             prev.filter(ind => ind.individual.individual_id !== individualId)
         );
     };
@@ -314,7 +337,7 @@ export function TransferIndividualModal({
         setModalSearchLoading(true);
         try {
             const { IndividualService } = await import("@/services/individualService");
-            
+
             const response = await IndividualService.getIndividuals({
                 search: search,
                 page: page,
@@ -322,7 +345,7 @@ export function TransferIndividualModal({
                 sortBy: "last_name",
                 sortOrder: "asc",
             });
-            
+
             console.log("TransferModal performing search with:", { search, page });
             console.log("TransferModal search response:", response);
 
@@ -347,25 +370,25 @@ export function TransferIndividualModal({
         limit: number;
     }): Promise<{ success: boolean; data: Individual[]; totalRecords: number }> => {
         console.log("TransferModal handleModalSearch called with:", params);
-        
+
         // Don't update state if nothing changed
         if (modalSearchQuery === params.search && modalPage === params.page) {
             return {
                 success: true,
                 data: modalSearchResults,
-                totalRecords: modalTotalRecords
+                totalRecords: modalTotalRecords,
             };
         }
-        
+
         // Update local state
         setModalSearchQuery(params.search);
         setModalPage(params.page);
-        
+
         // Clear any existing timeout
         if (searchTimeoutRef.current) {
             clearTimeout(searchTimeoutRef.current);
         }
-        
+
         // If search is empty, clear results immediately
         if (params.search.trim() === "") {
             setModalSearchResults([]);
@@ -373,63 +396,65 @@ export function TransferIndividualModal({
             return {
                 success: true,
                 data: [],
-                totalRecords: 0
+                totalRecords: 0,
             };
         }
-        
+
         // Return a promise that resolves with the search results (EXACTLY like CheckInModal)
-        return new Promise<{ success: boolean; data: Individual[]; totalRecords: number }>((resolve) => {
-            searchTimeoutRef.current = setTimeout(async () => {
-                try {
-                    const { IndividualService } = await import("@/services/individualService");
-                    const response = await IndividualService.getIndividuals({
-                        search: params.search,
-                        page: params.page,
-                        limit: params.limit,
-                        sortBy: "last_name",
-                        sortOrder: "asc",
-                    });
-                    
-                    if (response.success && response.data) {
-                        const results = response.data.results || [];
-                        const total = response.data.pagination?.total_items || 0;
-                        
-                        setModalSearchResults(results);
-                        setModalTotalRecords(total);
-                        resolve({
-                            success: true,
-                            data: results,
-                            totalRecords: total
+        return new Promise<{ success: boolean; data: Individual[]; totalRecords: number }>(
+            resolve => {
+                searchTimeoutRef.current = setTimeout(async () => {
+                    try {
+                        const { IndividualService } = await import("@/services/individualService");
+                        const response = await IndividualService.getIndividuals({
+                            search: params.search,
+                            page: params.page,
+                            limit: params.limit,
+                            sortBy: "last_name",
+                            sortOrder: "asc",
                         });
-                    } else {
+
+                        if (response.success && response.data) {
+                            const results = response.data.results || [];
+                            const total = response.data.pagination?.total_items || 0;
+
+                            setModalSearchResults(results);
+                            setModalTotalRecords(total);
+                            resolve({
+                                success: true,
+                                data: results,
+                                totalRecords: total,
+                            });
+                        } else {
+                            resolve({
+                                success: false,
+                                data: [],
+                                totalRecords: 0,
+                            });
+                        }
+                    } catch (error) {
+                        console.error("Transfer modal search failed:", error);
                         resolve({
                             success: false,
                             data: [],
-                            totalRecords: 0
+                            totalRecords: 0,
                         });
                     }
-                } catch (error) {
-                    console.error("Transfer modal search failed:", error);
-                    resolve({
-                        success: false,
-                        data: [],
-                        totalRecords: 0
-                    });
-                }
-            }, 500); // IMPORTANT: Same 500ms debounce as CheckInModal
-        });
+                }, 500); // IMPORTANT: Same 500ms debounce as CheckInModal
+            }
+        );
     };
 
     // HANDLE PAGE CHANGE (EXACTLY LIKE CheckInModal)
     const handleModalPageChange = (page: number) => {
         setModalPage(page);
-        
+
         // Clear any pending search timeout
         if (searchTimeoutRef.current) {
             clearTimeout(searchTimeoutRef.current);
             searchTimeoutRef.current = null;
         }
-        
+
         // Immediate search for page change
         if (modalSearchQuery.trim() === "") {
             setModalSearchResults([]);
@@ -450,9 +475,12 @@ export function TransferIndividualModal({
         // Validate ready individuals (only those with "ready" status)
         const readyIndividuals = selectedIndividuals.filter(ind => ind.status === "ready");
         const readyCount = readyIndividuals.length;
-        
+
         if (readyCount === 0) {
-            setError("No individuals ready for transfer. Please select individuals with active check-in records.");
+            setError(
+                "No individuals ready for transfer. " +
+                    "Select individuals with active check-in records."
+            );
             return;
         }
 
@@ -504,13 +532,11 @@ export function TransferIndividualModal({
                 if (typeof onTransfer === "function") {
                     await onTransfer(individual.record_id, transferData);
                 } else {
-                    // fallback to store action if parent didn't provide handler
-                    await (useAttendanceStore.getState().transferIndividual as any)(
-                        individual.record_id,
-                        transferData
-                    );
+                    await useAttendanceStore
+                        .getState()
+                        .transferIndividual(individual.record_id, transferData);
                 }
-                
+
                 onSuccess(1);
             } else {
                 // Batch transfer
@@ -519,18 +545,15 @@ export function TransferIndividualModal({
                         record_id: ind.record_id!,
                         transfer_to_center_id: selectedCenterId!,
                         notes: `${transferReason}. ${notes || ""}`.trim(),
-                    }))
+                    })),
                 };
 
                 if (typeof onBatchTransfer === "function") {
                     await onBatchTransfer(transferData);
                 } else {
-                    // fallback to store action if parent didn't provide handler
-                    await (useAttendanceStore.getState().transferMultipleIndividuals as any)(
-                        transferData
-                    );
+                    await useAttendanceStore.getState().transferMultipleIndividuals(transferData);
                 }
-                
+
                 onSuccess(readyCount);
             }
 
@@ -545,16 +568,14 @@ export function TransferIndividualModal({
 
     const getSubmitButtonText = () => {
         const readyCount = selectedIndividuals.filter(ind => ind.status === "ready").length;
-        
+
         if (isSubmitting) {
-            return readyCount === 1 
-                ? "Transferring..." 
+            return readyCount === 1
+                ? "Transferring..."
                 : `Transferring ${readyCount} Individuals...`;
         }
-        
-        return readyCount === 1 
-            ? "✓ Confirm Transfer" 
-            : `✓ Transfer ${readyCount} Individuals`;
+
+        return readyCount === 1 ? "✓ Confirm Transfer" : `✓ Transfer ${readyCount} Individuals`;
     };
 
     const getStatusColor = (status: string) => {
@@ -571,14 +592,31 @@ export function TransferIndividualModal({
         }
     };
 
+    const getSelectedIndividualClass = (status: ProcessedIndividual["status"]) =>
+        cn(
+            "flex items-center justify-between rounded-lg border p-3",
+            status === "ready"
+                ? "border-green-200 bg-green-50 dark:border-green-800 dark:bg-green-950"
+                : status === "loading"
+                  ? "border-yellow-200 bg-yellow-50 dark:border-yellow-800 dark:bg-yellow-950"
+                  : "border-red-200 bg-red-50 dark:border-red-800 dark:bg-red-950"
+        );
+
     const readyCount = selectedIndividuals.filter(ind => ind.status === "ready").length;
     const errorCount = selectedIndividuals.filter(ind => ind.status === "error").length;
-    const wrongCenterCount = selectedIndividuals.filter(ind => ind.status === "wrong_center").length;
+    const wrongCenterCount = selectedIndividuals.filter(
+        ind => ind.status === "wrong_center"
+    ).length;
     const loadingCount = selectedIndividuals.filter(ind => ind.status === "loading").length;
 
     // NEW: Info message about source center restriction (using center name when available)
     const sourceCenterInfo = sourceCenterId ? (
-        <div className="bg-blue-50 dark:bg-blue-950 text-blue-700 dark:text-blue-300 p-3 rounded-md text-sm border border-blue-200 dark:border-blue-800">
+        <div
+            className={cn(
+                "rounded-md border border-blue-200 bg-blue-50 p-3 text-sm",
+                "text-blue-700 dark:border-blue-800 dark:bg-blue-950 dark:text-blue-300"
+            )}
+        >
             <div className="font-medium">Transfer Restriction:</div>
             <div>
                 You can only transfer individuals currently checked into{" "}
@@ -588,7 +626,8 @@ export function TransferIndividualModal({
     ) : null;
 
     // Check if we can transfer
-    const canTransfer = !validationError && activeEvent && selectedCenterId && activeCenters.length > 0;
+    const canTransfer =
+        !validationError && activeEvent && selectedCenterId && activeCenters.length > 0;
 
     return (
         <Dialog open={isOpen} onOpenChange={handleClose}>
@@ -596,19 +635,29 @@ export function TransferIndividualModal({
                 <DialogHeader>
                     <DialogTitle className="text-lg font-semibold flex items-center gap-2">
                         <ArrowRightLeft className="h-5 w-5" />
-                        {selectedIndividuals.length > 1 ? "Transfer Individuals" : "Transfer Individual"}
+                        {selectedIndividuals.length > 1
+                            ? "Transfer Individuals"
+                            : "Transfer Individual"}
                         {sourceCenterId && (
                             <Badge variant="outline" className="ml-2">
                                 From {formatCenterDisplay(sourceCenterId)}
                             </Badge>
                         )}
                     </DialogTitle>
+                    <DialogDescription>
+                        Select checked-in individuals, a destination center, and a transfer reason.
+                    </DialogDescription>
                 </DialogHeader>
 
                 <div className="space-y-6 py-4">
                     {/* Active Event Display */}
                     {activeEvent ? (
-                        <div className="bg-blue-50 dark:bg-blue-950/30 p-4 rounded-lg border border-blue-200 dark:border-blue-800">
+                        <div
+                            className={cn(
+                                "rounded-lg border border-blue-200 bg-blue-50 p-4",
+                                "dark:border-blue-800 dark:bg-blue-950/30"
+                            )}
+                        >
                             <div className="flex items-start gap-3">
                                 <div className="flex-1">
                                     <div className="font-semibold text-blue-900 dark:text-blue-100">
@@ -621,13 +670,28 @@ export function TransferIndividualModal({
                             </div>
                         </div>
                     ) : (
-                        <div className="bg-yellow-50 dark:bg-yellow-950/30 p-4 rounded-lg border border-yellow-200 dark:border-yellow-800">
+                        <div
+                            className={cn(
+                                "rounded-lg border border-yellow-200 bg-yellow-50 p-4",
+                                "dark:border-yellow-800 dark:bg-yellow-950/30"
+                            )}
+                        >
                             <div className="flex items-start gap-3">
                                 <div className="flex-1">
-                                    <div className="font-semibold text-yellow-900 dark:text-yellow-100">
+                                    <div
+                                        className={cn(
+                                            "font-semibold text-yellow-900",
+                                            "dark:text-yellow-100"
+                                        )}
+                                    >
                                         No Active Event
                                     </div>
-                                    <div className="text-sm text-yellow-700 dark:text-yellow-300 mt-1">
+                                    <div
+                                        className={cn(
+                                            "mt-1 text-sm text-yellow-700",
+                                            "dark:text-yellow-300"
+                                        )}
+                                    >
                                         An event must be active to transfer individuals.
                                     </div>
                                 </div>
@@ -637,7 +701,10 @@ export function TransferIndividualModal({
 
                     {/* Center Status Validation */}
                     {validationError && (
-                        <div className="bg-destructive/15 text-destructive p-3 rounded-md text-sm">
+                        <div
+                            className="bg-destructive/15 text-destructive p-3 rounded-md text-sm"
+                            role="alert"
+                        >
                             {validationError}
                         </div>
                     )}
@@ -658,10 +725,13 @@ export function TransferIndividualModal({
                                     <Label className="text-base font-semibold">
                                         Selected Individuals ({selectedIndividuals.length})
                                     </Label>
-                                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                                        <span className="text-green-600">
-                                            ✓ {readyCount} ready
-                                        </span>
+                                    <div
+                                        className={cn(
+                                            "flex items-center gap-2 text-sm",
+                                            "text-muted-foreground"
+                                        )}
+                                    >
+                                        <span className="text-green-600">✓ {readyCount} ready</span>
                                         {loadingCount > 0 && (
                                             <span className="text-yellow-600">
                                                 ⏳ {loadingCount} loading
@@ -690,51 +760,55 @@ export function TransferIndividualModal({
                                 </Button>
                             </div>
                             <div className="space-y-2 max-h-60 overflow-y-auto">
-                                {selectedIndividuals.map((processedIndividual) => (
+                                {selectedIndividuals.map(processedIndividual => (
                                     <div
                                         key={processedIndividual.individual.individual_id}
-                                        className={`flex justify-between items-center p-3 rounded-lg border ${
-                                            processedIndividual.status === "ready"
-                                                ? "bg-green-50 dark:bg-green-950 border-green-200 dark:border-green-800"
-                                                : processedIndividual.status === "loading"
-                                                ? "bg-yellow-50 dark:bg-yellow-950 border-yellow-200 dark:border-yellow-800"
-                                                : "bg-red-50 dark:bg-red-950 border-red-200 dark:border-red-800"
-                                        }`}
+                                        className={getSelectedIndividualClass(
+                                            processedIndividual.status
+                                        )}
                                     >
                                         <div className="flex-1">
                                             <div className="font-medium">
-                                                {processedIndividual.individual.first_name} {processedIndividual.individual.last_name}
+                                                {processedIndividual.individual.first_name}{" "}
+                                                {processedIndividual.individual.last_name}
                                             </div>
                                             <div className="text-sm text-muted-foreground">
                                                 ID: {processedIndividual.individual.individual_id}
                                             </div>
-                                            
+
                                             {processedIndividual.status === "ready" && (
                                                 <div className="mt-1">
                                                     <div className="text-sm">
-                                                        From: {processedIndividual.original_center_name || formatCenterDisplay(processedIndividual.original_center_id)}
+                                                        From:{" "}
+                                                        {getOriginalCenterDisplay(
+                                                            processedIndividual
+                                                        )}
                                                     </div>
                                                     <Badge
                                                         variant="secondary"
-                                                        className={`${getStatusColor("ready")} mt-1`}
+                                                        className={cn(
+                                                            getStatusColor("ready"),
+                                                            "mt-1"
+                                                        )}
                                                     >
-                                                        ✓ Ready to transfer (Record #{processedIndividual.record_id})
+                                                        ✓ Ready to transfer (Record #
+                                                        {processedIndividual.record_id})
                                                     </Badge>
                                                 </div>
                                             )}
-                                            
+
                                             {processedIndividual.status === "loading" && (
                                                 <div className="text-sm text-yellow-600 mt-1">
                                                     ⏳ Finding active check-in record...
                                                 </div>
                                             )}
-                                            
+
                                             {processedIndividual.status === "wrong_center" && (
                                                 <div className="text-sm text-red-600 mt-1">
                                                     ✗ {processedIndividual.error}
                                                 </div>
                                             )}
-                                            
+
                                             {processedIndividual.status === "error" && (
                                                 <div className="text-sm text-red-600 mt-1">
                                                     ✗ {processedIndividual.error}
@@ -744,7 +818,11 @@ export function TransferIndividualModal({
                                         <Button
                                             variant="ghost"
                                             size="sm"
-                                            onClick={() => handleRemoveIndividual(processedIndividual.individual.individual_id)}
+                                            onClick={() =>
+                                                handleRemoveIndividual(
+                                                    processedIndividual.individual.individual_id
+                                                )
+                                            }
                                             className="text-destructive hover:text-destructive"
                                         >
                                             <X className="h-4 w-4" />
@@ -764,16 +842,16 @@ export function TransferIndividualModal({
                         <IndividualSearchTable
                             onSelectIndividual={handleSelectIndividual}
                             selectedIndividuals={selectedIndividuals.map(ind => ind.individual)}
-                            // Modal provides a custom search function. Let the table manage its own input state
                             onSearch={handleModalSearch}
                             modalPage={modalPage}
                             onModalPageChange={handleModalPageChange}
                             isLoading={modalSearchLoading}
-                            errorMessage={''}
+                            errorMessage={""}
                         />
 
                         <div className="text-sm text-muted-foreground">
-                            Note: Only individuals with active check-in records for the current event
+                            Note: Only individuals with active check-in records for the current
+                            event
                             {sourceCenterId && ` in ${formatCenterDisplay(sourceCenterId)} `}
                             can be transferred
                         </div>
@@ -784,7 +862,7 @@ export function TransferIndividualModal({
                         <Label className="text-base font-semibold">
                             Select Destination Center *
                         </Label>
-                        
+
                         <Input
                             type="text"
                             placeholder="Search centers..."
@@ -793,23 +871,25 @@ export function TransferIndividualModal({
                             className="w-full"
                             disabled={!activeEvent}
                         />
-                        
+
                         <EvacuationCentersList
                             centers={activeCenters} // Use only active centers
                             selectedCenterId={selectedCenterId}
                             onCenterSelect={setSelectedCenterId}
                             searchQuery={centerSearchQuery}
                         />
-                        
+
                         {activeCenters.length === 0 && !centersLoading && activeEvent && (
                             <p className="text-sm text-muted-foreground">
-                                No active centers available. Centers must be active to transfer individuals.
+                                No active centers available. Centers must be active to transfer
+                                individuals.
                             </p>
                         )}
-                        
+
                         {sourceCenterId && (
                             <div className="text-sm text-muted-foreground">
-                                Note: Your current center ({formatCenterDisplay(sourceCenterId)}) is not shown in the list
+                                Note: Your current center ({formatCenterDisplay(sourceCenterId)}) is
+                                not shown in the list
                             </div>
                         )}
                     </div>
@@ -835,7 +915,9 @@ export function TransferIndividualModal({
                             maxLength={100}
                             disabled={!activeEvent}
                         />
-                        <p className="text-xs text-muted-foreground">{notes.length}/100 characters</p>
+                        <p className="text-xs text-muted-foreground">
+                            {notes.length}/100 characters
+                        </p>
                     </div>
                 </div>
 
@@ -845,7 +927,14 @@ export function TransferIndividualModal({
                     </DialogClose>
                     <Button
                         onClick={handleSubmit}
-                        disabled={readyCount === 0 || !selectedCenterId || !transferReason || isSubmitting || !canTransfer || centersLoading}
+                        disabled={
+                            readyCount === 0 ||
+                            !selectedCenterId ||
+                            !transferReason ||
+                            isSubmitting ||
+                            !canTransfer ||
+                            centersLoading
+                        }
                         className="bg-green-600 hover:bg-green-700 px-6"
                     >
                         {getSubmitButtonText()}

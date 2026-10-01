@@ -202,19 +202,23 @@ def create_new_event() -> Tuple:
                 "message": "Access denied: Only super_admin can create events"
             }), 403
         
-        # Check if there's already an active event
-        from app.models.event import Event
-        active_events = Event.get_all(status='active')
-        if active_events["total_count"] > 0:
-            return jsonify({
-                "success": False,
-                "message": "Cannot create new event: There is already an active event. Resolve the current event first."
-            }), 400
-
         data = request.get_json()
 
         if not data:
             return jsonify({"success": False, "message": "No data provided"}), 400
+
+        # Only another active event conflicts with the currently active event.
+        if data.get("status", "active") == "active":
+            from app.models.event import Event
+
+            active_events = Event.get_all(status="active")
+            if active_events["total_count"] > 0:
+                return jsonify(
+                    {
+                        "success": False,
+                        "message": "Cannot create new event: There is already an active event. Resolve the current event first.",
+                    }
+                ), 400
 
         logger.info("Creating new event: %s", data.get("event_name"))
 

@@ -6,10 +6,17 @@ from app.schemas.distribution import CreateDistributionSchema, DistributionHisto
 
 bp = Blueprint("distribution_bp", __name__)
 
+
+def _current_actor():
+    user = User.get_by_id(get_jwt_identity())
+    return user if user and user.is_active else None
+
 @bp.route("/distributions", methods=["POST"])
 @jwt_required()
 def create_distribution():
-    user = User.get_by_id(get_jwt_identity())
+    user = _current_actor()
+    if not user:
+        return jsonify({"success": False, "message": "Invalid token"}), 401
     schema = CreateDistributionSchema()
     try:
         data = schema.load(request.json)
@@ -21,7 +28,9 @@ def create_distribution():
 @bp.route("/distributions/history", methods=["GET"])
 @jwt_required()
 def get_history():
-    user = User.get_by_id(get_jwt_identity())
+    user = _current_actor()
+    if not user:
+        return jsonify({"success": False, "message": "Invalid token"}), 401
     schema = DistributionHistoryParams()
     try:
         params = schema.load(request.args)
@@ -41,7 +50,9 @@ def get_history():
 @bp.route("/distributions/<int:id>", methods=["PUT"])
 @jwt_required()
 def update_distribution(id):
-    user = User.get_by_id(get_jwt_identity())
+    user = _current_actor()
+    if not user:
+        return jsonify({"success": False, "message": "Invalid token"}), 401
     if user.role != 'super_admin':
         return jsonify({"success": False, "message": "Forbidden"}), 403
         
@@ -56,7 +67,9 @@ def update_distribution(id):
 @bp.route("/distributions/<int:id>", methods=["DELETE"])
 @jwt_required()
 def delete_distribution(id):
-    user = User.get_by_id(get_jwt_identity())
+    user = _current_actor()
+    if not user:
+        return jsonify({"success": False, "message": "Invalid token"}), 401
     if user.role != 'super_admin':
         return jsonify({"success": False, "message": "Forbidden"}), 403
 
@@ -67,5 +80,10 @@ def delete_distribution(id):
 @bp.route("/distributions/<int:id>/status", methods=["PATCH"])
 @jwt_required()
 def toggle_status(id):
+    user = _current_actor()
+    if not user:
+        return jsonify({"success": False, "message": "Invalid token"}), 401
+    if user.role != "super_admin":
+        return jsonify({"success": False, "message": "Forbidden"}), 403
     result, status = DistributionService.toggle_status(id)
     return jsonify(result), status

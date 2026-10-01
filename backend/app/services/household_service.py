@@ -3,6 +3,8 @@ import math
 from app.models.household import Household
 from app.models.individual import Individual
 from app.models import db
+from app.schemas.household import HouseholdWithIndividualsCreateSchema
+from app.schemas.individual import IndividualMemberCreateSchema
 
 logger = logging.getLogger(__name__)
 
@@ -97,6 +99,10 @@ class HouseholdService:
 
     @staticmethod
     def create_household_with_individuals(data: dict):
+        try:
+            data = HouseholdWithIndividualsCreateSchema().load(data)
+        except Exception as validation_error:
+            return {"success": False, "message": f"Validation error: {validation_error}"}, 400
         if Household.get_by_name(data["household_name"]):
             return {
                 "success": False,
@@ -236,6 +242,7 @@ class HouseholdService:
             if not Household.get_by_id(household_id):
                 return {"success": False, "message": "Household not found."}, 404
 
+            data = IndividualMemberCreateSchema().load(data)
             data["household_id"] = household_id
             new_individual = Individual.create(data)
 

@@ -404,7 +404,7 @@ def check_out_individual(
     Check out an individual from an evacuation center.
 
     Args:
-        record_id: Individual ID to check out
+        record_id: Attendance record ID to check out
         check_out_time: Optional check-out time (defaults to current time)
         notes: Optional notes
 
@@ -416,17 +416,13 @@ def check_out_individual(
         if not check_out_time:
             check_out_time = datetime.now().isoformat()
 
-        # Get the individual's current status
-        individual = Individual.get_by_id(record_id)
-        if not individual:
-            return {"success": False, "message": "Individual not found"}
+        current_record = AttendanceRecord.get_by_id(record_id)
+        if not current_record:
+            return {"success": False, "message": "Attendance record not found"}
 
-        # Check if individual is currently checked in
-        if individual.get("current_status") != "checked_in":
+        if current_record.status != "checked_in" or current_record.check_out_time is not None:
             return {"success": False, "message": "Individual is not currently checked in"}
 
-        # Check out individual - the AttendanceRecord.check_out_individual method
-        # should find and update the active check-in record
         updated_record = AttendanceRecord.check_out_individual(
             record_id=record_id, 
             check_out_time=check_out_time,
@@ -436,7 +432,7 @@ def check_out_individual(
         if not updated_record:
             return {"success": False, "message": "Failed to check out individual"}
 
-        logger.info("Individual %s checked out", record_id)
+        logger.info("Attendance record %s checked out", record_id)
 
         return {
             "success": True,
