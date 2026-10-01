@@ -1,21 +1,16 @@
 // components/map/MapLocationPicker.tsx
 
-import { useState, useCallback } from "react";
-import {
-    MapContainer,
-    TileLayer,
-    Marker,
-    ScaleControl,
-    useMapEvents,
-} from "react-leaflet";
+import { useState, useCallback, useEffect } from "react";
+import { MapContainer, TileLayer, Marker, ScaleControl, useMapEvents } from "react-leaflet";
 import { useTheme } from "@/components/common/ThemeProvider";
 import "leaflet/dist/leaflet.css";
 import "./map.css";
 
 import L from "leaflet";
+import type { LeafletEvent } from "leaflet";
 
 // Fix for default icons
-delete (L.Icon.Default.prototype as any)._getIconUrl;
+Reflect.deleteProperty(L.Icon.Default.prototype, "_getIconUrl");
 L.Icon.Default.mergeOptions({
     iconRetinaUrl: "/leaflet/images/marker-icon-2x.png",
     iconUrl: "/leaflet/images/marker-icon.png",
@@ -36,7 +31,8 @@ const createLocationIcon = (isDark: boolean) => {
                 </div>
                 
                 <!-- Main marker -->
-                <div class="relative w-8 h-8 rounded-full border-3 border-white shadow-xl transition-all duration-200 group-hover:scale-110"
+                <div class="relative w-8 h-8 rounded-full border-3 border-white shadow-xl
+                            transition-all duration-200 group-hover:scale-110"
                      style="background-color: ${color}">
                 </div>
                 
@@ -67,6 +63,8 @@ interface MapLocationPickerProps {
     initialLocation?: [number, number] | null;
     /** Callback when location is selected */
     onLocationSelect: (location: { lat: number; lng: number }) => void;
+    /** Callback when the selected location is cleared */
+    onLocationClear?: () => void;
     /** Optional callback when cancelled */
     onCancel?: () => void;
     /** Additional CSS classes */
@@ -86,7 +84,7 @@ function MapClickHandler({
     setLocation: (loc: [number, number] | null) => void;
 }) {
     useMapEvents({
-        click: (e) => {
+        click: e => {
             const { lat, lng } = e.latlng;
             const newLocation: [number, number] = [lat, lng];
             setLocation(newLocation);
@@ -101,6 +99,7 @@ export default function MapLocationPicker({
     zoom = 13,
     initialLocation = null,
     onLocationSelect,
+    onLocationClear,
     onCancel,
     className = "",
     showCoordinates = true,
@@ -109,6 +108,14 @@ export default function MapLocationPicker({
     const { theme } = useTheme();
     const [location, setLocation] = useState<[number, number] | null>(initialLocation);
     const isDark = theme === "dark";
+    const initialLat = initialLocation?.[0];
+    const initialLng = initialLocation?.[1];
+
+    useEffect(() => {
+        setLocation(
+            initialLat === undefined || initialLng === undefined ? null : [initialLat, initialLng]
+        );
+    }, [initialLat, initialLng]);
 
     const handleLocationSelect = useCallback(
         (newLocation: [number, number]) => {
@@ -119,21 +126,42 @@ export default function MapLocationPicker({
     );
 
     const handleDragEnd = useCallback(
-        (e: any) => {
-            const { lat, lng } = e.target.getLatLng();
+        (event: LeafletEvent) => {
+            const { lat, lng } = (event.target as L.Marker).getLatLng();
             setLocation([lat, lng]);
             onLocationSelect({ lat, lng });
         },
         [onLocationSelect]
     );
 
-    const handleReset = () => setLocation(null);
+    const handleReset = () => {
+        setLocation(null);
+        onLocationClear?.();
+    };
 
     const locationIcon = createLocationIcon(isDark);
+    const tileUrl = isDark
+        ? "https://tiles.stadiamaps.com/tiles/alidade_smooth_dark/{z}/{x}/{y}{r}.png"
+        : "https://tiles.stadiamaps.com/tiles/alidade_smooth/{z}/{x}/{y}{r}.png";
+    const secondaryButtonClass = [
+        "px-3 py-1 text-sm border border-input rounded-md",
+        "hover:bg-accent transition-colors",
+    ].join(" ");
+    const clearButtonClass = [
+        "px-3 py-2 text-sm bg-background/90 backdrop-blur-sm border rounded-md",
+        "shadow-sm hover:bg-accent transition-colors text-foreground",
+    ].join(" ");
+    const destructiveButtonClass = [
+        "px-3 py-1 text-sm border border-destructive/20 text-destructive rounded-md",
+        "hover:bg-destructive/10 transition-colors",
+    ].join(" ");
+    const mapHintClass = [
+        "bg-background/90 backdrop-blur-sm border rounded-md p-3",
+        "max-w-xs shadow-sm",
+    ].join(" ");
 
     return (
         <div className={`flex flex-col h-full min-h-0 ${className}`}>
-            
             {/* TOP PANEL — scrollable, fixed height */}
             <div className="shrink-0 mb-4 space-y-2 max-h-[24vh] overflow-y-auto pr-1">
                 <div className="flex justify-between items-center">
@@ -145,10 +173,7 @@ export default function MapLocationPicker({
                     </div>
 
                     {onCancel && (
-                        <button
-                            onClick={onCancel}
-                            className="px-3 py-1 text-sm border border-input rounded-md hover:bg-accent transition-colors"
-                        >
+                        <button onClick={onCancel} className={secondaryButtonClass}>
                             Cancel
                         </button>
                     )}
@@ -156,15 +181,21 @@ export default function MapLocationPicker({
 
                 {showCoordinates && location && (
                     <div className="p-3 bg-card border rounded-md space-y-1">
-                        <div className="text-sm font-medium text-foreground">Selected Coordinates</div>
+                        <div className="text-sm font-medium text-foreground">
+                            Selected Coordinates
+                        </div>
                         <div className="flex flex-wrap gap-4 text-sm">
                             <div className="space-y-1">
                                 <div className="text-muted-foreground">Latitude</div>
-                                <div className="font-mono text-foreground">{location[0].toFixed(6)}°</div>
+                                <div className="font-mono text-foreground">
+                                    {location[0].toFixed(6)}°
+                                </div>
                             </div>
                             <div className="space-y-1">
                                 <div className="text-muted-foreground">Longitude</div>
-                                <div className="font-mono text-foreground">{location[1].toFixed(6)}°</div>
+                                <div className="font-mono text-foreground">
+                                    {location[1].toFixed(6)}°
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -189,11 +220,7 @@ export default function MapLocationPicker({
                     zoomControl={true}
                 >
                     <TileLayer
-                        url={
-                            isDark
-                                ? "https://tiles.stadiamaps.com/tiles/alidade_smooth_dark/{z}/{x}/{y}{r}.png"
-                                : "https://tiles.stadiamaps.com/tiles/alidade_smooth/{z}/{x}/{y}{r}.png"
-                        }
+                        url={tileUrl}
                         attribution='&copy; <a href="https://stadiamaps.com/">Stadia Maps</a>'
                         maxZoom={19}
                     />
@@ -218,10 +245,7 @@ export default function MapLocationPicker({
                 {/* Map overlay controls */}
                 <div className="absolute bottom-4 left-4 flex flex-col gap-2">
                     {location && (
-                        <button
-                            onClick={handleReset}
-                            className="px-3 py-2 text-sm bg-background/90 backdrop-blur-sm border rounded-md shadow-sm hover:bg-accent transition-colors text-foreground"
-                        >
+                        <button onClick={handleReset} className={clearButtonClass}>
                             Clear Location
                         </button>
                     )}
@@ -229,7 +253,7 @@ export default function MapLocationPicker({
 
                 {/* Map instructions bubble */}
                 <div className="absolute top-4 right-4">
-                    <div className="bg-background/90 backdrop-blur-sm border rounded-md p-3 max-w-xs shadow-sm">
+                    <div className={mapHintClass}>
                         <div className="text-sm space-y-2">
                             <div className="flex items-center gap-2">
                                 <div className="w-3 h-3 rounded-full bg-blue-500"></div>
@@ -237,7 +261,7 @@ export default function MapLocationPicker({
                             </div>
                             {draggable && (
                                 <div className="flex items-center gap-2">
-                                    <div className="w-3 h-3 rounded-full border-2 border-blue-500"></div>
+                                    <div className="w-3 h-3 rounded-full border-2 border-blue-500" />
                                     <span className="text-foreground">Drag to adjust</span>
                                 </div>
                             )}
@@ -258,16 +282,15 @@ export default function MapLocationPicker({
                         </div>
                         <div className="flex gap-2">
                             <button
-                                onClick={() => navigator.clipboard.writeText(`${location[0]}, ${location[1]}`)}
-                                className="px-3 py-1 text-sm border border-input rounded-md hover:bg-accent transition-colors"
+                                onClick={() =>
+                                    navigator.clipboard.writeText(`${location[0]}, ${location[1]}`)
+                                }
+                                className={secondaryButtonClass}
                                 title="Copy coordinates"
                             >
                                 Copy
                             </button>
-                            <button
-                                onClick={handleReset}
-                                className="px-3 py-1 text-sm border border-destructive/20 text-destructive rounded-md hover:bg-destructive/10 transition-colors"
-                            >
+                            <button onClick={handleReset} className={destructiveButtonClass}>
                                 Clear
                             </button>
                         </div>

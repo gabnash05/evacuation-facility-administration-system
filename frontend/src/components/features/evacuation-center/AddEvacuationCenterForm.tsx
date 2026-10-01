@@ -216,6 +216,10 @@ export function AddEvacuationCenterForm({
         }));
     };
 
+    const handleLocationClear = () => {
+        setFormData(prev => ({ ...prev, latitude: undefined, longitude: undefined }));
+    };
+
     // NEW: Handle opening map picker
     const handleOpenMapPicker = () => {
         setShowMapPicker(true);
@@ -352,6 +356,7 @@ export function AddEvacuationCenterForm({
                             <div className="flex-1 min-h-0">
                                 <MapLocationPicker
                                     onLocationSelect={handleLocationSelect}
+                                    onLocationClear={handleLocationClear}
                                     onCancel={handleCloseMapPicker}
                                     initialLocation={
                                         locationSelected

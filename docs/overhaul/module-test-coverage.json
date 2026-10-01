@@ -1162,7 +1162,19 @@
       "path": "frontend/src/components/features/evacuation-center/AddEvacuationCenterForm.tsx",
       "status": "covered",
       "tests": ["frontend/src/components/features/evacuation-center/AddEvacuationCenterForm.test.tsx"],
-      "behavior": "Describes center creation and blocks submission until a map location is selected."
+      "behavior": "Describes center creation, blocks submission without a map location, and clears parent coordinates when a selection is removed."
+    },
+    {
+      "path": "frontend/src/components/features/evacuation-center/EditEvacuationCenterForm.tsx",
+      "status": "covered",
+      "tests": ["frontend/src/components/features/evacuation-center/EditEvacuationCenterForm.test.tsx"],
+      "behavior": "Accepts zero-valued coordinates, prevents stale-location saves, supports keyboard location selection, describes dialog views, and announces failed updates."
+    },
+    {
+      "path": "frontend/src/components/features/map/MapLocationPicker.tsx",
+      "status": "covered",
+      "tests": ["frontend/src/components/features/map/MapLocationPicker.test.tsx"],
+      "behavior": "Reports map clicks, drags, and clears; renders valid zero-valued coordinates; and follows changed initial-location props."
     },
     {
       "path": "frontend/src/test/setup.ts",

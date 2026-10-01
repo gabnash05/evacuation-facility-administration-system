@@ -395,3 +395,13 @@ PR #6 (`https://github.com/gabnash05/evacuation-facility-administration-system/p
 against `main`. GitHub reported the PR open, mergeable, and without status
 checks on 2026-10-01. The draft remains ineligible for merge while P1 findings
 and required validation remain open.
+
+`TEST-003I-FRONTEND-MODULE-COVERAGE` now directly covers MapLocationPicker and
+EditEvacuationCenterForm, and expands AddEvacuationCenterForm coverage.
+`FRONTEND-062` fixes stale parent coordinates after clearing a map selection,
+zero-valued coordinates in edit, missing keyboard/accessible-dialog behavior,
+and silent generic save failures. Touched-file Vitest (3 files, 6 tests),
+ESLint, Prettier, TypeScript, the production build, and the read-only module
+coverage verifier pass. The verifier reports 212 executable modules, 193 covered,
+13 unmapped, and six valid exemptions. The full frontend suite passed (145
+files, 217 tests; 335.97 seconds). Publish after final diff review.
