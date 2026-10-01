@@ -389,3 +389,9 @@ first build attempt was denied access to generated `backend/app/static/assets`;
 the identical build passed with approved filesystem access. Read-only
 reconciliation reports 212 executable modules, 191 covered modules, 15
 unmapped modules, and six valid exemptions.
+
+The published `codex/overhaul-foundation` branch is tracked by draft GitHub
+PR #6 (`https://github.com/gabnash05/evacuation-facility-administration-system/pull/6`)
+against `main`. GitHub reported the PR open, mergeable, and without status
+checks on 2026-10-01. The draft remains ineligible for merge while P1 findings
+and required validation remain open.
