@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { UserService } from "@/services/userService";
-import type { User, UsersResponse, GetUsersParams } from "@/types/user";
+import type { User, UserRole, UsersResponse, GetUsersParams } from "@/types/user";
 import type { CreateUserFormData, UpdateUserFormData } from "@/schemas/user";
 
 interface UserState {
@@ -22,6 +22,8 @@ interface UserState {
         limit: number;
     } | null;
     centerFilter: number | null; // Add center filter
+    roleFilter: UserRole | "all";
+    statusFilter: "active" | "inactive" | "all";
 
     // Actions
     setCurrentUser: (user: User) => void;
@@ -31,6 +33,8 @@ interface UserState {
     setEntriesPerPage: (entries: number) => void;
     setSortConfig: (config: { key: string; direction: "asc" | "desc" | null } | null) => void;
     setCenterFilter: (centerId: number | null) => void; // Add center filter action
+    setRoleFilter: (role: UserRole | "all") => void;
+    setStatusFilter: (status: "active" | "inactive" | "all") => void;
     fetchUsers: (centerId?: number | null) => Promise<void>; // Update to accept centerId
     initializeCurrentUser: () => Promise<void>;
     fetchCurrentUser: () => Promise<void>;
@@ -53,6 +57,8 @@ const initialState = {
     sortConfig: null,
     pagination: null,
     centerFilter: null, // Add to initial state
+    roleFilter: "all" as const,
+    statusFilter: "all" as const,
 };
 
 export const useUserStore = create<UserState>((set, get) => ({
@@ -78,8 +84,24 @@ export const useUserStore = create<UserState>((set, get) => ({
         set({ centerFilter: centerId, currentPage: 1 });
     },
 
+    setRoleFilter: (roleFilter) => {
+        set({ roleFilter, currentPage: 1 });
+    },
+
+    setStatusFilter: (statusFilter) => {
+        set({ statusFilter, currentPage: 1 });
+    },
+
     fetchUsers: async (centerId?: number | null) => {
-        const { searchQuery, currentPage, entriesPerPage, sortConfig, centerFilter } = get();
+        const {
+            searchQuery,
+            currentPage,
+            entriesPerPage,
+            sortConfig,
+            centerFilter,
+            roleFilter,
+            statusFilter,
+        } = get();
 
         // Use provided centerId or fall back to store's centerFilter
         const targetCenterId = centerId !== undefined ? centerId : centerFilter;
@@ -93,7 +115,9 @@ export const useUserStore = create<UserState>((set, get) => ({
                 limit: entriesPerPage,
                 sortBy: sortConfig?.key,
                 sortOrder: sortConfig?.direction || undefined,
-                centerId: targetCenterId !== null ? targetCenterId : undefined, // Only include if not null
+                centerId: targetCenterId !== null ? targetCenterId : undefined,
+                role: roleFilter === "all" ? undefined : roleFilter,
+                status: statusFilter === "all" ? undefined : statusFilter,
             };
 
             const response: UsersResponse = await UserService.getUsers(params);

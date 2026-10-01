@@ -377,3 +377,15 @@ lint debt. Focused Vitest, targeted ESLint, TypeScript, and the full frontend
 suite pass (141 files, 208 tests; 246.35 seconds). Read-only reconciliation
 reports 212 executable modules, 189 covered modules, 17 unmapped modules, and
 six valid exemptions.
+
+`TEST-003I-FRONTEND-MODULE-COVERAGE` now directly covers both administrative
+user-management pages. `FRONTEND-061` connects role/status controls to the
+existing server filters, limits role choices to each actor's manageable roles,
+and blocks the center page when no center is assigned. `TEST-007` extends the
+cold event-modal import timeout after a documented aggregate flake. Focused
+Vitest (4 files, 6 tests), targeted ESLint, TypeScript, the full frontend suite
+(143 files, 212 tests; 345.24 seconds), and the production build pass. The
+first build attempt was denied access to generated `backend/app/static/assets`;
+the identical build passed with approved filesystem access. Read-only
+reconciliation reports 212 executable modules, 191 covered modules, 15
+unmapped modules, and six valid exemptions.

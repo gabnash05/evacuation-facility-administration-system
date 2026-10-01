@@ -1234,6 +1234,18 @@
       "status": "covered",
       "tests": ["frontend/src/pages/city-admin/CityAdminHouseholdsPage.test.tsx"],
       "behavior": "Loads the city-admin household-management view and fetches its initial household data."
+    },
+    {
+      "path": "frontend/src/pages/center-admin/CenterAdminUserManagementPage.tsx",
+      "status": "covered",
+      "tests": ["frontend/src/pages/center-admin/CenterAdminUserManagementPage.test.tsx"],
+      "behavior": "Lists personnel at the assigned center and blocks access when no center is assigned."
+    },
+    {
+      "path": "frontend/src/pages/city-admin/CityAdminUserMangementPage.tsx",
+      "status": "covered",
+      "tests": ["frontend/src/pages/city-admin/CityAdminUserMangementPage.test.tsx"],
+      "behavior": "Loads city-admin users and exposes only authorized role and status filters."
     }
   ]
 }

@@ -1,17 +1,39 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const { getCurrentUser } = vi.hoisted(() => ({ getCurrentUser: vi.fn() }));
+const { getCurrentUser, getUsers } = vi.hoisted(() => ({
+    getCurrentUser: vi.fn(),
+    getUsers: vi.fn(),
+}));
 
 vi.mock("@/services/userService", () => ({
-    UserService: { getCurrentUser },
+    UserService: { getCurrentUser, getUsers },
 }));
 
 import { useUserStore } from "./userStore";
 
 describe("user store", () => {
     beforeEach(() => {
-        useUserStore.setState({ currentUser: null, error: null, loading: false });
+        useUserStore.getState().resetState();
         getCurrentUser.mockReset();
+        getUsers.mockReset();
+    });
+
+    it("sends role, status, and center filters to the users API", async () => {
+        getUsers.mockResolvedValue({
+            data: {
+                results: [],
+                pagination: { current_page: 1, total_pages: 0, total_items: 0, limit: 10 },
+            },
+        });
+
+        useUserStore.getState().setRoleFilter("volunteer");
+        useUserStore.getState().setStatusFilter("inactive");
+        await useUserStore.getState().fetchUsers(24);
+
+        expect(getUsers).toHaveBeenCalledWith(
+            expect.objectContaining({ centerId: 24, role: "volunteer", status: "inactive" })
+        );
+        expect(useUserStore.getState().currentPage).toBe(1);
     });
 
     it("refreshes the current user without logging the authenticated response", async () => {

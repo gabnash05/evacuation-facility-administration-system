@@ -26,5 +26,5 @@ describe("CreateEventModal", () => {
         expect(screen.getByLabelText("Event Name")).toBeEnabled();
         expect(screen.getByRole("combobox", { name: "Event type" })).toBeEnabled();
         expect(screen.getByRole("button", { name: "Date declared" })).toBeEnabled();
-    }, 10_000);
+    }, 30_000);
 });

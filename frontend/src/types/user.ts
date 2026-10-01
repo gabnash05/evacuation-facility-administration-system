@@ -21,7 +21,7 @@ export interface AuthResponse {
 export interface GetUsersParams extends SearchParams {
     centerId?: number;
     role?: UserRole;
-    isActive?: boolean;
+    status?: "active" | "inactive";
 }
 
 // API Response types
