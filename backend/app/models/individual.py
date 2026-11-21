@@ -146,7 +146,7 @@ class Individual(db.Model):
             return None
 
     @classmethod
-    def update(cls, individual_id: int, data: dict):
+    def update(cls, individual_id: int, data: dict, *, household_id: int = None):
         """Update an existing individual."""
         sql = text(
             """
@@ -159,6 +159,8 @@ class Individual(db.Model):
                 relationship_to_head = COALESCE(:relationship_to_head, relationship_to_head),
                 updated_at = CURRENT_TIMESTAMP
             WHERE individual_id = :individual_id
+              AND (CAST(:expected_household_id AS INTEGER) IS NULL
+                   OR household_id = :expected_household_id)
             RETURNING individual_id, household_id, first_name, last_name, date_of_birth, gender, relationship_to_head, current_status, created_at, updated_at
         """
         )
@@ -170,6 +172,7 @@ class Individual(db.Model):
             "gender": data.get("gender"),
             "relationship_to_head": data.get("relationship_to_head"),
             "individual_id": individual_id,
+            "expected_household_id": household_id,
         }
 
         try:
@@ -181,7 +184,7 @@ class Individual(db.Model):
             return None
 
     @classmethod
-    def delete_by_ids(cls, ids: list):
+    def delete_by_ids(cls, ids: list, *, household_id: int = None):
         """Delete multiple individuals by IDs."""
         if not ids:
             return 0
@@ -190,12 +193,16 @@ class Individual(db.Model):
             """
             DELETE FROM individuals 
             WHERE individual_id = ANY(:ids) 
+              AND (CAST(:expected_household_id AS INTEGER) IS NULL
+                   OR household_id = :expected_household_id)
             RETURNING individual_id
         """
         )
 
         try:
-            result = db.session.execute(sql, {"ids": ids}).fetchall()
+            result = db.session.execute(
+                sql, {"ids": ids, "expected_household_id": household_id}
+            ).fetchall()
             return len(result)
         except Exception as e:
             logger.error(f"Error deleting individuals {ids}: {str(e)}")

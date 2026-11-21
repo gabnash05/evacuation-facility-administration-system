@@ -10,6 +10,18 @@ from tests.api_test_case import ApiTestCase
 
 class HouseholdModelTests(ApiTestCase):
     @patch("app.models.individual.db")
+    def test_member_writes_bind_expected_household(self, database):
+        Individual.update(8, {"first_name": "A"}, household_id=4)
+        query, params = database.session.execute.call_args.args
+        self.assertIn("household_id = :expected_household_id", str(query))
+        self.assertEqual(params["expected_household_id"], 4)
+
+        Individual.delete_by_ids([8], household_id=4)
+        query, params = database.session.execute.call_args.args
+        self.assertIn("household_id = :expected_household_id", str(query))
+        self.assertEqual(params["expected_household_id"], 4)
+
+    @patch("app.models.individual.db")
     def test_member_read_propagates_database_failure(self, database):
         database.session.execute.side_effect = RuntimeError("read failed")
 

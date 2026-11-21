@@ -634,3 +634,8 @@ DATABASE-006B propagates member-read errors to existing service error handlers.
 The household update aborts and rolls back before writes when the read fails.
 Model and service regressions and all 134 backend tests passed. Database-backed
 aggregate and concurrency verification remain open.
+
+HOUSEHOLD-002B binds household ownership in member update and delete queries
+used by aggregate edits. Failed matches abort the aggregate. Unit regressions
+and all 135 backend tests passed. Database-backed concurrency verification
+remains open.
