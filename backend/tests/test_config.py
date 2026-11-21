@@ -1,11 +1,46 @@
 """Regression tests for the explicit runtime configuration contract."""
 
+import os
 import unittest
+from unittest.mock import patch
 
-from app.config import Config
+from app.config import Config, ProductionConfig
 
 
 class ConfigTests(unittest.TestCase):
+    def test_base_config_disables_debug(self):
+        self.assertFalse(Config.DEBUG)
+
+    def test_production_requires_both_keys_without_echoing_values(self):
+        for key in ("SECRET_KEY", "JWT_SECRET_KEY"):
+            for invalid in (None, "  ", "dev-secret-key", "jwt-secret-key"):
+                with self.subTest(key=key, invalid=invalid):
+                    values = {
+                        "SECRET_KEY": "flask-test-value",
+                        "JWT_SECRET_KEY": "jwt-test-value",
+                    }
+                    if invalid is None:
+                        values.pop(key)
+                    else:
+                        values[key] = invalid
+                    with patch.dict(os.environ, values, clear=True):
+                        with self.assertRaisesRegex(
+                            RuntimeError, f"non-default {key}"
+                        ) as failure:
+                            ProductionConfig()
+                    for value in values.values():
+                        if value.strip():
+                            self.assertNotIn(value, str(failure.exception))
+
+    def test_production_reads_deployment_keys_and_disables_debug(self):
+        with patch.dict(
+            os.environ, {"SECRET_KEY": "test-flask", "JWT_SECRET_KEY": "test-jwt"}
+        ):
+            config = ProductionConfig()
+        self.assertEqual(config.SECRET_KEY, "test-flask")
+        self.assertEqual(config.JWT_SECRET_KEY, "test-jwt")
+        self.assertFalse(config.DEBUG)
+
     def test_token_transport_is_explicitly_configured(self):
         self.assertEqual(Config.JWT_TOKEN_LOCATION, ["headers", "cookies"])
         self.assertEqual(Config.JWT_HEADER_NAME, "Authorization")

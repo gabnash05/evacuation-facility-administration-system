@@ -7,7 +7,7 @@ class Config:
     """Base configuration."""
 
     SECRET_KEY = os.environ.get("SECRET_KEY", "dev-secret-key")
-    DEBUG = True
+    DEBUG = False
     TESTING = False
 
     SQLALCHEMY_DATABASE_URI = os.environ.get("DATABASE_URL", "sqlite:///efas.db")
@@ -30,3 +30,17 @@ class Config:
         "http://localhost:5000",  # Flask development server
         "http://127.0.0.1:5000",  # Alternative local address
     ]
+
+
+class ProductionConfig(Config):
+    """Production requires deployment-provided signing keys at startup."""
+
+    def __init__(self):
+        for name in ("SECRET_KEY", "JWT_SECRET_KEY"):
+            value = os.environ.get(name, "")
+            if not value.strip() or value.strip() in {
+                "dev-secret-key",
+                "jwt-secret-key",
+            }:
+                raise RuntimeError(f"Set a non-default {name} before starting EFAS.")
+            setattr(self, name, value)

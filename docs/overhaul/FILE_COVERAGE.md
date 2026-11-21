@@ -71,7 +71,7 @@
 | `backend/run.py` | backend | development entry point | human-authored | yes | reviewed | DEVOPS-001, SECURITY-001 | Always runs Flask development server with debug enabled. |
 | `backend/wsgi.py` | backend | production WSGI entry point | human-authored | yes | reviewed | DEVOPS-001 | Empty; cannot provide the documented `wsgi:app` Gunicorn target. |
 | `backend/app/__init__.py` | backend | application factory and SPA host | human-authored | yes | reviewed | BACKEND-001, CONTRACT-001, SECURITY-003 | Registers all blueprints under hard-coded `/api`, configures CORS, and serves the built SPA. |
-| `backend/app/config.py` | backend | base runtime configuration | human-authored | yes | reviewed | SECURITY-001, SECURITY-003, CONTRACT-001 | Unsafe fallback secrets/debug/cookie settings; expiry env value is overwritten by a later constant. |
+| `backend/app/config.py` | backend | base and production runtime configuration | human-authored | yes | reviewed | SECURITY-001, SECURITY-003, CONTRACT-001 | WSGI startup rejects missing and known development signing keys, and default debug is disabled. Cookie policy and the duplicate expiry assignment remain open. |
 | `backend/app/models/__init__.py` | backend | database/JWT/migration extension setup | human-authored | yes | reviewed | — | Defines extensions and eagerly imports only five model classes. |
 | `backend/app/models/user.py` | backend | user persistence | human-authored | yes | reviewed | DATABASE-001, CONTRACT-002 | Mixes ORM declaration with raw SQL, independently commits writes, and selects password hashes for list results. |
 | `backend/app/routes/__init__.py` | backend | route package marker | human-authored | yes | reviewed | — | Empty package initializer. |

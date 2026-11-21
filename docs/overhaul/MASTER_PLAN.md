@@ -363,6 +363,15 @@ The audit tickets are complete. The tickets below are the authoritative implemen
 | CONTRACT-001..006, FRONTEND-001..018 | P2/P3 | Reconcile contracts and client behavior feature by feature with regression tests; retire unreachable legacy code only after route/behavior confirmation. | corresponding backend/security ticket | must-split |
 | QUALITY-001/002, DEVOPS-002..005, AGENT-001 | P2 | Restore quality gates, CI/local setup, runtime pinning, hooks, instructions, and agent safeguards after tests are reliable. | TEST-001 | must-split |
 
+### SECURITY-001A — Require explicit production signing keys
+
+- **Priority, size, and dependency:** P1, S. Depends on DEVOPS-001 and TEST-001.
+- **Evidence and scope:** `backend/app/config.py` supplies public fallback keys and enables default debug. `backend/wsgi.py` uses those defaults for the Gunicorn target. Scope is base debug and production startup configuration, with regressions in `backend/tests/test_config.py` and `backend/tests/test_wsgi.py` and deployment notes in `README.md`.
+- **Invariant and checklist:** Default debug is off, and the production WSGI entry point rejects missing, blank, or known development signing keys before building the app. Read secrets at startup, preserve configured key bytes, report variable names only, and keep the existing explicit local development runner. Verify the WSGI app still registers the login route with fixture keys.
+- **Non-goals and compatibility:** Preserve JWT transport, cookie policy, CSRF, expiry, and database behavior. Production deployments must supply their intended stable keys before rollout. A planned key rotation and any auth transport change belong to their own rollout and decision.
+- **Validation and acceptance:** Run configuration and WSGI test modules, the full backend unit suite, Black, isort, Flake8 on touched Python files, the strict coverage verifier, and `git diff --check`. Verify failed startup contains no secret values. Use isolated fixture settings and avoid live database access.
+- **Risk, rollback, and escalation:** A deployment with absent keys fails at boot. Provision deployment secrets before release, and preserve valid existing values across workers. Use a focused follow-up revert if code recovery is required, with production access kept restricted until keys and debug configuration are verified. Escalate any cutover requiring session invalidation, live secret access, or an incompatible auth transport decision.
+
 ### DEVOPS-001 — Restore the production WSGI entry point
 
 - **Priority/risk:** P1 / XS; production start failure, reversible source change.

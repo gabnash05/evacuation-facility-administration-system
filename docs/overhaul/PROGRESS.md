@@ -485,4 +485,11 @@ Focused validation passed (four files, eight tests), along with targeted lint,
 production build, and the full frontend suite (158 files, 252 tests in 222.14
 seconds). The application compiler still reports 52 existing diagnostics with
 none in the changed tests. Strict mapping reconciliation passes with 203
-mapped, zero unmapped, and six exempt.
+mapped, zero unmapped, and six exempt. Published as `391826f` in draft PR #6.
+
+`SECURITY-001A` is complete. The WSGI target now requires explicit Flask and
+JWT signing keys and starts with debug disabled. The existing development entry
+point still enables debug when run directly. Seven focused checks and all 98
+backend tests passed. Black, isort, Flake8, lock verification, strict module
+reconciliation, and diff checks passed. Validation used fixture keys and an
+isolated SQLite configuration without opening a live database connection.
