@@ -382,6 +382,12 @@ class EvacuationCenter(db.Model):
         cls, center_id: int, update_data: Dict[str, Any]
     ) -> Optional["EvacuationCenter"]:
         """Update center information using raw SQL."""
+        allowed_fields = {
+            "center_id", "center_name", "address", "capacity", "status",
+            "current_occupancy", "photo_data", "latitude", "longitude", "coordinates",
+        }
+        if set(update_data) - allowed_fields:
+            raise ValueError("Unsupported evacuation center update field")
         # Build dynamic UPDATE query
         set_clauses = []
         params = {"center_id": center_id}

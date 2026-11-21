@@ -453,6 +453,11 @@ The audit tickets are complete. The tickets below are the authoritative implemen
 - Validate clean migration, concurrent inserts, downgrade to 0002, duplicate refusal with rows and revision unchanged, and retry after correcting only the synthetic fixture. Run backend tests, strict mapping, and the disposable attendance smoke suite.
 - Deployment needs a verified backup and restored-copy rehearsal. Index creation blocks attendance writes while it runs. Confirm the acceptable maintenance window using restored-copy timing. Any historical reconciliation requires separate approval. Downgrade to 0002 drops the index and removes the uniqueness guarantee without rewriting records.
 
+### SECURITY-012 — Constrain center update identifiers
+
+- P2, S. The center model interpolated update keys into SQL. Restrict keys to the existing update-schema fields and model coordinate inputs before executing a query. Preserve event-driven status updates.
+- Validate with `pipenv run test`, the mapped model regression, strict module verification, and diff review. No schema migration is involved. Revert the commit if a documented caller needs a field outside the allowlist, then add that field with a regression.
+
 ### DEVOPS-001 — Restore the production WSGI entry point
 
 - **Priority/risk:** P1 / XS; production start failure, reversible source change.

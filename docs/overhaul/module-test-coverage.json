@@ -157,7 +157,7 @@
       "path": "backend/app/models/evacuation_center.py",
       "status": "covered",
       "tests": ["backend/tests/test_evacuation_center_model.py"],
-      "behavior": "Normalizes supported coordinate representations and rejects malformed coordinate values."
+      "behavior": "Normalizes coordinates and rejects unsupported update identifiers before database access."
     },
     {
       "path": "backend/database/setup_db.py",

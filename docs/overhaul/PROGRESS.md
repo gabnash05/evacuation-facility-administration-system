@@ -583,3 +583,7 @@ rollout still requires a restored-copy rehearsal under DATABASE-002.
 TEST-002 documentation now records how to run the attendance and distribution
 PostgreSQL smoke suites against separate fresh fixture databases. Automated
 fixture provisioning and PostGIS integration remain open.
+
+SECURITY-012 closes an unsafe center-model update boundary. The model rejects
+unsupported column names before executing SQL, while preserving fields used
+by the center schema and event lifecycle. All 122 backend tests passed.
