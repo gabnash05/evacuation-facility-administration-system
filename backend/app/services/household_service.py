@@ -1,5 +1,6 @@
 import logging
 import math
+from sqlalchemy import text
 from app.models.household import Household
 from app.models.individual import Individual
 from app.models import db
@@ -18,6 +19,7 @@ class HouseholdService:
         if not existing_household:
             return {"success": False, "message": "Household not found."}, 404
 
+        head_was_supplied = "household_head_id" in data
         data = {**existing_household, **data}
         existing_by_name = Household.get_by_name(data["household_name"])
         if existing_by_name and existing_by_name.household_id != household_id:
@@ -29,6 +31,17 @@ class HouseholdService:
         individuals_payload = data.pop("individuals", None)
 
         try:
+            if head_was_supplied and data.get("household_head_id") is not None:
+                head = db.session.execute(
+                    text(
+                        "SELECT individual_id FROM individuals "
+                        "WHERE individual_id = :head_id AND household_id = :household_id "
+                        "FOR NO KEY UPDATE"
+                    ),
+                    {"head_id": data["household_head_id"], "household_id": household_id},
+                ).fetchone()
+                if not head:
+                    return {"success": False, "message": "Invalid household head."}, 400
             if individuals_payload is not None:
                 existing_individuals = Individual.get_by_household_id(household_id)
                 existing_ids = {ind["individual_id"] for ind in existing_individuals}

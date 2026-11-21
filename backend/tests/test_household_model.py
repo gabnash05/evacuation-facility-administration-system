@@ -9,6 +9,22 @@ from tests.api_test_case import ApiTestCase
 
 
 class HouseholdModelTests(ApiTestCase):
+    @patch("app.services.household_service.db")
+    @patch("app.services.household_service.Household")
+    def test_update_rejects_head_from_another_household(self, household, database):
+        household.get_by_id.return_value = {"household_name": "Santos household"}
+        household.get_by_name.return_value = None
+        database.session.execute.return_value.fetchone.return_value = None
+
+        result, status = HouseholdService.update_household(4, {"household_head_id": 99})
+
+        self.assertEqual(status, 400)
+        self.assertFalse(result["success"])
+        household.update.assert_not_called()
+        query, params = database.session.execute.call_args.args
+        self.assertIn("household_id = :household_id", str(query))
+        self.assertEqual(params, {"head_id": 99, "household_id": 4})
+
     @patch("app.models.individual.db")
     def test_member_writes_bind_expected_household(self, database):
         Individual.update(8, {"first_name": "A"}, household_id=4)

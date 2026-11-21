@@ -649,3 +649,8 @@ concurrency and other aggregate invariants remain open.
 HOUSEHOLD-002D verifies concurrent member movement before deletion on
 disposable PostgreSQL. The moved member survives and the household edit rolls
 back. All three PostgreSQL smoke suites and 135 backend tests passed.
+
+HOUSEHOLD-003A checks explicitly supplied head IDs against the target household
+and locks the matching member during the edit. The foreign-head regression and
+all 136 backend tests passed. Existing data and other head-assignment paths
+remain under DATABASE-006.

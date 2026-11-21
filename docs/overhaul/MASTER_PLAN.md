@@ -506,6 +506,10 @@ The audit tickets are complete. The tickets below are the authoritative implemen
 
 - P1, S. Test a member moving after the aggregate read and before deletion on disposable PostgreSQL. Verify the moved member survives and the household edit rolls back. Run all PostgreSQL smoke suites, backend tests, strict mapping and diff review. Other household aggregate invariants remain under DATABASE-006.
 
+### HOUSEHOLD-003A — Validate explicitly supplied household heads
+
+- P1, S. Check that an explicitly supplied non-null head belongs to the target household and lock the member until the update finishes. Reject unrelated IDs before writes. Run the mapped regression, backend suite, strict mapping and diff review. Existing data and other head-assignment paths remain under DATABASE-006. No migration is required.
+
 ### DEVOPS-001 — Restore the production WSGI entry point
 
 - **Priority/risk:** P1 / XS; production start failure, reversible source change.
