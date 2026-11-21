@@ -1263,30 +1263,20 @@ def get_attendance_record_route(record_id: int) -> Tuple:
             - HTTP status code
     """
     try:
-        # Get current user for role-based access control
-        current_user_id = get_jwt_identity()
-        current_user = get_current_user(current_user_id)
-        
-        if current_user and current_user.role in ['center_admin', 'volunteer'] and current_user.center_id:
-            record_result = get_attendance_record_by_id(record_id)
-            if not record_result.get("success"):
-                return jsonify(record_result), 404
-            
-            record_data = record_result.get("data") or {}
-            record_center_id = record_data.get("center_id")
-            
-            if record_center_id != current_user.center_id:
-                return jsonify({
-                    "success": False, 
-                    "message": "Access denied: Cannot view attendance records for other centers"
-                }), 403
-
-        logger.info("Fetching attendance record: %s", record_id)
+        current_user, response = _actor_or_response()
+        if response:
+            return response
+        if current_user.role not in {"super_admin", "city_admin", "center_admin", "volunteer"}:
+            return jsonify({"success": False, "message": "Access denied"}), 403
+        if current_user.role in {"center_admin", "volunteer"} and not current_user.center_id:
+            return jsonify({"success": False, "message": "No assigned center"}), 403
 
         result = get_attendance_record_by_id(record_id)
-
         if not result["success"]:
             return jsonify(result), 404
+        if current_user.role in {"center_admin", "volunteer"}:
+            if (result.get("data") or {}).get("center_id") != current_user.center_id:
+                return jsonify({"success": False, "message": "Access denied"}), 403
 
         return jsonify(result), 200
 
@@ -1321,16 +1311,14 @@ def get_attendance_summary_route(center_id: int) -> Tuple:
             - HTTP status code
     """
     try:
-        # Get current user for role-based access control
-        current_user_id = get_jwt_identity()
-        current_user = get_current_user(current_user_id)
-        
-        if current_user and current_user.role in ['center_admin', 'volunteer'] and current_user.center_id:
-            if center_id != current_user.center_id:
-                return jsonify({
-                    "success": False, 
-                    "message": "Access denied: Cannot view attendance summary for other centers"
-                }), 403
+        current_user, response = _actor_or_response()
+        if response:
+            return response
+        if current_user.role in {"center_admin", "volunteer"}:
+            if not current_user.center_id or center_id != current_user.center_id:
+                return jsonify({"success": False, "message": "Access denied"}), 403
+        elif current_user.role not in {"super_admin", "city_admin"}:
+            return jsonify({"success": False, "message": "Access denied"}), 403
 
         event_id = request.args.get("event_id", type=int)
 

@@ -11,6 +11,35 @@ def actor(role="volunteer", center_id=2, user_id=7):
 
 
 class AttendanceRouteAuthorizationTests(ApiTestCase):
+    @patch("app.routes.attendance_records.get_attendance_summary_by_center")
+    @patch("app.routes.attendance_records.get_attendance_record_by_id")
+    @patch("app.routes.attendance_records.get_current_user")
+    def test_detail_and_summary_reject_unassigned_actor(
+        self, get_user, get_record, summary
+    ):
+        get_user.return_value = actor(center_id=None)
+        for path in ("/api/attendance/1", "/api/attendance/summary/center/2"):
+            response = self.client.get(path, headers=self.authorization_headers(7))
+            self.assertEqual(response.status_code, 403)
+        get_record.assert_not_called()
+        summary.assert_not_called()
+
+    @patch("app.routes.attendance_records.get_attendance_record_by_id")
+    @patch("app.routes.attendance_records.get_current_user")
+    def test_detail_queries_once_and_checks_center(self, get_user, get_record):
+        get_user.return_value = actor()
+        get_record.return_value = {"success": True, "data": {"center_id": 3}}
+        response = self.client.get(
+            "/api/attendance/1", headers=self.authorization_headers(7)
+        )
+        self.assertEqual(response.status_code, 403)
+        get_record.assert_called_once_with(1)
+        get_record.return_value = {"success": True, "data": {"center_id": 2}}
+        response = self.client.get(
+            "/api/attendance/1", headers=self.authorization_headers(7)
+        )
+        self.assertEqual(response.status_code, 200)
+
     @patch("app.routes.attendance_records.get_current_user")
     def test_attendance_lists_reject_unassigned_or_inactive_accounts(self, get_user):
         paths = (

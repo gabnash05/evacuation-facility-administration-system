@@ -566,6 +566,10 @@ The audit tickets are complete. The tickets below are the authoritative implemen
 
 - P1, S. Require active persisted actors and assigned-center scope for lower roles on current, event, and transfer attendance lists. Preserve citywide access for administrators. Test rejected accounts and scoped calls, run backend tests, strict mapping and diff review. No migration is needed. Review remaining attendance routes separately.
 
+### SECURITY-017 — Scope attendance detail and center summary
+
+- P1, S. Require an active persisted actor and assigned-center authorization for detail and center summary reads. Fetch detail once and retain administrator access. Run route regressions, backend tests, strict mapping and diff review. No migration is needed. Review remaining routes separately.
+
 ### DEVOPS-001 — Restore the production WSGI entry point
 
 - **Priority/risk:** P1 / XS; production start failure, reversible source change.
