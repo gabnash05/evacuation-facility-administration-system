@@ -61,3 +61,15 @@ class ModuleCoverageVerifierTests(unittest.TestCase):
 
             with self.assertRaisesRegex(ValueError, "Duplicate module row"):
                 module_coverage.inspect(root, mapping)
+
+    def test_discovery_includes_migration_revision_sources(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            revision = root / "backend/migrations/versions/0001.py"
+            revision.parent.mkdir(parents=True)
+            revision.touch()
+
+            self.assertEqual(
+                module_coverage.discover_modules(root),
+                {"backend/migrations/versions/0001.py"},
+            )

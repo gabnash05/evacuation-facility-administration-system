@@ -1,0 +1,3 @@
+EFAS Alembic migration directory. See the DATABASE-002A section in
+docs/overhaul/MASTER_PLAN.md for upgrade, legacy adoption, and recovery.
+Write future revisions by hand. The initial SQL snapshot is immutable.

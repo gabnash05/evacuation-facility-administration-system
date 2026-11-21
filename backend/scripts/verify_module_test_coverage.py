@@ -11,7 +11,13 @@ from pathlib import Path
 from typing import Any
 
 SOURCE_SUFFIXES = {".py", ".ts", ".tsx"}
-SOURCE_ROOTS = ("backend/app", "backend/database", "backend/scripts", "frontend/src")
+SOURCE_ROOTS = (
+    "backend/app",
+    "backend/database",
+    "backend/migrations",
+    "backend/scripts",
+    "frontend/src",
+)
 SOURCE_FILES = ("backend/run.py", "backend/wsgi.py", "frontend/vite.config.ts")
 
 

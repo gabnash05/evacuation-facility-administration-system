@@ -42,4 +42,9 @@ keys abort startup before the app is initialized. Production debug mode is
 disabled. Changing the JWT signing key invalidates tokens signed with the
 previous key.
 
+For a fresh PostgreSQL database, set `DATABASE_URL` and run
+`pipenv run flask --app app db upgrade` from `backend`. The first migration
+refuses an existing EFAS schema. Follow the [migration and recovery plan](docs/overhaul/MASTER_PLAN.md#database-002a--version-the-existing-postgresql-schema)
+before adopting a legacy database.
+
 

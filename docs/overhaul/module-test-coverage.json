@@ -7,6 +7,18 @@
       "behavior": "Reports every maintained executable module and rejects invalid mappings."
     },
     {
+      "path": "backend/migrations/env.py",
+      "status": "covered",
+      "tests": ["backend/tests/test_migrations.py"],
+      "behavior": "The Flask migration command requires an explicit online PostgreSQL target before connecting."
+    },
+    {
+      "path": "backend/migrations/versions/0001_legacy_schema.py",
+      "status": "covered",
+      "tests": ["backend/tests/test_migrations.py"],
+      "behavior": "Rejects modified baseline SQL, existing EFAS tables, and destructive downgrade."
+    },
+    {
       "path": "backend/wsgi.py",
       "status": "covered",
       "tests": ["backend/tests/test_wsgi.py"],

@@ -493,3 +493,14 @@ point still enables debug when run directly. Seven focused checks and all 98
 backend tests passed. Black, isort, Flake8, lock verification, strict module
 reconciliation, and diff checks passed. Validation used fixture keys and an
 isolated SQLite configuration without opening a live database connection.
+Published as `c1645e4` in draft PR #6.
+
+`DATABASE-002A` establishes revision `0001_legacy_schema` using the preserved
+SQL schema. On a disposable PostgreSQL 17.2 cluster bound to loopback, fresh
+upgrade and a repeat upgrade passed. The normalized schema dump matched the
+legacy script's output (1,620 lines excluding the version table). Legacy
+adoption and destructive downgrade were refused and the observed state was
+unchanged. Both databases retained seven categories. All 105 backend tests,
+touched Python checks, lock verification, and strict module reconciliation
+passed (205 mapped, zero missing, six exempt). The scratch server was stopped.
+PostGIS runtime verification and actual legacy adoption remain separate work.
