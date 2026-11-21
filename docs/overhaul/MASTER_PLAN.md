@@ -431,6 +431,14 @@ The audit tickets are complete. The tickets below are the authoritative implemen
 - Run `py -3.13 -m pipenv run test` from `backend`, the strict module verifier from the root, and `py -3.13 -m pipenv run python -m tests.postgresql_attendance_smoke` against a fresh disposable migrated fixture. Verify the source and occupancy survive a rejected destination insert and that concurrent requests persist exactly one transfer.
 - Preserve route authorization and server-selected recorder attribution. Review that raw database errors use the existing generic failure path. No migration is needed. Revert the code commit to roll back, preserving recorded history. Escalate if arrival semantics or existing records must change incompatibly.
 
+### ATTENDANCE-002B — Commit automatic transfer and arrival together
+
+- P1, S. Depends on ATTENDANCE-002A. Automatic transfer during check-in previously committed checkout and the transfer record before inserting the new active check-in.
+- Lock the active source record when available and acquire the two center locks in ID order before occupancy triggers write. Commit checkout, transfer history, and arrival as a unit. Post-commit peak-stat refresh failures must leave a successful committed arrival.
+- Preserve transfer metadata, checkout attribution, and the batch API's current per-item partial results. Enforcing one active check-in when there is no source row and fixing the other batch write paths are separate tickets.
+- From `backend`, run `py -3.13 -m pipenv run test` and `py -3.13 -m pipenv run python -m tests.postgresql_attendance_smoke` against a freshly migrated disposable fixture. Run strict mapping from the root. Review rollback after the final insert, preserved source and destination occupancy, a later batch success, and generic write-failure responses.
+- No production schema change. Roll back by reverting the code commit. Escalate only if the batch response or automatic-transfer behavior must change incompatibly.
+
 ### DEVOPS-001 — Restore the production WSGI entry point
 
 - **Priority/risk:** P1 / XS; production start failure, reversible source change.

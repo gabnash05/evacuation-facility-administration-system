@@ -512,7 +512,7 @@
       "path": "backend/app/services/attendance_records_service.py",
       "status": "covered",
       "tests": ["backend/tests/test_attendance_checkout_identity.py"],
-      "behavior": "Treats checkout input as an attendance record ID and never reloads an unrelated individual by that ID."
+      "behavior": "Uses the requested attendance record ID for checkout and keeps private failed-write details out of transfer and check-in responses and logs."
     },
     {
       "path": "backend/app/models/attendance_records.py",

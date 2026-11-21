@@ -217,9 +217,13 @@ def check_in_individual(
             },
         }
 
+    except ValueError as error:
+        return {"success": False, "message": f"Failed to check in individual: {error}"}
     except Exception as error:
-        logger.error("Error checking in individual %s: %s", individual_id, str(error))
-        return {"success": False, "message": f"Failed to check in individual: {str(error)}"}
+        logger.error(
+            "Check-in failed for individual %s (%s)", individual_id, type(error).__name__
+        )
+        return {"success": False, "message": "Failed to check in individual"}
 
 
 def check_in_multiple_individuals(data: List[Dict[str, Any]]) -> Dict[str, Any]:
@@ -341,7 +345,11 @@ def check_in_multiple_individuals(data: List[Dict[str, Any]]) -> Dict[str, Any]:
                     )
                     
             except Exception as error:
-                error_message = str(error)
+                error_message = (
+                    str(error)
+                    if isinstance(error, ValueError)
+                    else "Failed to check in individual"
+                )
                 failed_checkins.append({
                     "index": i,
                     "individual_id": check_in_data["individual_id"],

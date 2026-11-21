@@ -41,6 +41,22 @@ class AttendanceCheckoutIdentityTests(unittest.TestCase):
 
 
 class AttendanceTransferTests(unittest.TestCase):
+    @patch.object(AttendanceRecord, "validate_attendance_conditions", return_value=True)
+    @patch.object(AttendanceRecord, "check_in_individual")
+    def test_check_in_service_keeps_failed_write_details_private(
+        self, check_in, validate
+    ):
+        check_in.side_effect = RuntimeError("Private check-in note")
+
+        with self.assertLogs(attendance_records_service.logger, level="ERROR") as logs:
+            result = attendance_records_service.check_in_individual(21, 20, 1)
+
+        validate.assert_called_once_with(20)
+        self.assertEqual(
+            result, {"success": False, "message": "Failed to check in individual"}
+        )
+        self.assertNotIn("Private check-in note", "\n".join(logs.output))
+
     @patch.object(AttendanceRecord, "get_by_id")
     @patch.object(AttendanceRecord, "validate_attendance_conditions", return_value=True)
     @patch.object(AttendanceRecord, "transfer_individual")

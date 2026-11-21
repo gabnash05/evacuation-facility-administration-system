@@ -13,11 +13,12 @@ from sqlalchemy.exc import ArgumentError, IntegrityError
 from app import create_app
 from app.models import db
 from app.models.attendance_records import AttendanceRecord
+from app.services.attendance_records_service import check_in_multiple_individuals
 from tests.api_test_case import ApiTestConfig
 
 
 class AttendancePostgreSQLSmoke(unittest.TestCase):
-    def test_transfer_rolls_back_on_failed_insert_and_serializes_retries(self):
+    def test_attendance_transfer_lifecycle(self):
         value = os.environ.get("EFAS_TEST_DATABASE_URL")
         if not value:
             self.fail("Set EFAS_TEST_DATABASE_URL to a migrated PostgreSQL fixture.")
@@ -158,6 +159,65 @@ class AttendancePostgreSQLSmoke(unittest.TestCase):
                     text("SELECT COUNT(*) FROM attendance_records")
                 ).scalar(),
                 2,
+            )
+
+            checked_in = AttendanceRecord.check_in_individual(
+                individual_id, source_id, user_id, "2026-01-02T13:00:00"
+            )["record"]
+            db.session.execute(
+                text(
+                    """
+                    ALTER TABLE attendance_records ADD CONSTRAINT fixture_reject_arrival
+                    CHECK (status <> 'checked_in' OR notes IS DISTINCT FROM 'Reject arrival');
+                    """
+                )
+            )
+            db.session.commit()
+
+            def move(note):
+                return {
+                    "individual_id": individual_id,
+                    "center_id": destination_id,
+                    "recorded_by_user_id": user_id,
+                    "check_in_time": "2026-01-02T14:00:00",
+                    "notes": note,
+                }
+
+            failed = check_in_multiple_individuals([move("Reject arrival")])
+            self.assertFalse(failed["success"])
+            self.assertEqual(
+                failed["data"]["failed_checkins"][0]["error"],
+                "Failed to check in individual",
+            )
+            self.assertEqual(
+                AttendanceRecord.get_by_id(checked_in.record_id).status, "checked_in"
+            )
+            self.assertEqual(occupancies(), [1, 0])
+            self.assertEqual(
+                db.session.execute(
+                    text("SELECT COUNT(*) FROM attendance_records")
+                ).scalar(),
+                3,
+            )
+
+            batch = check_in_multiple_individuals(
+                [move("Reject arrival"), move("Arrived")]
+            )
+            self.assertTrue(batch["success"])
+            self.assertEqual(len(batch["data"]["failed_checkins"]), 1)
+            (added,) = batch["data"]["successful_checkins"]
+            self.assertTrue(added["transfer_occurred"])
+            self.assertEqual(added["previous_center_id"], source_id)
+            self.assertEqual(added["status"], "checked_in")
+            self.assertEqual(
+                AttendanceRecord.get_by_id(checked_in.record_id).status, "checked_out"
+            )
+            self.assertEqual(occupancies(), [0, 1])
+            self.assertEqual(
+                db.session.execute(
+                    text("SELECT COUNT(*) FROM attendance_records")
+                ).scalar(),
+                5,
             )
 
 

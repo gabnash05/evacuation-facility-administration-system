@@ -556,3 +556,11 @@ with a checked-out source and no automatic destination check-in. The service
 keeps failed-write details out of responses and logs. All 117 backend tests
 passed, and strict module verification found zero missing mappings. Automatic
 transfer during check-in and batch workflows remain open.
+
+`ATTENDANCE-002B` is verified. Automatic transfer commits the source checkout,
+transfer record, and destination check-in together. On disposable PostgreSQL
+17.2, rejection of the final insert left the source active and occupancy
+unchanged. A batch with the same rejected item followed by a valid item
+returned one failure and one success, moved occupancy to the destination,
+and stored only the successful transfer and arrival. All 118 backend tests,
+test-file lint and formatting, strict mapping, and diff checks passed.

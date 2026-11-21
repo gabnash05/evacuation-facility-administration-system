@@ -437,117 +437,130 @@ class AttendanceRecord(db.Model):
         center_id: int,
         recorded_by_user_id: int,
         check_in_time: str,
-        notes: Optional[str] = None
+        notes: Optional[str] = None,
     ) -> Dict[str, Any]:
-        """Check in an individual to a center, handling transfers automatically."""
-        
-        # Import db here to ensure it's available
-        from app.models import db
-        
-        # Get household_id from individual
-        household_result = db.session.execute(
-            text("SELECT household_id FROM individuals WHERE individual_id = :individual_id"),
-            {"individual_id": individual_id}
-        ).fetchone()
-        
-        if not household_result:
-            raise ValueError("Individual not found")
-        
-        household_id = household_result[0]
-        
-        # Get current active event for the center
-        current_event_id = cls.get_current_event_for_center(center_id)
-        if current_event_id is None:
-            raise ValueError(f"No active event found for center {center_id}")
-
-        # Check for existing check-in
-        existing_checkin_query = text("""
-            SELECT ar.record_id, ar.center_id, ec.center_name
-            FROM attendance_records ar
-            JOIN evacuation_centers ec ON ar.center_id = ec.center_id
-            WHERE ar.individual_id = :individual_id 
-            AND ar.status = 'checked_in'
-            AND ar.check_out_time IS NULL
-            LIMIT 1
-        """)
-        
-        existing_record = db.session.execute(
-            existing_checkin_query, 
-            {"individual_id": individual_id}
-        ).fetchone()
-        
-        transfer_occurred = False
+        """Check in an individual and commit any automatic transfer with it."""
         previous_center_id = None
         previous_center_name = None
-        
-        # Handle transfer if individual is checked in elsewhere
-        if existing_record and existing_record.center_id != center_id:
-            transfer_occurred = True
-            previous_center_id = existing_record.center_id
-            previous_center_name = existing_record.center_name
-            
-            # Check out from current center
-            check_out_query = text("""
-                UPDATE attendance_records 
-                SET status = 'checked_out', 
-                    check_out_time = :check_out_time,
-                    recorded_by_user_id = :recorded_by_user_id,
-                    notes = COALESCE(:notes, notes) || ' (Auto-checked out due to transfer)',
-                    updated_at = CURRENT_TIMESTAMP
-                WHERE record_id = :record_id
-            """)
-            
-            db.session.execute(
-                check_out_query,
-                {
-                    "record_id": existing_record.record_id,
-                    "check_out_time": check_in_time,
-                    "recorded_by_user_id": recorded_by_user_id,
-                    "notes": notes
-                }
+
+        try:
+            household = db.session.execute(
+                text(
+                    "SELECT household_id FROM individuals WHERE individual_id = :individual_id"
+                ),
+                {"individual_id": individual_id},
+            ).fetchone()
+            if not household:
+                raise ValueError("Individual not found")
+            household_id = household[0]
+
+            current_event_id = cls.get_current_event_for_center(center_id)
+            if current_event_id is None:
+                raise ValueError(f"No active event found for center {center_id}")
+
+            existing_record = db.session.execute(
+                text(
+                    """
+                    SELECT ar.record_id, ar.center_id, ec.center_name
+                    FROM attendance_records ar
+                    JOIN evacuation_centers ec ON ar.center_id = ec.center_id
+                    WHERE ar.individual_id = :individual_id
+                      AND ar.status = 'checked_in'
+                      AND ar.check_out_time IS NULL
+                    LIMIT 1
+                    FOR UPDATE OF ar
+                    """
+                ),
+                {"individual_id": individual_id},
+            ).fetchone()
+            transfer_occurred = bool(
+                existing_record and existing_record.center_id != center_id
             )
-            
-            # Create transfer record
-            transfer_data = {
-                "individual_id": individual_id,
-                "center_id": center_id,
-                "event_id": current_event_id,
-                "household_id": household_id,
-                "status": "transferred",
-                "transfer_from_center_id": previous_center_id,
-                "transfer_to_center_id": center_id,
-                "transfer_time": check_in_time,
-                "recorded_by_user_id": recorded_by_user_id,
-                "notes": f"Auto-transferred from {previous_center_name}. {notes or ''}"
-            }
-            
-            cls.create(transfer_data)
+            if transfer_occurred:
+                previous_center_id = existing_record.center_id
+                previous_center_name = existing_record.center_name
 
-        # Create the new check-in record
-        data = {
-            "individual_id": individual_id,
-            "center_id": center_id,
-            "event_id": current_event_id,
-            "household_id": household_id,
-            "status": "checked_in",
-            "check_in_time": check_in_time,
-            "recorded_by_user_id": recorded_by_user_id,
-            "notes": notes
-        }
+                # Occupancy triggers update both centers. Lock them in ID order
+                # so transfers in opposite directions use the same lock order.
+                db.session.execute(
+                    text(
+                        """
+                        SELECT center_id FROM evacuation_centers
+                        WHERE center_id IN (:source_id, :destination_id)
+                        ORDER BY center_id
+                        FOR NO KEY UPDATE
+                        """
+                    ),
+                    {"source_id": previous_center_id, "destination_id": center_id},
+                ).all()
+                db.session.execute(
+                    text(
+                        """
+                        UPDATE attendance_records
+                        SET status = 'checked_out',
+                            check_out_time = :check_out_time,
+                            recorded_by_user_id = :recorded_by_user_id,
+                            notes = COALESCE(:notes, notes) || ' (Auto-checked out due to transfer)',
+                            updated_at = CURRENT_TIMESTAMP
+                        WHERE record_id = :record_id
+                        """
+                    ),
+                    {
+                        "record_id": existing_record.record_id,
+                        "check_out_time": check_in_time,
+                        "recorded_by_user_id": recorded_by_user_id,
+                        "notes": notes,
+                    },
+                )
+                cls.create(
+                    {
+                        "individual_id": individual_id,
+                        "center_id": center_id,
+                        "event_id": current_event_id,
+                        "household_id": household_id,
+                        "status": "transferred",
+                        "transfer_from_center_id": previous_center_id,
+                        "transfer_to_center_id": center_id,
+                        "transfer_time": check_in_time,
+                        "recorded_by_user_id": recorded_by_user_id,
+                        "notes": f"Auto-transferred from {previous_center_name}. {notes or ''}",
+                    },
+                    commit=False,
+                )
 
-        record = cls.create(data)
+            record = cls.create(
+                {
+                    "individual_id": individual_id,
+                    "center_id": center_id,
+                    "event_id": current_event_id,
+                    "household_id": household_id,
+                    "status": "checked_in",
+                    "check_in_time": check_in_time,
+                    "recorded_by_user_id": recorded_by_user_id,
+                    "notes": notes,
+                },
+                commit=False,
+            )
+            db.session.commit()
+        except Exception:
+            db.session.rollback()
+            raise
 
         try:
             cls._update_event_occupancy(current_event_id)
-        except Exception as e:
-            logger.warning(f"Failed to update event occupancy for event {current_event_id}: {str(e)}")
-        
-        # Return dict format that service expects
+        except Exception as error:
+            db.session.rollback()
+            logger.warning(
+                "Attendance committed but event %s occupancy refresh failed (%s)",
+                current_event_id,
+                type(error).__name__,
+            )
+
         return {
             "record": record,
             "transfer_occurred": transfer_occurred,
             "previous_center_id": previous_center_id,
-            "previous_center_name": previous_center_name
+            "previous_center_name": previous_center_name,
         }
 
 
