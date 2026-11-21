@@ -731,6 +731,10 @@ SECURITY-018 requires active scoped actors for singleton and batch checkout.
 All 156 backend tests passed. Concurrent ownership changes between route
 authorization and mutation remain under review.
 
+SECURITY-019 requires active scoped actors for singleton and batch transfers.
+All 157 backend tests passed. Concurrent ownership changes between route
+authorization and mutation remain under review.
+
 CONTRACT-001A corrects the backend environment example to document the fixed
 `/api` prefix and removes the unused `API_PREFIX` setting. The application
 route registration and frontend base configuration were checked directly.

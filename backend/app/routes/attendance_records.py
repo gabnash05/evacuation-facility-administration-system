@@ -990,25 +990,14 @@ def transfer_individual_route(record_id: int) -> Tuple:
         if "transfer_to_center_id" not in data:
             return jsonify({"success": False, "message": "Missing required field: transfer_to_center_id"}), 400
 
-        # Get current user ID from JWT token
-        current_user_id = get_jwt_identity()
-        try:
-            current_user_id_int = int(current_user_id) if current_user_id is not None else None
-        except (TypeError, ValueError):
-            current_user_id_int = None
-
-        current_user = get_current_user(current_user_id_int) if current_user_id_int is not None else None
-
-        if not current_user:
-            return (
-                jsonify(
-                    {
-                        "success": False,
-                        "message": "Unauthorized: Unable to determine current user",
-                    }
-                ),
-                401,
-            )
+        current_user, response = _actor_or_response()
+        if response:
+            return response
+        if current_user.role in {"center_admin", "volunteer"}:
+            if not current_user.center_id:
+                return jsonify({"success": False, "message": "No assigned center"}), 403
+        elif current_user.role not in {"super_admin", "city_admin"}:
+            return jsonify({"success": False, "message": "Access denied"}), 403
 
         # Get the current record to check its center
         record_result = get_attendance_record_by_id(record_id)
@@ -1125,21 +1114,15 @@ def transfer_multiple_individuals_route() -> Tuple:
                 "message": "Maximum batch size is 50 transfers per request"
             }), 400
 
-        # Get current user ID from JWT token
-        current_user_id = get_jwt_identity()
-        try:
-            current_user_id_int = int(current_user_id) if current_user_id is not None else None
-        except (TypeError, ValueError):
-            current_user_id_int = None
+        current_user, response = _actor_or_response()
+        if response:
+            return response
+        if current_user.role in {"center_admin", "volunteer"}:
+            if not current_user.center_id:
+                return jsonify({"success": False, "message": "No assigned center"}), 403
+        elif current_user.role not in {"super_admin", "city_admin"}:
+            return jsonify({"success": False, "message": "Access denied"}), 403
 
-        current_user = get_current_user(current_user_id_int) if current_user_id_int is not None else None
-
-        if not current_user:
-            return jsonify({
-                "success": False,
-                "message": "Unauthorized: Unable to determine current user",
-            }), 401
-        
         # Validate and prepare transfer data
         validated_transfers = []
         required_fields = ["record_id", "transfer_to_center_id"]

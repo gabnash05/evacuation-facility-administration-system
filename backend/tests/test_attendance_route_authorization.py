@@ -11,6 +11,38 @@ def actor(role="volunteer", center_id=2, user_id=7):
 
 
 class AttendanceRouteAuthorizationTests(ApiTestCase):
+    @patch("app.routes.attendance_records.transfer_multiple_individuals")
+    @patch("app.routes.attendance_records.transfer_individual")
+    @patch("app.routes.attendance_records.get_current_user")
+    def test_transfer_rejects_unassigned_or_inactive_actors(
+        self, get_user, transfer, batch
+    ):
+        requests = (
+            ("PUT", "/api/attendance/1/transfer", {"transfer_to_center_id": 3}),
+            (
+                "POST",
+                "/api/attendance/transfer/batch",
+                {"transfers": [{"record_id": 1, "transfer_to_center_id": 3}]},
+            ),
+        )
+        for method, path, payload in requests:
+            for user, expected in (
+                (None, 401),
+                (actor(center_id=None), 403),
+                (actor(role="unknown"), 403),
+            ):
+                with self.subTest(path=path, user=user):
+                    get_user.return_value = user
+                    response = self.client.open(
+                        path,
+                        method=method,
+                        json=payload,
+                        headers=self.authorization_headers(7),
+                    )
+                    self.assertEqual(response.status_code, expected)
+        transfer.assert_not_called()
+        batch.assert_not_called()
+
     @patch("app.routes.attendance_records.check_out_multiple_individuals")
     @patch("app.routes.attendance_records.check_out_individual")
     @patch("app.routes.attendance_records.get_current_user")
