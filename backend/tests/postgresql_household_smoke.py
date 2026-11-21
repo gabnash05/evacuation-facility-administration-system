@@ -145,6 +145,26 @@ class HouseholdPostgreSQLSmoke(unittest.TestCase):
                 ).scalar_one(),
                 second,
             )
+            result, status = HouseholdService.update_household(
+                first, {"household_head_id": member}
+            )
+            self.assertEqual(status, 400)
+            self.assertFalse(result["success"])
+            db.session.rollback()
+            result, status = HouseholdService.update_household(
+                second, {"household_head_id": member}
+            )
+            self.assertEqual(status, 200)
+            self.assertTrue(result["success"])
+            self.assertEqual(
+                db.session.execute(
+                    text(
+                        "SELECT household_head_id FROM households WHERE household_id = :id"
+                    ),
+                    {"id": second},
+                ).scalar_one(),
+                member,
+            )
 
 
 if __name__ == "__main__":

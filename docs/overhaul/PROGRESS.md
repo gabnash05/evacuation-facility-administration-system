@@ -654,3 +654,7 @@ HOUSEHOLD-003A checks explicitly supplied head IDs against the target household
 and locks the matching member during the edit. The foreign-head regression and
 all 136 backend tests passed. Existing data and other head-assignment paths
 remain under DATABASE-006.
+
+HOUSEHOLD-003A PostgreSQL follow-up verified that a foreign head is rejected
+and an existing member can be assigned as head. All three PostgreSQL smoke
+suites passed on freshly migrated disposable databases.
