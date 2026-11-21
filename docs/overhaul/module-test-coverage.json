@@ -40,19 +40,19 @@
       "path": "backend/app/routes/distribution.py",
       "status": "covered",
       "tests": ["backend/tests/test_distribution_authorization.py"],
-      "behavior": "Requires active actors and protects stock-returning status mutations."
+      "behavior": "Requires active actors, scopes history to assigned centers, and protects stock-returning status mutations."
     },
     {
       "path": "backend/app/services/distribution_service.py",
       "status": "covered",
-      "tests": ["backend/tests/test_distribution_authorization.py"],
-      "behavior": "Binds distribution household, allocation, center, and event ownership before writes."
+      "tests": ["backend/tests/test_distribution_authorization.py", "backend/tests/postgresql_distribution_smoke.py"],
+      "behavior": "Binds distribution ownership before writes and commits creation once with all items and trigger side effects."
     },
     {
       "path": "backend/app/models/distribution.py",
       "status": "covered",
-      "tests": ["backend/tests/test_distribution_authorization.py"],
-      "behavior": "Persists the validated allocation event on a distribution session."
+      "tests": ["backend/tests/test_distribution_authorization.py", "backend/tests/postgresql_distribution_smoke.py"],
+      "behavior": "Persists the validated event on a session and leaves inserts inside the caller's transaction."
     },
     {
       "path": "backend/app/routes/stats_routes.py",

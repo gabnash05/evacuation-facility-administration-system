@@ -1,6 +1,8 @@
 from types import SimpleNamespace
 from unittest.mock import patch
 
+from sqlalchemy.exc import SQLAlchemyError
+
 from app.models.distribution import DistributionSession
 from app.services.distribution_service import DistributionService
 from tests.api_test_case import ApiTestCase
@@ -10,6 +12,10 @@ def user(role="volunteer", center_id=2, user_id=7):
     return SimpleNamespace(
         role=role, center_id=center_id, user_id=user_id, is_active=True
     )
+
+
+def returned_row(values):
+    return SimpleNamespace(fetchone=lambda: SimpleNamespace(_asdict=lambda: values))
 
 
 class DistributionAuthorizationTests(ApiTestCase):
@@ -114,7 +120,7 @@ class DistributionAuthorizationTests(ApiTestCase):
         with self.app.app_context():
             with patch("app.models.distribution.db.session.execute") as execute, patch(
                 "app.models.distribution.db.session.commit"
-            ):
+            ) as commit:
                 execute.return_value.fetchone.return_value = SimpleNamespace(
                     _asdict=lambda: {"session_id": 1}
                 )
@@ -129,3 +135,77 @@ class DistributionAuthorizationTests(ApiTestCase):
                 )
 
         self.assertEqual(execute.call_args.args[1]["event_id"], 3)
+        commit.assert_not_called()
+
+    @patch("app.services.distribution_service.Allocation.get_by_id")
+    @patch("app.services.distribution_service.Household.get_by_id")
+    def test_recording_commits_once_after_all_database_writes(
+        self, household, allocation
+    ):
+        household.return_value = {"center_id": 2}
+        allocation.return_value = SimpleNamespace(
+            center_id=2, event_id=3, status="active"
+        )
+        payload = {
+            "household_id": 1,
+            "center_id": 2,
+            "items": [
+                {"allocation_id": 1, "quantity": 1},
+                {"allocation_id": 2, "quantity": 1},
+            ],
+        }
+        with self.app.app_context():
+            with patch("app.models.distribution.db.session") as session:
+                session.execute.side_effect = [
+                    returned_row({"session_id": 9}),
+                    returned_row({"distribution_id": 12}),
+                    returned_row({"distribution_id": 13}),
+                ]
+                result, status = DistributionService.record_distribution(
+                    user(), payload
+                )
+
+        self.assertEqual(status, 201)
+        self.assertTrue(result["success"])
+        self.assertEqual(
+            [method for method, _, _ in session.method_calls],
+            ["execute", "execute", "execute", "commit"],
+        )
+
+    @patch("app.services.distribution_service.Allocation.get_by_id")
+    @patch("app.services.distribution_service.Household.get_by_id")
+    def test_late_item_failure_rolls_back_without_committing(
+        self, household, allocation
+    ):
+        household.return_value = {"center_id": 2}
+        allocation.return_value = SimpleNamespace(
+            center_id=2, event_id=3, status="active"
+        )
+        payload = {
+            "household_id": 1,
+            "center_id": 2,
+            "items": [
+                {"allocation_id": 1, "quantity": 1},
+                {"allocation_id": 2, "quantity": 5},
+            ],
+        }
+        with self.app.app_context():
+            with patch("app.models.distribution.db.session") as session:
+                session.execute.side_effect = [
+                    returned_row({"session_id": 9}),
+                    returned_row({"distribution_id": 12}),
+                    SQLAlchemyError(
+                        "Internal SQL diagnostics must not reach the caller"
+                    ),
+                ]
+                result, status = DistributionService.record_distribution(
+                    user(), payload
+                )
+
+        self.assertEqual(status, 400)
+        self.assertFalse(result["success"])
+        self.assertEqual(result["message"], "Failed to record distribution.")
+        self.assertEqual(
+            [method for method, _, _ in session.method_calls],
+            ["execute", "execute", "execute", "rollback"],
+        )

@@ -395,6 +395,13 @@ The audit tickets are complete. The tickets below are the authoritative implemen
 - **Scope and invariant:** In `backend/app/routes/distribution.py`, require an active user and an assigned center for volunteer and center-admin history. Deny unsupported roles before reading the service. Use the persisted center for scoped callers and preserve city and super administrator access.
 - **Validation and compatibility:** Route tests use mocked persistence and check all supported role paths, rejected missing scope, and preservation of the assigned center. Run the full backend suite, Black, Black-compatible isort, Flake8, diff checks, and strict module coverage. No database writes or migrations. A follow-up revert would reopen the unsafe read path, so restrict access before rolling back this guard.
 
+### DISTRIBUTION-001A — Commit distribution creation atomically
+
+- **Priority, size, and dependencies:** P1, M. Follows the verified DATABASE-002A baseline and SECURITY-008. In `backend/app/models/distribution.py`, session and item inserts committed independently, and service rollback could not undo partial creation in `backend/app/services/distribution_service.py`.
+- **Scope and invariant:** The service owns the only commit. Session and item inserts leave the transaction open, and the existing PostgreSQL trigger's stock changes participate in that transaction. A failed item or missing insert result rolls back all writes. Preserve the validated allocation event, permissions, request shape, and HTTP statuses. Report stock failure without disclosing SQL, parameters, or internals.
+- **Validation:** Run mocked transaction regressions and the backend suite. Create a fresh disposable PostgreSQL database whose name starts with `efas_test_` on a dedicated loopback port. Upgrade it with Alembic, set `EFAS_TEST_DATABASE_URL` to its URL, and run `pipenv run python -m tests.postgresql_distribution_smoke` from `backend`. The smoke case inserts synthetic fixtures and verifies zero session, item, and stock changes after a later item fails. It then verifies a two-item success and the expected stock decrements. Use a new fixture database on each run.
+- **Non-goals and rollout:** No historical data repair, schema changes, or policy changes to event eligibility. Update, delete, void/restore, and concurrent stock coordination remain separate work. Code rollback must not re-enable multi-item creation without a transaction. Existing partial records require inventory evidence and an approved repair policy.
+
 ### DEVOPS-001 — Restore the production WSGI entry point
 
 - **Priority/risk:** P1 / XS; production start failure, reversible source change.

@@ -1,13 +1,17 @@
 import logging
+
+from sqlalchemy.exc import SQLAlchemyError
+
 from app.models import db
-from app.models.distribution import DistributionSession, Distribution
 from app.models.aid_allocation import Allocation
+from app.models.distribution import Distribution, DistributionSession
 from app.models.household import Household
 
 logger = logging.getLogger(__name__)
 
+
 class DistributionService:
-    
+
     @staticmethod
     def record_distribution(user, data):
         try:
@@ -17,14 +21,20 @@ class DistributionService:
             household = Household.get_by_id(data["household_id"])
             if not household:
                 raise Exception("Household not found.")
-                
+
             # 2. Get Center ID from Household (Fix for Admin bug)
-            distribution_center_id = household.get('center_id')
+            distribution_center_id = household.get("center_id")
             if not distribution_center_id:
-                 raise Exception("Could not determine the center for this household.")
+                raise Exception("Could not determine the center for this household.")
             if data["center_id"] != distribution_center_id:
-                return {"success": False, "message": "Household center does not match request center"}, 403
-            if user.role in {"center_admin", "volunteer"} and user.center_id != distribution_center_id:
+                return {
+                    "success": False,
+                    "message": "Household center does not match request center",
+                }, 403
+            if (
+                user.role in {"center_admin", "volunteer"}
+                and user.center_id != distribution_center_id
+            ):
                 return {"success": False, "message": "Insufficient permissions"}, 403
 
             event_ids = set()
@@ -33,31 +43,58 @@ class DistributionService:
                 if not allocation:
                     return {"success": False, "message": "Allocation not found"}, 404
                 if allocation.center_id != distribution_center_id:
-                    return {"success": False, "message": "Allocation center does not match household center"}, 403
+                    return {
+                        "success": False,
+                        "message": "Allocation center does not match household center",
+                    }, 403
                 if allocation.status != "active":
-                    return {"success": False, "message": "Allocation is not active"}, 400
+                    return {
+                        "success": False,
+                        "message": "Allocation is not active",
+                    }, 400
                 event_ids.add(allocation.event_id)
             if len(event_ids) != 1:
-                return {"success": False, "message": "Distribution items must belong to one event"}, 400
+                return {
+                    "success": False,
+                    "message": "Distribution items must belong to one event",
+                }, 400
 
             # 3. Create Session
             session_data = {
                 "household_id": data["household_id"],
                 "user_id": user.user_id,
-                "center_id": distribution_center_id, 
+                "center_id": distribution_center_id,
                 "event_id": event_ids.pop(),
-                "notes": data.get("notes")
+                "notes": data.get("notes"),
             }
             session = DistributionSession.create(session_data)
-            if not session: raise Exception("Failed to create session")
+            if not session:
+                raise Exception("Failed to create session")
 
             # 4. Add Items
             for item in data["items"]:
-                Distribution.add_item(session["session_id"], item["allocation_id"], item["quantity"])
-            
+                if not Distribution.add_item(
+                    session["session_id"], item["allocation_id"], item["quantity"]
+                ):
+                    raise RuntimeError("Failed to insert a distribution item.")
+
             db.session.commit()
-            return {"success": True, "message": "Distribution recorded successfully"}, 201
-            
+            return {
+                "success": True,
+                "message": "Distribution recorded successfully",
+            }, 201
+
+        except SQLAlchemyError as error:
+            db.session.rollback()
+            diagnostics = getattr(getattr(error, "orig", None), "diag", None)
+            reason = getattr(diagnostics, "message_primary", "") or ""
+            if reason.startswith("Insufficient quantity in allocation."):
+                return {
+                    "success": False,
+                    "message": "Insufficient quantity in allocation.",
+                }, 400
+            logger.error("Database rejected distribution creation")
+            return {"success": False, "message": "Failed to record distribution."}, 400
         except Exception as e:
             db.session.rollback()
             logger.error(f"Distribution error: {str(e)}")
@@ -68,7 +105,7 @@ class DistributionService:
         try:
             page = params.get('page', 1)
             limit = params.get('limit', 10)
-            
+
             result = Distribution.get_history_paginated(
                 center_id=params.get('center_id'),
                 search=params.get('search'),
@@ -77,7 +114,7 @@ class DistributionService:
                 sort_by=params.get('sort_by', 'distribution_date'),
                 sort_order=params.get('sort_order', 'desc')
             )
-            
+
             return {
                 "success": True, 
                 "data": {
@@ -108,9 +145,9 @@ class DistributionService:
             new_quantity = update_data['quantity']
             new_household_id = update_data['household_id']
 
-            # REMOVED: with db.session.begin(): 
+            # REMOVED: with db.session.begin():
             # Don't use context manager since model methods manage their own transactions
-            
+
             try:
                 # 2. Return old stock
                 Allocation.update_quantity(original_allocation_id, original_quantity, 'add')
@@ -121,17 +158,17 @@ class DistributionService:
                     DistributionSession.update_household(original_dist['session_id'], new_household_id)
                 # 5. Update record
                 Distribution.update(distribution_id, update_data)
-                
+
                 # Manually commit at the end
                 db.session.commit()
-                
+
             except Exception as e:
                 # Rollback if any of the operations fail
                 db.session.rollback()
                 raise e
 
             return {"success": True, "message": "Record updated successfully"}, 200
-            
+
         except ValueError as ve:
             # Don't need rollback here since model methods handle their own rollback
             return {"success": False, "message": str(ve)}, 400
@@ -161,27 +198,27 @@ class DistributionService:
             current_status = record['status']
             allocation_id = record['allocation_id']
             quantity = record['quantity_distributed']
-            
+
             try:
                 if current_status == 'completed':
                     # VOID: Return stock, set status to voided
                     Allocation.update_quantity(allocation_id, quantity, 'add')
                     Distribution.update_status(distribution_id, 'voided')
                     msg = "Record voided successfully. Stock returned."
-                    
+
                 elif current_status == 'voided':
                     # RESTORE: Deduct stock, set status to completed
                     # This will raise ValueError if stock is insufficient
                     Allocation.update_quantity(allocation_id, quantity, 'subtract')
                     Distribution.update_status(distribution_id, 'completed')
                     msg = "Record restored successfully. Stock deducted."
-                
+
                 else:
                     return {"success": False, "message": "Invalid status state"}, 400
 
                 # Manually commit the transaction
                 db.session.commit()
-                
+
             except Exception as e:
                 db.session.rollback()
                 raise e

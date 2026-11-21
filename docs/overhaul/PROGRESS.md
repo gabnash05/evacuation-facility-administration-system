@@ -518,4 +518,11 @@ unassigned center administrator or volunteer now receives 403 before the
 history service runs. Tests also protect assigned-center scope and legitimate
 citywide access. Seven focused cases and all 112 backend tests passed.
 Black, Black-compatible isort, Flake8, strict module mapping, and diff checks
-passed. Bare isort disagreed with Black on one multiline import.
+passed. Bare isort disagreed with Black on one multiline import. Published as
+`a263347` in draft PR #6.
+
+`DISTRIBUTION-001A` moves creation commits to the service. All 114 backend tests
+and the PostgreSQL 17.2 distribution smoke passed. The late stock rejection
+left zero new sessions, zero items, and stock unchanged. A subsequent success
+created both items and decremented both allocations. The returned error is
+sanitized. Existing stock repair and the other distribution mutations remain open.
