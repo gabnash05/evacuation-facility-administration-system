@@ -511,4 +511,11 @@ require explicit PostgreSQL psycopg2 URLs before initializing Flask extensions.
 All 108 backend tests, touched-file checks, lock verification, strict module
 reconciliation, and diff checks passed. No application database connection or
 schema change was needed. Spatial queries and coordinate storage remain under
-DATABASE-003.
+DATABASE-003. Published as `d9bd388` in draft PR #6.
+
+`SECURITY-008A` closes a newly identified distribution-history scope gap. An
+unassigned center administrator or volunteer now receives 403 before the
+history service runs. Tests also protect assigned-center scope and legitimate
+citywide access. Seven focused cases and all 112 backend tests passed.
+Black, Black-compatible isort, Flake8, strict module mapping, and diff checks
+passed. Bare isort disagreed with Black on one multiline import.

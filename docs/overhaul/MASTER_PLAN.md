@@ -389,6 +389,12 @@ The audit tickets are complete. The tickets below are the authoritative implemen
 - **Non-goals and risks:** Preserve production key rules and authentication transport. PostGIS availability, spatial SQL, and deployment adoption remain separate work. Existing local or production launchers must set their intended PostgreSQL URL before restarting.
 - **Validation and recovery:** Unit-test malformed, missing, and unsupported URLs and successful launcher construction with fixture URLs. Run the complete backend suite, touched-file lint and format checks, lock verification, and strict module coverage. Roll back code with a follow-up revert if necessary and retain the explicit database URL. No schema mutations are part of this ticket.
 
+### SECURITY-008A — Require a center for scoped distribution history
+
+- **Priority, size, and dependencies:** P1, S. Follows SECURITY-008. The GET history route sent a missing center through to a service that treats absent center criteria as unscoped.
+- **Scope and invariant:** In `backend/app/routes/distribution.py`, require an active user and an assigned center for volunteer and center-admin history. Deny unsupported roles before reading the service. Use the persisted center for scoped callers and preserve city and super administrator access.
+- **Validation and compatibility:** Route tests use mocked persistence and check all supported role paths, rejected missing scope, and preservation of the assigned center. Run the full backend suite, Black, Black-compatible isort, Flake8, diff checks, and strict module coverage. No database writes or migrations. A follow-up revert would reopen the unsafe read path, so restrict access before rolling back this guard.
+
 ### DEVOPS-001 — Restore the production WSGI entry point
 
 - **Priority/risk:** P1 / XS; production start failure, reversible source change.
