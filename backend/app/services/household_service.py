@@ -86,16 +86,20 @@ class HouseholdService:
 
             # Delete individuals that are no longer in the household
             if ids_to_delete:
-                Individual.delete_by_ids(ids_to_delete)
+                if Individual.delete_by_ids(ids_to_delete) != len(ids_to_delete):
+                    raise RuntimeError("Household member deletion failed")
 
             # Update existing individuals
             for ind_data in incoming_individuals:
-                Individual.update(ind_data["individual_id"], ind_data)
+                if not Individual.update(ind_data["individual_id"], ind_data):
+                    raise RuntimeError("Household member update failed")
 
             # Create new individuals
             for ind_data in new_individuals:
                 ind_data["household_id"] = household_id
                 new_individual = Individual.create(ind_data)
+                if not new_individual:
+                    raise RuntimeError("Household member creation failed")
                 # If this new individual is the head, set them as head
                 if (
                     new_individual

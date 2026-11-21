@@ -8,6 +8,34 @@ from tests.api_test_case import ApiTestCase
 
 
 class HouseholdModelTests(ApiTestCase):
+    @patch("app.services.household_service.db")
+    @patch("app.services.household_service.Individual")
+    @patch("app.services.household_service.Household")
+    def test_member_write_failures_abort_aggregate_update(
+        self, household, individual, database
+    ):
+        household.get_by_id.return_value = {"household_name": "Santos household"}
+        household.get_by_name.return_value = None
+        household.update.return_value = {"household_id": 4}
+        individual.get_by_household_id.return_value = [{"individual_id": 8}]
+
+        for members, method, failure in (
+            ([], "delete_by_ids", 0),
+            ([{"individual_id": 8}], "update", None),
+            ([{"individual_id": 8}, {"first_name": "New"}], "create", None),
+        ):
+            individual.reset_mock()
+            database.reset_mock()
+            individual.update.return_value = {"individual_id": 8}
+            getattr(individual, method).return_value = failure
+            result, status = HouseholdService.update_household(
+                4, {"individuals": members}
+            )
+            self.assertEqual(status, 500)
+            self.assertFalse(result["success"])
+            database.session.commit.assert_not_called()
+            database.session.rollback.assert_called_once_with()
+
     @patch("app.services.household_service.Individual")
     @patch("app.services.household_service.Household")
     def test_update_rejects_foreign_and_duplicate_members_before_writes(

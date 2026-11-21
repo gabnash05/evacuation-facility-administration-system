@@ -486,6 +486,10 @@ The audit tickets are complete. The tickets below are the authoritative implemen
 
 - P1, S. Validate explicit member IDs against the target household and reject duplicates before writes. Preserve explicit replacement behavior for valid IDs. Run backend tests, strict mapping and diff review. Concurrent ownership changes and aggregate transaction behavior remain follow-up work. Revert the focused commit if compatibility recovery is required.
 
+### DATABASE-006A — Abort household updates after member-write failures
+
+- P1, S. Detect failed member deletion, update, and creation before committing the household aggregate. Preserve existing response behavior for successful edits. Cover all three failure paths, run the backend suite, strict module mapping and diff review. No migration is needed. Individual read failure semantics and concurrent ownership changes remain follow-up work.
+
 ### DEVOPS-001 — Restore the production WSGI entry point
 
 - **Priority/risk:** P1 / XS; production start failure, reversible source change.

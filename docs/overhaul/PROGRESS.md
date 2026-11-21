@@ -624,3 +624,8 @@ HOUSEHOLD-001 follow-up corrects the earlier incomplete head preservation:
 the service now merges omitted household fields with persisted values before
 the fixed-field model update. A regression checks the head and address passed
 to persistence. All 131 backend tests passed.
+
+DATABASE-006A aborts household edits when a member write reports failure.
+Regressions cover deletion, update and creation failures and assert rollback
+without commit. All 132 backend tests passed. Database-backed aggregate and
+concurrency verification and member-read failure semantics remain open.
