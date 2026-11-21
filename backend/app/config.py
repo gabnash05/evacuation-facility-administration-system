@@ -2,6 +2,25 @@
 
 import os
 
+from sqlalchemy.engine import make_url
+from sqlalchemy.exc import ArgumentError
+
+
+def require_postgresql_url():
+    """Validate the runtime database without connecting or disclosing credentials."""
+    value = os.environ.get("DATABASE_URL", "").strip()
+    if not value:
+        raise RuntimeError("Set DATABASE_URL to the EFAS PostgreSQL database.")
+    try:
+        url = make_url(value)
+    except (ArgumentError, ValueError):
+        raise RuntimeError("DATABASE_URL must be a valid PostgreSQL URL.") from None
+    if url.drivername not in {"postgresql", "postgresql+psycopg2"} or not url.database:
+        raise RuntimeError(
+            "DATABASE_URL must name a PostgreSQL database using psycopg2."
+        )
+    return url
+
 
 class Config:
     """Base configuration."""
@@ -32,7 +51,14 @@ class Config:
     ]
 
 
-class ProductionConfig(Config):
+class DevelopmentConfig(Config):
+    """Development uses the same PostgreSQL runtime as production."""
+
+    def __init__(self):
+        self.SQLALCHEMY_DATABASE_URI = require_postgresql_url()
+
+
+class ProductionConfig(DevelopmentConfig):
     """Production requires deployment-provided signing keys at startup."""
 
     def __init__(self):
@@ -44,3 +70,4 @@ class ProductionConfig(Config):
             }:
                 raise RuntimeError(f"Set a non-default {name} before starting EFAS.")
             setattr(self, name, value)
+        super().__init__()

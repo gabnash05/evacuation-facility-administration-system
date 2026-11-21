@@ -382,6 +382,13 @@ The audit tickets are complete. The tickets below are the authoritative implemen
 - **Required validation:** Test the migration command's missing-URL, unsupported dialect, and offline guards. Test modified-snapshot and existing-table refusal. In a disposable PostgreSQL instance, run clean upgrade, repeat upgrade, destructive downgrade refusal, and refusal against the unversioned legacy snapshot. Run backend unit tests, touched Python checks, and strict module reconciliation.
 - **Non-goals and release conditions:** This ticket does not install PostGIS, change the coordinate representation, migrate live data, seed fixture households, or implement historical stock repair. Verified upgrades from real deployments and backup restoration remain in the broader database and integration tickets.
 
+### DATABASE-003A — Make the runtime database explicit
+
+- **Priority, size, and dependencies:** P1, S. Follows DATABASE-002A. The documented WSGI and dev launchers inherit a SQLite default despite requiring PostgreSQL SQL.
+- **Scope and invariant:** `backend/run.py`, `backend/wsgi.py` through `ProductionConfig`, and `backend/app/config.py` require `DATABASE_URL` with a database name and the locked psycopg2 driver. Fail before connecting and omit credential input from error messages. Preserve custom injected configurations for isolated tests.
+- **Non-goals and risks:** Preserve production key rules and authentication transport. PostGIS availability, spatial SQL, and deployment adoption remain separate work. Existing local or production launchers must set their intended PostgreSQL URL before restarting.
+- **Validation and recovery:** Unit-test malformed, missing, and unsupported URLs and successful launcher construction with fixture URLs. Run the complete backend suite, touched-file lint and format checks, lock verification, and strict module coverage. Roll back code with a follow-up revert if necessary and retain the explicit database URL. No schema mutations are part of this ticket.
+
 ### DEVOPS-001 — Restore the production WSGI entry point
 
 - **Priority/risk:** P1 / XS; production start failure, reversible source change.

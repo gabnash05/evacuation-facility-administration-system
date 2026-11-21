@@ -504,3 +504,11 @@ unchanged. Both databases retained seven categories. All 105 backend tests,
 touched Python checks, lock verification, and strict module reconciliation
 passed (205 mapped, zero missing, six exempt). The scratch server was stopped.
 PostGIS runtime verification and actual legacy adoption remain separate work.
+Published as `b1e378d` in draft PR #6.
+
+`DATABASE-003A` is complete. The documented dev and WSGI entry points now
+require explicit PostgreSQL psycopg2 URLs before initializing Flask extensions.
+All 108 backend tests, touched-file checks, lock verification, strict module
+reconciliation, and diff checks passed. No application database connection or
+schema change was needed. Spatial queries and coordinate storage remain under
+DATABASE-003.

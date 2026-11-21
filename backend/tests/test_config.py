@@ -4,7 +4,7 @@ import os
 import unittest
 from unittest.mock import patch
 
-from app.config import Config, ProductionConfig
+from app.config import Config, DevelopmentConfig, ProductionConfig
 
 
 class ConfigTests(unittest.TestCase):
@@ -34,12 +34,33 @@ class ConfigTests(unittest.TestCase):
 
     def test_production_reads_deployment_keys_and_disables_debug(self):
         with patch.dict(
-            os.environ, {"SECRET_KEY": "test-flask", "JWT_SECRET_KEY": "test-jwt"}
+            os.environ,
+            {
+                "SECRET_KEY": "test-flask",
+                "JWT_SECRET_KEY": "test-jwt",
+                "DATABASE_URL": "postgresql+psycopg2://localhost/efas_fixture",
+            },
         ):
             config = ProductionConfig()
         self.assertEqual(config.SECRET_KEY, "test-flask")
         self.assertEqual(config.JWT_SECRET_KEY, "test-jwt")
         self.assertFalse(config.DEBUG)
+
+    def test_rejects_unsupported_and_malformed_database_urls_without_echoing_them(self):
+        for url in (
+            "postgresql://user:fixture-password@localhost/",
+            "sqlite:///efas.db",
+            "postgresql+asyncpg://localhost/efas_fixture",
+            "not-a-url-with-fixture-password",
+        ):
+            with self.subTest(url=url):
+                with patch.dict(os.environ, {"DATABASE_URL": url}):
+                    with self.assertRaisesRegex(
+                        RuntimeError, "DATABASE_URL"
+                    ) as failure:
+                        DevelopmentConfig()
+                self.assertNotIn(url, str(failure.exception))
+                self.assertNotIn("fixture-password", str(failure.exception))
 
     def test_token_transport_is_explicitly_configured(self):
         self.assertEqual(Config.JWT_TOKEN_LOCATION, ["headers", "cookies"])

@@ -33,8 +33,10 @@ A web-based disaster management platform that enables local government units to 
 
 ## Backend startup
 
+Set `DATABASE_URL` to an explicit PostgreSQL database for both entry points.
+Use a `postgresql://` or `postgresql+psycopg2://` URL with a database name.
 From `backend`, use `pipenv run dev` for local development. The production
-`pipenv run start` command loads `wsgi:app` and requires `SECRET_KEY` and
+`pipenv run start` command loads `wsgi:app` and also requires `SECRET_KEY` and
 `JWT_SECRET_KEY` from the deployment environment. Generate separate, strong
 random values, store them in your deployment's secret manager, and use the
 same values across workers and restarts. Missing, blank, or known development
