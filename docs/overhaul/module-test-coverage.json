@@ -1195,6 +1195,12 @@
       "behavior": "Keeps history readable for lower roles and exposes status actions only to super administrators, dispatching the selected record ID."
     },
     {
+      "path": "frontend/src/store/distributionStore.ts",
+      "status": "covered",
+      "tests": ["frontend/src/store/distributionStore.test.ts"],
+      "behavior": "Uses the assigned center for scoped reads, clears stale data for unassigned scoped users, and preserves citywide history with center-specific options."
+    },
+    {
       "path": "frontend/src/components/features/map/MapLocationPicker.tsx",
       "status": "covered",
       "tests": ["frontend/src/components/features/map/MapLocationPicker.test.tsx"],

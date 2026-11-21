@@ -444,3 +444,13 @@ Six focused cases, targeted lint and format, the production build, and the
 full frontend suite passed (149 files, 232 tests in 200.60 seconds). The direct
 application compiler check still reports 56 diagnostics outside the changed
 files. Module reconciliation reports 197 covered, nine unmapped, and six exempt.
+Published as `3b829ca` in draft PR #6.
+
+`TEST-003I` now covers the distribution store. `FRONTEND-065` uses one effective
+center for scoped reads and clears stale state if no center is assigned. Four
+focused cases, test-file lint/format, and the production build passed. Source
+lint matches the parent commit (six errors and one warning). The direct compiler
+check still reports 56 diagnostics, including the store's existing unused local.
+Module reconciliation reports 198 covered, eight unmapped, and six exempt.
+Full frontend validation passed (150 files, 236 tests in 216.95 seconds).
+The backend unit suite passed independently (94 tests).

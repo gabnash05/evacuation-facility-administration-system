@@ -97,6 +97,24 @@ export const useDistributionStore = create<DistributionState>((set, get) => ({
         
         const { user } = useAuthStore.getState();
         const { selectedCenterId, searchQuery, currentPage, entriesPerPage, sortColumn, sortDirection } = get();
+        const isCenterScoped = user?.role === "center_admin" || user?.role === "volunteer";
+        const effectiveCenterId = isCenterScoped
+            ? user.center_id ?? undefined
+            : selectedCenterId ?? undefined;
+
+        if (isCenterScoped && effectiveCenterId === undefined) {
+            set({
+                allocations: [],
+                households: [],
+                centers: [],
+                history: [],
+                pagination: null,
+                selectedCenterId: null,
+                isLoading: false,
+                error: "No evacuation center assigned.",
+            });
+            return;
+        }
 
         let realHouseholds: HouseholdOption[] = [];
         let realHistory: DistributionRecord[] = [];
@@ -107,18 +125,13 @@ export const useDistributionStore = create<DistributionState>((set, get) => ({
             // Fetch centers first
             await get().fetchCenters();
             
-            // Get user's center context
-            let userCenterId = user?.center_id ?? undefined;
-            
-            // If user is center-specific and no center selected yet, auto-select their center
-            if (user?.center_id && !selectedCenterId) {
-                set({ selectedCenterId: user.center_id });
-                userCenterId = user.center_id;
+            if (effectiveCenterId !== undefined && effectiveCenterId !== selectedCenterId) {
+                set({ selectedCenterId: effectiveCenterId });
             }
 
             // Households - filter by center if selected
             try {
-                const centerIdForHouseholds = selectedCenterId || userCenterId;
+                const centerIdForHouseholds = effectiveCenterId;
                 const householdResponse = await HouseholdService.getHouseholds({ 
                     limit: 100, 
                     centerId: centerIdForHouseholds 
@@ -144,7 +157,7 @@ export const useDistributionStore = create<DistributionState>((set, get) => ({
                     // Only pass center_id if user is NOT city admin/super admin
                     center_id: (user?.role === 'city_admin' || user?.role === 'super_admin') 
                         ? undefined  // City/Super admins see all records by default
-                        : selectedCenterId || userCenterId,
+                        : effectiveCenterId,
                     sort_by: sortColumn || "distribution_date",
                     sort_order: sortDirection || "desc",
                 });
@@ -163,9 +176,9 @@ export const useDistributionStore = create<DistributionState>((set, get) => ({
 
             // Allocations - Use backend filtering when center is selected
             try {
-                if (selectedCenterId) {
+                if (effectiveCenterId !== undefined) {
                     // Fetch only allocations for the selected center from backend
-                    const allocationResponse = await AidAllocationService.getCenterAllocations(selectedCenterId, {
+                    const allocationResponse = await AidAllocationService.getCenterAllocations(effectiveCenterId, {
                         status: 'active', // Only show active allocations by default
                         limit: 100 // Get enough for the distribution form
                     });
