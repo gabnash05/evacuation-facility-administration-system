@@ -14,9 +14,11 @@ class HouseholdService:
     def update_household(household_id: int, data: dict):
         if "individuals" in data and not isinstance(data["individuals"], list):
             return {"success": False, "message": "Individuals must be a list."}, 400
-        if not Household.get_by_id(household_id):
+        existing_household = Household.get_by_id(household_id)
+        if not existing_household:
             return {"success": False, "message": "Household not found."}, 404
 
+        data = {**existing_household, **data}
         existing_by_name = Household.get_by_name(data["household_name"])
         if existing_by_name and existing_by_name.household_id != household_id:
             return {

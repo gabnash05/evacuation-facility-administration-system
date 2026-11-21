@@ -619,3 +619,8 @@ and recovery of previously deleted records remain separate concerns.
 HOUSEHOLD-002A rejects foreign and duplicate member IDs before household or
 individual writes. The regression and all 131 backend tests passed. Database
 concurrency and aggregate transaction review remain open.
+
+HOUSEHOLD-001 follow-up corrects the earlier incomplete head preservation:
+the service now merges omitted household fields with persisted values before
+the fixed-field model update. A regression checks the head and address passed
+to persistence. All 131 backend tests passed.

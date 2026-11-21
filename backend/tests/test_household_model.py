@@ -13,6 +13,7 @@ class HouseholdModelTests(ApiTestCase):
     def test_update_rejects_foreign_and_duplicate_members_before_writes(
         self, household, individual
     ):
+        household.get_by_id.return_value = {"household_name": "Santos household"}
         household.get_by_name.return_value = None
         individual.get_by_household_id.return_value = [{"individual_id": 8}]
 
@@ -33,6 +34,12 @@ class HouseholdModelTests(ApiTestCase):
     def test_update_without_individuals_preserves_household_members(
         self, household, individual, database
     ):
+        household.get_by_id.return_value = {
+            "household_name": "Santos household",
+            "address": "Existing address",
+            "center_id": 2,
+            "household_head_id": 8,
+        }
         household.get_by_name.return_value = None
         household.update.return_value = {"household_id": 4}
 
@@ -45,6 +52,10 @@ class HouseholdModelTests(ApiTestCase):
         individual.get_by_household_id.assert_not_called()
         individual.delete_by_ids.assert_not_called()
         household.set_head.assert_not_called()
+        self.assertEqual(household.update.call_args.args[1]["household_head_id"], 8)
+        self.assertEqual(
+            household.update.call_args.args[1]["address"], "Existing address"
+        )
         database.session.commit.assert_called_once_with()
 
     def test_update_rejects_null_individuals(self):
