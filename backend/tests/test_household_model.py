@@ -12,6 +12,30 @@ class HouseholdModelTests(ApiTestCase):
     @patch("app.services.household_service.db")
     @patch("app.services.household_service.Individual")
     @patch("app.services.household_service.Household")
+    def test_partial_member_update_preserves_existing_head(
+        self, household, individual, database
+    ):
+        household.get_by_id.return_value = {
+            "household_name": "Santos household",
+            "household_head_id": 8,
+        }
+        household.get_by_name.return_value = None
+        household.update.return_value = {"household_id": 4}
+        individual.get_by_household_id.return_value = [{"individual_id": 8}]
+        individual.update.return_value = {"individual_id": 8}
+
+        result, status = HouseholdService.update_household(
+            4, {"individuals": [{"individual_id": 8, "first_name": "Ana"}]}
+        )
+
+        self.assertEqual(status, 200)
+        self.assertTrue(result["success"])
+        household.set_head.assert_called_once_with(4, 8)
+        database.session.commit.assert_called_once_with()
+
+    @patch("app.services.household_service.db")
+    @patch("app.services.household_service.Individual")
+    @patch("app.services.household_service.Household")
     def test_update_accepts_existing_and_new_member_payloads(
         self, household, individual, database
     ):

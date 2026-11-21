@@ -522,6 +522,10 @@ The audit tickets are complete. The tickets below are the authoritative implemen
 
 - P2, S. Apply existing individual create validation to new nested members and partial-update validation to existing members. Reject malformed IDs and input before persistence. Run backend tests, PostgreSQL smoke suites, strict mapping and diff review. Invalid inputs that previously reached persistence now receive 400. No migration is required.
 
+### HOUSEHOLD-004 — Preserve head on partial member edits
+
+- P2, S. Preserve the existing head when its included member update omits the relationship field. Retain explicit relationship changes. Run the mapped regression, backend suite, strict mapping and diff review. No migration is needed.
+
 ### DEVOPS-001 — Restore the production WSGI entry point
 
 - **Priority/risk:** P1 / XS; production start failure, reversible source change.

@@ -676,3 +676,7 @@ reconciliation remains open.
 CONTRACT-004B follow-up covers a mixed payload containing an existing member
 and a new member, matching the household editor's supported workflow. All 141
 backend tests passed.
+
+HOUSEHOLD-004 preserves the current household head when its partial member
+update omits the relationship. The focused regression and all 142 backend tests
+passed. Other head-selection ambiguities remain under DATABASE-006.

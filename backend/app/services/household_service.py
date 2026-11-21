@@ -115,7 +115,13 @@ class HouseholdService:
             # Find the head individual from the incoming data
             head_individual_id = None
             for ind_data in incoming_individuals:
-                if ind_data.get("relationship_to_head", "").lower() == "head":
+                if (
+                    ind_data.get("relationship_to_head", "").lower() == "head"
+                    or (
+                        ind_data["individual_id"] == existing_household.get("household_head_id")
+                        and "relationship_to_head" not in ind_data
+                    )
+                ):
                     head_individual_id = ind_data["individual_id"]
                     break
 
