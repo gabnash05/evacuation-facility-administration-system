@@ -4,18 +4,22 @@ interface DebounceOptions {
     maxWait?: number; // Maximum wait time
 }
 
+type DebouncedFunction<T extends (...args: any[]) => any> = ((...args: Parameters<T>) => void) & {
+    cancel: () => void;
+};
+
 export function debounce<T extends (...args: any[]) => any>(
     func: T,
     delay: number,
     options: DebounceOptions = {}
-): (...args: Parameters<T>) => void {
+): DebouncedFunction<T> {
     let timeoutId: number | undefined;
     let lastCallTime: number | undefined;
     let lastExecTime = 0;
 
     const { leading = false, trailing = true, maxWait } = options;
 
-    return (...args: Parameters<T>) => {
+    const debounced = (...args: Parameters<T>) => {
         const currentTime = Date.now();
 
         // Check if we should execute immediately (leading edge)
@@ -50,6 +54,15 @@ export function debounce<T extends (...args: any[]) => any>(
 
         lastCallTime = currentTime;
     };
+
+    debounced.cancel = () => {
+        if (timeoutId) {
+            clearTimeout(timeoutId);
+            timeoutId = undefined;
+        }
+    };
+
+    return debounced;
 }
 
 // Utility function to create a debounced version that cancels on unmount
@@ -62,12 +75,6 @@ export function useDebounce<T extends (...args: any[]) => any>(
 
     return {
         debounced: debouncedFunc,
-        cancel: () => {
-            // This would be used in useEffect cleanup
-            const anyFunc = debouncedFunc as any;
-            if (anyFunc.timeoutId) {
-                clearTimeout(anyFunc.timeoutId);
-            }
-        },
+        cancel: debouncedFunc.cancel,
     };
 }

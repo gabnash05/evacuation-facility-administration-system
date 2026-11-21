@@ -29,7 +29,7 @@
 
 /* Tooltips using CSS pseudo-elements - now using theme variables */
 .custom-marker .group::after {
-    content: attr(data-name);
+    content: "";
     position: absolute;
     top: 32px;
     left: 50%;

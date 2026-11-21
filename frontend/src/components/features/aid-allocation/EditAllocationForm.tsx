@@ -265,23 +265,6 @@ export function EditAllocationForm({
                 // Note: center_id and event_id cannot be updated per backend restrictions
             };
 
-            // Ensure remaining_quantity is adjusted client-side when total_quantity changes.
-            // This guarantees correct remaining update even if backend logic doesn't apply it.
-            const originalTotal = allocation?.total_quantity ?? 0;
-            const originalRemaining = allocation?.remaining_quantity ?? 0;
-            const newTotal = Number(formData.total_quantity || originalTotal);
-            const delta = newTotal - originalTotal;
-
-            if (delta > 0) {
-                // Increasing total -> increase remaining by same amount
-                payload.remaining_quantity = Number(originalRemaining + delta);
-            } else if (delta < 0) {
-                // Decreasing total -> decrease remaining by same amount but not below 0
-                const decreaseAmount = Math.abs(delta);
-                payload.remaining_quantity = Number(Math.max(0, originalRemaining - decreaseAmount));
-            }
-            // If delta === 0, don't include remaining_quantity
-
             await onSubmit(allocation.allocation_id, payload);
             // onSubmit resolved -> success, close modal
             handleClose();

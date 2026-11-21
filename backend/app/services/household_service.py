@@ -1,8 +1,12 @@
 import logging
 import math
+from marshmallow import ValidationError
+from sqlalchemy import text
 from app.models.household import Household
 from app.models.individual import Individual
 from app.models import db
+from app.schemas.household import HouseholdUpdateSchema, HouseholdWithIndividualsCreateSchema
+from app.schemas.individual import IndividualMemberCreateSchema, IndividualUpdateSchema
 
 logger = logging.getLogger(__name__)
 
@@ -10,9 +14,42 @@ logger = logging.getLogger(__name__)
 class HouseholdService:
     @staticmethod
     def update_household(household_id: int, data: dict):
-        if not Household.get_by_id(household_id):
+        if "individuals" in data and not isinstance(data["individuals"], list):
+            return {"success": False, "message": "Individuals must be a list."}, 400
+        try:
+            validated = HouseholdUpdateSchema(exclude=("individuals",)).load(
+                {key: value for key, value in data.items() if key != "individuals"},
+                partial=True,
+            )
+        except ValidationError as validation_error:
+            return {"success": False, "message": f"Validation error: {validation_error}"}, 400
+        if "individuals" in data:
+            members = []
+            try:
+                for member in data["individuals"]:
+                    if not isinstance(member, dict):
+                        raise ValidationError("Each individual must be an object.")
+                    member_id = member.get("individual_id")
+                    if "individual_id" in member and (
+                        not isinstance(member_id, int) or isinstance(member_id, bool)
+                    ):
+                        raise ValidationError("Individual ID must be an integer.")
+                    fields = {key: value for key, value in member.items() if key != "individual_id"}
+                    schema = IndividualUpdateSchema if member_id is not None else IndividualMemberCreateSchema
+                    cleaned = schema().load(fields)
+                    if member_id is not None:
+                        cleaned["individual_id"] = member_id
+                    members.append(cleaned)
+            except ValidationError as validation_error:
+                return {"success": False, "message": f"Validation error: {validation_error}"}, 400
+            validated["individuals"] = members
+        data = validated
+        existing_household = Household.get_by_id(household_id)
+        if not existing_household:
             return {"success": False, "message": "Household not found."}, 404
 
+        head_was_supplied = "household_head_id" in data
+        data = {**existing_household, **data}
         existing_by_name = Household.get_by_name(data["household_name"])
         if existing_by_name and existing_by_name.household_id != household_id:
             return {
@@ -20,16 +57,50 @@ class HouseholdService:
                 "message": "Another household with this name already exists.",
             }, 409
 
-        individuals_payload = data.pop("individuals", [])
+        individuals_payload = data.pop("individuals", None)
 
         try:
+            if head_was_supplied and data.get("household_head_id") is not None:
+                head = db.session.execute(
+                    text(
+                        "SELECT individual_id FROM individuals "
+                        "WHERE individual_id = :head_id AND household_id = :household_id "
+                        "FOR NO KEY UPDATE"
+                    ),
+                    {"head_id": data["household_head_id"], "household_id": household_id},
+                ).fetchone()
+                if not head:
+                    return {"success": False, "message": "Invalid household head."}, 400
+            if individuals_payload is not None:
+                existing_individuals = Individual.get_by_household_id(household_id)
+                existing_ids = {ind["individual_id"] for ind in existing_individuals}
+                incoming_ids = [
+                    ind["individual_id"]
+                    for ind in individuals_payload
+                    if isinstance(ind, dict) and "individual_id" in ind
+                ]
+                if (
+                    any(not isinstance(ind, dict) for ind in individuals_payload)
+                    or any(
+                        not isinstance(value, int) or isinstance(value, bool)
+                        for value in incoming_ids
+                    )
+                    or len(incoming_ids) != len(set(incoming_ids))
+                    or not set(incoming_ids).issubset(existing_ids)
+                ):
+                    return {
+                        "success": False,
+                        "message": "Invalid household member IDs.",
+                    }, 400
+
             # First update the household basic info
             updated_household = Household.update(household_id, data)
             if not updated_household:
                 raise Exception("Household update failed.")
 
-            existing_individuals = Individual.get_by_household_id(household_id)
-            existing_ids = {ind["individual_id"] for ind in existing_individuals}
+            if individuals_payload is None:
+                db.session.commit()
+                return {"success": True, "data": updated_household}, 200
 
             incoming_individuals = [
                 ind for ind in individuals_payload if "individual_id" in ind
@@ -44,7 +115,13 @@ class HouseholdService:
             # Find the head individual from the incoming data
             head_individual_id = None
             for ind_data in incoming_individuals:
-                if ind_data.get("relationship_to_head", "").lower() == "head":
+                if (
+                    ind_data.get("relationship_to_head", "").lower() == "head"
+                    or (
+                        ind_data["individual_id"] == existing_household.get("household_head_id")
+                        and "relationship_to_head" not in ind_data
+                    )
+                ):
                     head_individual_id = ind_data["individual_id"]
                     break
 
@@ -57,16 +134,24 @@ class HouseholdService:
 
             # Delete individuals that are no longer in the household
             if ids_to_delete:
-                Individual.delete_by_ids(ids_to_delete)
+                if Individual.delete_by_ids(
+                    ids_to_delete, household_id=household_id
+                ) != len(ids_to_delete):
+                    raise RuntimeError("Household member deletion failed")
 
             # Update existing individuals
             for ind_data in incoming_individuals:
-                Individual.update(ind_data["individual_id"], ind_data)
+                if not Individual.update(
+                    ind_data["individual_id"], ind_data, household_id=household_id
+                ):
+                    raise RuntimeError("Household member update failed")
 
             # Create new individuals
             for ind_data in new_individuals:
                 ind_data["household_id"] = household_id
                 new_individual = Individual.create(ind_data)
+                if not new_individual:
+                    raise RuntimeError("Household member creation failed")
                 # If this new individual is the head, set them as head
                 if (
                     new_individual
@@ -97,6 +182,10 @@ class HouseholdService:
 
     @staticmethod
     def create_household_with_individuals(data: dict):
+        try:
+            data = HouseholdWithIndividualsCreateSchema().load(data)
+        except Exception as validation_error:
+            return {"success": False, "message": f"Validation error: {validation_error}"}, 400
         if Household.get_by_name(data["household_name"]):
             return {
                 "success": False,
@@ -236,6 +325,7 @@ class HouseholdService:
             if not Household.get_by_id(household_id):
                 return {"success": False, "message": "Household not found."}, 404
 
+            data = IndividualMemberCreateSchema().load(data)
             data["household_id"] = household_id
             new_individual = Individual.create(data)
 

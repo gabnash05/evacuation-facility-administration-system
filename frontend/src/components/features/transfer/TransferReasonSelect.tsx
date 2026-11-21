@@ -26,7 +26,11 @@ export function TransferReasonSelect({ value, onChange, disabled }: TransferReas
     return (
         <div className="max-w-md">
             <Select value={value} onValueChange={onChange} disabled={disabled}>
-                <SelectTrigger className="w-full" aria-disabled={disabled}>
+                <SelectTrigger
+                    aria-label="Transfer reason"
+                    className="w-full"
+                    aria-disabled={disabled}
+                >
                     <SelectValue placeholder="Choose all that applies" />
                 </SelectTrigger>
                 <SelectContent>

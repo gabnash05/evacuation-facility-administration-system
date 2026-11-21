@@ -1,8 +1,9 @@
-import { useEffect, useState, useMemo, useCallback } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useDistributionStore } from "@/store/distributionStore";
 import { useAuthStore } from "@/store/authStore";
 import { TableToolbar } from "@/components/common/Toolbar";
 import { TablePagination } from "@/components/common/TablePagination";
+import { ErrorAlert } from "@/components/features/dashboard/ErrorAlert";
 import { DistributeAidModal } from "@/components/features/distribution/DistributeAidModal";
 import { EditDistributionModal } from "@/components/features/distribution/EditDistributionModal";
 import { DistributionHistoryTable } from "@/components/features/distribution/DistributionHistoryTable";
@@ -11,27 +12,28 @@ import type { DistributionRecord } from "@/types/distribution";
 
 export function CityAdminDistributionPage() {
     const { user } = useAuthStore();
-    const { 
-        history, 
-        searchQuery, 
-        setSearchQuery, 
-        fetchData, 
+    const {
+        history,
+        searchQuery,
+        setSearchQuery,
+        fetchData,
         deleteDistribution,
-        currentPage, 
+        currentPage,
         setCurrentPage,
-        entriesPerPage, 
+        entriesPerPage,
         setEntriesPerPage,
         isLoading,
+        error,
         pagination,
         setSortColumn,
         setSortDirection,
         sortColumn,
-        sortDirection
+        sortDirection,
     } = useDistributionStore();
 
     // Local state for debounced search
     const [localSearch, setLocalSearch] = useState(searchQuery);
-    
+
     // Modals
     const [isCreateOpen, setIsCreateOpen] = useState(false);
     const [editRecord, setEditRecord] = useState<DistributionRecord | null>(null);
@@ -55,14 +57,17 @@ export function CityAdminDistributionPage() {
     }, [searchQuery]);
 
     // Handle sort
-    const handleSort = useCallback((column: string) => {
-        if (sortColumn === column) {
-            setSortDirection(sortDirection === "asc" ? "desc" : "asc");
-        } else {
-            setSortColumn(column);
-            setSortDirection("desc");
-        }
-    }, [sortColumn, sortDirection, setSortColumn, setSortDirection]);
+    const handleSort = useCallback(
+        (column: string) => {
+            if (sortColumn === column) {
+                setSortDirection(sortDirection === "asc" ? "desc" : "asc");
+            } else {
+                setSortColumn(column);
+                setSortDirection("desc");
+            }
+        },
+        [sortColumn, sortDirection, setSortColumn, setSortDirection]
+    );
 
     // Fetch data when dependencies change
     useEffect(() => {
@@ -70,7 +75,6 @@ export function CityAdminDistributionPage() {
     }, [fetchData, currentPage, entriesPerPage, searchQuery, sortColumn, sortDirection]);
 
     // Server-side pagination data
-    const totalPages = pagination?.total_pages || 1;
     const totalEntries = pagination?.total_items || 0;
 
     const handleDelete = async () => {
@@ -85,9 +89,7 @@ export function CityAdminDistributionPage() {
             <div className="space-y-6">
                 <div>
                     <h1 className="text-2xl font-bold tracking-tight">Aid Distribution</h1>
-                    <p className="text-muted-foreground">
-                        Manage city-wide distribution records.
-                    </p>
+                    <p className="text-muted-foreground">Manage city-wide distribution records.</p>
                 </div>
 
                 <div className="border border-border rounded-lg">
@@ -106,18 +108,21 @@ export function CityAdminDistributionPage() {
                     </div>
 
                     {/* Table */}
-                    <div className="border-b border-border">
-                        <DistributionHistoryTable 
-                            data={history}
-                            loading={isLoading}
-                            userRole={user?.role}
-                            onEdit={setEditRecord}
-                            onDelete={setDeleteRecord}
-                            onSort={handleSort}
-                            sortColumn={sortColumn}
-                            sortDirection={sortDirection}
-                        />
-                    </div>
+                    <ErrorAlert error={error} />
+                    {(!error || history.length > 0) && (
+                        <div className="border-b border-border">
+                            <DistributionHistoryTable
+                                data={history}
+                                loading={isLoading}
+                                userRole={user?.role}
+                                onEdit={setEditRecord}
+                                onDelete={setDeleteRecord}
+                                onSort={handleSort}
+                                sortColumn={sortColumn}
+                                sortDirection={sortDirection}
+                            />
+                        </div>
+                    )}
 
                     {/* Pagination */}
                     <div className="bg-card p-4">
@@ -134,10 +139,7 @@ export function CityAdminDistributionPage() {
             </div>
 
             {/* Create Modal */}
-            <DistributeAidModal 
-                isOpen={isCreateOpen} 
-                onClose={() => setIsCreateOpen(false)} 
-            />
+            <DistributeAidModal isOpen={isCreateOpen} onClose={() => setIsCreateOpen(false)} />
 
             {/* Edit Modal */}
             <EditDistributionModal

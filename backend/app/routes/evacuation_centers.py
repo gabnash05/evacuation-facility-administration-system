@@ -4,10 +4,11 @@ import logging
 from typing import Tuple
 
 from flask import Blueprint, jsonify, request
-from flask_jwt_extended import jwt_required
+from flask_jwt_extended import get_jwt_identity, jwt_required
 from sqlalchemy import text
 
 from app.models import db  # Add this import
+from app.services.user_service import get_current_user
 from app.services.evacuation_center_service import (
     create_center,
     delete_center,
@@ -24,6 +25,41 @@ from app.services.evacuation_center_service import (
 logger = logging.getLogger(__name__)
 
 evacuation_center_bp = Blueprint("evacuation_center_bp", __name__)
+
+
+def _current_actor():
+    """Resolve a JWT identity to an active persisted account."""
+    actor = get_current_user(get_jwt_identity())
+    return actor if actor and actor.is_active else None
+
+
+def _may_read_center(actor, center_id):
+    return actor.role in {"super_admin", "city_admin"} or actor.center_id == center_id
+
+
+def _actor_or_response():
+    actor = _current_actor()
+    if not actor:
+        return None, (jsonify({"success": False, "message": "Invalid token"}), 401)
+    return actor, None
+
+
+def _super_admin_or_response():
+    actor, response = _actor_or_response()
+    if response:
+        return None, response
+    if actor.role != "super_admin":
+        return None, (jsonify({"success": False, "message": "Insufficient permissions"}), 403)
+    return actor, None
+
+
+def _citywide_read_or_response():
+    actor, response = _actor_or_response()
+    if response:
+        return None, response
+    if actor.role not in {"super_admin", "city_admin"}:
+        return None, (jsonify({"success": False, "message": "Insufficient permissions"}), 403)
+    return actor, None
 
 
 @evacuation_center_bp.route("/evacuation_centers", methods=["GET"])
@@ -68,6 +104,10 @@ def get_centers_route() -> Tuple:
                 ),
                 400,
             )
+
+        _, response = _citywide_read_or_response()
+        if response:
+            return response
 
         logger.info(
             "Fetching centers - search: %s, status: %s, page: %s, limit: %s",
@@ -117,6 +157,9 @@ def get_all_centers_no_pagination_route() -> Tuple:
             - HTTP status code
     """
     try:
+        _, response = _citywide_read_or_response()
+        if response:
+            return response
         logger.info("Fetching all evacuation centers without pagination")
 
         # Get all centers without pagination
@@ -156,6 +199,11 @@ def get_center_route(center_id: int) -> Tuple:
             - HTTP status code
     """
     try:
+        actor, response = _actor_or_response()
+        if response:
+            return response
+        if not _may_read_center(actor, center_id):
+            return jsonify({"success": False, "message": "Insufficient permissions"}), 403
         logger.info("Fetching center with ID: %s", center_id)
 
         result = get_center_by_id(center_id)
@@ -194,6 +242,11 @@ def get_center_status(center_id: int) -> Tuple:
             - HTTP status code
     """
     try:
+        actor, response = _actor_or_response()
+        if response:
+            return response
+        if not _may_read_center(actor, center_id):
+            return jsonify({"success": False, "message": "Insufficient permissions"}), 403
         from app.models.evacuation_center import EvacuationCenter
         from app.models.event import Event
         
@@ -288,6 +341,11 @@ def get_center_events(center_id: int):
     Uses the event_centers junction table for efficient querying.
     """
     try:
+        actor, response = _actor_or_response()
+        if response:
+            return response
+        if not _may_read_center(actor, center_id):
+            return jsonify({"success": False, "message": "Insufficient permissions"}), 403
         # Direct SQL query using the event_centers junction table
         query = """
             SELECT e.* 
@@ -331,6 +389,9 @@ def create_new_center_route() -> Tuple:
             - HTTP status code
     """
     try:
+        _, response = _super_admin_or_response()
+        if response:
+            return response
         # Check if request is multipart/form-data for file upload
         if request.content_type and "multipart/form-data" in request.content_type:
             data = {
@@ -398,6 +459,9 @@ def update_existing_center_route(center_id: int) -> Tuple:
             - HTTP status code
     """
     try:
+        _, response = _super_admin_or_response()
+        if response:
+            return response
         # Check if request is multipart/form-data for file upload
         if request.content_type and "multipart/form-data" in request.content_type:
             data = {
@@ -464,6 +528,9 @@ def delete_existing_center_route(center_id: int) -> Tuple:
             - HTTP status code
     """
     try:
+        _, response = _super_admin_or_response()
+        if response:
+            return response
         logger.info("Deleting center with ID: %s", center_id)
 
         result = delete_center(center_id)
@@ -511,6 +578,9 @@ def get_city_summary_route() -> Tuple:
         }
     """
     try:
+        _, response = _citywide_read_or_response()
+        if response:
+            return response
         logger.info("Fetching Iligan City evacuation centers summary")
         
         result = get_city_summary()
@@ -573,6 +643,10 @@ def get_nearby_centers_route() -> Tuple:
                 "success": False,
                 "message": "Limit must be between 1 and 100"
             }), 400
+
+        _, response = _citywide_read_or_response()
+        if response:
+            return response
             
         logger.info(
             "Finding centers near coordinates: (%s, %s), radius: %skm, limit: %s",
@@ -635,6 +709,10 @@ def get_centers_in_bounds_route() -> Tuple:
                 "success": False,
                 "message": "All bounding box parameters (north, south, east, west) are required"
             }), 400
+
+        _, response = _citywide_read_or_response()
+        if response:
+            return response
             
         logger.info(
             "Finding centers in bounds: north=%s, south=%s, east=%s, west=%s, status=%s",

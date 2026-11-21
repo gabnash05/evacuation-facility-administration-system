@@ -7,6 +7,7 @@ import {
     DialogContent,
     DialogHeader,
     DialogTitle,
+    DialogDescription,
     DialogFooter,
     DialogClose,
 } from "@/components/ui/dialog";
@@ -34,6 +35,15 @@ import {
 import { useHouseholdStore } from "@/store/householdStore";
 import { useEvacuationCenterStore } from "@/store/evacuationCenterStore";
 import type { CreateIndividualData } from "@/types/individual";
+
+const destructiveIconButtonClass = "h-8 w-8 text-destructive hover:text-destructive";
+const errorMessageClass = "bg-destructive/15 text-destructive p-3 rounded-md text-sm";
+const emptyMembersClass = [
+    "text-center text-sm text-muted-foreground py-8",
+    "border-2 border-dashed border-border rounded-lg",
+].join(" ");
+const actionColumnClass = "whitespace-nowrap w-[80px]";
+const memberNameClass = "font-medium whitespace-nowrap";
 
 interface AddHouseholdModalProps {
     isOpen: boolean;
@@ -101,7 +111,8 @@ export function AddHouseholdModal({
     const handleAddIndividual = (newIndividual: Omit<CreateIndividualData, "household_id">) => {
         if (newIndividual.relationship_to_head.toLowerCase().trim() === "head") {
             alert(
-                "Error: The primary household head is defined above. Additional members cannot be 'Head'."
+                "Error: The primary household head is defined above. " +
+                    "Additional members cannot be 'Head'."
             );
             return;
         }
@@ -161,8 +172,8 @@ export function AddHouseholdModal({
 
             onSuccess();
             handleClose();
-        } catch (err: any) {
-            setError(err.message);
+        } catch (error: unknown) {
+            setError(error instanceof Error ? error.message : "Unable to create household.");
         } finally {
             setIsSubmitting(false);
         }
@@ -181,13 +192,13 @@ export function AddHouseholdModal({
                         <DialogTitle className="text-lg font-semibold">
                             Add New Household
                         </DialogTitle>
+                        <DialogDescription className="sr-only">
+                            Create a household with its primary member and optional additional
+                            members.
+                        </DialogDescription>
                     </DialogHeader>
                     <div className="space-y-6 py-4">
-                        {error && (
-                            <div className="bg-destructive/15 text-destructive p-3 rounded-md text-sm">
-                                {error}
-                            </div>
-                        )}
+                        {error && <div className={errorMessageClass}>{error}</div>}
 
                         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
                             <div className="space-y-2">
@@ -337,7 +348,7 @@ export function AddHouseholdModal({
                                                     <TableHead className="whitespace-nowrap">
                                                         Relationship
                                                     </TableHead>
-                                                    <TableHead className="whitespace-nowrap w-[80px]">
+                                                    <TableHead className={actionColumnClass}>
                                                         Actions
                                                     </TableHead>
                                                 </TableRow>
@@ -345,7 +356,7 @@ export function AddHouseholdModal({
                                             <TableBody>
                                                 {individuals.map((ind, index) => (
                                                     <TableRow key={index}>
-                                                        <TableCell className="font-medium whitespace-nowrap">
+                                                        <TableCell className={memberNameClass}>
                                                             {ind.first_name}
                                                         </TableCell>
                                                         <TableCell className="whitespace-nowrap">
@@ -372,7 +383,9 @@ export function AddHouseholdModal({
                                                                 onClick={() =>
                                                                     handleRemoveIndividual(index)
                                                                 }
-                                                                className="h-8 w-8 text-destructive hover:text-destructive"
+                                                                className={
+                                                                    destructiveIconButtonClass
+                                                                }
                                                             >
                                                                 <Trash2 className="h-4 w-4" />
                                                             </Button>
@@ -384,7 +397,7 @@ export function AddHouseholdModal({
                                     </div>
                                 </div>
                             ) : (
-                                <div className="text-center text-sm text-muted-foreground py-8 border-2 border-dashed border-border rounded-lg">
+                                <div className={emptyMembersClass}>
                                     No additional members added yet. Click "Add Member" to include
                                     other household members.
                                 </div>

@@ -13,8 +13,10 @@ import {
 } from "@/components/ui/select";
 import { useAuthStore } from "@/store/authStore";
 import { AddEditUserModal } from "@/components/features/user-management/AddEditUserModal";
+// eslint-disable-next-line max-len
 import { DeleteConfirmationModal } from "@/components/features/user-management/DeleteConfirmationModal";
 import type { User } from "@/types/user";
+// eslint-disable-next-line max-len
 import { DeactivateConfirmationModal } from "@/components/features/user-management/DeactivateConfirmationModal";
 
 export function CityAdminUserManagementPage() {
@@ -31,6 +33,10 @@ export function CityAdminUserManagementPage() {
         setCurrentPage,
         setEntriesPerPage,
         setSortConfig,
+        roleFilter,
+        statusFilter,
+        setRoleFilter,
+        setStatusFilter,
         fetchUsers,
         deleteUser,
         deactivateUser,
@@ -45,9 +51,6 @@ export function CityAdminUserManagementPage() {
     const [isDeactivateModalOpen, setIsDeactivateModalOpen] = useState(false);
     const [selectedUser, setSelectedUser] = useState<User | null>(null);
     
-
-    const [roleFilter, setRoleFilter] = useState<string>("all");
-    const [statusFilter, setStatusFilter] = useState<string>("all");
 
     const debouncedFetchUsers = useMemo(() => debounce(() => fetchUsers(), 500), [fetchUsers]);
 
@@ -161,13 +164,11 @@ export function CityAdminUserManagementPage() {
     };
 
     const handleRoleFilterChange = (role: string) => {
-        setRoleFilter(role);
-        setCurrentPage(1);
+        setRoleFilter(role === "center_admin" || role === "volunteer" ? role : "all");
     };
 
     const handleStatusFilterChange = (status: string) => {
-        setStatusFilter(status);
-        setCurrentPage(1);
+        setStatusFilter(status === "active" || status === "inactive" ? status : "all");
     };
 
     const additionalFilters = (
@@ -178,8 +179,6 @@ export function CityAdminUserManagementPage() {
                 </SelectTrigger>
                 <SelectContent>
                     <SelectItem value="all">All Roles</SelectItem>
-                    <SelectItem value="super_admin">Super Admin</SelectItem>
-                    <SelectItem value="city_admin">City Admin</SelectItem>
                     <SelectItem value="center_admin">Center Admin</SelectItem>
                     <SelectItem value="volunteer">Volunteer</SelectItem>
                 </SelectContent>
@@ -215,14 +214,16 @@ export function CityAdminUserManagementPage() {
                 onClose={() => setIsDeleteModalOpen(false)}
                 onConfirm={handleConfirmDelete}
                 title="Delete User"
-                description={`Are you sure you want to permanently delete the user "${selectedUser?.email}"? This action cannot be undone.`}
+                description={`Permanently delete "${selectedUser?.email}"? This cannot be undone.`}
             />
             <DeactivateConfirmationModal
                 isOpen={isDeactivateModalOpen}
                 onClose={() => setIsDeactivateModalOpen(false)}
                 onConfirm={handleConfirmDeactivate}
                 title={selectedUser?.is_active ? "Deactivate User" : "Reactivate User"}
-                description={selectedUser?.is_active ? `Are you sure you want to deactivate ${selectedUser?.email}?` : `Are you sure you want to reactivate ${selectedUser?.email}?`}
+                description={selectedUser?.is_active
+                    ? `Are you sure you want to deactivate ${selectedUser?.email}?`
+                    : `Are you sure you want to reactivate ${selectedUser?.email}?`}
             />
 
             <div className="space-y-6">
@@ -252,6 +253,7 @@ export function CityAdminUserManagementPage() {
                             loading={loading}
                             searchPlaceholder="Search by email"
                             addButtonText="Add User"
+                            additionalFilters={additionalFilters}
                         />
                     </div>
 

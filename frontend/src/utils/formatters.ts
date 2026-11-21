@@ -30,5 +30,6 @@ export function parseDate(dateStr: string): Date | undefined {
 }
 
 export function formatCapacity(current: number, total: number): string {
-    return `${current}/${total} (${Math.round((current / total) * 100)}%)`;
+    const percentage = total > 0 ? Math.round((current / total) * 100) : 0;
+    return `${current}/${total} (${percentage}%)`;
 }

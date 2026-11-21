@@ -44,6 +44,7 @@ export function IndividualTablePagination({
                 <Button
                     variant="outline"
                     size="sm"
+                    aria-label="Previous page"
                     onClick={() => onPageChange(currentPage - 1)}
                     disabled={currentPage === 1 || loading}
                     className="h-8 w-8 p-0"
@@ -67,6 +68,7 @@ export function IndividualTablePagination({
                 <Button
                     variant="outline"
                     size="sm"
+                    aria-label="Next page"
                     onClick={() => onPageChange(currentPage + 1)}
                     disabled={currentPage === totalPages || loading}
                     className="h-8 w-8 p-0"

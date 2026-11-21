@@ -10,6 +10,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { AlertTriangle, Trash2 } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 interface DeleteAidDialogProps {
     isOpen: boolean;
@@ -50,11 +51,19 @@ export function DeleteAidDialog({
                 <div className="py-4">
                     <p className="text-sm text-muted-foreground">
                         Are you sure you want to delete the aid allocation for{" "}
-                        <strong className="font-semibold text-foreground">"{allocationName}"</strong>?
+                        <strong className="font-semibold text-foreground">
+                            "{allocationName}"
+                        </strong>
+                        ?
                     </p>
                 </div>
 
-                <DialogFooter className="flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-2">
+                <DialogFooter
+                    className={cn(
+                        "flex flex-col-reverse sm:flex-row",
+                        "sm:justify-end sm:space-x-2"
+                    )}
+                >
                     <Button
                         type="button"
                         variant="outline"
@@ -73,7 +82,12 @@ export function DeleteAidDialog({
                     >
                         {loading ? (
                             <>
-                                <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                                <div
+                                    className={cn(
+                                        "h-4 w-4 animate-spin rounded-full border-2",
+                                        "border-current border-t-transparent"
+                                    )}
+                                />
                                 Deleting...
                             </>
                         ) : (

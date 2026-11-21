@@ -14,6 +14,17 @@ class User(db.Model):
 
     __tablename__ = "users"
 
+    @staticmethod
+    def _execute_write(query, params):
+        """Commit a single user write and restore the session after failure."""
+        try:
+            result = db.session.execute(query, params).fetchone()
+            db.session.commit()
+            return result
+        except Exception:
+            db.session.rollback()
+            raise
+
     user_id = db.Column(db.Integer, primary_key=True)
     email = db.Column(db.String(120), unique=True, nullable=False, index=True)
     password_hash = db.Column(db.String(255), nullable=False)
@@ -109,7 +120,7 @@ class User(db.Model):
         """Create a new user from registration data using raw SQL."""
         password_hash = generate_password_hash(register_data["password"])
 
-        result = db.session.execute(
+        result = cls._execute_write(
             text(
                 """  
             INSERT INTO users (email, password_hash, role, center_id, is_active) 
@@ -123,9 +134,7 @@ class User(db.Model):
                 "role": register_data["role"],
                 "center_id": register_data.get("center_id"),
             },
-        ).fetchone()
-
-        db.session.commit()
+        )
 
         result_dict = result._asdict()
 
@@ -145,7 +154,7 @@ class User(db.Model):
         """Create a new user using raw SQL (for user management)."""
         password_hash = generate_password_hash(data["password"])
 
-        result = db.session.execute(
+        result = cls._execute_write(
             text(
                 """  
             INSERT INTO users (email, password_hash, role, center_id, is_active) 
@@ -159,9 +168,7 @@ class User(db.Model):
                 "role": data["role"],
                 "center_id": data.get("center_id"),
             },
-        ).fetchone()
-
-        db.session.commit()
+        )
 
         result_dict = result._asdict()
 
@@ -179,7 +186,7 @@ class User(db.Model):
     @classmethod
     def deactivate_user(cls, user_id: int) -> bool:
         """Deactivate a user account using raw SQL."""
-        result = db.session.execute(
+        result = cls._execute_write(
             text(
                 """  
             UPDATE users 
@@ -189,14 +196,15 @@ class User(db.Model):
             """
             ),
             {"user_id": user_id},
-        ).fetchone()
-
-        db.session.commit()
+        )
         return result is not None
 
     @classmethod
     def update_user(cls, user_id: int, update_data: Dict[str, Any]) -> Optional["User"]:
         """Update user information using raw SQL."""
+        allowed_fields = {"user_id", "email", "password_hash", "role", "center_id", "is_active"}
+        if set(update_data) - allowed_fields:
+            raise ValueError("Unsupported user update field")
         # Build dynamic UPDATE query
         set_clauses = []
         params = {"user_id": user_id}
@@ -223,8 +231,7 @@ class User(db.Model):
             """
         )
 
-        result = db.session.execute(query, params).fetchone()
-        db.session.commit()
+        result = cls._execute_write(query, params)
 
         return cls._row_to_user(result)
 
@@ -239,6 +246,7 @@ class User(db.Model):
         sort_by: Optional[str] = None,
         sort_order: Optional[str] = "asc",
         center_id: Optional[int] = None,
+        allowed_roles: Optional[set[str]] = None,
     ) -> Dict[str, Any]:
         """Get all users with pagination, search, and sorting."""
         # Base query with join to get center name
@@ -266,6 +274,15 @@ class User(db.Model):
             base_query += " AND u.role = :role"
             count_query += " AND u.role = :role"
             params["role"] = role
+        elif allowed_roles is not None:
+            role_params = []
+            for index, allowed_role in enumerate(sorted(allowed_roles)):
+                parameter = f"allowed_role_{index}"
+                role_params.append(f":{parameter}")
+                params[parameter] = allowed_role
+            clause = f" AND u.role IN ({', '.join(role_params)})"
+            base_query += clause
+            count_query += clause
 
         # Add status filter
         if status and status != "all":
@@ -291,7 +308,6 @@ class User(db.Model):
             SELECT 
                 u.user_id,
                 u.email,
-                u.password_hash,
                 u.role,
                 u.center_id,
                 u.is_active,
@@ -370,7 +386,7 @@ class User(db.Model):
     @classmethod
     def delete(cls, user_id: int) -> bool:
         """Delete a user using raw SQL."""
-        result = db.session.execute(
+        result = cls._execute_write(
             text(
                 """  
                 DELETE FROM users 
@@ -379,7 +395,5 @@ class User(db.Model):
                 """
             ),
             {"user_id": user_id},
-        ).fetchone()
-
-        db.session.commit()
+        )
         return result is not None

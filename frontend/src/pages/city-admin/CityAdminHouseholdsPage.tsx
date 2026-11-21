@@ -42,7 +42,9 @@ export function CityAdminHouseholdsPage() {
         message: "",
     });
     const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
-    const [selectedHouseholdForDetails, setSelectedHouseholdForDetails] = useState<number | null>(null);
+    const [selectedHouseholdForDetails, setSelectedHouseholdForDetails] = useState<number | null>(
+        null
+    );
 
     const debouncedFetchHouseholds = useMemo(
         () => debounce(() => fetchHouseholds(), 500),

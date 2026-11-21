@@ -2,7 +2,13 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogHeader,
+    DialogTitle,
+} from "@/components/ui/dialog";
 import {
     Table,
     TableBody,
@@ -15,6 +21,7 @@ import { Button } from "@/components/ui/button";
 import { Plus, CirclePlus, CircleMinus } from "lucide-react";
 import { useEvacuationCenterStore } from "@/store/evacuationCenterStore";
 import type { EvacuationCenter } from "@/types/center";
+import { cn } from "@/lib/utils";
 
 interface AddCenterModalProps {
     isOpen: boolean;
@@ -22,6 +29,9 @@ interface AddCenterModalProps {
     onAddCenters: (centers: EvacuationCenter[]) => void;
     existingCenters?: EvacuationCenter[]; // Add this prop
 }
+
+const emptyStateClass = cn("flex items-center justify-center h-[400px]", "text-muted-foreground");
+const capacityBadgeClass = "px-3 py-1 rounded text-xs font-medium inline-block";
 
 export function AddCenterModal({
     isOpen,
@@ -115,31 +125,46 @@ export function AddCenterModal({
             <DialogContent className="!max-w-[1100px] w-[95vw] max-h-[90vh] overflow-y-auto p-6">
                 <DialogHeader>
                     <DialogTitle className="text-xl font-semibold">Add Center</DialogTitle>
+                    <DialogDescription>
+                        Select available evacuation centers to associate with this event.
+                    </DialogDescription>
                 </DialogHeader>
 
                 {error && (
-                    <div className="bg-destructive/10 border border-destructive text-destructive px-4 py-3 rounded mt-4">
+                    <div
+                        className={cn(
+                            "bg-destructive/10 border border-destructive text-destructive",
+                            "px-4 py-3 rounded mt-4"
+                        )}
+                        role="alert"
+                    >
                         {error}
                     </div>
                 )}
 
                 {/* Info about excluded centers */}
                 {existingCenters.length > 0 && (
-                    <div className="bg-muted border border-border text-muted-foreground px-4 py-3 rounded-md mt-4">
+                    <div
+                        className={cn(
+                            "bg-muted border border-border text-muted-foreground",
+                            "px-4 py-3 rounded-md mt-4"
+                        )}
+                    >
                         <p className="text-sm">
-                            {existingCenters.length} center{existingCenters.length !== 1 ? "s" : ""}{" "}
-                            already added to this event are hidden
+                            {existingCenters.length} center
+                            {existingCenters.length !== 1 ? "s" : ""} already added to this event
+                            are hidden
                         </p>
                     </div>
                 )}
 
                 <div className="mt-4 border border-border rounded-lg overflow-x-auto">
                     {isLoading ? (
-                        <div className="flex items-center justify-center h-[400px] text-muted-foreground">
+                        <div className={emptyStateClass}>
                             <p className="text-lg">Loading evacuation centers...</p>
                         </div>
                     ) : filteredCenters.length === 0 ? (
-                        <div className="flex items-center justify-center h-[400px] text-muted-foreground">
+                        <div className={emptyStateClass}>
                             <p className="text-lg">
                                 {availableCenters.length === 0
                                     ? "No evacuation centers available"
@@ -174,7 +199,10 @@ export function AddCenterModal({
                                     return (
                                         <TableRow
                                             key={center.center_id}
-                                            className={`${i % 2 === 1 ? "bg-muted" : ""} ${isSelected ? "bg-green-50 dark:bg-green-950" : ""}`}
+                                            className={cn(
+                                                i % 2 === 1 && "bg-muted",
+                                                isSelected && "bg-green-50 dark:bg-green-950"
+                                            )}
                                         >
                                             <TableCell className="font-medium">
                                                 {center.center_name}
@@ -182,7 +210,10 @@ export function AddCenterModal({
                                             <TableCell>{center.address}</TableCell>
                                             <TableCell>
                                                 <span
-                                                    className={`px-3 py-1 rounded text-xs font-medium inline-block ${getStatusColor(center.status)}`}
+                                                    className={cn(
+                                                        capacityBadgeClass,
+                                                        getStatusColor(center.status)
+                                                    )}
                                                 >
                                                     {getDisplayStatus(center.status)}
                                                 </span>
@@ -191,7 +222,10 @@ export function AddCenterModal({
                                             <TableCell>{center.current_occupancy}</TableCell>
                                             <TableCell>
                                                 <span
-                                                    className={`px-3 py-1 rounded text-xs font-medium inline-block ${getOccupancyColor(center)}`}
+                                                    className={cn(
+                                                        capacityBadgeClass,
+                                                        getOccupancyColor(center)
+                                                    )}
                                                 >
                                                     {`${occupancyPercentage}%`}
                                                 </span>
@@ -200,15 +234,30 @@ export function AddCenterModal({
                                                 <Button
                                                     variant="ghost"
                                                     size="icon"
+                                                    aria-label={
+                                                        isSelected
+                                                            ? `Remove ${center.center_name}`
+                                                            : `Add ${center.center_name}`
+                                                    }
                                                     onClick={() =>
                                                         handleToggleCenter(center.center_id)
                                                     }
                                                     className="h-8 w-8"
                                                 >
                                                     {isSelected ? (
-                                                        <CircleMinus className="h-4 w-4 text-red-600" />
+                                                        <CircleMinus
+                                                            className={cn(
+                                                                "h-4 w-4",
+                                                                "text-red-600"
+                                                            )}
+                                                        />
                                                     ) : (
-                                                        <CirclePlus className="h-4 w-4 text-green-600" />
+                                                        <CirclePlus
+                                                            className={cn(
+                                                                "h-4 w-4",
+                                                                "text-green-600"
+                                                            )}
+                                                        />
                                                     )}
                                                 </Button>
                                             </TableCell>
@@ -223,8 +272,8 @@ export function AddCenterModal({
                 <div className="flex items-center justify-between mt-6">
                     <div className="text-sm text-muted-foreground">
                         <p>
-                            {selectedCenterIds.size} center{selectedCenterIds.size !== 1 ? "s" : ""}{" "}
-                            selected
+                            {selectedCenterIds.size} center
+                            {selectedCenterIds.size !== 1 ? "s" : ""} selected
                         </p>
                         {existingCenters.length > 0 && (
                             <p>

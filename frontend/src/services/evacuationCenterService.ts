@@ -6,6 +6,7 @@ import type {
     CitySummary,
 } from "@/types/center";
 import type { CreateCenterFormData, UpdateCenterFormData } from "@/schemas/centers";
+import type { Event } from "@/types/event";
 
 export class EvacuationCenterService {
     static async getCenters(params: GetCentersParams = {}): Promise<CentersResponse> {
@@ -98,8 +99,10 @@ export class EvacuationCenterService {
             // Append form data (only provided fields, including coordinates)
             if (updates.center_name) formData.append("center_name", updates.center_name);
             if (updates.address) formData.append("address", updates.address);
-            if (updates.latitude !== undefined) formData.append("latitude", updates.latitude.toString());
-            if (updates.longitude !== undefined) formData.append("longitude", updates.longitude.toString());
+            if (updates.latitude !== undefined)
+                formData.append("latitude", updates.latitude.toString());
+            if (updates.longitude !== undefined)
+                formData.append("longitude", updates.longitude.toString());
             if (updates.capacity) formData.append("capacity", updates.capacity.toString());
             if (updates.current_occupancy !== undefined)
                 formData.append("current_occupancy", updates.current_occupancy.toString());
@@ -173,7 +176,7 @@ export class EvacuationCenterService {
                     lat: latitude,
                     lng: longitude,
                     radius,
-                    limit
+                    limit,
                 },
                 withCredentials: true,
             });
@@ -207,7 +210,7 @@ export class EvacuationCenterService {
                     south: bounds.south,
                     east: bounds.east,
                     west: bounds.west,
-                    status
+                    status,
                 },
                 withCredentials: true,
             });
@@ -219,12 +222,12 @@ export class EvacuationCenterService {
 
     static async getCenterEvents(centerId: number): Promise<{
         success: boolean;
-        data: any[]; // Replace 'any' with your Event type
+        data: Event[];
     }> {
         try {
             const response = await api.get<{
                 success: boolean;
-                data: any[];
+                data: Event[];
             }>(`/evacuation_centers/${centerId}/events`, {
                 withCredentials: true,
             });

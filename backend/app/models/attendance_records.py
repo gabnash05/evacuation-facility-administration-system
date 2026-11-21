@@ -3,6 +3,7 @@
 from typing import Any, Dict, List, Optional, Tuple
 from datetime import datetime
 from sqlalchemy import text
+from sqlalchemy.exc import IntegrityError
 from app.models import db
 import logging
 
@@ -71,12 +72,14 @@ class AttendanceRecord(db.Model):
 
 
     @classmethod
-    def get_by_id(cls, record_id: int) -> Optional["AttendanceRecord"]:
+    def get_by_id(
+        cls, record_id: int, *, for_update: bool = False
+    ) -> Optional["AttendanceRecord"]:
         """Get attendance record by ID using raw SQL."""
-        result = db.session.execute(
-            text("SELECT * FROM attendance_records WHERE record_id = :record_id"),
-            {"record_id": record_id},
-        ).fetchone()
+        query = "SELECT * FROM attendance_records WHERE record_id = :record_id"
+        if for_update:
+            query += " FOR UPDATE"
+        result = db.session.execute(text(query), {"record_id": record_id}).fetchone()
 
         return cls._row_to_record(result)
 
@@ -241,9 +244,15 @@ class AttendanceRecord(db.Model):
 
 
     @classmethod
-    def create(cls, data: Dict[str, Any]) -> "AttendanceRecord":
-        """Create a new attendance record using raw SQL."""
-        required_fields = ["individual_id", "center_id", "household_id", "status", "recorded_by_user_id"]
+    def create(cls, data: Dict[str, Any], *, commit: bool = True) -> "AttendanceRecord":
+        """Create an attendance record, optionally within a caller-owned transaction."""
+        required_fields = [
+            "individual_id",
+            "center_id",
+            "household_id",
+            "status",
+            "recorded_by_user_id",
+        ]
         
         for field in required_fields:
             if field not in data:
@@ -323,13 +332,18 @@ class AttendanceRecord(db.Model):
 
         try:
             result = db.session.execute(query, params).fetchone()
+            record = cls._row_to_record(result)
+            if not commit:
+                return record
             db.session.commit()
             
             if data.get("status") == "checked_in" and "event_id" in data:
                 cls._update_event_occupancy(data["event_id"])
                 
-            return cls._row_to_record(result)
+            return record
         except Exception as e:
+            if not commit:
+                raise
             db.session.rollback()
             # Re-raise the exception to preserve the original error message
             if "Individual is already checked in" in str(e):
@@ -340,9 +354,17 @@ class AttendanceRecord(db.Model):
 
     @classmethod
     def update(
-        cls, record_id: int, update_data: Dict[str, Any]
+        cls, record_id: int, update_data: Dict[str, Any], *, commit: bool = True
     ) -> Optional["AttendanceRecord"]:
         """Update attendance record using raw SQL."""
+
+        allowed_fields = {
+            "record_id", "individual_id", "center_id", "event_id", "household_id",
+            "status", "check_in_time", "check_out_time", "transfer_from_center_id",
+            "transfer_to_center_id", "transfer_time", "recorded_by_user_id", "notes",
+        }
+        if set(update_data) - allowed_fields:
+            raise ValueError("Unsupported attendance update field")
 
         current_record = cls.get_by_id(record_id)
         if not current_record:
@@ -384,9 +406,10 @@ class AttendanceRecord(db.Model):
         )
 
         result = db.session.execute(query, params).fetchone()
-        db.session.commit()
-
         updated_record = cls._row_to_record(result)
+        if not commit:
+            return updated_record
+        db.session.commit()
     
         # Update event occupancy if status changed to/from checked_in
         if updated_record and "status" in update_data:
@@ -423,117 +446,138 @@ class AttendanceRecord(db.Model):
         center_id: int,
         recorded_by_user_id: int,
         check_in_time: str,
-        notes: Optional[str] = None
+        notes: Optional[str] = None,
     ) -> Dict[str, Any]:
-        """Check in an individual to a center, handling transfers automatically."""
-        
-        # Import db here to ensure it's available
-        from app.models import db
-        
-        # Get household_id from individual
-        household_result = db.session.execute(
-            text("SELECT household_id FROM individuals WHERE individual_id = :individual_id"),
-            {"individual_id": individual_id}
-        ).fetchone()
-        
-        if not household_result:
-            raise ValueError("Individual not found")
-        
-        household_id = household_result[0]
-        
-        # Get current active event for the center
-        current_event_id = cls.get_current_event_for_center(center_id)
-        if current_event_id is None:
-            raise ValueError(f"No active event found for center {center_id}")
-
-        # Check for existing check-in
-        existing_checkin_query = text("""
-            SELECT ar.record_id, ar.center_id, ec.center_name
-            FROM attendance_records ar
-            JOIN evacuation_centers ec ON ar.center_id = ec.center_id
-            WHERE ar.individual_id = :individual_id 
-            AND ar.status = 'checked_in'
-            AND ar.check_out_time IS NULL
-            LIMIT 1
-        """)
-        
-        existing_record = db.session.execute(
-            existing_checkin_query, 
-            {"individual_id": individual_id}
-        ).fetchone()
-        
-        transfer_occurred = False
+        """Check in an individual and commit any automatic transfer with it."""
         previous_center_id = None
         previous_center_name = None
-        
-        # Handle transfer if individual is checked in elsewhere
-        if existing_record and existing_record.center_id != center_id:
-            transfer_occurred = True
-            previous_center_id = existing_record.center_id
-            previous_center_name = existing_record.center_name
-            
-            # Check out from current center
-            check_out_query = text("""
-                UPDATE attendance_records 
-                SET status = 'checked_out', 
-                    check_out_time = :check_out_time,
-                    recorded_by_user_id = :recorded_by_user_id,
-                    notes = COALESCE(:notes, notes) || ' (Auto-checked out due to transfer)',
-                    updated_at = CURRENT_TIMESTAMP
-                WHERE record_id = :record_id
-            """)
-            
-            db.session.execute(
-                check_out_query,
-                {
-                    "record_id": existing_record.record_id,
-                    "check_out_time": check_in_time,
-                    "recorded_by_user_id": recorded_by_user_id,
-                    "notes": notes
-                }
+
+        try:
+            household = db.session.execute(
+                text(
+                    "SELECT household_id FROM individuals WHERE individual_id = :individual_id"
+                ),
+                {"individual_id": individual_id},
+            ).fetchone()
+            if not household:
+                raise ValueError("Individual not found")
+            household_id = household[0]
+
+            current_event_id = cls.get_current_event_for_center(center_id)
+            if current_event_id is None:
+                raise ValueError(f"No active event found for center {center_id}")
+
+            existing_record = db.session.execute(
+                text(
+                    """
+                    SELECT ar.record_id, ar.center_id, ec.center_name
+                    FROM attendance_records ar
+                    JOIN evacuation_centers ec ON ar.center_id = ec.center_id
+                    WHERE ar.individual_id = :individual_id
+                      AND ar.status = 'checked_in'
+                      AND ar.check_out_time IS NULL
+                    LIMIT 1
+                    FOR UPDATE OF ar
+                    """
+                ),
+                {"individual_id": individual_id},
+            ).fetchone()
+            transfer_occurred = bool(
+                existing_record and existing_record.center_id != center_id
             )
-            
-            # Create transfer record
-            transfer_data = {
-                "individual_id": individual_id,
-                "center_id": center_id,
-                "event_id": current_event_id,
-                "household_id": household_id,
-                "status": "transferred",
-                "transfer_from_center_id": previous_center_id,
-                "transfer_to_center_id": center_id,
-                "transfer_time": check_in_time,
-                "recorded_by_user_id": recorded_by_user_id,
-                "notes": f"Auto-transferred from {previous_center_name}. {notes or ''}"
-            }
-            
-            cls.create(transfer_data)
+            if transfer_occurred:
+                previous_center_id = existing_record.center_id
+                previous_center_name = existing_record.center_name
 
-        # Create the new check-in record
-        data = {
-            "individual_id": individual_id,
-            "center_id": center_id,
-            "event_id": current_event_id,
-            "household_id": household_id,
-            "status": "checked_in",
-            "check_in_time": check_in_time,
-            "recorded_by_user_id": recorded_by_user_id,
-            "notes": notes
-        }
+                # Occupancy triggers update both centers. Lock them in ID order
+                # so transfers in opposite directions use the same lock order.
+                db.session.execute(
+                    text(
+                        """
+                        SELECT center_id FROM evacuation_centers
+                        WHERE center_id IN (:source_id, :destination_id)
+                        ORDER BY center_id
+                        FOR NO KEY UPDATE
+                        """
+                    ),
+                    {"source_id": previous_center_id, "destination_id": center_id},
+                ).all()
+                db.session.execute(
+                    text(
+                        """
+                        UPDATE attendance_records
+                        SET status = 'checked_out',
+                            check_out_time = :check_out_time,
+                            recorded_by_user_id = :recorded_by_user_id,
+                            notes = COALESCE(:notes, notes) || ' (Auto-checked out due to transfer)',
+                            updated_at = CURRENT_TIMESTAMP
+                        WHERE record_id = :record_id
+                        """
+                    ),
+                    {
+                        "record_id": existing_record.record_id,
+                        "check_out_time": check_in_time,
+                        "recorded_by_user_id": recorded_by_user_id,
+                        "notes": notes,
+                    },
+                )
+                cls.create(
+                    {
+                        "individual_id": individual_id,
+                        "center_id": center_id,
+                        "event_id": current_event_id,
+                        "household_id": household_id,
+                        "status": "transferred",
+                        "transfer_from_center_id": previous_center_id,
+                        "transfer_to_center_id": center_id,
+                        "transfer_time": check_in_time,
+                        "recorded_by_user_id": recorded_by_user_id,
+                        "notes": f"Auto-transferred from {previous_center_name}. {notes or ''}",
+                    },
+                    commit=False,
+                )
 
-        record = cls.create(data)
+            record = cls.create(
+                {
+                    "individual_id": individual_id,
+                    "center_id": center_id,
+                    "event_id": current_event_id,
+                    "household_id": household_id,
+                    "status": "checked_in",
+                    "check_in_time": check_in_time,
+                    "recorded_by_user_id": recorded_by_user_id,
+                    "notes": notes,
+                },
+                commit=False,
+            )
+            db.session.commit()
+        except IntegrityError as error:
+            db.session.rollback()
+            if (
+                getattr(getattr(error.orig, "diag", None), "constraint_name", None)
+                == "uq_attendance_active_individual"
+            ):
+                raise ValueError("Individual is already checked in") from None
+            raise
+        except Exception:
+            db.session.rollback()
+            raise
 
         try:
             cls._update_event_occupancy(current_event_id)
-        except Exception as e:
-            logger.warning(f"Failed to update event occupancy for event {current_event_id}: {str(e)}")
-        
-        # Return dict format that service expects
+        except Exception as error:
+            db.session.rollback()
+            logger.warning(
+                "Attendance committed but event %s occupancy refresh failed (%s)",
+                current_event_id,
+                type(error).__name__,
+            )
+
         return {
             "record": record,
             "transfer_occurred": transfer_occurred,
             "previous_center_id": previous_center_id,
-            "previous_center_name": previous_center_name
+            "previous_center_name": previous_center_name,
         }
 
 
@@ -544,29 +588,7 @@ class AttendanceRecord(db.Model):
         check_out_time: str,
         notes: Optional[str] = None
     ) -> Optional["AttendanceRecord"]:
-        """Check out an individual by finding their current check-in record."""
-        
-        # Find the active check-in record for this individual
-        current_record_query = text("""
-            SELECT record_id 
-            FROM attendance_records 
-            WHERE individual_id = :individual_id 
-            AND status = 'checked_in' 
-            AND check_out_time IS NULL
-            ORDER BY check_in_time DESC
-            LIMIT 1
-        """)
-        
-        result = db.session.execute(
-            current_record_query,
-            {"individual_id": record_id}
-        ).fetchone()
-        
-        if not result:
-            raise ValueError("No active check-in found for this individual")
-        
-        record_id = result[0]
-        
+        """Check out the specified active attendance record."""
         return cls._check_out_by_record_id(record_id, check_out_time, notes)
     
 
@@ -575,110 +597,92 @@ class AttendanceRecord(db.Model):
         cls,
         record_id: int,
         check_out_time: str,
-        notes: Optional[str] = None
+        notes: Optional[str] = None,
     ) -> Optional["AttendanceRecord"]:
-        """Internal method to check out by record ID."""
-        current_record = cls.get_by_id(record_id)
-        if not current_record:
-            return None
+        """Lock and check out the specified attendance record."""
+        try:
+            current_record = cls.get_by_id(record_id, for_update=True)
+            if not current_record:
+                db.session.rollback()
+                return None
+            if (
+                current_record.status != "checked_in"
+                or current_record.check_out_time is not None
+            ):
+                raise ValueError("Individual is not currently checked in")
 
-        # Verify individual is currently checked in
-        if current_record.status != 'checked_in' or current_record.check_out_time is not None:
-            raise ValueError("Individual is not currently checked in")
-
-        # Update the existing record to checked_out
-        update_data = {
-            "status": "checked_out",
-            "check_out_time": check_out_time,
-            "notes": f"{current_record.notes or ''} Checked out. {notes or ''}".strip()
-        }
-
-        updated_record = cls.update(record_id, update_data)
+            checkout_notes = f"{current_record.notes or ''} Checked out. {notes or ''}"
+            updated_record = cls.update(
+                record_id,
+                {
+                    "status": "checked_out",
+                    "check_out_time": check_out_time,
+                    "notes": checkout_notes.strip(),
+                },
+                commit=False,
+            )
+            db.session.commit()
+        except Exception:
+            db.session.rollback()
+            raise
 
         if updated_record:
             try:
                 cls._update_event_occupancy(current_record.event_id)
-            except Exception as e:
-                logger.warning(f"Failed to update event occupancy for event {current_record.event_id}: {str(e)}")
-        
+            except Exception as error:
+                db.session.rollback()
+                logger.warning(
+                    "Checkout committed but event %s occupancy refresh failed (%s)",
+                    current_record.event_id,
+                    type(error).__name__,
+                )
         return updated_record
 
     @classmethod
     def check_out_multiple_individuals(
-        cls,
-        check_out_data: List[Dict[str, Any]]
+        cls, check_out_data: List[Dict[str, Any]]
     ) -> Dict[str, Any]:
-        """Check out multiple individuals in a batch operation by updating their current records."""
-        from app.models import db
-        
+        """Process each checkout in its own transaction and report partial results."""
         successful_checkouts = []
         failed_checkouts = []
-        
-        for i, data in enumerate(check_out_data):
-            try:
-                record_id = data["record_id"]
-                check_out_time = data.get("check_out_time")
-                notes = data.get("notes")
-                
-                # Get current record
-                current_record = cls.get_by_id(record_id)
-                if not current_record:
-                    failed_checkouts.append({
-                        "index": i,
-                        "record_id": record_id,
-                        "error": "Attendance record not found"
-                    })
-                    continue
 
-                # Check if individual is currently checked in
-                if current_record.status != 'checked_in' or current_record.check_out_time is not None:
-                    failed_checkouts.append({
-                        "index": i,
-                        "record_id": record_id,
-                        "error": "Individual is not currently checked in"
-                    })
-                    continue
-                
-                # Update the existing record to checked_out
-                update_data = {
-                    "status": "checked_out",
-                    "check_out_time": check_out_time or datetime.now().isoformat(),
-                    "notes": f"{current_record.notes or ''} Checked out. {notes or ''}".strip()
-                    # REMOVED: "updated_at": datetime.now() - This is automatically added in the update() method
-                }
-                
-                updated_record = cls.update(record_id, update_data)
-                
-                if updated_record:
-                    successful_checkouts.append({
-                        "record_id": updated_record.record_id,
-                        "individual_id": updated_record.individual_id,
-                        "original_record_id": record_id
-                    })
-                    
-                    # Update event occupancy
-                    try:
-                        cls._update_event_occupancy(current_record.event_id)
-                    except Exception as e:
-                        logger.warning(f"Failed to update event occupancy for event {current_record.event_id}: {str(e)}")
-                else:
-                    failed_checkouts.append({
-                        "index": i,
-                        "record_id": record_id,
-                        "error": "Failed to update check-out record"
-                    })
-                    
+        for index, data in enumerate(check_out_data):
+            record_id = data.get("record_id")
+            try:
+                updated_record = cls.check_out_individual(
+                    record_id,
+                    data.get("check_out_time") or datetime.now().isoformat(),
+                    data.get("notes"),
+                )
+            except ValueError as error:
+                error_message = str(error)
             except Exception as error:
-                failed_checkouts.append({
-                    "index": i,
-                    "record_id": data.get("record_id"),
-                    "error": str(error)
-                })
-                logger.error(f"Failed to check out record at index {i}: {str(error)}")
-        
+                error_message = "Failed to check out individual"
+                logger.error(
+                    "Batch checkout failed for record %s at index %s (%s)",
+                    record_id,
+                    index,
+                    type(error).__name__,
+                )
+            else:
+                if updated_record:
+                    successful_checkouts.append(
+                        {
+                            "record_id": updated_record.record_id,
+                            "individual_id": updated_record.individual_id,
+                            "original_record_id": record_id,
+                        }
+                    )
+                    continue
+                error_message = "Attendance record not found"
+
+            failed_checkouts.append(
+                {"index": index, "record_id": record_id, "error": error_message}
+            )
+
         return {
             "successful_checkouts": successful_checkouts,
-            "failed_checkouts": failed_checkouts
+            "failed_checkouts": failed_checkouts,
         }
 
 
@@ -689,7 +693,7 @@ class AttendanceRecord(db.Model):
         transfer_to_center_id: int,
         transfer_time: str,
         recorded_by_user_id: int,
-        notes: Optional[str] = None
+        notes: Optional[str] = None,
     ) -> Optional["AttendanceRecord"]:
         """
         Transfer an individual to a different center by:
@@ -699,57 +703,70 @@ class AttendanceRecord(db.Model):
         NOTE: This does NOT automatically check the individual in to the destination center.
         A separate, explicit check-in is required once their arrival is confirmed.
         """
-        # Get current record
-        current_record = cls.get_by_id(record_id)
-        if not current_record:
-            return None
+        try:
+            current_record = cls.get_by_id(record_id, for_update=True)
+            if not current_record:
+                db.session.rollback()
+                return None
+            if current_record.center_id == transfer_to_center_id:
+                raise ValueError("Cannot transfer to the same center")
+            if (
+                current_record.status != "checked_in"
+                or current_record.check_out_time is not None
+            ):
+                raise ValueError("Individual is not currently checked in")
 
-        # Check if transferring to same center
-        if current_record.center_id == transfer_to_center_id:
-            raise ValueError("Cannot transfer to the same center")
+            destination_event_id = cls.get_current_event_for_center(
+                transfer_to_center_id
+            )
+            if destination_event_id is None:
+                raise ValueError(
+                    f"No active event found for destination center {transfer_to_center_id}"
+                )
 
-        # Check if individual is currently checked in
-        if current_record.status != "checked_in" or current_record.check_out_time is not None:
-            raise ValueError("Individual is not currently checked in")
-
-        # Validate destination center has an active event
-        destination_event_id = cls.get_current_event_for_center(transfer_to_center_id)
-        if destination_event_id is None:
-            raise ValueError(f"No active event found for destination center {transfer_to_center_id}")
-
-        # Check out from current center first
-        check_out_data = {
-            "status": "checked_out",
-            "check_out_time": transfer_time,
-            "notes": f"Checked out for transfer to center {transfer_to_center_id}. {notes or ''}"
-        }
-        
-        cls.update(record_id, check_out_data)
-
-        # Create new transfer record
-        transfer_data = {
-            "individual_id": current_record.individual_id,
-            "center_id": transfer_to_center_id,  # Destination center
-            "event_id": destination_event_id,  # Destination center's event
-            "household_id": current_record.household_id,
-            "status": "transferred",
-            "transfer_from_center_id": current_record.center_id,  # Source center
-            "transfer_to_center_id": transfer_to_center_id,  # Destination center
-            "transfer_time": transfer_time,
-            "recorded_by_user_id": recorded_by_user_id,
-            "notes": f"Transferred from center {current_record.center_id}. {notes or ''}"
-        }
-
-        # Create the transfer record
-        transfer_record = cls.create(transfer_data)
+            cls.update(
+                record_id,
+                {
+                    "status": "checked_out",
+                    "check_out_time": transfer_time,
+                    "notes": (
+                        f"Checked out for transfer to center {transfer_to_center_id}. "
+                        f"{notes or ''}"
+                    ),
+                },
+                commit=False,
+            )
+            transfer_record = cls.create(
+                {
+                    "individual_id": current_record.individual_id,
+                    "center_id": transfer_to_center_id,
+                    "event_id": destination_event_id,
+                    "household_id": current_record.household_id,
+                    "status": "transferred",
+                    "transfer_from_center_id": current_record.center_id,
+                    "transfer_to_center_id": transfer_to_center_id,
+                    "transfer_time": transfer_time,
+                    "recorded_by_user_id": recorded_by_user_id,
+                    "notes": f"Transferred from center {current_record.center_id}. {notes or ''}",
+                },
+                commit=False,
+            )
+            db.session.commit()
+        except Exception:
+            db.session.rollback()
+            raise
 
         try:
+            cls._update_event_occupancy(current_record.event_id)
             # Update events associated with the old center
             cls._update_associated_events_occupancy(current_record.center_id)
             # Update events associated with the new center  
             cls._update_associated_events_occupancy(transfer_to_center_id)
         except Exception as e:
-            logger.warning(f"Failed to update event occupancies during transfer: {str(e)}")
+            db.session.rollback()
+            logger.warning(
+                f"Failed to update event occupancies during transfer: {str(e)}"
+            )
 
         return transfer_record
 

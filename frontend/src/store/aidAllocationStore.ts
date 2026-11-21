@@ -7,7 +7,7 @@ import type {
     CreateAllocationData,
     UpdateAllocationData,
     AllocationResponse,
-    AllocationsResponse
+    AllocationsResponse,
 } from "@/types/aid";
 
 interface AidAllocationState {
@@ -90,7 +90,7 @@ export const useAidAllocationStore = create<AidAllocationState>((set, get) => ({
         set({ entriesPerPage: entries, currentPage: 1 });
     },
 
-    setSortConfig: (config) => {
+    setSortConfig: config => {
         set({ sortConfig: config, currentPage: 1 });
     },
 
@@ -119,7 +119,6 @@ export const useAidAllocationStore = create<AidAllocationState>((set, get) => ({
             });
         } catch (error) {
             const message = error instanceof Error ? error.message : "Failed to fetch allocations";
-            console.error("Error fetching allocations:", message, error);
             set({
                 allocationsError: message,
                 allocationsLoading: false,
@@ -152,7 +151,10 @@ export const useAidAllocationStore = create<AidAllocationState>((set, get) => ({
         set({ allocationsLoading: true, allocationsError: null });
 
         try {
-            const response: AllocationResponse = await AidAllocationService.updateAllocation(id, updates);
+            const response: AllocationResponse = await AidAllocationService.updateAllocation(
+                id,
+                updates
+            );
 
             // Refresh allocations
             await get().fetchAllocations();
@@ -170,7 +172,7 @@ export const useAidAllocationStore = create<AidAllocationState>((set, get) => ({
 
         try {
             const response: AllocationResponse = await AidAllocationService.deleteAllocation(id);
-            
+
             // Check if the delete was successful
             if (!response.success) {
                 throw new Error(response.message || "Failed to delete allocation");
@@ -202,7 +204,7 @@ export const useAidAllocationStore = create<AidAllocationState>((set, get) => ({
         set({ allocationsLoading: true, allocationsError: null, loading: true, error: null });
 
         try {
-            const params: Omit<GetAllocationsParams, 'center_id'> = {
+            const params: Omit<GetAllocationsParams, "center_id"> = {
                 search: searchQuery,
                 page: currentPage,
                 limit: entriesPerPage,
@@ -210,8 +212,10 @@ export const useAidAllocationStore = create<AidAllocationState>((set, get) => ({
                 sortOrder: sortConfig?.direction || undefined,
             };
 
-            console.log(`[DEBUG] Fetching center allocations for center: ${centerId}`);
-            const response: AllocationsResponse = await AidAllocationService.getCenterAllocations(centerId, params);
+            const response: AllocationsResponse = await AidAllocationService.getCenterAllocations(
+                centerId,
+                params
+            );
 
             set({
                 allocations: response.data.results,
@@ -221,7 +225,6 @@ export const useAidAllocationStore = create<AidAllocationState>((set, get) => ({
             });
         } catch (error) {
             const message = error instanceof Error ? error.message : "Failed to fetch allocations";
-            console.error(`[ERROR] fetchCenterAllocations error: ${message}`, error);
             set({
                 allocationsError: message,
                 allocationsLoading: false,

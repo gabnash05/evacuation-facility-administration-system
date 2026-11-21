@@ -4,7 +4,13 @@ import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogHeader,
+    DialogTitle,
+} from "@/components/ui/dialog";
 import { useEvacuationCenterStore } from "@/store/evacuationCenterStore";
 import { DuplicateCenterDialog } from "./DuplicateCenterDialog";
 import { ConfirmationDialog } from "./ConfirmationDialog";
@@ -179,6 +185,7 @@ export function EditEvacuationCenterForm({
     const [confirmationDialog, setConfirmationDialog] = useState({
         isOpen: false,
     });
+    const [submitError, setSubmitError] = useState<string | null>(null);
     const [showMapPicker, setShowMapPicker] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -240,6 +247,10 @@ export function EditEvacuationCenterForm({
         }));
     };
 
+    const handleLocationClear = () => {
+        setFormData(prev => ({ ...prev, latitude: undefined, longitude: undefined }));
+    };
+
     // Handle opening map picker
     const handleOpenMapPicker = () => {
         setShowMapPicker(true);
@@ -292,6 +303,7 @@ export function EditEvacuationCenterForm({
         e.preventDefault();
 
         if (!center) return;
+        setSubmitError(null);
         setConfirmationDialog({ isOpen: true });
     };
 
@@ -310,11 +322,12 @@ export function EditEvacuationCenterForm({
             }
 
             onClose();
-        } catch (error: any) {
+        } catch (error: unknown) {
+            const message = error instanceof Error ? error.message : "";
             if (
-                error.message?.includes("already exists") ||
-                error.message?.includes("duplicate") ||
-                error.message?.includes("name already")
+                message.includes("already exists") ||
+                message.includes("duplicate") ||
+                message.includes("name already")
             ) {
                 setConfirmationDialog({ isOpen: false });
                 setDuplicateDialog({
@@ -322,8 +335,8 @@ export function EditEvacuationCenterForm({
                     centerName: formData.center_name,
                 });
             } else {
-                console.error("Failed to update center:", error);
                 setConfirmationDialog({ isOpen: false });
+                setSubmitError("Failed to update the center. Please try again.");
             }
         }
     };
@@ -364,15 +377,25 @@ export function EditEvacuationCenterForm({
     return (
         <>
             <Dialog open={isOpen} onOpenChange={onClose}>
-                <DialogContent className={`${showMapPicker ? 'min-w-[65vw] max-w-[85vw] h-[85vh]' : 'max-w-4xl max-h-[90vh]'}`}>
+                <DialogContent
+                    className={`${showMapPicker ? "min-w-[65vw] max-w-[85vw] h-[85vh]" : "max-w-4xl max-h-[90vh]"}`}
+                >
                     {showMapPicker ? (
                         <div className="flex flex-col h-full">
+                            <DialogHeader className="sr-only">
+                                <DialogTitle>Select evacuation center location</DialogTitle>
+                                <DialogDescription>
+                                    Select a point on the map, then confirm the location.
+                                </DialogDescription>
+                            </DialogHeader>
                             <div className="flex-1 min-h-0">
                                 <MapLocationPicker
                                     onLocationSelect={handleLocationSelect}
+                                    onLocationClear={handleLocationClear}
                                     onCancel={handleCloseMapPicker}
                                     initialLocation={
-                                        formData.latitude && formData.longitude
+                                        formData.latitude !== undefined &&
+                                        formData.longitude !== undefined
                                             ? [formData.latitude, formData.longitude]
                                             : null
                                     }
@@ -381,7 +404,7 @@ export function EditEvacuationCenterForm({
                                     className="h-full"
                                 />
                             </div>
-                            
+
                             {/* Buttons at the bottom - always visible */}
                             <div className="flex justify-end gap-2 pt-4 mt-4 border-t shrink-0">
                                 <Button
@@ -394,7 +417,10 @@ export function EditEvacuationCenterForm({
                                 <Button
                                     type="button"
                                     onClick={handleCloseMapPicker}
-                                    disabled={!formData.latitude || !formData.longitude}
+                                    disabled={
+                                        formData.latitude === undefined ||
+                                        formData.longitude === undefined
+                                    }
                                     className="bg-blue-600 text-white hover:bg-blue-700"
                                 >
                                     Confirm Location
@@ -409,11 +435,17 @@ export function EditEvacuationCenterForm({
                                     <DialogTitle className="text-lg font-semibold">
                                         Edit Evacuation Center
                                     </DialogTitle>
+                                    <DialogDescription>
+                                        Update the center details and save your changes.
+                                    </DialogDescription>
                                 </DialogHeader>
                                 <form onSubmit={handleSubmit} className="space-y-5">
                                     {/* Center Name */}
                                     <div className="space-y-2">
-                                        <Label htmlFor="center_name" className="text-sm font-medium">
+                                        <Label
+                                            htmlFor="center_name"
+                                            className="text-sm font-medium"
+                                        >
                                             Center Name
                                         </Label>
                                         <Input
@@ -421,7 +453,9 @@ export function EditEvacuationCenterForm({
                                             type="text"
                                             placeholder="Enter center name"
                                             value={formData.center_name}
-                                            onChange={e => handleInputChange("center_name", e.target.value)}
+                                            onChange={e =>
+                                                handleInputChange("center_name", e.target.value)
+                                            }
                                             required
                                             className="w-full"
                                         />
@@ -437,7 +471,9 @@ export function EditEvacuationCenterForm({
                                             type="text"
                                             placeholder="Enter full address"
                                             value={formData.address}
-                                            onChange={e => handleInputChange("address", e.target.value)}
+                                            onChange={e =>
+                                                handleInputChange("address", e.target.value)
+                                            }
                                             required
                                             className="w-full"
                                         />
@@ -445,11 +481,10 @@ export function EditEvacuationCenterForm({
 
                                     {/* Location Selection */}
                                     <div className="space-y-2">
-                                        <Label className="text-sm font-medium">
-                                            Location
-                                        </Label>
+                                        <Label className="text-sm font-medium">Location</Label>
                                         <div className="space-y-3">
-                                            {formData.latitude && formData.longitude ? (
+                                            {formData.latitude !== undefined &&
+                                            formData.longitude !== undefined ? (
                                                 <div className="p-4 border border-green-200 bg-green-50 rounded-md dark:border-green-800 dark:bg-green-950/30">
                                                     <div className="flex items-start justify-between">
                                                         <div className="space-y-2">
@@ -461,12 +496,26 @@ export function EditEvacuationCenterForm({
                                                             </div>
                                                             <div className="text-sm space-y-1">
                                                                 <div>
-                                                                    <span className="text-muted-foreground">Latitude: </span>
-                                                                    <span className="font-mono">{formData.latitude.toFixed(6)}°</span>
+                                                                    <span className="text-muted-foreground">
+                                                                        Latitude:{" "}
+                                                                    </span>
+                                                                    <span className="font-mono">
+                                                                        {formData.latitude.toFixed(
+                                                                            6
+                                                                        )}
+                                                                        °
+                                                                    </span>
                                                                 </div>
                                                                 <div>
-                                                                    <span className="text-muted-foreground">Longitude: </span>
-                                                                    <span className="font-mono">{formData.longitude.toFixed(6)}°</span>
+                                                                    <span className="text-muted-foreground">
+                                                                        Longitude:{" "}
+                                                                    </span>
+                                                                    <span className="font-mono">
+                                                                        {formData.longitude.toFixed(
+                                                                            6
+                                                                        )}
+                                                                        °
+                                                                    </span>
                                                                 </div>
                                                             </div>
                                                         </div>
@@ -480,8 +529,21 @@ export function EditEvacuationCenterForm({
                                                     </div>
                                                 </div>
                                             ) : (
-                                                <div className="p-6 border-2 border-dashed border-muted-foreground/25 rounded-lg text-center cursor-pointer hover:border-muted-foreground/50 transition-colors bg-background dark:bg-background"
-                                                    onClick={handleOpenMapPicker}>
+                                                <div
+                                                    role="button"
+                                                    tabIndex={0}
+                                                    className="p-6 border-2 border-dashed border-muted-foreground/25 rounded-lg text-center cursor-pointer hover:border-muted-foreground/50 transition-colors bg-background dark:bg-background"
+                                                    onClick={handleOpenMapPicker}
+                                                    onKeyDown={event => {
+                                                        if (
+                                                            event.key === "Enter" ||
+                                                            event.key === " "
+                                                        ) {
+                                                            event.preventDefault();
+                                                            handleOpenMapPicker();
+                                                        }
+                                                    }}
+                                                >
                                                     <div className="space-y-3">
                                                         <div className="text-muted-foreground">
                                                             <MapPin className="mx-auto h-12 w-12" />
@@ -491,7 +553,8 @@ export function EditEvacuationCenterForm({
                                                                 Click to select location on map
                                                             </p>
                                                             <p className="text-xs text-muted-foreground">
-                                                                Required for mapping and proximity features
+                                                                Required for mapping and proximity
+                                                                features
                                                             </p>
                                                         </div>
                                                     </div>
@@ -533,7 +596,9 @@ export function EditEvacuationCenterForm({
                                             Photo of Evacuation Center
                                         </Label>
 
-                                        {center?.photo_data && !removeExistingPhoto && !photoPreview ? (
+                                        {center?.photo_data &&
+                                        !removeExistingPhoto &&
+                                        !photoPreview ? (
                                             // Show existing center photo from backend (base64)
                                             <div className="border border-border rounded-lg bg-background">
                                                 <div className="flex flex-col items-center space-y-3 p-4 pb-2">
@@ -687,6 +752,11 @@ export function EditEvacuationCenterForm({
 
                             {/* Submit Button - Fixed at bottom */}
                             <div className="border-t pt-4 pb-1 mt-2 shrink-0">
+                                {submitError && (
+                                    <p role="alert" className="text-destructive text-sm">
+                                        {submitError}
+                                    </p>
+                                )}
                                 <div className="flex justify-end">
                                     <Button
                                         type="button"
@@ -699,7 +769,11 @@ export function EditEvacuationCenterForm({
                                     <Button
                                         type="submit"
                                         onClick={handleSubmit}
-                                        disabled={loading || !formData.latitude || !formData.longitude}
+                                        disabled={
+                                            loading ||
+                                            formData.latitude === undefined ||
+                                            formData.longitude === undefined
+                                        }
                                         className="bg-blue-600 text-white hover:bg-blue-700 px-4 py-2 text-sm font-medium"
                                     >
                                         {loading ? "Updating..." : "Update Center"}

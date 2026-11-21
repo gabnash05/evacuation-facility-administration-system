@@ -2,9 +2,14 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogHeader,
+    DialogTitle,
+} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { AlertCircle, CalendarIcon, CheckCircle, Loader2 } from "lucide-react";
@@ -19,15 +24,17 @@ interface ResolveEventModalProps {
     event: Event | null;
 }
 
-export function ResolveEventModal({
-    isOpen,
-    onClose,
-    event,
-}: ResolveEventModalProps) {
+function getErrorMessage(error: unknown): string {
+    return error instanceof Error && error.message
+        ? error.message
+        : "Failed to resolve event. Please try again.";
+}
+
+export function ResolveEventModal({ isOpen, onClose, event }: ResolveEventModalProps) {
     const [end_date, setEndDate] = useState<Date | undefined>(new Date());
     const [error, setError] = useState<string | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
-    
+
     const { resolveEvent, loading: storeLoading } = useEventStore();
 
     useEffect(() => {
@@ -81,9 +88,8 @@ export function ResolveEventModal({
             } else {
                 setError(result.message || "Failed to resolve event");
             }
-        } catch (err: any) {
-            setError(err.message || "Failed to resolve event. Please try again.");
-            console.error("Resolve event error:", err);
+        } catch (error: unknown) {
+            setError(getErrorMessage(error));
         } finally {
             setIsSubmitting(false);
         }
@@ -100,11 +106,14 @@ export function ResolveEventModal({
                         <CheckCircle className="h-5 w-5 text-green-600" />
                         Resolve Event
                     </DialogTitle>
+                    <DialogDescription>
+                        Set the final date and close this emergency event.
+                    </DialogDescription>
                 </DialogHeader>
 
                 {/* Error Display */}
                 {error && (
-                    <div className="bg-destructive/15 text-destructive p-3 rounded-md">
+                    <div className="bg-destructive/15 text-destructive p-3 rounded-md" role="alert">
                         <div className="flex items-center gap-2">
                             <AlertCircle className="h-4 w-4" />
                             <span className="text-sm">{error}</span>
@@ -121,7 +130,7 @@ export function ResolveEventModal({
                                 {event.event_name}
                             </p>
                         </div>
-                        
+
                         <div>
                             <p className="text-sm font-medium mb-1">Event Type</p>
                             <p className="text-sm text-muted-foreground bg-muted p-2 rounded">
@@ -142,6 +151,7 @@ export function ResolveEventModal({
                                 <PopoverTrigger asChild>
                                     <Button
                                         variant="outline"
+                                        aria-label="Resolution end date"
                                         className={cn(
                                             "w-full justify-start text-left font-normal",
                                             !end_date && "text-muted-foreground"
@@ -159,14 +169,17 @@ export function ResolveEventModal({
                                         mode="single"
                                         selected={end_date}
                                         onSelect={setEndDate}
-                                        disabled={date => date > new Date() || date < new Date(event.date_declared)}
+                                        disabled={date =>
+                                            date > new Date() ||
+                                            date < new Date(event.date_declared)
+                                        }
                                         captionLayout="dropdown-years"
                                         fromDate={new Date(event.date_declared)}
                                         toDate={new Date()}
                                     />
                                 </PopoverContent>
                             </Popover>
-                            <p className="text-xs text-muted-foreground">
+                            <div className="text-xs text-muted-foreground">
                                 Marking an event as resolved will:
                                 <ul className="list-disc list-inside mt-1 space-y-1">
                                     <li>Change the event status to "Resolved"</li>
@@ -174,7 +187,7 @@ export function ResolveEventModal({
                                     <li>Close attendance for this event</li>
                                     <li>Allow creating new events</li>
                                 </ul>
-                            </p>
+                            </div>
                         </div>
                     </div>
                 )}
@@ -191,7 +204,10 @@ export function ResolveEventModal({
                     </Button>
                     <Button
                         onClick={handleResolveEvent}
-                        className="gap-2 bg-green-600 hover:bg-green-700 px-4 py-2 text-sm font-medium"
+                        className={cn(
+                            "gap-2 bg-green-600 hover:bg-green-700",
+                            "px-4 py-2 text-sm font-medium"
+                        )}
                         disabled={!isFormValid || isLoading}
                     >
                         {isLoading ? (

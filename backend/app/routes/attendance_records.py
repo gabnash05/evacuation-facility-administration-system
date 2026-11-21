@@ -27,11 +27,47 @@ from app.services.attendance_records_service import (
     check_in_multiple_individuals,
 )
 from app.services.user_service import get_current_user
+from app.models.individual import Individual
 
 # Configure logger for this module
 logger = logging.getLogger(__name__)
 
 attendance_record_bp = Blueprint("attendance_record_bp", __name__)
+
+
+def _current_actor():
+    """Resolve the JWT identity to an active persisted account."""
+    identity = get_jwt_identity()
+    try:
+        user_id = int(identity)
+    except (TypeError, ValueError):
+        return None
+    actor = get_current_user(user_id)
+    return actor if actor and actor.is_active else None
+
+
+def _actor_or_response():
+    actor = _current_actor()
+    if not actor:
+        return None, (jsonify({"success": False, "message": "Invalid token"}), 401)
+    return actor, None
+
+
+def _may_access_individual_history(actor, individual_id):
+    individual = Individual.get_by_id(individual_id)
+    household = individual and individual.get("household")
+    return (
+        individual
+        and household
+        and (
+            actor.role in {"super_admin", "city_admin"}
+            or (
+                actor.role in {"center_admin", "volunteer"}
+                and actor.center_id is not None
+                and actor.center_id == household["center_id"]
+            )
+        )
+    )
 
 
 @attendance_record_bp.route("/attendance", methods=["GET"])
@@ -87,17 +123,21 @@ def get_attendance_records_route() -> Tuple:
                 400,
             )
 
-        # Get current user for role-based access control
-        current_user_id = get_jwt_identity()
-        current_user = get_current_user(current_user_id)
-        
-        if current_user and current_user.role in ['center_admin', 'volunteer'] and current_user.center_id:
+        current_user, response = _actor_or_response()
+        if response:
+            return response
+
+        if current_user.role in ['center_admin', 'volunteer']:
+            if not current_user.center_id:
+                return jsonify({"success": False, "message": "No assigned center"}), 403
             if center_id and center_id != current_user.center_id:
                 return jsonify({
                     "success": False, 
                     "message": "Access denied: Cannot view attendance records for other centers"
                 }), 403
             center_id = current_user.center_id  # Force filter by user's center
+        elif current_user.role not in ['super_admin', 'city_admin']:
+            return jsonify({"success": False, "message": "Access denied"}), 403
 
         logger.info(
             "Fetching attendance records - search: %s, center_id: %s, event_id: %s, status: %s, page: %s, limit: %s, sort_by: %s, sort_order: %s",
@@ -180,17 +220,17 @@ def get_current_attendees_route() -> Tuple:
                 400,
             )
 
-        # Get current user for role-based access control
-        current_user_id = get_jwt_identity()
-        current_user = get_current_user(current_user_id)
-        
-        if current_user and current_user.role in ['center_admin', 'volunteer'] and current_user.center_id:
+        current_user, response = _actor_or_response()
+        if response:
+            return response
+        if current_user.role in {"center_admin", "volunteer"}:
+            if not current_user.center_id:
+                return jsonify({"success": False, "message": "No assigned center"}), 403
             if center_id and center_id != current_user.center_id:
-                return jsonify({
-                    "success": False, 
-                    "message": "Access denied: Cannot view current attendees for other centers"
-                }), 403
-            center_id = current_user.center_id  # Force filter by user's center
+                return jsonify({"success": False, "message": "Access denied"}), 403
+            center_id = current_user.center_id
+        elif current_user.role not in {"super_admin", "city_admin"}:
+            return jsonify({"success": False, "message": "Access denied"}), 403
 
         if center_id:
             # Get current evacuees for specific center
@@ -281,17 +321,17 @@ def get_event_attendance_route(event_id: int) -> Tuple:
                 400,
             )
 
-        # Get current user for role-based access control
-        current_user_id = get_jwt_identity()
-        current_user = get_current_user(current_user_id)
-        
-        if current_user and current_user.role in ['center_admin', 'volunteer'] and current_user.center_id:
+        current_user, response = _actor_or_response()
+        if response:
+            return response
+        if current_user.role in {"center_admin", "volunteer"}:
+            if not current_user.center_id:
+                return jsonify({"success": False, "message": "No assigned center"}), 403
             if center_id and center_id != current_user.center_id:
-                return jsonify({
-                    "success": False, 
-                    "message": "Access denied: Cannot view event attendance for other centers"
-                }), 403
-            center_id = current_user.center_id  # Force filter by user's center
+                return jsonify({"success": False, "message": "Access denied"}), 403
+            center_id = current_user.center_id
+        elif current_user.role not in {"super_admin", "city_admin"}:
+            return jsonify({"success": False, "message": "Access denied"}), 403
 
         logger.info("Fetching attendance records for event: %s", event_id)
 
@@ -363,17 +403,17 @@ def get_transfer_records_route() -> Tuple:
                 400,
             )
 
-        # Get current user for role-based access control
-        current_user_id = get_jwt_identity()
-        current_user = get_current_user(current_user_id)
-        
-        if current_user and current_user.role in ['center_admin', 'volunteer'] and current_user.center_id:
+        current_user, response = _actor_or_response()
+        if response:
+            return response
+        if current_user.role in {"center_admin", "volunteer"}:
+            if not current_user.center_id:
+                return jsonify({"success": False, "message": "No assigned center"}), 403
             if center_id and center_id != current_user.center_id:
-                return jsonify({
-                    "success": False, 
-                    "message": "Access denied: Cannot view transfer records for other centers"
-                }), 403
-            center_id = current_user.center_id  # Force filter by user's center
+                return jsonify({"success": False, "message": "Access denied"}), 403
+            center_id = current_user.center_id
+        elif current_user.role not in {"super_admin", "city_admin"}:
+            return jsonify({"success": False, "message": "Access denied"}), 403
 
         logger.info("Fetching transfer records - center_id: %s", center_id)
 
@@ -428,10 +468,15 @@ def check_in_individual_route() -> Tuple:
         if not data:
             return jsonify({"success": False, "message": "No data provided"}), 400
 
-        # Get current user ID from JWT token if recorded_by_user_id not provided
-        current_user_id = get_jwt_identity()
-        if "recorded_by_user_id" not in data:
-            data["recorded_by_user_id"] = current_user_id
+        actor, response = _actor_or_response()
+        if response:
+            return response
+        if actor.role in {"center_admin", "volunteer"}:
+            if not actor.center_id:
+                return jsonify({"success": False, "message": "No assigned center"}), 403
+        elif actor.role not in {"super_admin", "city_admin"}:
+            return jsonify({"success": False, "message": "Access denied"}), 403
+        data["recorded_by_user_id"] = actor.user_id
 
         # Validate required fields
         required_fields = ["individual_id", "center_id"]
@@ -448,7 +493,7 @@ def check_in_individual_route() -> Tuple:
             }), 400
 
         # Get current user for role-based access control
-        current_user = get_current_user(current_user_id)
+        current_user = actor
         
         if current_user and current_user.role in ['center_admin', 'volunteer'] and current_user.center_id:
             if data["center_id"] != current_user.center_id:
@@ -531,11 +576,14 @@ def check_in_multiple_individuals_route() -> Tuple:
                 "message": "Maximum batch size is 50 individuals per request"
             }), 400
 
-        # Get current user ID from JWT token
-        current_user_id = get_jwt_identity()
-        
-        # Get current user for role-based access control
-        current_user = get_current_user(current_user_id)
+        current_user, response = _actor_or_response()
+        if response:
+            return response
+        if current_user.role in {"center_admin", "volunteer"}:
+            if not current_user.center_id:
+                return jsonify({"success": False, "message": "No assigned center"}), 403
+        elif current_user.role not in {"super_admin", "city_admin"}:
+            return jsonify({"success": False, "message": "Access denied"}), 403
         
         # Validate and prepare check-in data
         validated_data = []
@@ -556,9 +604,7 @@ def check_in_multiple_individuals_route() -> Tuple:
                         "message": f"Missing required field '{field}' for individual at index {i}"
                     }), 400
 
-            # Set default recorded_by_user_id if not provided
-            if "recorded_by_user_id" not in item:
-                item["recorded_by_user_id"] = current_user_id
+            item["recorded_by_user_id"] = current_user.user_id
 
             validated_data.append(item)
 
@@ -733,25 +779,14 @@ def check_out_individual_route(record_id: int) -> Tuple:
     try:
         data = request.get_json() or {}
 
-        # Determine current user and enforce center-based restriction for center-bound roles
-        current_user_id = get_jwt_identity()
-        try:
-            current_user_id_int = int(current_user_id) if current_user_id is not None else None
-        except (TypeError, ValueError):
-            current_user_id_int = None
-
-        current_user = get_current_user(current_user_id_int) if current_user_id_int is not None else None
-
-        if not current_user:
-            return (
-                jsonify(
-                    {
-                        "success": False,
-                        "message": "Unauthorized: Unable to determine current user",
-                    }
-                ),
-                401,
-            )
+        current_user, response = _actor_or_response()
+        if response:
+            return response
+        if current_user.role in {"center_admin", "volunteer"}:
+            if not current_user.center_id:
+                return jsonify({"success": False, "message": "No assigned center"}), 403
+        elif current_user.role not in {"super_admin", "city_admin"}:
+            return jsonify({"success": False, "message": "Access denied"}), 403
 
         # Get the attendance record to check its center
         record_result = get_attendance_record_by_id(record_id)
@@ -850,20 +885,14 @@ def check_out_multiple_individuals_route() -> Tuple:
                 "message": "Maximum batch size is 50 check-outs per request"
             }), 400
 
-        # Determine current user for center-based restriction checks
-        current_user_id = get_jwt_identity()
-        try:
-            current_user_id_int = int(current_user_id) if current_user_id is not None else None
-        except (TypeError, ValueError):
-            current_user_id_int = None
-
-        current_user = get_current_user(current_user_id_int) if current_user_id_int is not None else None
-
-        if not current_user:
-            return jsonify({
-                "success": False,
-                "message": "Unauthorized: Unable to determine current user",
-            }), 401
+        current_user, response = _actor_or_response()
+        if response:
+            return response
+        if current_user.role in {"center_admin", "volunteer"}:
+            if not current_user.center_id:
+                return jsonify({"success": False, "message": "No assigned center"}), 403
+        elif current_user.role not in {"super_admin", "city_admin"}:
+            return jsonify({"success": False, "message": "Access denied"}), 403
 
         # Validate each check-out item
         required_fields = ["record_id"]
@@ -975,25 +1004,14 @@ def transfer_individual_route(record_id: int) -> Tuple:
         if "transfer_to_center_id" not in data:
             return jsonify({"success": False, "message": "Missing required field: transfer_to_center_id"}), 400
 
-        # Get current user ID from JWT token
-        current_user_id = get_jwt_identity()
-        try:
-            current_user_id_int = int(current_user_id) if current_user_id is not None else None
-        except (TypeError, ValueError):
-            current_user_id_int = None
-
-        current_user = get_current_user(current_user_id_int) if current_user_id_int is not None else None
-
-        if not current_user:
-            return (
-                jsonify(
-                    {
-                        "success": False,
-                        "message": "Unauthorized: Unable to determine current user",
-                    }
-                ),
-                401,
-            )
+        current_user, response = _actor_or_response()
+        if response:
+            return response
+        if current_user.role in {"center_admin", "volunteer"}:
+            if not current_user.center_id:
+                return jsonify({"success": False, "message": "No assigned center"}), 403
+        elif current_user.role not in {"super_admin", "city_admin"}:
+            return jsonify({"success": False, "message": "Access denied"}), 403
 
         # Get the current record to check its center
         record_result = get_attendance_record_by_id(record_id)
@@ -1024,9 +1042,7 @@ def transfer_individual_route(record_id: int) -> Tuple:
                     403,
                 )
 
-        # Default recorded_by_user_id to the authenticated user if not provided
-        if "recorded_by_user_id" not in data:
-            data["recorded_by_user_id"] = current_user_id_int
+        data["recorded_by_user_id"] = current_user.user_id
 
         logger.info("Transferring individual from record %s to center %s", 
                    record_id, data.get("transfer_to_center_id"))
@@ -1112,21 +1128,15 @@ def transfer_multiple_individuals_route() -> Tuple:
                 "message": "Maximum batch size is 50 transfers per request"
             }), 400
 
-        # Get current user ID from JWT token
-        current_user_id = get_jwt_identity()
-        try:
-            current_user_id_int = int(current_user_id) if current_user_id is not None else None
-        except (TypeError, ValueError):
-            current_user_id_int = None
+        current_user, response = _actor_or_response()
+        if response:
+            return response
+        if current_user.role in {"center_admin", "volunteer"}:
+            if not current_user.center_id:
+                return jsonify({"success": False, "message": "No assigned center"}), 403
+        elif current_user.role not in {"super_admin", "city_admin"}:
+            return jsonify({"success": False, "message": "Access denied"}), 403
 
-        current_user = get_current_user(current_user_id_int) if current_user_id_int is not None else None
-
-        if not current_user:
-            return jsonify({
-                "success": False,
-                "message": "Unauthorized: Unable to determine current user",
-            }), 401
-        
         # Validate and prepare transfer data
         validated_transfers = []
         required_fields = ["record_id", "transfer_to_center_id"]
@@ -1154,9 +1164,7 @@ def transfer_multiple_individuals_route() -> Tuple:
                     "message": f"Cannot transfer to center {transfer_item['transfer_to_center_id']}. Center must be active and have an active event."
                 }), 400
 
-            # Set default recorded_by_user_id if not provided
-            if "recorded_by_user_id" not in transfer_item:
-                transfer_item["recorded_by_user_id"] = current_user_id_int
+            transfer_item["recorded_by_user_id"] = current_user.user_id
 
             validated_transfers.append(transfer_item)
 
@@ -1235,30 +1243,20 @@ def get_attendance_record_route(record_id: int) -> Tuple:
             - HTTP status code
     """
     try:
-        # Get current user for role-based access control
-        current_user_id = get_jwt_identity()
-        current_user = get_current_user(current_user_id)
-        
-        if current_user and current_user.role in ['center_admin', 'volunteer'] and current_user.center_id:
-            record_result = get_attendance_record_by_id(record_id)
-            if not record_result.get("success"):
-                return jsonify(record_result), 404
-            
-            record_data = record_result.get("data") or {}
-            record_center_id = record_data.get("center_id")
-            
-            if record_center_id != current_user.center_id:
-                return jsonify({
-                    "success": False, 
-                    "message": "Access denied: Cannot view attendance records for other centers"
-                }), 403
-
-        logger.info("Fetching attendance record: %s", record_id)
+        current_user, response = _actor_or_response()
+        if response:
+            return response
+        if current_user.role not in {"super_admin", "city_admin", "center_admin", "volunteer"}:
+            return jsonify({"success": False, "message": "Access denied"}), 403
+        if current_user.role in {"center_admin", "volunteer"} and not current_user.center_id:
+            return jsonify({"success": False, "message": "No assigned center"}), 403
 
         result = get_attendance_record_by_id(record_id)
-
         if not result["success"]:
             return jsonify(result), 404
+        if current_user.role in {"center_admin", "volunteer"}:
+            if (result.get("data") or {}).get("center_id") != current_user.center_id:
+                return jsonify({"success": False, "message": "Access denied"}), 403
 
         return jsonify(result), 200
 
@@ -1293,16 +1291,14 @@ def get_attendance_summary_route(center_id: int) -> Tuple:
             - HTTP status code
     """
     try:
-        # Get current user for role-based access control
-        current_user_id = get_jwt_identity()
-        current_user = get_current_user(current_user_id)
-        
-        if current_user and current_user.role in ['center_admin', 'volunteer'] and current_user.center_id:
-            if center_id != current_user.center_id:
-                return jsonify({
-                    "success": False, 
-                    "message": "Access denied: Cannot view attendance summary for other centers"
-                }), 403
+        current_user, response = _actor_or_response()
+        if response:
+            return response
+        if current_user.role in {"center_admin", "volunteer"}:
+            if not current_user.center_id or center_id != current_user.center_id:
+                return jsonify({"success": False, "message": "Access denied"}), 403
+        elif current_user.role not in {"super_admin", "city_admin"}:
+            return jsonify({"success": False, "message": "Access denied"}), 403
 
         event_id = request.args.get("event_id", type=int)
 
@@ -1343,6 +1339,11 @@ def get_individual_attendance_history_route(individual_id: int) -> Tuple:
             - HTTP status code
     """
     try:
+        actor, response = _actor_or_response()
+        if response:
+            return response
+        if not _may_access_individual_history(actor, individual_id):
+            return jsonify({"success": False, "message": "Insufficient permissions"}), 403
         logger.info("Fetching attendance history for individual: %s", individual_id)
 
         result = get_individual_attendance_history(individual_id)
@@ -1380,10 +1381,10 @@ def recalculate_center_occupancy_route(center_id: int) -> Tuple:
             - HTTP status code
     """
     try:
-        # Get current user for role-based access control
-        current_user_id = get_jwt_identity()
-        current_user = get_current_user(current_user_id)
-        
+        current_user, response = _actor_or_response()
+        if response:
+            return response
+
         # Only super_admin can recalculate occupancy
         if not current_user or current_user.role != 'super_admin':
             return jsonify({
@@ -1425,10 +1426,10 @@ def recalculate_all_center_occupancies_route() -> Tuple:
             - HTTP status code
     """
     try:
-        # Get current user for role-based access control
-        current_user_id = get_jwt_identity()
-        current_user = get_current_user(current_user_id)
-        
+        current_user, response = _actor_or_response()
+        if response:
+            return response
+
         # Only super_admin can recalculate all occupancies
         if not current_user or current_user.role != 'super_admin':
             return jsonify({
@@ -1473,10 +1474,10 @@ def delete_attendance_record_route(record_id: int) -> Tuple:
             - HTTP status code
     """
     try:
-        # Get current user for role-based access control
-        current_user_id = get_jwt_identity()
-        current_user = get_current_user(current_user_id)
-        
+        current_user, response = _actor_or_response()
+        if response:
+            return response
+
         # Only super_admin can delete attendance records
         if not current_user or current_user.role != 'super_admin':
             return jsonify({

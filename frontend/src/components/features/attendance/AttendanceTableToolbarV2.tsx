@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useEffect, memo, useState } from "react";
-import { Search, Filter, X, ChevronDown } from "lucide-react";
+import { Search, Filter, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -12,6 +12,16 @@ import {
     SelectItem,
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
+
+const searchIconClass =
+    "absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4";
+const disabledActionTitle = "Attendance actions disabled - no active event or center is inactive";
+const filterGridClass =
+    "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 p-4 border rounded-lg bg-card";
+const warningIconPath =
+    "M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98" +
+    "H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0" +
+    "zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z";
 
 interface AttendanceTableToolbarProps {
     searchQuery: string;
@@ -62,12 +72,11 @@ function AttendanceTableToolbarV2Component({
         }
     }, [loading]);
 
-    const hasActiveFilters = (
+    const hasActiveFilters =
         filters.status !== "all" ||
         filters.gender !== "all" ||
         filters.ageGroup !== "all" ||
-        (filters.centerId && filters.centerId !== userCenterId)
-    );
+        (filters.centerId && filters.centerId !== userCenterId);
 
     // Clear all filters
     const handleClearAllFilters = () => {
@@ -82,7 +91,7 @@ function AttendanceTableToolbarV2Component({
                 {/* Left Side: Search and Main Actions */}
                 <div className="flex flex-col sm:flex-row gap-2 sm:items-center w-full md:w-auto">
                     <div className="relative flex-1">
-                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+                        <Search className={searchIconClass} />
                         <Input
                             ref={inputRef}
                             type="text"
@@ -91,31 +100,32 @@ function AttendanceTableToolbarV2Component({
                             onChange={e => onSearchChange(e.target.value)}
                             className="pl-10 w-full"
                             disabled={loading}
+                            aria-label="Search attendance records"
                         />
                     </div>
-                    
+
                     <div className="flex items-center gap-2">
-                        <Button 
-                            onClick={onCheckIn} 
+                        <Button
+                            onClick={onCheckIn}
                             disabled={loading || disabledActions} // ADDED: disabledActions
                             className="flex-shrink-0"
-                            title={disabledActions ? "Attendance actions disabled - no active event or center is inactive" : ""}
+                            title={disabledActions ? disabledActionTitle : ""}
                         >
                             Check In
                         </Button>
-                        <Button 
-                            onClick={() => onOpenCheckOut && onOpenCheckOut()} 
+                        <Button
+                            onClick={() => onOpenCheckOut && onOpenCheckOut()}
                             disabled={loading || disabledActions} // ADDED: disabledActions
                             className="flex-shrink-0"
-                            title={disabledActions ? "Attendance actions disabled - no active event or center is inactive" : ""}
+                            title={disabledActions ? disabledActionTitle : ""}
                         >
                             Check Out
                         </Button>
-                        <Button 
-                            onClick={() => onOpenTransfer && onOpenTransfer()} 
+                        <Button
+                            onClick={() => onOpenTransfer && onOpenTransfer()}
                             disabled={loading || disabledActions} // ADDED: disabledActions
                             className="flex-shrink-0"
-                            title={disabledActions ? "Attendance actions disabled - no active event or center is inactive" : ""}
+                            title={disabledActions ? disabledActionTitle : ""}
                         >
                             Transfer
                         </Button>
@@ -130,7 +140,7 @@ function AttendanceTableToolbarV2Component({
                         onValueChange={(val: string) => onEntriesPerPageChange(Number(val))}
                         disabled={loading}
                     >
-                        <SelectTrigger className="w-20">
+                        <SelectTrigger aria-label="Entries per page" className="w-20">
                             <SelectValue placeholder="Entries" />
                         </SelectTrigger>
                         <SelectContent>
@@ -156,25 +166,28 @@ function AttendanceTableToolbarV2Component({
                             onClick={() => setShowFilters(!showFilters)}
                             className="h-8"
                             disabled={loading}
+                            aria-expanded={showFilters}
                         >
                             <Filter className="h-4 w-4 mr-2" />
                             Filters
                             {hasActiveFilters && (
-                                <Badge 
-                                    variant="secondary" 
+                                <Badge
+                                    variant="secondary"
                                     className="ml-2 h-5 w-5 p-0 flex items-center justify-center"
                                 >
-                                    {[
-                                        filters.status !== "all",
-                                        filters.gender !== "all",
-                                        filters.ageGroup !== "all",
-                                        (filters.centerId && filters.centerId !== userCenterId)
-                                    ].filter(Boolean).length}
+                                    {
+                                        [
+                                            filters.status !== "all",
+                                            filters.gender !== "all",
+                                            filters.ageGroup !== "all",
+                                            filters.centerId && filters.centerId !== userCenterId,
+                                        ].filter(Boolean).length
+                                    }
                                 </Badge>
                             )}
                         </Button>
                     </div>
-                    
+
                     {hasActiveFilters && showFilters && (
                         <Button
                             variant="ghost"
@@ -191,13 +204,13 @@ function AttendanceTableToolbarV2Component({
 
                 {/* Filter Controls - Only shown when toggled */}
                 {showFilters && (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 p-4 border rounded-lg bg-card">
+                    <div className={filterGridClass}>
                         {/* Status Filter */}
                         <div className="space-y-2">
                             <label className="text-sm font-medium">Status</label>
                             <Select
                                 value={filters.status}
-                                onValueChange={(value) => onFilterChange("status", value)}
+                                onValueChange={value => onFilterChange("status", value)}
                                 disabled={loading}
                             >
                                 <SelectTrigger className="w-full">
@@ -217,7 +230,7 @@ function AttendanceTableToolbarV2Component({
                             <label className="text-sm font-medium">Gender</label>
                             <Select
                                 value={filters.gender}
-                                onValueChange={(value) => onFilterChange("gender", value)}
+                                onValueChange={value => onFilterChange("gender", value)}
                                 disabled={loading}
                             >
                                 <SelectTrigger className="w-full">
@@ -237,7 +250,7 @@ function AttendanceTableToolbarV2Component({
                             <label className="text-sm font-medium">Age Group</label>
                             <Select
                                 value={filters.ageGroup}
-                                onValueChange={(value) => onFilterChange("age_group", value)}
+                                onValueChange={value => onFilterChange("age_group", value)}
                                 disabled={loading}
                             >
                                 <SelectTrigger className="w-full">
@@ -259,7 +272,7 @@ function AttendanceTableToolbarV2Component({
                                 <label className="text-sm font-medium">Center</label>
                                 <Select
                                     value={filters.centerId?.toString() || "all"}
-                                    onValueChange={(value) => {
+                                    onValueChange={value => {
                                         if (value === "all") {
                                             onFilterChange("center_id", "all");
                                         } else {
@@ -274,8 +287,8 @@ function AttendanceTableToolbarV2Component({
                                     <SelectContent>
                                         <SelectItem value="all">All Centers</SelectItem>
                                         {centers.map(center => (
-                                            <SelectItem 
-                                                key={center.center_id} 
+                                            <SelectItem
+                                                key={center.center_id}
                                                 value={center.center_id.toString()}
                                             >
                                                 {center.center_name}
@@ -293,9 +306,11 @@ function AttendanceTableToolbarV2Component({
                     <div className="flex flex-wrap gap-2">
                         {filters.status !== "all" && (
                             <Badge variant="secondary" className="px-2 py-1 text-xs">
-                                Status: {filters.status.split('_').map(word => 
-                                    word.charAt(0).toUpperCase() + word.slice(1)
-                                ).join(' ')}
+                                Status:{" "}
+                                {filters.status
+                                    .split("_")
+                                    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+                                    .join(" ")}
                             </Badge>
                         )}
                         {filters.gender !== "all" && (
@@ -305,16 +320,23 @@ function AttendanceTableToolbarV2Component({
                         )}
                         {filters.ageGroup !== "all" && (
                             <Badge variant="secondary" className="px-2 py-1 text-xs">
-                                Age: {filters.ageGroup.split('_').map(word => 
-                                    word.charAt(0).toUpperCase() + word.slice(1)
-                                ).join(' ')}
+                                Age:{" "}
+                                {filters.ageGroup
+                                    .split("_")
+                                    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+                                    .join(" ")}
                             </Badge>
                         )}
-                        {filters.centerId && centers.find(c => c.center_id === filters.centerId) && (
-                            <Badge variant="secondary" className="px-2 py-1 text-xs">
-                                Center: {centers.find(c => c.center_id === filters.centerId)?.center_name}
-                            </Badge>
-                        )}
+                        {filters.centerId &&
+                            centers.find(c => c.center_id === filters.centerId) && (
+                                <Badge variant="secondary" className="px-2 py-1 text-xs">
+                                    Center:{" "}
+                                    {
+                                        centers.find(c => c.center_id === filters.centerId)
+                                            ?.center_name
+                                    }
+                                </Badge>
+                            )}
                     </div>
                 )}
 
@@ -323,15 +345,24 @@ function AttendanceTableToolbarV2Component({
                     <div className="bg-yellow-50 border border-yellow-200 rounded-md p-3">
                         <div className="flex items-start gap-2">
                             <div className="flex-shrink-0">
-                                <svg className="h-5 w-5 text-yellow-600" viewBox="0 0 20 20" fill="currentColor">
-                                    <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                                <svg
+                                    className="h-5 w-5 text-yellow-600"
+                                    viewBox="0 0 20 20"
+                                    fill="currentColor"
+                                >
+                                    <path
+                                        fillRule="evenodd"
+                                        d={warningIconPath}
+                                        clipRule="evenodd"
+                                    />
                                 </svg>
                             </div>
                             <div className="flex-1">
                                 <p className="text-sm text-yellow-700">
-                                    Attendance actions are currently disabled. 
-                                    {!userCenterId ? " No center assigned to your account." : 
-                                     " No active event or your center is inactive."}
+                                    Attendance actions are currently disabled.
+                                    {!userCenterId
+                                        ? " No center assigned to your account."
+                                        : " No active event or your center is inactive."}
                                 </p>
                             </div>
                         </div>

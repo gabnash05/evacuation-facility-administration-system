@@ -31,4 +31,28 @@ A web-based disaster management platform that enables local government units to 
 * Docker
 * Stadia Maps
 
+## Backend startup
+
+Set `DATABASE_URL` to an explicit PostgreSQL database for both entry points.
+Use a `postgresql://` or `postgresql+psycopg2://` URL with a database name.
+From `backend`, use `pipenv run dev` for local development. The production
+`pipenv run start` command loads `wsgi:app` and also requires `SECRET_KEY` and
+`JWT_SECRET_KEY` from the deployment environment. Generate separate, strong
+random values, store them in your deployment's secret manager, and use the
+same values across workers and restarts. Missing, blank, or known development
+keys abort startup before the app is initialized. Production debug mode is
+disabled. Changing the JWT signing key invalidates tokens signed with the
+previous key.
+
+For a fresh PostgreSQL database, set `DATABASE_URL` and run
+`pipenv run flask --app app db upgrade` from `backend`. The first migration
+refuses an existing EFAS schema. Follow the [migration and recovery plan](docs/overhaul/MASTER_PLAN.md#database-002a--version-the-existing-postgresql-schema)
+before adopting a legacy database.
+
+The spatial center endpoints require PostGIS in the application database.
+Install a PostgreSQL-compatible PostGIS package on the database server and
+have the database owner enable the `postgis` extension before deploying those
+endpoints. Confirm the deployment target and extension privileges with the
+database operator. The migration chain does not enable the extension.
+
 

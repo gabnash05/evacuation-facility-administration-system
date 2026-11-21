@@ -14,15 +14,15 @@ import type { DistributionRecord } from "@/types/distribution";
 
 export function VolunteerDistributionPage() {
     const { user } = useAuthStore();
-    const { 
-        history, 
-        searchQuery, 
-        setSearchQuery, 
-        fetchData, 
+    const {
+        history,
+        searchQuery,
+        setSearchQuery,
+        fetchData,
         deleteDistribution,
-        currentPage, 
+        currentPage,
         setCurrentPage,
-        entriesPerPage, 
+        entriesPerPage,
         setEntriesPerPage,
         isLoading,
         pagination,
@@ -32,9 +32,9 @@ export function VolunteerDistributionPage() {
         sortDirection,
         selectedCenterId,
         error,
-        clearError
+        clearError,
     } = useDistributionStore();
-    
+
     // Added: Fetch center name from evacuation center store
     const { fetchCenterById } = useEvacuationCenterStore();
 
@@ -42,7 +42,7 @@ export function VolunteerDistributionPage() {
     const [localSearch, setLocalSearch] = useState(searchQuery);
     // Added: State to store fetched center name
     const [volunteerCenterName, setVolunteerCenterName] = useState<string>("your assigned center");
-    
+
     // Modals
     const [isCreateOpen, setIsCreateOpen] = useState(false);
     const [editRecord, setEditRecord] = useState<DistributionRecord | null>(null);
@@ -92,24 +92,35 @@ export function VolunteerDistributionPage() {
     }, [searchQuery]);
 
     // Handle sort
-    const handleSort = useCallback((column: string) => {
-        if (sortColumn === column) {
-            setSortDirection(sortDirection === "asc" ? "desc" : "asc");
-        } else {
-            setSortColumn(column);
-            setSortDirection("desc");
-        }
-    }, [sortColumn, sortDirection, setSortColumn, setSortDirection]);
+    const handleSort = useCallback(
+        (column: string) => {
+            if (sortColumn === column) {
+                setSortDirection(sortDirection === "asc" ? "desc" : "asc");
+            } else {
+                setSortColumn(column);
+                setSortDirection("desc");
+            }
+        },
+        [sortColumn, sortDirection, setSortColumn, setSortDirection]
+    );
 
     // Fetch data when dependencies change
     useEffect(() => {
         if (hasAssignedCenter) {
             fetchData();
         }
-    }, [fetchData, hasAssignedCenter, currentPage, entriesPerPage, searchQuery, sortColumn, sortDirection]);
+    }, [
+        fetchData,
+        user?.center_id,
+        hasAssignedCenter,
+        currentPage,
+        entriesPerPage,
+        searchQuery,
+        sortColumn,
+        sortDirection,
+    ]);
 
     // Server-side pagination data
-    const totalPages = pagination?.total_pages || 1;
     const totalEntries = pagination?.total_items || 0;
 
     const handleDelete = async () => {
@@ -136,11 +147,13 @@ export function VolunteerDistributionPage() {
                             Manage distribution records for your assigned center.
                         </p>
                     </div>
-                    
+
                     <Alert variant="destructive">
                         <AlertCircle className="h-4 w-4" />
                         <AlertDescription>
-                            You have not been assigned to an evacuation center. Please contact an administrator to get assigned to a center before you can manage distributions.
+                            You have not been assigned to an evacuation center. Please contact an
+                            administrator to get assigned to a center before you can manage
+                            distributions.
                         </AlertDescription>
                     </Alert>
                 </div>
@@ -154,7 +167,8 @@ export function VolunteerDistributionPage() {
                 <div>
                     <h1 className="text-2xl font-bold tracking-tight">Aid Distribution</h1>
                     <p className="text-muted-foreground">
-                        Manage distribution records for your assigned center: <span className="font-semibold text-foreground">{volunteerCenterName}</span>
+                        Manage distribution records for your assigned center:{" "}
+                        <span className="font-semibold text-foreground">{volunteerCenterName}</span>
                     </p>
                 </div>
 
@@ -182,7 +196,8 @@ export function VolunteerDistributionPage() {
                         />
                         {selectedCenterId && (
                             <div className="mt-2 text-sm text-muted-foreground">
-                                Viewing distributions for: <span className="font-medium text-foreground">
+                                Viewing distributions for:{" "}
+                                <span className="font-medium text-foreground">
                                     {volunteerCenterName}
                                 </span>
                             </div>
@@ -191,7 +206,7 @@ export function VolunteerDistributionPage() {
 
                     {/* Table */}
                     <div className="border-b border-border">
-                        <DistributionHistoryTable 
+                        <DistributionHistoryTable
                             data={history}
                             loading={isLoading}
                             userRole={user?.role}
@@ -219,10 +234,7 @@ export function VolunteerDistributionPage() {
 
             {/* Create Modal - Only show if volunteer has an assigned center */}
             {selectedCenterId && (
-                <DistributeAidModal 
-                    isOpen={isCreateOpen} 
-                    onClose={() => setIsCreateOpen(false)} 
-                />
+                <DistributeAidModal isOpen={isCreateOpen} onClose={() => setIsCreateOpen(false)} />
             )}
 
             {/* Edit Modal */}

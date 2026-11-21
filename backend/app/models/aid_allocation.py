@@ -1,12 +1,27 @@
 """Aid Allocation models for EFAS."""
 
-from typing import Any, Dict, List, Optional
-from datetime import datetime
-from sqlalchemy import text
-from app.models import db
 import logging
+from datetime import datetime
+from typing import Any, Dict, List, Optional
+
+from sqlalchemy import text
+
+from app.models import db
 
 logger = logging.getLogger(__name__)
+
+ALLOCATION_MUTABLE_FIELDS = frozenset(
+    {
+        "category_id",
+        "resource_name",
+        "description",
+        "total_quantity",
+        "distribution_type",
+        "suggested_amount",
+        "status",
+        "notes",
+    }
+)
 
 
 class AidCategory(db.Model):
@@ -127,11 +142,15 @@ class Allocation(db.Model):
         return cls(**row_dict)
 
     @classmethod
-    def get_by_id(cls, allocation_id: int) -> Optional["Allocation"]:
+    def get_by_id(
+        cls, allocation_id: int, *, for_update=False
+    ) -> Optional["Allocation"]:
         """Get allocation by ID."""
+        query = "SELECT * FROM allocations WHERE allocation_id = :allocation_id"
+        if for_update:
+            query += " FOR UPDATE"
         result = db.session.execute(
-            text("SELECT * FROM allocations WHERE allocation_id = :allocation_id"),
-            {"allocation_id": allocation_id}
+            text(query), {"allocation_id": allocation_id}
         ).fetchone()
 
         return cls._row_to_allocation(result)
@@ -184,26 +203,31 @@ class Allocation(db.Model):
             raise ValueError(f"Failed to create allocation: {str(e)}")
 
     @classmethod
-    def update(cls, allocation_id: int, update_data: Dict[str, Any]) -> Optional["Allocation"]:
+    def update(
+        cls, allocation_id: int, update_data: Dict[str, Any]
+    ) -> Optional["Allocation"]:
         """Update allocation."""
+        unsupported_fields = set(update_data).difference(ALLOCATION_MUTABLE_FIELDS)
+        if unsupported_fields:
+            raise ValueError("Unsupported allocation update fields")
+
         current_allocation = cls.get_by_id(allocation_id)
         if not current_allocation:
             return None
 
-        # Prevent updating certain fields
-        restricted_fields = ["center_id", "event_id", "allocated_by_user_id", "remaining_quantity"]
-        for field in restricted_fields:
-            if field in update_data:
-                del update_data[field]
+        safe_update_data = {
+            field: update_data[field]
+            for field in ALLOCATION_MUTABLE_FIELDS
+            if field in update_data
+        }
 
         # Build dynamic UPDATE query
         set_clauses = []
         params = {"allocation_id": allocation_id}
 
-        for field, value in update_data.items():
-            if field != "allocation_id":
-                set_clauses.append(f"{field} = :{field}")
-                params[field] = value
+        for field, value in safe_update_data.items():
+            set_clauses.append(f"{field} = :{field}")
+            params[field] = value
 
         if not set_clauses:
             return None
@@ -226,21 +250,30 @@ class Allocation(db.Model):
         return cls._row_to_allocation(result)
 
     @classmethod
-    def update_quantity(cls, allocation_id, quantity, operation='subtract'):
-        """Manually adjusts the remaining_quantity of an allocation."""
-        if operation == 'subtract':
-            check_sql = text("SELECT remaining_quantity FROM allocations WHERE allocation_id = :id")
-            current_stock = db.session.execute(check_sql, {"id": allocation_id}).scalar()
-            
-            if current_stock is None or current_stock < quantity:
-                raise ValueError(f"Insufficient stock for allocation ID {allocation_id}. Required: {quantity}, Available: {current_stock}")
-            
-            update_sql = text("UPDATE allocations SET remaining_quantity = remaining_quantity - :qty WHERE allocation_id = :id")
-        
-        else: # 'add' (Restore)
-            update_sql = text("UPDATE allocations SET remaining_quantity = remaining_quantity + :qty, status = 'active' WHERE allocation_id = :id")
-        
-        db.session.execute(update_sql, {"qty": quantity, "id": allocation_id})
+    def update_quantity(cls, allocation_id, quantity, operation="subtract"):
+        """Adjust stock without a separate read or a commit."""
+        if operation not in {"add", "subtract"} or quantity <= 0:
+            raise ValueError("Invalid inventory adjustment.")
+        delta = quantity if operation == "add" else -quantity
+        update_sql = text(
+            """
+            UPDATE allocations
+            SET remaining_quantity = remaining_quantity + :delta,
+                status = CASE
+                    WHEN status = 'cancelled' THEN 'cancelled'
+                    WHEN remaining_quantity + :delta = 0 THEN 'depleted'
+                    ELSE 'active'
+                END
+            WHERE allocation_id = :id
+              AND remaining_quantity + :delta BETWEEN 0 AND total_quantity
+            RETURNING allocation_id
+        """
+        )
+        result = db.session.execute(update_sql, {"delta": delta, "id": allocation_id})
+        if result.scalar_one_or_none() is None:
+            raise ValueError(
+                "The inventory adjustment exceeds the available stock or capacity."
+            )
 
     @classmethod
     def delete(cls, allocation_id: int) -> bool:

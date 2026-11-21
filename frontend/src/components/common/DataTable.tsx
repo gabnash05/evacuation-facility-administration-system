@@ -93,20 +93,32 @@ export function DataTable({
                 <TableHeader>
                     <TableRow>
                         {columns.map(column => (
-                            <TableHead key={column.key} className={column.className || ""}>
-                                <div
-                                    className={`flex items-center justify-between ${
-                                        column.sortable !== false && onSort
-                                            ? "cursor-pointer hover:text-foreground"
-                                            : ""
-                                    }`}
-                                    onClick={() =>
-                                        column.sortable !== false && onSort?.(column.key)
-                                    }
-                                >
-                                    {column.label}
-                                    {column.sortable !== false && getSortIcon(column.key)}
-                                </div>
+                            <TableHead
+                                key={column.key}
+                                className={column.className || ""}
+                                aria-sort={
+                                    column.sortable !== false && sortColumn === column.key
+                                        ? sortDirection === "asc"
+                                            ? "ascending"
+                                            : "descending"
+                                        : undefined
+                                }
+                            >
+                                {column.sortable !== false && onSort ? (
+                                    <button
+                                        type="button"
+                                        className="flex w-full items-center justify-between hover:text-foreground"
+                                        onClick={() => onSort(column.key)}
+                                    >
+                                        {column.label}
+                                        {getSortIcon(column.key)}
+                                    </button>
+                                ) : (
+                                    <div className="flex items-center justify-between">
+                                        {column.label}
+                                        {column.sortable !== false && getSortIcon(column.key)}
+                                    </div>
+                                )}
                             </TableHead>
                         ))}
                         {renderActions && <TableHead>Action</TableHead>}
@@ -114,7 +126,11 @@ export function DataTable({
                 </TableHeader>
                 <TableBody>
                     {data.length === 0 ? (
-                        <TableRow></TableRow>
+                        <TableRow>
+                            <TableCell colSpan={columns.length + (renderActions ? 1 : 0)}>
+                                No results found.
+                            </TableCell>
+                        </TableRow>
                     ) : (
                         data.map((row, i) => (
                             <TableRow

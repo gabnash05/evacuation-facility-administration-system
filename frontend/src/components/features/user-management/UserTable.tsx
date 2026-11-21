@@ -1,4 +1,13 @@
-import { ChevronUp, ChevronDown, ChevronsUpDown, MoreVertical } from "lucide-react";
+import {
+    Building,
+    ChevronDown,
+    ChevronsUpDown,
+    ChevronUp,
+    Edit,
+    MoreVertical,
+    Trash2,
+    Users,
+} from "lucide-react";
 import {
     Table,
     TableBody,
@@ -16,8 +25,35 @@ import {
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
-import { Edit, Trash2, Users, Building } from "lucide-react";
 import type { User } from "@/types/user";
+
+const roleStyles = {
+    super_admin: cn(
+        "bg-purple-100 text-purple-700 border-purple-100",
+        "dark:bg-purple-900 dark:text-purple-200 dark:border-purple-900"
+    ),
+    city_admin: cn(
+        "bg-blue-100 text-blue-700 border-blue-100",
+        "dark:bg-blue-900 dark:text-blue-200 dark:border-blue-900"
+    ),
+    center_admin: cn(
+        "bg-orange-100 text-orange-700 border-orange-100",
+        "dark:bg-orange-900 dark:text-orange-200 dark:border-orange-900"
+    ),
+    volunteer: cn(
+        "bg-green-100 text-green-700 border-green-100",
+        "dark:bg-green-900 dark:text-green-200 dark:border-green-900"
+    ),
+    default: cn(
+        "bg-gray-100 text-gray-700 border-gray-100",
+        "dark:bg-gray-800 dark:text-gray-300 dark:border-gray-800"
+    ),
+};
+
+const statusStyles = {
+    active: roleStyles.volunteer,
+    inactive: roleStyles.default,
+};
 
 interface UserTableProps {
     data: User[];
@@ -33,7 +69,16 @@ interface UserTableProps {
     userRole: string | undefined;
 }
 
-export function UserTable({ data, sortConfig, onSort, onEdit, onDelete, onDeactivate, loading, userRole }: UserTableProps) {
+export function UserTable({
+    data,
+    sortConfig,
+    onSort,
+    onEdit,
+    onDelete,
+    onDeactivate,
+    loading,
+    userRole,
+}: UserTableProps) {
     const getSortIcon = (key: string) => {
         if (!sortConfig || sortConfig.key !== key) {
             return <ChevronsUpDown className="h-4 w-4 text-muted-foreground" />;
@@ -74,25 +119,10 @@ export function UserTable({ data, sortConfig, onSort, onEdit, onDelete, onDeacti
     ];
 
     const getRoleStyles = (role: string) => {
-        switch (role.toLowerCase()) {
-            case "super_admin":
-                return "bg-purple-100 text-purple-700 border-purple-100 dark:bg-purple-900 dark:text-purple-200 dark:border-purple-900";
-            case "city_admin":
-                return "bg-blue-100 text-blue-700 border-blue-100 dark:bg-blue-900 dark:text-blue-200 dark:border-blue-900";
-            case "center_admin":
-                return "bg-orange-100 text-orange-700 border-orange-100 dark:bg-orange-900 dark:text-orange-200 dark:border-orange-900";
-            case "volunteer":
-                return "bg-green-100 text-green-700 border-green-100 dark:bg-green-900 dark:text-green-200 dark:border-green-900";
-            default:
-                return "bg-gray-100 text-gray-700 border-gray-100 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-800";
-        }
+        return roleStyles[role.toLowerCase() as keyof typeof roleStyles] || roleStyles.default;
     };
 
-    const getStatusStyles = (isActive: boolean) => {
-        return isActive
-            ? "bg-green-100 text-green-700 border-green-100 dark:bg-green-900 dark:text-green-200 dark:border-green-900"
-            : "bg-gray-100 text-gray-700 border-gray-100 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-800";
-    };
+    const getStatusStyles = (isActive: boolean) => statusStyles[isActive ? "active" : "inactive"];
 
     const getRoleIcon = (role: string) => {
         switch (role.toLowerCase()) {
@@ -121,23 +151,36 @@ export function UserTable({ data, sortConfig, onSort, onEdit, onDelete, onDeacti
                         {headers.map(header => (
                             <TableHead
                                 key={header.key}
-                                className={cn(
-                                    header.sortable && "cursor-pointer hover:bg-muted",
-                                    "font-semibold py-3 text-left"
-                                )}
+                                aria-sort={
+                                    header.sortable && sortConfig?.key === header.key
+                                        ? sortConfig.direction === "asc"
+                                            ? "ascending"
+                                            : "descending"
+                                        : "none"
+                                }
+                                className="font-semibold py-3 text-left"
                                 style={{ width: header.width }}
-                                onClick={header.sortable ? () => onSort(header.key) : undefined}
                             >
-                                <div className="flex items-center justify-between w-full">
-                                    <span className="truncate block font-medium">
-                                        {header.label}
-                                    </span>
-                                    {header.sortable && (
+                                {header.sortable ? (
+                                    <Button
+                                        type="button"
+                                        variant="ghost"
+                                        className={cn(
+                                            "flex h-auto w-full items-center justify-between",
+                                            "px-0 py-0 font-medium hover:bg-muted"
+                                        )}
+                                        onClick={() => onSort(header.key)}
+                                    >
+                                        <span className="truncate block">{header.label}</span>
                                         <span className="flex-shrink-0 ml-2">
                                             {getSortIcon(header.key)}
                                         </span>
-                                    )}
-                                </div>
+                                    </Button>
+                                ) : (
+                                    <span className="truncate block font-medium">
+                                        {header.label}
+                                    </span>
+                                )}
                             </TableHead>
                         ))}
                     </TableRow>
@@ -150,7 +193,12 @@ export function UserTable({ data, sortConfig, onSort, onEdit, onDelete, onDeacti
                                 className="h-32 text-center"
                                 style={{ width: "100%" }}
                             >
-                                <div className="text-muted-foreground flex flex-col items-center justify-center">
+                                <div
+                                    className={cn(
+                                        "text-muted-foreground flex flex-col",
+                                        "items-center justify-center"
+                                    )}
+                                >
                                     <div className="text-lg font-medium mb-2">No users found</div>
                                     <div className="text-sm">
                                         Add your first user to get started
@@ -222,9 +270,16 @@ export function UserTable({ data, sortConfig, onSort, onEdit, onDelete, onDeacti
                                 >
                                     <DropdownMenu>
                                         <DropdownMenuTrigger asChild>
-                                            <Button variant="ghost" size="icon" className="h-8 w-8">
-                                                <MoreVertical className="h-4 w-4" />
-                                                <span className="sr-only">Open menu</span>
+                                            <Button
+                                                variant="ghost"
+                                                size="icon"
+                                                className="h-8 w-8"
+                                                aria-label={`Open actions for ${user.email}`}
+                                            >
+                                                <MoreVertical
+                                                    className="h-4 w-4"
+                                                    aria-hidden="true"
+                                                />
                                             </Button>
                                         </DropdownMenuTrigger>
                                         <DropdownMenuContent align="end">
@@ -232,14 +287,19 @@ export function UserTable({ data, sortConfig, onSort, onEdit, onDelete, onDeacti
                                                 <Edit className="h-4 w-4 mr-2" />
                                                 Edit
                                             </DropdownMenuItem>
-                                            <DropdownMenuItem onClick={() => handleDeactivate(user)}>
+                                            <DropdownMenuItem
+                                                onClick={() => handleDeactivate(user)}
+                                            >
                                                 <Users className="h-4 w-4 mr-2" />
                                                 {user.is_active ? "Deactivate" : "Activate"}
                                             </DropdownMenuItem>
                                             {canDelete && (
                                                 <DropdownMenuItem
                                                     onClick={() => onDelete(user)}
-                                                    className="text-destructive focus:text-destructive"
+                                                    className={cn(
+                                                        "text-destructive",
+                                                        "focus:text-destructive"
+                                                    )}
                                                 >
                                                     <Trash2 className="h-4 w-4 mr-2" />
                                                     Delete

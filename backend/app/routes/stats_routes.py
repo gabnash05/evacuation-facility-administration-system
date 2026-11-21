@@ -46,7 +46,7 @@ def get_dashboard_stats():
         age_group = request.args.get("age_group")
         center_id = request.args.get("center_id", type=int)
         event_id = request.args.get("event_id", type=int)  # NEW
-        
+
         # Validate filters
         try:
             filters = filter_schema.load({
@@ -140,6 +140,18 @@ def get_occupancy_stats():
         age_group = request.args.get("age_group")
         center_id = request.args.get("center_id", type=int)
         event_id = request.args.get("event_id", type=int)  # NEW
+
+        try:
+            filters = filter_schema.load(
+                {
+                    "gender": gender,
+                    "age_group": age_group,
+                    "center_id": center_id,
+                    "event_id": event_id,
+                }
+            )
+        except Exception as validation_error:
+            return jsonify({"success": False, "message": f"Validation error: {validation_error}"}), 400
         
         # Role-based center filtering
         if user.role in ["center_admin", "volunteer"]:
@@ -153,9 +165,9 @@ def get_occupancy_stats():
         # Get stats with event filter
         occupancy_stats = stats_service.get_occupancy_stats(
             center_id=center_id,
-            gender=gender,
-            age_group=age_group,
-            event_id=event_id  # NEW
+            gender=filters.get("gender"),
+            age_group=filters.get("age_group"),
+            event_id=filters.get("event_id"),
         )
         
         return jsonify({
@@ -199,6 +211,18 @@ def get_registration_stats():
         age_group = request.args.get("age_group")
         center_id = request.args.get("center_id", type=int)
         event_id = request.args.get("event_id", type=int)  # NEW
+
+        try:
+            filters = filter_schema.load(
+                {
+                    "gender": gender,
+                    "age_group": age_group,
+                    "center_id": center_id,
+                    "event_id": event_id,
+                }
+            )
+        except Exception as validation_error:
+            return jsonify({"success": False, "message": f"Validation error: {validation_error}"}), 400
         
         # Role-based center filtering
         if user.role in ["center_admin", "volunteer"]:
@@ -212,9 +236,9 @@ def get_registration_stats():
         # Get stats with event filter
         registration_stats = stats_service.get_registration_stats(
             center_id=center_id,
-            gender=gender,
-            age_group=age_group,
-            event_id=event_id  # NEW
+            gender=filters.get("gender"),
+            age_group=filters.get("age_group"),
+            event_id=filters.get("event_id"),
         )
         
         return jsonify({
@@ -256,6 +280,11 @@ def get_aid_distribution_stats():
         # Get query parameters
         center_id = request.args.get("center_id", type=int)
         event_id = request.args.get("event_id", type=int)  # NEW
+
+        try:
+            filters = filter_schema.load({"center_id": center_id, "event_id": event_id})
+        except Exception as validation_error:
+            return jsonify({"success": False, "message": f"Validation error: {validation_error}"}), 400
         
         # Role-based center filtering
         if user.role in ["center_admin", "volunteer"]:
@@ -269,7 +298,7 @@ def get_aid_distribution_stats():
         # Get stats with event filter
         aid_stats = stats_service.get_aid_distribution_stats(
             center_id=center_id,
-            event_id=event_id  # NEW
+            event_id=filters.get("event_id"),
         )
         
         return jsonify({

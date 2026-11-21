@@ -2,10 +2,36 @@
 
 from typing import Any, Dict, List, Optional
 from sqlalchemy import text, func
-from geoalchemy2.types import Geometry
+from sqlalchemy.types import UserDefinedType
 
 from app.models import db
 from app.schemas.evacuation_center import EvacuationCenterResponseSchema
+
+
+class PostgreSQLPoint(UserDefinedType):
+    """Native PostgreSQL point values stored as longitude and latitude."""
+
+    cache_ok = True
+
+    def get_col_spec(self, **kwargs):
+        return "POINT"
+
+    def bind_processor(self, dialect):
+        def process(value):
+            if isinstance(value, (tuple, list)):
+                return f"({value[0]},{value[1]})"
+            return value
+
+        return process
+
+    def result_processor(self, dialect, coltype):
+        def process(value):
+            if isinstance(value, str):
+                longitude, latitude = value.strip("()").split(",")
+                return float(longitude), float(latitude)
+            return value
+
+        return process
 
 
 class EvacuationCenter(db.Model):
@@ -16,7 +42,7 @@ class EvacuationCenter(db.Model):
     center_id = db.Column(db.Integer, primary_key=True)
     center_name = db.Column(db.String(255), nullable=False, index=True)
     address = db.Column(db.String(255), nullable=False)
-    coordinates = db.Column(Geometry(geometry_type='POINT', srid=4326), nullable=False)
+    coordinates = db.Column(PostgreSQLPoint(), nullable=False)
     capacity = db.Column(db.Integer, nullable=False)
     status = db.Column(db.String(20), nullable=False, default="active")
     current_occupancy = db.Column(db.Integer, nullable=False, default=0)
@@ -121,6 +147,7 @@ class EvacuationCenter(db.Model):
         except AttributeError:
             row_dict = dict(row)
         
+        distance_km = row_dict.pop("distance_km", None)
         # Parse coordinates if they're in string format "(x, y)"
         if 'coordinates' in row_dict and row_dict['coordinates']:
             coords = row_dict['coordinates']
@@ -136,7 +163,10 @@ class EvacuationCenter(db.Model):
                     # Keep as is if parsing fails
                     pass
         
-        return cls(**row_dict)
+        center = cls(**row_dict)
+        if distance_km is not None:
+            center.distance_km = distance_km
+        return center
 
 
     @classmethod
@@ -336,8 +366,8 @@ class EvacuationCenter(db.Model):
         if latitude is not None and longitude is not None:
             # Create POINT from lat/lng using PostgreSQL POINT() function
             fields.append("coordinates")
-            # Format POINT directly in SQL string
-            values.append(f"POINT({longitude}, {latitude})")
+            values.append("POINT(:longitude, :latitude)")
+            params.update(longitude=longitude, latitude=latitude)
             # Remove from data dictionary
             data.pop('latitude', None)
             data.pop('longitude', None)
@@ -382,6 +412,12 @@ class EvacuationCenter(db.Model):
         cls, center_id: int, update_data: Dict[str, Any]
     ) -> Optional["EvacuationCenter"]:
         """Update center information using raw SQL."""
+        allowed_fields = {
+            "center_id", "center_name", "address", "capacity", "status",
+            "current_occupancy", "photo_data", "latitude", "longitude", "coordinates",
+        }
+        if set(update_data) - allowed_fields:
+            raise ValueError("Unsupported evacuation center update field")
         # Build dynamic UPDATE query
         set_clauses = []
         params = {"center_id": center_id}
@@ -403,8 +439,8 @@ class EvacuationCenter(db.Model):
         
         # If we have valid coordinates, add them to the query
         if latitude is not None and longitude is not None:
-            # Direct string formatting for POINT
-            set_clauses.append(f"coordinates = POINT({longitude}, {latitude})")
+            set_clauses.append("coordinates = POINT(:longitude, :latitude)")
+            params.update(longitude=longitude, latitude=latitude)
             update_data.pop('latitude', None)
             update_data.pop('longitude', None)
             update_data.pop('coordinates', None)
@@ -655,13 +691,13 @@ class EvacuationCenter(db.Model):
         query = text("""
             SELECT *,
                 ST_DistanceSphere(
-                    coordinates,
+                    ST_SetSRID(ST_MakePoint(coordinates[0], coordinates[1]), 4326),
                     ST_SetSRID(ST_MakePoint(:longitude, :latitude), 4326)
                 ) / 1000 as distance_km
             FROM evacuation_centers
             WHERE status = 'active'
             AND ST_DistanceSphere(
-                coordinates,
+                ST_SetSRID(ST_MakePoint(coordinates[0], coordinates[1]), 4326),
                 ST_SetSRID(ST_MakePoint(:longitude, :latitude), 4326)
             ) <= :radius_meters
             ORDER BY distance_km ASC
@@ -677,16 +713,7 @@ class EvacuationCenter(db.Model):
         
         results = db.session.execute(query, params).fetchall()
         
-        centers = [
-            cls._row_to_center(row) for row in results if cls._row_to_center(row)
-        ]
-        
-        # Add distance to each center object
-        for i, row in enumerate(results):
-            if i < len(centers):
-                centers[i].distance_km = row[-1]  # Last column is distance_km
-        
-        return centers
+        return [cls._row_to_center(row) for row in results]
 
     @classmethod
     def get_centers_in_bounds(
@@ -716,7 +743,7 @@ class EvacuationCenter(db.Model):
             SELECT *
             FROM evacuation_centers
             WHERE ST_Within(
-                coordinates,
+                ST_SetSRID(ST_MakePoint(coordinates[0], coordinates[1]), 4326),
                 ST_MakeEnvelope(:west, :south, :east, :north, 4326)
             )
         """

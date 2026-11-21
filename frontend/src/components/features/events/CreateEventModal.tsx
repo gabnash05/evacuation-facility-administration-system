@@ -2,7 +2,13 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogHeader,
+    DialogTitle,
+} from "@/components/ui/dialog";
 import {
     Table,
     TableBody,
@@ -49,7 +55,7 @@ interface EventData {
 }
 
 // Helper function to transform backend center data to EvacuationCenter type
-const transformCenterData = (center: any): EvacuationCenter => ({
+const transformCenterData = (center: Partial<EvacuationCenter>): EvacuationCenter => ({
     center_id: center.center_id,
     center_name: center.center_name,
     address: center.barangay || center.address || "",
@@ -78,11 +84,11 @@ export function CreateEventModal({
     const [isAddCenterOpen, setIsAddCenterOpen] = useState(false);
     const [customEventType, setCustomEventType] = useState("");
     const [isSubmitting, setIsSubmitting] = useState(false);
-    
+
     const { createEvent, updateEvent, loading: storeLoading } = useEventStore();
 
     // Check if this is a resolved event (read-only)
-    const isResolvedEvent = initialData?.status?.toLowerCase() === 'resolved';
+    const isResolvedEvent = initialData?.status?.toLowerCase() === "resolved";
 
     // Initialize form with initialData when editing
     useEffect(() => {
@@ -158,7 +164,7 @@ export function CreateEventModal({
                     if (isResolvedEvent) {
                         throw new Error("Cannot update a resolved event");
                     }
-                    
+
                     result = await updateEvent(initialData.event_id, eventData);
                 } else {
                     result = await createEvent(eventData);
@@ -170,16 +176,17 @@ export function CreateEventModal({
                     setError(result.message || "Failed to save event");
                 }
             }
-        } catch (err: any) {
+        } catch (err: unknown) {
+            const message =
+                err instanceof Error ? err.message : "Failed to save event. Please try again.";
             // Handle specific error types
-            if (err.message?.includes("already exists")) {
+            if (message.includes("already exists")) {
                 setError(`An event with the name "${event_name}" already exists.`);
-            } else if (err.message?.includes("Validation error")) {
-                setError(err.message);
+            } else if (message.includes("Validation error")) {
+                setError(message);
             } else {
-                setError(err.message || "Failed to save event. Please try again.");
+                setError(message);
             }
-            console.error("Create/update event error:", err);
         } finally {
             setIsSubmitting(false);
         }
@@ -234,6 +241,12 @@ export function CreateEventModal({
         return "bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-200";
     };
 
+    const getOccupancyPercentage = (center: EvacuationCenter) =>
+        center.capacity > 0 ? Math.round((center.current_occupancy / center.capacity) * 100) : 0;
+
+    const getOccupancyClass = (center: EvacuationCenter) =>
+        getOccupancyColor(String(getOccupancyPercentage(center)));
+
     const getDisplayStatus = (status: string): string => {
         const statusMap: Record<string, string> = {
             active: "Active",
@@ -253,17 +266,32 @@ export function CreateEventModal({
                 <DialogContent className="!max-w-[900px] w-[95vw] max-h-[90vh] overflow-y-auto">
                     <DialogHeader>
                         <DialogTitle className="text-lg font-semibold">
-                            {initialData ? (isResolvedEvent ? "View Resolved Event" : "Edit Event") : "Create Event"}
+                            {initialData
+                                ? isResolvedEvent
+                                    ? "View Resolved Event"
+                                    : "Edit Event"
+                                : "Create Event"}
                         </DialogTitle>
+                        <DialogDescription>
+                            {initialData
+                                ? "Review or update affected evacuation centers."
+                                : "Create an event and associate affected centers."}
+                        </DialogDescription>
                     </DialogHeader>
 
                     {/* Warning for resolved event */}
                     {isResolvedEvent && (
-                        <div className="bg-yellow-50 border border-yellow-200 text-yellow-800 p-3 rounded-md">
+                        <div
+                            className={cn(
+                                "rounded-md border border-yellow-200 bg-yellow-50 p-3",
+                                "text-yellow-800"
+                            )}
+                        >
                             <div className="flex items-center gap-2">
                                 <AlertTriangle className="h-4 w-4" />
                                 <span className="text-sm">
-                                    This event is resolved and cannot be modified. Use the "Resolve Event" action to manage event resolution.
+                                    This event is resolved and cannot be modified. Use the "Resolve
+                                    Event" action to manage event resolution.
                                 </span>
                             </div>
                         </div>
@@ -271,7 +299,10 @@ export function CreateEventModal({
 
                     {/* Error Display */}
                     {error && (
-                        <div className="bg-destructive/15 text-destructive p-3 rounded-md">
+                        <div
+                            className="bg-destructive/15 text-destructive p-3 rounded-md"
+                            role="alert"
+                        >
                             <div className="flex items-center gap-2">
                                 <AlertCircle className="h-4 w-4" />
                                 <span className="text-sm">{error}</span>
@@ -282,8 +313,11 @@ export function CreateEventModal({
                     {/* Event Info Section */}
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
                         <div className="space-y-2">
-                            <label className="text-sm font-medium">Event Name</label>
+                            <label className="text-sm font-medium" htmlFor="event-name">
+                                Event Name
+                            </label>
                             <Input
+                                id="event-name"
                                 value={event_name}
                                 onChange={e => setEventName(e.target.value)}
                                 placeholder="Enter event name"
@@ -294,12 +328,12 @@ export function CreateEventModal({
                         </div>
                         <div className="space-y-2">
                             <label className="text-sm font-medium">Event Type</label>
-                            <Select 
-                                value={event_type} 
-                                onValueChange={setEventType} 
+                            <Select
+                                value={event_type}
+                                onValueChange={setEventType}
                                 disabled={isLoading || isReadOnly}
                             >
-                                <SelectTrigger className="w-full">
+                                <SelectTrigger aria-label="Event type" className="w-full">
                                     <SelectValue placeholder="Select disaster type" />
                                 </SelectTrigger>
                                 <SelectContent>
@@ -331,12 +365,15 @@ export function CreateEventModal({
                         </div>
                         <div className="space-y-2">
                             <label className="text-sm font-medium">Status</label>
-                            <Select 
-                                value={status} 
-                                onValueChange={setStatus} 
+                            <Select
+                                value={status}
+                                onValueChange={setStatus}
                                 disabled={isLoading || !initialData || isReadOnly}
                             >
-                                <SelectTrigger className={`w-full ${getStatusColor(status)}`}>
+                                <SelectTrigger
+                                    aria-label="Event status"
+                                    className={cn("w-full", getStatusColor(status))}
+                                >
                                     <SelectValue>{getDisplayStatus(status)}</SelectValue>
                                 </SelectTrigger>
                                 <SelectContent>
@@ -352,7 +389,7 @@ export function CreateEventModal({
                                     New events are always created as "Active"
                                 </p>
                             )}
-                            {initialData && status === 'resolved' && !isReadOnly && (
+                            {initialData && status === "resolved" && !isReadOnly && (
                                 <p className="text-xs text-yellow-600">
                                     To resolve an event, use the "Resolve Event" action in the table
                                 </p>
@@ -366,6 +403,7 @@ export function CreateEventModal({
                             <Popover>
                                 <PopoverTrigger asChild>
                                     <Button
+                                        aria-label="Date declared"
                                         variant="outline"
                                         className={cn(
                                             "w-full justify-start text-left font-normal",
@@ -395,6 +433,7 @@ export function CreateEventModal({
                             <Popover>
                                 <PopoverTrigger asChild>
                                     <Button
+                                        aria-label="Event end date"
                                         variant="outline"
                                         className={cn(
                                             "w-full justify-start text-left font-normal",
@@ -482,7 +521,10 @@ export function CreateEventModal({
                                             <TableRow>
                                                 <TableCell
                                                     colSpan={isReadOnly ? 5 : 6}
-                                                    className="text-center py-8 text-muted-foreground"
+                                                    className={cn(
+                                                        "py-8 text-center",
+                                                        "text-muted-foreground"
+                                                    )}
                                                 >
                                                     No evacuation centers added yet
                                                 </TableCell>
@@ -508,18 +550,30 @@ export function CreateEventModal({
                                                     </TableCell>
                                                     <TableCell>
                                                         <span
-                                                            className={`px-2 py-1 rounded text-xs font-medium inline-block ${getOccupancyColor(`${Math.round((center.current_occupancy / center.capacity) * 100)}%` || "0%")}`}
+                                                            className={cn(
+                                                                "inline-block rounded px-2 py-1",
+                                                                "text-xs font-medium",
+                                                                getOccupancyClass(center)
+                                                            )}
                                                         >
-                                                            {`${Math.round((center.current_occupancy / center.capacity) * 100)}%`}
+                                                            {getOccupancyPercentage(center)}%
                                                         </span>
                                                     </TableCell>
                                                     {!isReadOnly && (
                                                         <TableCell>
                                                             <Button
+                                                                aria-label={
+                                                                    "Remove " + center.center_name
+                                                                }
                                                                 variant="ghost"
                                                                 size="icon"
-                                                                onClick={() => handleRemoveCenter(i)}
-                                                                className="h-8 w-8 text-destructive hover:text-destructive"
+                                                                onClick={() =>
+                                                                    handleRemoveCenter(i)
+                                                                }
+                                                                className={cn(
+                                                                    "h-8 w-8 text-destructive",
+                                                                    "hover:text-destructive"
+                                                                )}
                                                                 disabled={isLoading}
                                                             >
                                                                 <Trash2 className="h-4 w-4" />
@@ -548,7 +602,10 @@ export function CreateEventModal({
                         {!isReadOnly && (
                             <Button
                                 onClick={handleAddEvent}
-                                className="gap-2 bg-blue-600 hover:bg-blue-700 px-4 py-2 text-sm font-medium"
+                                className={cn(
+                                    "gap-2 bg-blue-600 px-4 py-2 text-sm font-medium",
+                                    "hover:bg-blue-700"
+                                )}
                                 disabled={!isFormValid || isLoading}
                             >
                                 {isLoading ? (

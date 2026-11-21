@@ -16,6 +16,14 @@ logger = logging.getLogger(__name__)
 
 # Constants
 DEFAULT_DB_NAME = "efas_db"
+DATABASE_IDENTIFIER_PATTERN = re.compile(r"[A-Za-z_][A-Za-z0-9_]*\Z")
+
+
+def validate_database_identifier(database_name: str) -> str:
+    """Return a safe PostgreSQL identifier or reject unsafe configuration input."""
+    if not DATABASE_IDENTIFIER_PATTERN.fullmatch(database_name):
+        raise ValueError("DB_NAME must be a PostgreSQL identifier")
+    return database_name
 
 
 def get_database_connection(database_name: Optional[str] = None):
@@ -47,7 +55,7 @@ def get_database_connection(database_name: Optional[str] = None):
 
 def create_database():
     """Create database if it doesn't exist."""
-    db_name = os.environ.get("DB_NAME", DEFAULT_DB_NAME)
+    db_name = validate_database_identifier(os.environ.get("DB_NAME", DEFAULT_DB_NAME))
 
     try:
         # Connect to default postgres database to create our database

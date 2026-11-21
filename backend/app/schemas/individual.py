@@ -10,7 +10,7 @@ def validate_not_in_future(value):
         raise ValidationError("Date of birth cannot be in the future.")
 
 
-class IndividualCreateSchema(Schema):
+class IndividualMemberCreateSchema(Schema):
     first_name = fields.Str(required=True, validate=validate.Length(min=1, max=50))
     last_name = fields.Str(required=True, validate=validate.Length(min=1, max=50))
 
@@ -28,8 +28,24 @@ class IndividualCreateSchema(Schema):
     )
 
 
-class IndividualUpdateSchema(IndividualCreateSchema):
-    individual_id = fields.Int(required=False)
+class IndividualCreateSchema(IndividualMemberCreateSchema):
+    household_id = fields.Int(required=True, validate=validate.Range(min=1))
+
+
+class IndividualUpdateSchema(Schema):
+    first_name = fields.Str(required=False, validate=validate.Length(min=1, max=50))
+    last_name = fields.Str(required=False, validate=validate.Length(min=1, max=50))
+    date_of_birth = fields.Date(
+        allow_none=True, required=False, validate=validate_not_in_future
+    )
+    gender = fields.Str(
+        allow_none=True,
+        required=False,
+        validate=validate.OneOf(["Male", "Female", "Other"]),
+    )
+    relationship_to_head = fields.Str(
+        required=False, validate=validate.Length(min=1, max=50)
+    )
 
 
 class IndividualSelectionSchema(Schema):
