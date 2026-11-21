@@ -11,6 +11,7 @@ from app import create_app
 from app.models import db
 from app.models.individual import Individual
 from app.services.household_service import HouseholdService
+from app.services.individual_service import IndividualService
 from tests.api_test_case import ApiTestConfig
 
 
@@ -165,6 +166,26 @@ class HouseholdPostgreSQLSmoke(unittest.TestCase):
                 ).scalar_one(),
                 member,
             )
+            db.session.execute(
+                text(
+                    "UPDATE individuals SET current_status = 'transferred' "
+                    "WHERE individual_id = :id"
+                ),
+                {"id": member},
+            )
+            db.session.commit()
+            result = IndividualService.recalculate_all_statuses()
+            self.assertTrue(result["success"])
+            with db.engine.connect() as connection:
+                self.assertEqual(
+                    connection.execute(
+                        text(
+                            "SELECT current_status FROM individuals WHERE individual_id = :id"
+                        ),
+                        {"id": member},
+                    ).scalar_one(),
+                    "checked_out",
+                )
 
 
 if __name__ == "__main__":

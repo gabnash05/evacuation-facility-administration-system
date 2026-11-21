@@ -15,6 +15,9 @@ baseline = importlib.import_module("migrations.versions.0001_legacy_schema")
 active_attendance = importlib.import_module(
     "migrations.versions.0003_unique_active_attendance"
 )
+status_migration = importlib.import_module(
+    "migrations.versions.0004_fix_individual_status_function"
+)
 
 
 class MigrationEnvironmentTests(unittest.TestCase):
@@ -66,6 +69,10 @@ class MigrationBaselineTests(unittest.TestCase):
 
 
 class ActiveAttendanceMigrationTests(unittest.TestCase):
+    def test_status_function_downgrade_refuses_broken_revision(self):
+        with self.assertRaisesRegex(RuntimeError, "broken status function"):
+            status_migration.downgrade()
+
     @patch.object(active_attendance.op, "get_bind")
     def test_duplicate_rows_prevent_index_creation(self, get_bind):
         connection = get_bind.return_value

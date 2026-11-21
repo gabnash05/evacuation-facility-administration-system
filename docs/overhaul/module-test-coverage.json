@@ -515,6 +515,12 @@
       "behavior": "Uses the requested attendance record ID for checkout and keeps private failed-write details out of transfer and check-in responses and logs."
     },
     {
+      "path": "backend/migrations/versions/0004_fix_individual_status_function.py",
+      "status": "covered",
+      "tests": ["backend/tests/test_migrations.py"],
+      "behavior": "Refuses a downgrade that would restore the broken recalculation function."
+    },
+    {
       "path": "backend/migrations/versions/0003_unique_active_attendance.py",
       "status": "covered",
       "tests": ["backend/tests/test_migrations.py"],

@@ -658,3 +658,8 @@ remain under DATABASE-006.
 HOUSEHOLD-003A PostgreSQL follow-up verified that a foreign head is rejected
 and an existing member can be assigned as head. All three PostgreSQL smoke
 suites passed on freshly migrated disposable databases.
+
+DATABASE-006C fixes the status function return type in revision 0004 and commits
+successful recalculation. A separate PostgreSQL connection observed the corrected
+status. All three PostgreSQL smoke suites and 138 backend tests passed. Downgrade
+to the broken function is refused.

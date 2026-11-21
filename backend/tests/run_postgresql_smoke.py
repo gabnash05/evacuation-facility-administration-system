@@ -44,8 +44,20 @@ def main():
                 FLASK_SKIP_DOTENV="1",
             )
             print(f"Running {suite} smoke suite on {name}", flush=True)
+            revision = (
+                "0003_unique_active_attendance" if suite == "attendance" else "head"
+            )
             subprocess.run(
-                [sys.executable, "-m", "flask", "--app", "app", "db", "upgrade"],
+                [
+                    sys.executable,
+                    "-m",
+                    "flask",
+                    "--app",
+                    "app",
+                    "db",
+                    "upgrade",
+                    revision,
+                ],
                 env=environment,
                 check=True,
             )

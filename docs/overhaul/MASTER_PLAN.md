@@ -510,6 +510,10 @@ The audit tickets are complete. The tickets below are the authoritative implemen
 
 - P1, S. Check that an explicitly supplied non-null head belongs to the target household and lock the member until the update finishes. Reject unrelated IDs before writes. Run the mapped regression, backend suite, strict mapping and diff review. Existing data and other head-assignment paths remain under DATABASE-006. No migration is required.
 
+### DATABASE-006C — Persist individual status recalculation
+
+- P1, S. Revision 0004 corrects the legacy function return type. The service commits successful recalculation and rolls back failure. Verify the corrected status from a separate PostgreSQL connection, all smoke suites, backend tests, strict mapping and diff review. Deploy revision 0004 with the service change. Downgrade refuses to restore the broken function; recover using a reviewed forward migration or verified backup.
+
 ### DEVOPS-001 — Restore the production WSGI entry point
 
 - **Priority/risk:** P1 / XS; production start failure, reversible source change.

@@ -350,7 +350,7 @@ class AttendancePostgreSQLSmoke(unittest.TestCase):
             db.session.commit()
             migration_config = application.extensions["migrate"].migrate.get_config()
             with self.assertRaisesRegex(RuntimeError, "Duplicate active attendance"):
-                command.upgrade(migration_config, "head")
+                command.upgrade(migration_config, "0003_unique_active_attendance")
             self.assertEqual(
                 db.session.execute(
                     text("SELECT version_num FROM alembic_version")
@@ -366,7 +366,7 @@ class AttendancePostgreSQLSmoke(unittest.TestCase):
                 {"record_id": duplicate_id},
             )
             db.session.commit()
-            upgrade()
+            upgrade(revision="0003_unique_active_attendance")
             self.assertEqual(
                 db.session.execute(
                     text("SELECT version_num FROM alembic_version")

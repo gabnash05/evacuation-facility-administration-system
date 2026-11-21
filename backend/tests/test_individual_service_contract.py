@@ -7,6 +7,23 @@ from tests.api_test_case import ApiTestCase
 
 
 class IndividualServiceContractTests(ApiTestCase):
+    @patch("app.services.individual_service.db")
+    @patch("app.services.individual_service.Individual.recalculate_all_statuses")
+    def test_recalculation_commits_success_and_rolls_back_failure(
+        self, recalculate, database
+    ):
+        recalculate.return_value = [{"individual_id": 1}]
+        result = IndividualService.recalculate_all_statuses()
+        self.assertTrue(result["success"])
+        database.session.commit.assert_called_once_with()
+
+        database.reset_mock()
+        recalculate.side_effect = RuntimeError("database failed")
+        result = IndividualService.recalculate_all_statuses()
+        self.assertFalse(result["success"])
+        database.session.commit.assert_not_called()
+        database.session.rollback.assert_called_once_with()
+
     def test_create_service_preserves_validated_household_identifier(self):
         data = {
             "household_id": 2,
@@ -15,7 +32,9 @@ class IndividualServiceContractTests(ApiTestCase):
             "relationship_to_head": "Child",
         }
         with self.app.app_context():
-            with patch("app.services.individual_service.Individual.create") as create, patch(
+            with patch(
+                "app.services.individual_service.Individual.create"
+            ) as create, patch(
                 "app.services.individual_service.db.session.commit"
             ), patch(
                 "app.services.individual_service.Individual.get_by_id",

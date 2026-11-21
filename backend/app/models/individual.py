@@ -636,7 +636,7 @@ class Individual(db.Model):
 
         except Exception as e:
             logger.error(f"Error recalculating individual statuses: {str(e)}")
-            return []
+            raise
 
     @classmethod
     def get_current_center_for_individual(cls, individual_id: int):

@@ -542,6 +542,7 @@ class IndividualService:
         """
         try:
             updates = Individual.recalculate_all_statuses()
+            db.session.commit()
 
             return {
                 "success": True,
@@ -550,6 +551,7 @@ class IndividualService:
             }
 
         except Exception as error:
+            db.session.rollback()
             logger.error("Error recalculating statuses: %s", str(error), exc_info=True)
             return {
                 "success": False,
