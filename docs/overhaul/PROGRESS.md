@@ -707,6 +707,10 @@ Disposable PostgreSQL verified an assigned, not checked-in individual appears
 in both list and count. All 146 backend tests and three PostgreSQL smoke suites
 passed. Age category differences remain open.
 
+BACKEND-008 propagates individual list and count failures to the existing
+service error response. Model and service regressions and all 148 backend
+tests passed.
+
 CONTRACT-001A corrects the backend environment example to document the fixed
 `/api` prefix and removes the unused `API_PREFIX` setting. The application
 route registration and frontend base configuration were checked directly.

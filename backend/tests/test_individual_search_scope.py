@@ -90,6 +90,25 @@ class IndividualSearchScopeTests(ApiTestCase):
             self.assertIn(clause, list_query)
             self.assertIn(clause, count_query)
 
+    def test_list_and_count_database_errors_reach_service(self):
+        for method in ("get_all_paginated", "get_count"):
+            with self.subTest(method=method), patch(
+                f"app.services.individual_service.Individual.{method}",
+                side_effect=RuntimeError("database unavailable"),
+            ):
+                result = IndividualService.get_all_individuals({})
+                self.assertFalse(result["success"])
+
+    def test_list_and_count_model_propagate_query_errors(self):
+        with self.app.app_context(), patch(
+            "app.models.individual.db.session.execute",
+            side_effect=RuntimeError("query failed"),
+        ):
+            with self.assertRaisesRegex(RuntimeError, "query failed"):
+                Individual.get_all_paginated()
+            with self.assertRaisesRegex(RuntimeError, "query failed"):
+                Individual.get_count()
+
     def test_status_summary_query_binds_assigned_center_scope(self):
         with self.app.app_context():
             with patch("app.models.individual.db.session.execute") as execute:

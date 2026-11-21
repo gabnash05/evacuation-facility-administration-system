@@ -550,6 +550,10 @@ The audit tickets are complete. The tickets below are the authoritative implemen
 
 - P2, S. Share the existing list center predicate with the count query, preserving list behavior. Verify bound predicates and an assigned-but-not-checked-in individual on disposable PostgreSQL. Run backend tests, PostgreSQL smoke suites, strict mapping and diff review. Age categories remain separate pending product evidence. No migration is needed.
 
+### BACKEND-008 — Report individual list and count failures
+
+- P2, S. Propagate individual list and count query failures to the service error handler instead of returning empty data. Test both model and service failure paths, run backend tests, strict mapping and diff review. Successful empty results remain unchanged. No migration is needed.
+
 ### DEVOPS-001 — Restore the production WSGI entry point
 
 - **Priority/risk:** P1 / XS; production start failure, reversible source change.

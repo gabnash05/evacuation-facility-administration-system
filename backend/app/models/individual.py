@@ -397,7 +397,7 @@ class Individual(db.Model):
 
         except Exception as e:
             logger.error(f"Error fetching paginated individuals: {str(e)}")
-            return []
+            raise
 
     @classmethod
     def get_count(
@@ -465,7 +465,7 @@ class Individual(db.Model):
             return result if result is not None else 0
         except Exception as e:
             logger.error(f"Error counting individuals: {str(e)}")
-            return 0
+            raise
 
     @classmethod
     def search_by_name(cls, name: str, limit: int = 10, center_id: int = None):
