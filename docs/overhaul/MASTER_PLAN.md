@@ -402,6 +402,13 @@ The audit tickets are complete. The tickets below are the authoritative implemen
 - **Validation:** Run mocked transaction regressions and the backend suite. Create a fresh disposable PostgreSQL database whose name starts with `efas_test_` on a dedicated loopback port. Upgrade it with Alembic, set `EFAS_TEST_DATABASE_URL` to its URL, and run `pipenv run python -m tests.postgresql_distribution_smoke` from `backend`. The smoke case inserts synthetic fixtures and verifies zero session, item, and stock changes after a later item fails. It then verifies a two-item success and the expected stock decrements. Use a new fixture database on each run.
 - **Non-goals and rollout:** No historical data repair, schema changes, or policy changes to event eligibility. Update, delete, void/restore, and concurrent stock coordination remain separate work. Code rollback must not re-enable multi-item creation without a transaction. Existing partial records require inventory evidence and an approved repair policy.
 
+### DISTRIBUTION-001B — Make status and delete operations stock-safe
+
+- **Priority, size, and dependencies:** P1, M. Follows DISTRIBUTION-001A and DATABASE-002A. The service committed status through a model method and the delete trigger credited voided items a second time.
+- **Scope and invariant:** Lock the distribution row before deciding its next status. Use a bounded atomic allocation update and commit stock plus status together. Returning stock reactivates depleted allocations, while cancelled allocations retain their status. Revision `0002_distribution_delete_stock` limits deletion credits to completed records. Existing HTTP operations and supported statuses remain available.
+- **Validation:** Run the backend suite and `tests.postgresql_distribution_smoke` against a disposable database upgraded from revision 0001. Verify row lock exclusion from a second connection, void and restore, insufficient-stock refusal, deletion of both statuses, and cancellation preservation. Unit-test rollback on a status write failure.
+- **Rollout and recovery:** Apply revision 0002 before enabling or reopening distribution deletes after rollout. It affects future deletes and makes no historical repairs. The revision refuses to reinstall the double-credit trigger. Use a verified backup and approved recovery procedure if database rollback is needed. Edit transactions and historical discrepancies remain separate work.
+
 ### DEVOPS-001 — Restore the production WSGI entry point
 
 - **Priority/risk:** P1 / XS; production start failure, reversible source change.

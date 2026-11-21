@@ -158,17 +158,17 @@ class Distribution(db.Model):
         return result._asdict() if result else None
 
     @classmethod
-    def get_by_id(cls, distribution_id):
+    def get_by_id(cls, distribution_id, *, for_update=False):
         try:
-            sql = text(
-                """
+            query = """
                 SELECT d.*, ds.household_id, ds.session_id, ds.center_id, ds.event_id
                 FROM distributions d
                 JOIN distribution_sessions ds ON d.session_id = ds.session_id
                 WHERE d.distribution_id = :id
             """
-            )
-            result = db.session.execute(sql, {"id": distribution_id}).fetchone()
+            if for_update:
+                query += " FOR UPDATE OF d"
+            result = db.session.execute(text(query), {"id": distribution_id}).fetchone()
             return result._asdict() if result else None
         except Exception as e:
             db.session.rollback()
@@ -198,10 +198,7 @@ class Distribution(db.Model):
 
     @classmethod
     def update_status(cls, distribution_id, new_status):
-        try:
-            sql = text("UPDATE distributions SET status = :status WHERE distribution_id = :id")
-            db.session.execute(sql, {"status": new_status, "id": distribution_id})
-            db.session.commit()
-        except Exception as e:
-            db.session.rollback()
-            raise e
+        sql = text(
+            "UPDATE distributions SET status = :status WHERE distribution_id = :id"
+        )
+        db.session.execute(sql, {"status": new_status, "id": distribution_id})

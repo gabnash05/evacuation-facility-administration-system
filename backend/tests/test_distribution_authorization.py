@@ -19,6 +19,30 @@ def returned_row(values):
 
 
 class DistributionAuthorizationTests(ApiTestCase):
+    @patch("app.services.distribution_service.Distribution.update_status")
+    @patch("app.services.distribution_service.Allocation.update_quantity")
+    @patch("app.services.distribution_service.Distribution.get_by_id")
+    def test_status_failure_rolls_back_stock(
+        self, get_by_id, update_quantity, update_status
+    ):
+        get_by_id.return_value = {
+            "status": "completed",
+            "allocation_id": 2,
+            "quantity_distributed": 1,
+        }
+        update_status.side_effect = RuntimeError("Private database details")
+        with self.app.app_context():
+            with patch("app.services.distribution_service.db.session") as session:
+                result, status = DistributionService.toggle_status(7)
+
+        self.assertEqual(status, 500)
+        self.assertNotIn("Private database details", result["message"])
+        get_by_id.assert_called_once_with(7, for_update=True)
+        update_quantity.assert_called_once_with(2, 1, "add")
+        update_status.assert_called_once_with(7, "voided")
+        session.rollback.assert_called_once_with()
+        session.commit.assert_not_called()
+
     @patch("app.routes.distribution.User.get_by_id")
     @patch("app.routes.distribution.DistributionService.get_history")
     def test_history_requires_a_center_for_center_scoped_roles(

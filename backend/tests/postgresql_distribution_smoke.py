@@ -6,16 +6,17 @@ from types import SimpleNamespace
 
 from sqlalchemy import text
 from sqlalchemy.engine import make_url
-from sqlalchemy.exc import ArgumentError
+from sqlalchemy.exc import ArgumentError, DBAPIError
 
 from app import create_app
 from app.models import db
+from app.models.distribution import Distribution
 from app.services.distribution_service import DistributionService
 from tests.api_test_case import ApiTestConfig
 
 
 class DistributionPostgreSQLSmoke(unittest.TestCase):
-    def test_late_stock_failure_rolls_back_session_items_and_inventory(self):
+    def test_distribution_lifecycle_preserves_stock_and_atomicity(self):
         value = os.environ.get("EFAS_TEST_DATABASE_URL")
         if not value:
             self.fail(
@@ -140,6 +141,76 @@ class DistributionPostgreSQLSmoke(unittest.TestCase):
             self.assertEqual(status, 201)
             self.assertEqual(counts(), (1, 2))
             self.assertEqual(stock(), [3, 4])
+
+            distribution_ids = (
+                db.session.execute(
+                    text(
+                        "SELECT distribution_id FROM distributions ORDER BY allocation_id"
+                    )
+                )
+                .scalars()
+                .all()
+            )
+            first, second = distribution_ids
+
+            self.assertEqual(
+                Distribution.get_by_id(first, for_update=True)["status"], "completed"
+            )
+            with db.engine.connect() as concurrent_connection:
+                with self.assertRaises(DBAPIError) as lock_refusal:
+                    concurrent_connection.execute(
+                        text(
+                            "SELECT 1 FROM distributions "
+                            "WHERE distribution_id = :id FOR UPDATE NOWAIT"
+                        ),
+                        {"id": first},
+                    )
+                self.assertEqual(lock_refusal.exception.orig.pgcode, "55P03")
+            db.session.rollback()
+
+            def state(distribution_id):
+                return db.session.execute(
+                    text(
+                        "SELECT status FROM distributions WHERE distribution_id = :id"
+                    ),
+                    {"id": distribution_id},
+                ).scalar_one()
+
+            self.assertEqual(DistributionService.toggle_status(first)[1], 200)
+            self.assertEqual(state(first), "voided")
+            self.assertEqual(stock(), [5, 4])
+
+            self.assertEqual(DistributionService.toggle_status(first)[1], 200)
+            self.assertEqual(state(first), "completed")
+            self.assertEqual(stock(), [3, 4])
+
+            self.assertEqual(DistributionService.toggle_status(first)[1], 200)
+            self.assertEqual(record(1)[1], 201)
+            self.assertEqual(record(1)[1], 201)
+            self.assertEqual(stock(), [1, 2])
+            self.assertEqual(DistributionService.toggle_status(first)[1], 400)
+            self.assertEqual(state(first), "voided")
+            self.assertEqual(stock(), [1, 2])
+
+            self.assertEqual(DistributionService.delete_distribution(first)[1], 200)
+            self.assertEqual(stock(), [1, 2])
+
+            db.session.execute(
+                text(
+                    "UPDATE allocations SET status = 'cancelled' WHERE allocation_id = :id"
+                ),
+                {"id": allocation_ids[1]},
+            )
+            db.session.commit()
+            self.assertEqual(DistributionService.delete_distribution(second)[1], 200)
+            self.assertEqual(stock(), [1, 3])
+            self.assertEqual(
+                db.session.execute(
+                    text("SELECT status FROM allocations WHERE allocation_id = :id"),
+                    {"id": allocation_ids[1]},
+                ).scalar_one(),
+                "cancelled",
+            )
 
 
 if __name__ == "__main__":

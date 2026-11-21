@@ -184,49 +184,40 @@ class DistributionService:
                 return {"success": False, "message": "Record not found"}, 404
             return {"success": True, "message": "Record deleted successfully"}, 200
         except Exception as e:
-            # Don't need rollback here since model methods handle their own rollback
-            return {"success": False, "message": str(e)}, 500
+            logger.error("Distribution delete failed (%s)", type(e).__name__)
+            return {"success": False, "message": "Failed to delete distribution."}, 500
 
     @staticmethod
     def toggle_status(distribution_id):
         try:
-            # 1. Fetch record
-            record = Distribution.get_by_id(distribution_id)
+            record = Distribution.get_by_id(distribution_id, for_update=True)
             if not record:
                 return {"success": False, "message": "Record not found"}, 404
 
-            current_status = record['status']
-            allocation_id = record['allocation_id']
-            quantity = record['quantity_distributed']
+            current_status = record["status"]
+            allocation_id = record["allocation_id"]
+            quantity = record["quantity_distributed"]
 
-            try:
-                if current_status == 'completed':
-                    # VOID: Return stock, set status to voided
-                    Allocation.update_quantity(allocation_id, quantity, 'add')
-                    Distribution.update_status(distribution_id, 'voided')
-                    msg = "Record voided successfully. Stock returned."
-
-                elif current_status == 'voided':
-                    # RESTORE: Deduct stock, set status to completed
-                    # This will raise ValueError if stock is insufficient
-                    Allocation.update_quantity(allocation_id, quantity, 'subtract')
-                    Distribution.update_status(distribution_id, 'completed')
-                    msg = "Record restored successfully. Stock deducted."
-
-                else:
-                    return {"success": False, "message": "Invalid status state"}, 400
-
-                # Manually commit the transaction
-                db.session.commit()
-
-            except Exception as e:
+            if current_status == "completed":
+                Allocation.update_quantity(allocation_id, quantity, "add")
+                Distribution.update_status(distribution_id, "voided")
+                msg = "Record voided successfully. Stock returned."
+            elif current_status == "voided":
+                Allocation.update_quantity(allocation_id, quantity, "subtract")
+                Distribution.update_status(distribution_id, "completed")
+                msg = "Record restored successfully. Stock deducted."
+            else:
                 db.session.rollback()
-                raise e
+                return {"success": False, "message": "Invalid status state"}, 400
+
+            db.session.commit()
 
             return {"success": True, "message": msg}, 200
 
         except ValueError as ve:
+            db.session.rollback()
             return {"success": False, "message": str(ve)}, 400
         except Exception as e:
-            logger.error(f"Toggle status error: {str(e)}")
+            db.session.rollback()
+            logger.error("Distribution status update failed (%s)", type(e).__name__)
             return {"success": False, "message": "An unexpected error occurred."}, 500

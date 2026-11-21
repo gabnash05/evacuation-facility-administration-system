@@ -246,21 +246,30 @@ class Allocation(db.Model):
         return cls._row_to_allocation(result)
 
     @classmethod
-    def update_quantity(cls, allocation_id, quantity, operation='subtract'):
-        """Manually adjusts the remaining_quantity of an allocation."""
-        if operation == 'subtract':
-            check_sql = text("SELECT remaining_quantity FROM allocations WHERE allocation_id = :id")
-            current_stock = db.session.execute(check_sql, {"id": allocation_id}).scalar()
-            
-            if current_stock is None or current_stock < quantity:
-                raise ValueError(f"Insufficient stock for allocation ID {allocation_id}. Required: {quantity}, Available: {current_stock}")
-            
-            update_sql = text("UPDATE allocations SET remaining_quantity = remaining_quantity - :qty WHERE allocation_id = :id")
-        
-        else: # 'add' (Restore)
-            update_sql = text("UPDATE allocations SET remaining_quantity = remaining_quantity + :qty, status = 'active' WHERE allocation_id = :id")
-        
-        db.session.execute(update_sql, {"qty": quantity, "id": allocation_id})
+    def update_quantity(cls, allocation_id, quantity, operation="subtract"):
+        """Adjust stock without a separate read or a commit."""
+        if operation not in {"add", "subtract"} or quantity <= 0:
+            raise ValueError("Invalid inventory adjustment.")
+        delta = quantity if operation == "add" else -quantity
+        update_sql = text(
+            """
+            UPDATE allocations
+            SET remaining_quantity = remaining_quantity + :delta,
+                status = CASE
+                    WHEN status = 'cancelled' THEN 'cancelled'
+                    WHEN remaining_quantity + :delta = 0 THEN 'depleted'
+                    ELSE 'active'
+                END
+            WHERE allocation_id = :id
+              AND remaining_quantity + :delta BETWEEN 0 AND total_quantity
+            RETURNING allocation_id
+        """
+        )
+        result = db.session.execute(update_sql, {"delta": delta, "id": allocation_id})
+        if result.scalar_one_or_none() is None:
+            raise ValueError(
+                "The inventory adjustment exceeds the available stock or capacity."
+            )
 
     @classmethod
     def delete(cls, allocation_id: int) -> bool:

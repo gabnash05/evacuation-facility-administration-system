@@ -526,3 +526,11 @@ and the PostgreSQL 17.2 distribution smoke passed. The late stock rejection
 left zero new sessions, zero items, and stock unchanged. A subsequent success
 created both items and decremented both allocations. The returned error is
 sanitized. Existing stock repair and the other distribution mutations remain open.
+Published as `82a7a61` in draft PR #6.
+
+`DISTRIBUTION-001B` is verified. Void and restore use a locked distribution
+record and a single transaction. Revision 0002 prevents double-credit when a
+voided item is deleted. PostgreSQL upgrade and lifecycle checks passed on a
+disposable PostgreSQL 17.2 database, including lock refusal from a second
+connection. All 115 backend tests passed. Strict reconciliation reports 206
+mapped, zero missing, and six exempt. Distribution edits remain open.

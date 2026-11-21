@@ -19,6 +19,12 @@
       "behavior": "Rejects modified baseline SQL, existing EFAS tables, and destructive downgrade."
     },
     {
+      "path": "backend/migrations/versions/0002_distribution_delete_stock.py",
+      "status": "covered",
+      "tests": ["backend/tests/postgresql_distribution_smoke.py"],
+      "behavior": "Deletion credits completed records only and preserves cancelled allocation status."
+    },
+    {
       "path": "backend/wsgi.py",
       "status": "covered",
       "tests": ["backend/tests/test_wsgi.py"],
@@ -120,8 +126,8 @@
     {
       "path": "backend/app/models/aid_allocation.py",
       "status": "covered",
-      "tests": ["backend/tests/test_aid_allocation_model.py"],
-      "behavior": "Binds allocation-update identifiers only from an explicit model-level allowlist."
+      "tests": ["backend/tests/test_aid_allocation_model.py", "backend/tests/postgresql_distribution_smoke.py"],
+      "behavior": "Bounds inventory adjustments atomically and limits allocation-update identifiers to an explicit allowlist."
     },
     {
       "path": "backend/app/routes/events.py",
