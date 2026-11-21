@@ -1189,6 +1189,12 @@
       "behavior": "Loads allocations, resets pagination after search, and submits a status-only cancellation through the city administrator row menu."
     },
     {
+      "path": "frontend/src/components/features/distribution/DistributionHistoryTable.tsx",
+      "status": "covered",
+      "tests": ["frontend/src/components/features/distribution/DistributionHistoryTable.test.tsx"],
+      "behavior": "Keeps history readable for lower roles and exposes status actions only to super administrators, dispatching the selected record ID."
+    },
+    {
       "path": "frontend/src/components/features/map/MapLocationPicker.tsx",
       "status": "covered",
       "tests": ["frontend/src/components/features/map/MapLocationPicker.test.tsx"],

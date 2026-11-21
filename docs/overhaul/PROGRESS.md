@@ -436,3 +436,11 @@ The production build passed. The source file's strict lint check reports 10
 existing warnings, down from 11 at the parent commit. The full frontend suite
 passed under Node 24.22.1 (148 files, 226 tests in 231.99 seconds). An earlier
 Node 24.19.0 rerun of the sidebar snapshot timed out starting two fork workers.
+Published as `130c270` in draft PR #6.
+
+`TEST-003I` now covers distribution history. The table exposes change controls
+only to super administrators, consistent with the existing Flask route.
+Six focused cases, targeted lint and format, the production build, and the
+full frontend suite passed (149 files, 232 tests in 200.60 seconds). The direct
+application compiler check still reports 56 diagnostics outside the changed
+files. Module reconciliation reports 197 covered, nine unmapped, and six exempt.

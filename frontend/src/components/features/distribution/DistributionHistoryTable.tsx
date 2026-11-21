@@ -11,21 +11,21 @@ import {
     DropdownMenuContent,
     DropdownMenuItem,
     DropdownMenuTrigger,
-    DropdownMenuSeparator
+    DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 import { format } from "date-fns";
 import type { DistributionRecord } from "@/types/distribution";
 import { Badge } from "@/components/ui/badge";
-import { 
-    MoreVertical, 
-    Edit2, 
-    Trash2, 
-    ChevronsUpDown, 
-    ChevronUp, 
-    ChevronDown, 
-    Ban, 
-    RotateCcw 
+import {
+    MoreVertical,
+    Edit2,
+    Trash2,
+    ChevronsUpDown,
+    ChevronUp,
+    ChevronDown,
+    Ban,
+    RotateCcw,
 } from "lucide-react";
 import { useDistributionStore } from "@/store/distributionStore";
 
@@ -40,20 +40,18 @@ interface Props {
     sortDirection?: "asc" | "desc";
 }
 
-export function DistributionHistoryTable({ 
-    data, 
-    loading, 
-    userRole, 
-    onEdit, 
+export function DistributionHistoryTable({
+    data,
+    loading,
+    userRole,
+    onEdit,
     onDelete,
     onSort,
     sortColumn,
-    sortDirection 
+    sortDirection,
 }: Props) {
     const isSuperAdmin = userRole === "super_admin";
-    
-    // According to requirements: "Void Record" is for ALL USERS
-    // Use store action
+
     const { toggleStatus } = useDistributionStore();
 
     const getSortIcon = (columnKey: string) => {
@@ -87,7 +85,7 @@ export function DistributionHistoryTable({
             <Table>
                 <TableHeader>
                     <TableRow className="bg-muted/50">
-                        {columns.map((column) => (
+                        {columns.map(column => (
                             <TableHead key={column.key}>
                                 {column.sortable && onSort ? (
                                     <Button
@@ -105,27 +103,35 @@ export function DistributionHistoryTable({
                                 )}
                             </TableHead>
                         ))}
-                        <TableHead className="w-[80px] text-right">Actions</TableHead>
+                        {isSuperAdmin && (
+                            <TableHead className="w-[80px] text-right">Actions</TableHead>
+                        )}
                     </TableRow>
                 </TableHeader>
                 <TableBody>
                     {data.length === 0 ? (
                         <TableRow>
-                            <TableCell colSpan={8} className="h-32 text-center text-muted-foreground">
+                            <TableCell
+                                colSpan={columns.length + Number(isSuperAdmin)}
+                                className="h-32 text-center text-muted-foreground"
+                            >
                                 No distribution records found.
                             </TableCell>
                         </TableRow>
                     ) : (
                         data.map((record, index) => (
-                            <TableRow 
-                                key={record.distribution_id} 
+                            <TableRow
+                                key={record.distribution_id}
                                 className={`
                                     ${index % 2 === 1 ? "bg-muted/50" : ""}
-                                    ${record.status === 'voided' ? "opacity-60 grayscale bg-muted/20" : "hover:bg-muted/30"}
+                                    ${record.status === "voided" ? "opacity-60 grayscale bg-muted/20" : "hover:bg-muted/30"}
                                 `}
                             >
                                 <TableCell className="text-sm text-muted-foreground">
-                                    {format(new Date(record.distribution_date), "MMM d, yyyy h:mm a")}
+                                    {format(
+                                        new Date(record.distribution_date),
+                                        "MMM d, yyyy h:mm a"
+                                    )}
                                 </TableCell>
                                 <TableCell className="font-medium">
                                     {record.household_name}
@@ -136,65 +142,77 @@ export function DistributionHistoryTable({
                                 <TableCell className="font-medium">
                                     {record.resource_name}
                                 </TableCell>
-                                <TableCell className="font-bold pl-6">
-                                    {record.quantity}
-                                </TableCell>
-                                
+                                <TableCell className="font-bold pl-6">{record.quantity}</TableCell>
+
                                 {/* NEW STATUS CELL */}
                                 <TableCell>
-                                    <Badge variant={record.status === 'completed' ? "outline" : "destructive"}>
-                                        {record.status === 'completed' ? 'Complete' : 'Voided'}
+                                    <Badge
+                                        variant={
+                                            record.status === "completed"
+                                                ? "outline"
+                                                : "destructive"
+                                        }
+                                    >
+                                        {record.status === "completed" ? "Complete" : "Voided"}
                                     </Badge>
                                 </TableCell>
 
-                                <TableCell className="text-sm">
-                                    {record.volunteer_name}
-                                </TableCell>
-                                
-                                <TableCell className="text-right">
-                                    <DropdownMenu>
-                                        <DropdownMenuTrigger asChild>
-                                            <Button variant="ghost" size="icon" className="h-8 w-8">
-                                                <MoreVertical className="h-4 w-4" />
-                                            </Button>
-                                        </DropdownMenuTrigger>
-                                        <DropdownMenuContent align="end">
-                                            {/* Edit/Delete for Super Admin (Only if not voided) */}
-                                            {isSuperAdmin && record.status !== 'voided' && (
-                                                <>
-                                                    <DropdownMenuItem onClick={() => onEdit?.(record)}>
-                                                        <Edit2 className="h-4 w-4 mr-2" />
-                                                        Edit
-                                                    </DropdownMenuItem>
-                                                    <DropdownMenuItem 
-                                                        onClick={() => onDelete?.(record)}
-                                                        className="text-destructive focus:text-destructive"
-                                                    >
-                                                        <Trash2 className="h-4 w-4 mr-2" />
-                                                        Delete
-                                                    </DropdownMenuItem>
-                                                    <DropdownMenuSeparator />
-                                                </>
-                                            )}
+                                <TableCell className="text-sm">{record.volunteer_name}</TableCell>
 
-                                            {/* Void/Restore Action (All Users) */}
-                                            <DropdownMenuItem onClick={() => toggleStatus(record.distribution_id)}>
-                                                {record.status === 'completed' ? (
+                                {isSuperAdmin && (
+                                    <TableCell className="text-right">
+                                        <DropdownMenu>
+                                            <DropdownMenuTrigger asChild>
+                                                <Button
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    className="h-8 w-8"
+                                                    aria-label="Distribution actions"
+                                                >
+                                                    <MoreVertical className="h-4 w-4" />
+                                                </Button>
+                                            </DropdownMenuTrigger>
+                                            <DropdownMenuContent align="end">
+                                                {record.status !== "voided" && (
                                                     <>
-                                                        <Ban className="h-4 w-4 mr-2 text-orange-500" /> 
-                                                        Void Record
-                                                    </>
-                                                ) : (
-                                                    <>
-                                                        <RotateCcw className="h-4 w-4 mr-2 text-green-600" /> 
-                                                        Restore Record
+                                                        <DropdownMenuItem
+                                                            onClick={() => onEdit?.(record)}
+                                                        >
+                                                            <Edit2 className="h-4 w-4 mr-2" />
+                                                            Edit
+                                                        </DropdownMenuItem>
+                                                        <DropdownMenuItem
+                                                            onClick={() => onDelete?.(record)}
+                                                            className="text-destructive focus:text-destructive"
+                                                        >
+                                                            <Trash2 className="h-4 w-4 mr-2" />
+                                                            Delete
+                                                        </DropdownMenuItem>
+                                                        <DropdownMenuSeparator />
                                                     </>
                                                 )}
-                                            </DropdownMenuItem>
 
-                                        </DropdownMenuContent>
-                                    </DropdownMenu>
-                                </TableCell>
+                                                <DropdownMenuItem
+                                                    onClick={() =>
+                                                        toggleStatus(record.distribution_id)
+                                                    }
+                                                >
+                                                    {record.status === "completed" ? (
+                                                        <>
+                                                            <Ban className="h-4 w-4 mr-2 text-orange-500" />
+                                                            Void Record
+                                                        </>
+                                                    ) : (
+                                                        <>
+                                                            <RotateCcw className="h-4 w-4 mr-2 text-green-600" />
+                                                            Restore Record
+                                                        </>
+                                                    )}
+                                                </DropdownMenuItem>
+                                            </DropdownMenuContent>
+                                        </DropdownMenu>
+                                    </TableCell>
+                                )}
                             </TableRow>
                         ))
                     )}
