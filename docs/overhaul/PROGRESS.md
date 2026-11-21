@@ -685,3 +685,9 @@ DATABASE-003B binds center coordinates on create and update. Disposable
 PostgreSQL verified the stored longitude and latitude after both writes. All
 three PostgreSQL smoke suites and 143 backend tests passed. PostGIS proximity
 and ORM alignment remain open.
+
+DATABASE-003C converts native PostgreSQL points to PostGIS geometry for
+proximity and bounds queries and maps distance outside the model constructor.
+Both queries passed against disposable PostgreSQL 18 and PostGIS 3.6 in Ubuntu
+WSL, and all 145 backend tests passed. The fixture server was stopped. The ORM
+coordinate type and deployment PostGIS provisioning remain open.

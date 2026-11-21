@@ -530,6 +530,10 @@ The audit tickets are complete. The tickets below are the authoritative implemen
 
 - P2, S. Bind latitude and longitude as SQL values for PostgreSQL point creation and updates. Verify both on a disposable migrated database and run backend tests, strict mapping and diff review. No migration is needed. PostGIS proximity and ORM alignment remain under DATABASE-003.
 
+### DATABASE-003C — Convert native points for PostGIS queries
+
+- P1, S. Convert native PostgreSQL points to SRID 4326 geometry at proximity and bounds query boundaries. Map the computed distance without passing it to the model constructor. Verify active, inactive, near and distant fixtures on disposable PostGIS, run backend tests, strict mapping and diff review. No data migration is needed. Deploy only with PostGIS provisioned. ORM type alignment remains open.
+
 ### DEVOPS-001 — Restore the production WSGI entry point
 
 - **Priority/risk:** P1 / XS; production start failure, reversible source change.

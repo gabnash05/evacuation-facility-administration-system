@@ -30,3 +30,7 @@ downgrade and upgrade on its fixture. Run the normal backend suite with
 `pipenv run test` separately.
 
 PostGIS integration and automated provisioning remain part of TEST-002.
+
+For spatial checks, enable PostGIS in a separate fresh fixture database,
+run migrations, and run `pipenv run python -m tests.postgis_center_smoke`.
+The database must meet the same loopback, port and name restrictions.

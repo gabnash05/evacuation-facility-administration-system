@@ -121,6 +121,7 @@ class EvacuationCenter(db.Model):
         except AttributeError:
             row_dict = dict(row)
         
+        distance_km = row_dict.pop("distance_km", None)
         # Parse coordinates if they're in string format "(x, y)"
         if 'coordinates' in row_dict and row_dict['coordinates']:
             coords = row_dict['coordinates']
@@ -136,7 +137,10 @@ class EvacuationCenter(db.Model):
                     # Keep as is if parsing fails
                     pass
         
-        return cls(**row_dict)
+        center = cls(**row_dict)
+        if distance_km is not None:
+            center.distance_km = distance_km
+        return center
 
 
     @classmethod
@@ -661,13 +665,13 @@ class EvacuationCenter(db.Model):
         query = text("""
             SELECT *,
                 ST_DistanceSphere(
-                    coordinates,
+                    ST_SetSRID(ST_MakePoint(coordinates[0], coordinates[1]), 4326),
                     ST_SetSRID(ST_MakePoint(:longitude, :latitude), 4326)
                 ) / 1000 as distance_km
             FROM evacuation_centers
             WHERE status = 'active'
             AND ST_DistanceSphere(
-                coordinates,
+                ST_SetSRID(ST_MakePoint(coordinates[0], coordinates[1]), 4326),
                 ST_SetSRID(ST_MakePoint(:longitude, :latitude), 4326)
             ) <= :radius_meters
             ORDER BY distance_km ASC
@@ -683,16 +687,7 @@ class EvacuationCenter(db.Model):
         
         results = db.session.execute(query, params).fetchall()
         
-        centers = [
-            cls._row_to_center(row) for row in results if cls._row_to_center(row)
-        ]
-        
-        # Add distance to each center object
-        for i, row in enumerate(results):
-            if i < len(centers):
-                centers[i].distance_km = row[-1]  # Last column is distance_km
-        
-        return centers
+        return [cls._row_to_center(row) for row in results]
 
     @classmethod
     def get_centers_in_bounds(
@@ -722,7 +717,7 @@ class EvacuationCenter(db.Model):
             SELECT *
             FROM evacuation_centers
             WHERE ST_Within(
-                coordinates,
+                ST_SetSRID(ST_MakePoint(coordinates[0], coordinates[1]), 4326),
                 ST_MakeEnvelope(:west, :south, :east, :north, 4326)
             )
         """

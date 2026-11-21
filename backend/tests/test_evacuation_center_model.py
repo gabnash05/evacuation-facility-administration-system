@@ -7,6 +7,25 @@ from app.models.evacuation_center import EvacuationCenter
 
 
 class EvacuationCenterModelTests(unittest.TestCase):
+    def test_distance_is_mapped_without_passing_it_to_model_constructor(self):
+        center = EvacuationCenter._row_to_center(
+            {"center_id": 4, "center_name": "Fixture", "distance_km": 1.25}
+        )
+        self.assertEqual(center.center_id, 4)
+        self.assertEqual(center.distance_km, 1.25)
+
+    @patch("app.models.evacuation_center.db")
+    def test_spatial_queries_convert_native_points_to_geometry(self, database):
+        database.session.execute.return_value.fetchall.return_value = []
+        EvacuationCenter.get_centers_by_proximity(8.2, 124.6)
+        proximity_query = str(database.session.execute.call_args.args[0])
+        self.assertEqual(
+            proximity_query.count("ST_MakePoint(coordinates[0], coordinates[1])"), 2
+        )
+        EvacuationCenter.get_centers_in_bounds(9, 8, 125, 124)
+        bounds_query = str(database.session.execute.call_args.args[0])
+        self.assertIn("ST_MakePoint(coordinates[0], coordinates[1])", bounds_query)
+
     @patch("app.models.evacuation_center.db")
     @patch.object(EvacuationCenter, "_row_to_center")
     def test_update_binds_coordinate_values(self, convert, database):
