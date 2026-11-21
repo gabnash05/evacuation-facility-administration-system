@@ -578,6 +578,10 @@ The audit tickets are complete. The tickets below are the authoritative implemen
 
 - P1, S. Reject inactive, missing, unsupported and unassigned actors before singleton or batch transfers. Preserve existing source-center checks and administrator access. Run route regressions, backend tests, strict mapping and diff review. No migration is needed. Concurrent ownership changes between authorization and mutation remain follow-up work.
 
+### SECURITY-020 — Require active attendance maintenance actors
+
+- P1, S. Require an active persisted super-admin for center and global occupancy recalculation and attendance deletion. Run disabled-account route regressions, backend tests, strict mapping and diff review. No migration is needed.
+
 ### DEVOPS-001 — Restore the production WSGI entry point
 
 - **Priority/risk:** P1 / XS; production start failure, reversible source change.

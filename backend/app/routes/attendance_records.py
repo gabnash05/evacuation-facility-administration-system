@@ -1367,10 +1367,10 @@ def recalculate_center_occupancy_route(center_id: int) -> Tuple:
             - HTTP status code
     """
     try:
-        # Get current user for role-based access control
-        current_user_id = get_jwt_identity()
-        current_user = get_current_user(current_user_id)
-        
+        current_user, response = _actor_or_response()
+        if response:
+            return response
+
         # Only super_admin can recalculate occupancy
         if not current_user or current_user.role != 'super_admin':
             return jsonify({
@@ -1412,10 +1412,10 @@ def recalculate_all_center_occupancies_route() -> Tuple:
             - HTTP status code
     """
     try:
-        # Get current user for role-based access control
-        current_user_id = get_jwt_identity()
-        current_user = get_current_user(current_user_id)
-        
+        current_user, response = _actor_or_response()
+        if response:
+            return response
+
         # Only super_admin can recalculate all occupancies
         if not current_user or current_user.role != 'super_admin':
             return jsonify({
@@ -1460,10 +1460,10 @@ def delete_attendance_record_route(record_id: int) -> Tuple:
             - HTTP status code
     """
     try:
-        # Get current user for role-based access control
-        current_user_id = get_jwt_identity()
-        current_user = get_current_user(current_user_id)
-        
+        current_user, response = _actor_or_response()
+        if response:
+            return response
+
         # Only super_admin can delete attendance records
         if not current_user or current_user.role != 'super_admin':
             return jsonify({

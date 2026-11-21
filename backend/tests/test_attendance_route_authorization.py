@@ -11,6 +11,28 @@ def actor(role="volunteer", center_id=2, user_id=7):
 
 
 class AttendanceRouteAuthorizationTests(ApiTestCase):
+    @patch("app.routes.attendance_records.delete_attendance_record")
+    @patch("app.routes.attendance_records.recalculate_all_center_occupancies")
+    @patch("app.routes.attendance_records.recalculate_center_occupancy")
+    @patch("app.routes.attendance_records.get_current_user")
+    def test_disabled_admin_cannot_run_attendance_maintenance(
+        self, get_user, center, all_centers, delete
+    ):
+        get_user.return_value = SimpleNamespace(role="super_admin", is_active=False)
+        requests = (
+            ("POST", "/api/attendance/recalculate/center/2"),
+            ("POST", "/api/attendance/recalculate/all"),
+            ("DELETE", "/api/attendance/1"),
+        )
+        for method, path in requests:
+            response = self.client.open(
+                path, method=method, headers=self.authorization_headers(7)
+            )
+            self.assertEqual(response.status_code, 401)
+        center.assert_not_called()
+        all_centers.assert_not_called()
+        delete.assert_not_called()
+
     @patch("app.routes.attendance_records.transfer_multiple_individuals")
     @patch("app.routes.attendance_records.transfer_individual")
     @patch("app.routes.attendance_records.get_current_user")

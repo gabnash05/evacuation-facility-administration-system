@@ -731,6 +731,9 @@ SECURITY-018 requires active scoped actors for singleton and batch checkout.
 All 156 backend tests passed. Concurrent ownership changes between route
 authorization and mutation remain under review.
 
+SECURITY-020 prevents disabled super-admin accounts from running attendance
+maintenance or deletion. The route regression and all 158 backend tests passed.
+
 SECURITY-019 requires active scoped actors for singleton and batch transfers.
 All 157 backend tests passed. Concurrent ownership changes between route
 authorization and mutation remain under review.
