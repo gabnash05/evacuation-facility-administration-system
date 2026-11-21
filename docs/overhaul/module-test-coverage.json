@@ -1201,6 +1201,12 @@
       "behavior": "Uses the assigned center for scoped reads, clears stale data for unassigned scoped users, and preserves citywide history with center-specific options."
     },
     {
+      "path": "frontend/src/pages/city-admin/CityAdminDistributionPage.tsx",
+      "status": "covered",
+      "tests": ["frontend/src/pages/city-admin/CityAdminDistributionPage.test.tsx"],
+      "behavior": "Loads citywide history on entry and distinguishes an empty result from an announced fetch failure."
+    },
+    {
       "path": "frontend/src/components/features/map/MapLocationPicker.tsx",
       "status": "covered",
       "tests": ["frontend/src/components/features/map/MapLocationPicker.test.tsx"],

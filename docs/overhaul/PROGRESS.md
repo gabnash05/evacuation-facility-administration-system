@@ -453,4 +453,12 @@ lint matches the parent commit (six errors and one warning). The direct compiler
 check still reports 56 diagnostics, including the store's existing unused local.
 Module reconciliation reports 198 covered, eight unmapped, and six exempt.
 Full frontend validation passed (150 files, 236 tests in 216.95 seconds).
-The backend unit suite passed independently (94 tests).
+The backend unit suite passed independently (94 tests). Published as
+`3fcc4b9` in draft PR #6.
+
+`TEST-003I` now covers the city distribution page. `FRONTEND-066` shows the
+store's failure alert instead of the empty-history message. Two direct tests
+and targeted lint passed. Production build and the full frontend suite passed
+(151 files, 238 tests in 225.71 seconds). The direct compiler check dropped
+from 56 to 54 diagnostics. Module reconciliation reports 199 covered, seven
+unmapped, and six exempt.
