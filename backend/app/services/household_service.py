@@ -12,6 +12,8 @@ logger = logging.getLogger(__name__)
 class HouseholdService:
     @staticmethod
     def update_household(household_id: int, data: dict):
+        if "individuals" in data and not isinstance(data["individuals"], list):
+            return {"success": False, "message": "Individuals must be a list."}, 400
         if not Household.get_by_id(household_id):
             return {"success": False, "message": "Household not found."}, 404
 
@@ -22,13 +24,17 @@ class HouseholdService:
                 "message": "Another household with this name already exists.",
             }, 409
 
-        individuals_payload = data.pop("individuals", [])
+        individuals_payload = data.pop("individuals", None)
 
         try:
             # First update the household basic info
             updated_household = Household.update(household_id, data)
             if not updated_household:
                 raise Exception("Household update failed.")
+
+            if individuals_payload is None:
+                db.session.commit()
+                return {"success": True, "data": updated_household}, 200
 
             existing_individuals = Individual.get_by_household_id(household_id)
             existing_ids = {ind["individual_id"] for ind in existing_individuals}

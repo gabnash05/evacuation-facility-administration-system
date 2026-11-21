@@ -610,3 +610,8 @@ DATABASE-001B makes user writes roll back on query or commit failure. Unit
 tests cover both paths. On disposable PostgreSQL 17.2, a duplicate user insert
 failed and the same session then successfully queried and updated the user.
 All 128 backend tests passed. DATABASE-001 is resolved.
+
+HOUSEHOLD-001 prevents an omitted member list from deleting household members
+or clearing the head. Null and other non-list member payloads return 400.
+The regressions and all 130 backend tests passed. Explicit list replacement
+and recovery of previously deleted records remain separate concerns.

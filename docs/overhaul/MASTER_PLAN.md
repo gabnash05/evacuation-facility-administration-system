@@ -478,6 +478,10 @@ The audit tickets are complete. The tickets below are the authoritative implemen
 
 - P2, S. Keep each existing user write's commit boundary and roll back if execution or commit fails. Cover query and commit failures in unit tests and verify a duplicate insert followed by a successful query and update on disposable PostgreSQL. Run the backend suite, strict mapping and diff review. No migration is needed. Revert the focused commit to restore prior behavior if required.
 
+### HOUSEHOLD-001 — Preserve members when omitted from an update
+
+- P1, S. Household updates previously treated an omitted member list as empty and deleted existing members. Preserve members and head when the field is absent, reject a null or non-list value, and retain explicit-list behavior. Test both omission and invalid input, run the backend suite, strict module mapping, and diff review. No migration is required. Existing deleted data requires separate recovery evidence and approval.
+
 ### DEVOPS-001 — Restore the production WSGI entry point
 
 - **Priority/risk:** P1 / XS; production start failure, reversible source change.

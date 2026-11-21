@@ -3,10 +3,38 @@
 from unittest.mock import Mock, patch
 
 from app.models.household import Household
+from app.services.household_service import HouseholdService
 from tests.api_test_case import ApiTestCase
 
 
 class HouseholdModelTests(ApiTestCase):
+    @patch("app.services.household_service.db")
+    @patch("app.services.household_service.Individual")
+    @patch("app.services.household_service.Household")
+    def test_update_without_individuals_preserves_household_members(
+        self, household, individual, database
+    ):
+        household.get_by_name.return_value = None
+        household.update.return_value = {"household_id": 4}
+
+        result, status = HouseholdService.update_household(
+            4, {"household_name": "Santos household"}
+        )
+
+        self.assertEqual(status, 200)
+        self.assertTrue(result["success"])
+        individual.get_by_household_id.assert_not_called()
+        individual.delete_by_ids.assert_not_called()
+        household.set_head.assert_not_called()
+        database.session.commit.assert_called_once_with()
+
+    def test_update_rejects_null_individuals(self):
+        result, status = HouseholdService.update_household(
+            4, {"household_name": "Santos household", "individuals": None}
+        )
+        self.assertEqual(status, 400)
+        self.assertFalse(result["success"])
+
     def test_detail_preserves_household_and_center_fields_with_distinct_aliases(self):
         row = Mock()
         row._asdict.return_value = {

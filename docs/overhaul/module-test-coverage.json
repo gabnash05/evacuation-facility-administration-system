@@ -87,8 +87,8 @@
     {
       "path": "backend/app/services/household_service.py",
       "status": "covered",
-      "tests": ["backend/tests/test_individual_service_contract.py"],
-      "behavior": "Validates nested household creation members before persistence."
+      "tests": ["backend/tests/test_individual_service_contract.py", "backend/tests/test_household_model.py"],
+      "behavior": "Validates nested household creation members and preserves members when omitted from an update."
     },
     {
       "path": "backend/app/models/household.py",
