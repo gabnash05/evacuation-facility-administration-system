@@ -6,6 +6,13 @@ PostgreSQL server bound to `127.0.0.1` on a non-default port. Each database
 name must begin with `efas_test_`. Supply credentials through your local
 environment and avoid printing the resulting database URL.
 
+To provision both databases automatically, set `EFAS_TEST_SERVER_URL` to the
+local server's `postgres` maintenance database URL and run, from `backend`,
+`pipenv run python -m tests.run_postgresql_smoke`. The account needs permission
+to create databases. The runner gives each fixture a unique name and leaves
+the databases available for inspection. It stops if either migration or suite
+fails. Use a disposable server so fixture databases can be removed with it.
+
 For each suite, create a new empty database and set `DATABASE_URL` and
 `EFAS_TEST_DATABASE_URL` to its PostgreSQL URL. From `backend`, run
 `pipenv run flask --app app db upgrade` and then one of these commands.

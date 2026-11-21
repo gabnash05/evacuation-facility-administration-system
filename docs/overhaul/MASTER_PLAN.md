@@ -462,6 +462,10 @@ The audit tickets are complete. The tickets below are the authoritative implemen
 
 - P2, S. Limit dynamic update identifiers to the existing attendance fields and reject unsupported keys before loading the record. Preserve the checkout and transfer callers. Run the backend suite, mapped regression, strict module verifier, and diff review. No migration is involved. Revert if a documented caller needs an additional field, then add it with a regression.
 
+### TEST-002A — Automate isolated PostgreSQL smoke fixtures
+
+- P1, S. Create a unique database per existing PostgreSQL smoke suite on an explicitly configured loopback server. Reject unsafe connection targets, run migrations and each suite, and propagate failures. Retain fixture databases for inspection. Run the backend tests and both suites on a disposable local server. No application schema or runtime behavior changes. Revert the runner to roll back. PostGIS fixture coverage remains under TEST-002.
+
 ### DEVOPS-001 — Restore the production WSGI entry point
 
 - **Priority/risk:** P1 / XS; production start failure, reversible source change.

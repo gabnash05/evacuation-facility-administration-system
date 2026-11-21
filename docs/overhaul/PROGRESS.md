@@ -591,3 +591,9 @@ by the center schema and event lifecycle. All 122 backend tests passed.
 SECURITY-013 restricts attendance update identifiers to existing columns before
 database access. The invalid-identifier regression and all 123 backend tests
 passed. No schema or route changes were required.
+
+TEST-002A adds a local PostgreSQL fixture runner. It created separate databases,
+migrated each through revision 0003, and passed the attendance and distribution
+smoke suites on disposable PostgreSQL 17.2. All 125 backend tests passed.
+The runner leaves fixture databases on its disposable server. PostGIS fixture
+provisioning and integration coverage remain open.
