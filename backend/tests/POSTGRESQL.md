@@ -1,0 +1,24 @@
+# PostgreSQL integration tests
+
+The attendance and distribution smoke suites require separate, empty databases.
+They insert fixture data and leave it in place. Run them against a disposable
+PostgreSQL server bound to `127.0.0.1` on a non-default port. Each database
+name must begin with `efas_test_`. Supply credentials through your local
+environment and avoid printing the resulting database URL.
+
+For each suite, create a new empty database and set `DATABASE_URL` and
+`EFAS_TEST_DATABASE_URL` to its PostgreSQL URL. From `backend`, run
+`pipenv run flask --app app db upgrade` and then one of these commands.
+
+```text
+pipenv run python -m tests.postgresql_attendance_smoke
+pipenv run python -m tests.postgresql_distribution_smoke
+```
+
+Use a fresh database for the second command. The tests reject a non-loopback
+host, the default PostgreSQL port, URL query parameters, and database names
+without the fixture prefix. The attendance suite also exercises migration
+downgrade and upgrade on its fixture. Run the normal backend suite with
+`pipenv run test` separately.
+
+PostGIS integration and automated provisioning remain part of TEST-002.

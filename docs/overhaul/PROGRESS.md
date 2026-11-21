@@ -579,3 +579,7 @@ with records and revision intact, and a successful retry after removing the
 synthetic duplicate. All 121 backend tests passed. ATTENDANCE-002 now has
 implementation coverage for single and per-item batch writes. Production
 rollout still requires a restored-copy rehearsal under DATABASE-002.
+
+TEST-002 documentation now records how to run the attendance and distribution
+PostgreSQL smoke suites against separate fresh fixture databases. Automated
+fixture provisioning and PostGIS integration remain open.
