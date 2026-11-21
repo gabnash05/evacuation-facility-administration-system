@@ -470,6 +470,10 @@ The audit tickets are complete. The tickets below are the authoritative implemen
 
 - P2, S. Reject unsupported model update identifiers before executing SQL. Preserve service-supported email, password hash, role, center and active-state updates. Run the backend tests, mapped regression, strict module verifier and diff review. No schema changes are required. Revert if an established caller needs another field, then add it with a regression. Transaction handling remains DATABASE-001.
 
+### DATABASE-001A — Exclude password hashes from user lists
+
+- P2, S. Remove the unused password hash from the paginated user-list query while preserving its response fields and filters. Validate the SQL projection, role scopes, and backend suite. No migration or authentication lookup changes. Revert the commit if an established list consumer requires the hash and investigate that use.
+
 ### DEVOPS-001 — Restore the production WSGI entry point
 
 - **Priority/risk:** P1 / XS; production start failure, reversible source change.

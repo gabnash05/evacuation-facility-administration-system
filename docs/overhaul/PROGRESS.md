@@ -601,3 +601,7 @@ provisioning and integration coverage remain open.
 SECURITY-014 restricts user-update identifiers to fields used by the model's
 callers. Unsupported names are rejected before a query. All 126 backend tests
 passed. Transaction handling and user-list projections remain under DATABASE-001.
+
+DATABASE-001A removes password hashes from the paginated user-list query.
+The query projection and authorization scope regression and all 126 backend
+tests passed. User-write transaction handling remains open.

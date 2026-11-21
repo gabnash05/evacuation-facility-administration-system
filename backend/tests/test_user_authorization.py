@@ -136,6 +136,7 @@ class UserModelAuthorizationTests(ApiTestCase):
         select_query, select_params = execute.call_args_list[1].args
         self.assertIn("u.role IN (:allowed_role_0, :allowed_role_1)", str(count_query))
         self.assertIn("u.role IN (:allowed_role_0, :allowed_role_1)", str(select_query))
+        self.assertNotIn("password_hash", str(select_query))
         self.assertEqual(
             {count_params["allowed_role_0"], count_params["allowed_role_1"]},
             {"center_admin", "volunteer"},

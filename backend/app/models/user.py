@@ -304,7 +304,6 @@ class User(db.Model):
             SELECT 
                 u.user_id,
                 u.email,
-                u.password_hash,
                 u.role,
                 u.center_id,
                 u.is_active,
