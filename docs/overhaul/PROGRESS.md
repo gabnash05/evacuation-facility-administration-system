@@ -645,3 +645,7 @@ connection moved a member after the original read. The scoped update failed,
 the household address rolled back, and the moved member remained unchanged.
 All three PostgreSQL smoke suites and all 135 backend tests passed. Delete
 concurrency and other aggregate invariants remain open.
+
+HOUSEHOLD-002D verifies concurrent member movement before deletion on
+disposable PostgreSQL. The moved member survives and the household edit rolls
+back. All three PostgreSQL smoke suites and 135 backend tests passed.

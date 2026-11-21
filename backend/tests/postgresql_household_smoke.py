@@ -101,6 +101,51 @@ class HouseholdPostgreSQLSmoke(unittest.TestCase):
             ).one()
             self.assertEqual(tuple(moved), (second, "Fixture"))
 
+            db.session.execute(
+                text(
+                    "UPDATE individuals SET household_id = :id WHERE individual_id = :member"
+                ),
+                {"id": first, "member": member},
+            )
+            db.session.commit()
+            original_delete = Individual.delete_by_ids
+
+            def move_then_delete(ids, *, household_id):
+                with db.engine.begin() as connection:
+                    connection.execute(
+                        text(
+                            "UPDATE individuals SET household_id = :household "
+                            "WHERE individual_id = :id"
+                        ),
+                        {"household": second, "id": member},
+                    )
+                return original_delete(ids, household_id=household_id)
+
+            with patch.object(
+                Individual, "delete_by_ids", side_effect=move_then_delete
+            ):
+                result, status = HouseholdService.update_household(
+                    first, {"address": "Changed address", "individuals": []}
+                )
+            self.assertEqual(status, 500)
+            self.assertFalse(result["success"])
+            self.assertEqual(
+                db.session.execute(
+                    text("SELECT address FROM households WHERE household_id = :id"),
+                    {"id": first},
+                ).scalar_one(),
+                "Original address",
+            )
+            self.assertEqual(
+                db.session.execute(
+                    text(
+                        "SELECT household_id FROM individuals WHERE individual_id = :id"
+                    ),
+                    {"id": member},
+                ).scalar_one(),
+                second,
+            )
+
 
 if __name__ == "__main__":
     unittest.main()

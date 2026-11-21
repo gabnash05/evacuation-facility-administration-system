@@ -502,6 +502,10 @@ The audit tickets are complete. The tickets below are the authoritative implemen
 
 - P1, S. Use a disposable migrated PostgreSQL database and a second connection to move a member after the service reads it. Verify the scoped update fails and the household edit rolls back. Run all PostgreSQL smoke suites, backend tests, strict mapping, and diff review. Delete concurrency and aggregate invariants remain follow-up work.
 
+### HOUSEHOLD-002D — Verify concurrent member deletion
+
+- P1, S. Test a member moving after the aggregate read and before deletion on disposable PostgreSQL. Verify the moved member survives and the household edit rolls back. Run all PostgreSQL smoke suites, backend tests, strict mapping and diff review. Other household aggregate invariants remain under DATABASE-006.
+
 ### DEVOPS-001 — Restore the production WSGI entry point
 
 - **Priority/risk:** P1 / XS; production start failure, reversible source change.
