@@ -13,7 +13,11 @@ from sqlalchemy.exc import ArgumentError, IntegrityError
 from app import create_app
 from app.models import db
 from app.models.attendance_records import AttendanceRecord
-from app.services.attendance_records_service import check_in_multiple_individuals
+from app.services.attendance_records_service import (
+    check_in_multiple_individuals,
+    check_out_multiple_individuals,
+    transfer_multiple_individuals,
+)
 from tests.api_test_case import ApiTestConfig
 
 
@@ -219,6 +223,76 @@ class AttendancePostgreSQLSmoke(unittest.TestCase):
                 ).scalar(),
                 5,
             )
+
+            arrival_id = added["record_id"]
+            checkouts = check_out_multiple_individuals(
+                [
+                    {"record_id": arrival_id, "check_out_time": "2026-01-02T13:59:00"},
+                    {"record_id": arrival_id, "check_out_time": "2026-01-02T14:30:00"},
+                    {"record_id": arrival_id, "check_out_time": "2026-01-02T15:00:00"},
+                ]
+            )
+            self.assertTrue(checkouts["success"])
+            self.assertEqual(
+                checkouts["data"]["successful_checkouts"],
+                [
+                    {
+                        "record_id": arrival_id,
+                        "individual_id": individual_id,
+                        "original_record_id": arrival_id,
+                    }
+                ],
+            )
+            self.assertEqual(
+                checkouts["data"]["failed_checkouts"],
+                [
+                    {
+                        "index": 0,
+                        "record_id": arrival_id,
+                        "error": "Failed to check out individual",
+                    },
+                    {
+                        "index": 2,
+                        "record_id": arrival_id,
+                        "error": "Individual is not currently checked in",
+                    },
+                ],
+            )
+            self.assertEqual(
+                AttendanceRecord.get_by_id(arrival_id).check_out_time,
+                datetime(2026, 1, 2, 14, 30),
+            )
+            self.assertEqual(occupancies(), [0, 0])
+
+            active = AttendanceRecord.check_in_individual(
+                individual_id, source_id, user_id, "2026-01-02T16:00:00"
+            )["record"]
+            request = {
+                "record_id": active.record_id,
+                "transfer_to_center_id": destination_id,
+                "transfer_time": "2026-01-02T17:00:00",
+            }
+            transfers = transfer_multiple_individuals(
+                [
+                    {**request, "recorded_by_user_id": -1},
+                    {**request, "recorded_by_user_id": user_id},
+                ]
+            )
+            self.assertTrue(transfers["success"])
+            outcome = transfers["data"]
+            self.assertEqual(
+                outcome["failed_transfers"],
+                [
+                    {
+                        "record_id": active.record_id,
+                        "error": "Failed to transfer individual",
+                    }
+                ],
+            )
+            (sent,) = outcome["successful_transfers"]
+            self.assertEqual(sent["status"], "transferred")
+            self.assertEqual(sent["center_id"], destination_id)
+            self.assertEqual(occupancies(), [0, 0])
 
 
 if __name__ == "__main__":

@@ -564,3 +564,10 @@ unchanged. A batch with the same rejected item followed by a valid item
 returned one failure and one success, moved occupancy to the destination,
 and stored only the successful transfer and arrival. All 118 backend tests,
 test-file lint and formatting, strict mapping, and diff checks passed.
+
+`ATTENDANCE-002C` is verified. Singleton and batch checkout lock and
+revalidate the exact record and roll back failed writes. Disposable PostgreSQL
+rejected an invalid checkout timestamp, committed a later batch item, and
+rejected a duplicate checkout without replacing the committed time. A separate
+mixed-transfer batch rejected one invalid recorder and saved one successful
+transfer. All 119 backend tests and test-file style checks passed.

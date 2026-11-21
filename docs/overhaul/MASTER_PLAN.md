@@ -439,6 +439,13 @@ The audit tickets are complete. The tickets below are the authoritative implemen
 - From `backend`, run `py -3.13 -m pipenv run test` and `py -3.13 -m pipenv run python -m tests.postgresql_attendance_smoke` against a freshly migrated disposable fixture. Run strict mapping from the root. Review rollback after the final insert, preserved source and destination occupancy, a later batch success, and generic write-failure responses.
 - No production schema change. Roll back by reverting the code commit. Escalate only if the batch response or automatic-transfer behavior must change incompatibly.
 
+### ATTENDANCE-002C — Serialize checkout and verify batch outcomes
+
+- P1, S. Depends on ATTENDANCE-002A/B. Checkout validated unlocked state and duplicated the write between singleton and batch entry points. A failed batch item could leave the session in an aborted transaction.
+- Route both checkout entry points through the locked record write. Revalidate the active state before updating, roll back failed items, preserve batch result keys and valid later items, and keep database details private. Batch transfer already uses the atomic singleton implementation.
+- Run the full backend suite, strict module mapping, and the PostgreSQL attendance smoke from ATTENDANCE-002B. Acceptance requires a failed checkout followed by a successful one and a rejected repeat with the first successful timestamp preserved. Verify that a failed batch transfer can be retried by a later item and writes exactly one transfer.
+- No migration required. Keep recorder and route authorization unchanged. Revert the code commit for rollback. Escalate any proposal to change partial-success semantics.
+
 ### DEVOPS-001 — Restore the production WSGI entry point
 
 - **Priority/risk:** P1 / XS; production start failure, reversible source change.

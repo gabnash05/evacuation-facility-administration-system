@@ -449,7 +449,9 @@ def check_out_individual(
         }
 
     except Exception as error:
-        logger.error("Error checking out individual %s: %s", record_id, str(error))
+        logger.error(
+            "Checkout failed for record %s (%s)", record_id, type(error).__name__
+        )
         return {"success": False, "message": "Failed to check out individual"}
       
 

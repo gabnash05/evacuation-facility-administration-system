@@ -9,6 +9,24 @@ from app.services import attendance_records_service
 
 
 class AttendanceCheckoutIdentityTests(unittest.TestCase):
+    @patch("app.models.attendance_records.db", new_callable=Mock)
+    @patch.object(AttendanceRecord, "get_by_id")
+    @patch.object(AttendanceRecord, "update")
+    def test_checkout_revalidates_status_under_lock(self, update, get_record, database):
+        get_record.return_value = SimpleNamespace(
+            status="checked_out", check_out_time="2026-01-02T12:00:00"
+        )
+
+        with self.assertRaisesRegex(
+            ValueError, "Individual is not currently checked in"
+        ):
+            AttendanceRecord.check_out_individual(41, "2026-01-02T13:00:00")
+
+        get_record.assert_called_once_with(41, for_update=True)
+        update.assert_not_called()
+        database.session.commit.assert_not_called()
+        database.session.rollback.assert_called_once_with()
+
     @patch(
         "app.services.attendance_records_service.AttendanceRecord.check_out_individual"
     )

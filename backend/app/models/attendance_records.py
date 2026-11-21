@@ -580,110 +580,92 @@ class AttendanceRecord(db.Model):
         cls,
         record_id: int,
         check_out_time: str,
-        notes: Optional[str] = None
+        notes: Optional[str] = None,
     ) -> Optional["AttendanceRecord"]:
-        """Internal method to check out by record ID."""
-        current_record = cls.get_by_id(record_id)
-        if not current_record:
-            return None
+        """Lock and check out the specified attendance record."""
+        try:
+            current_record = cls.get_by_id(record_id, for_update=True)
+            if not current_record:
+                db.session.rollback()
+                return None
+            if (
+                current_record.status != "checked_in"
+                or current_record.check_out_time is not None
+            ):
+                raise ValueError("Individual is not currently checked in")
 
-        # Verify individual is currently checked in
-        if current_record.status != 'checked_in' or current_record.check_out_time is not None:
-            raise ValueError("Individual is not currently checked in")
-
-        # Update the existing record to checked_out
-        update_data = {
-            "status": "checked_out",
-            "check_out_time": check_out_time,
-            "notes": f"{current_record.notes or ''} Checked out. {notes or ''}".strip()
-        }
-
-        updated_record = cls.update(record_id, update_data)
+            checkout_notes = f"{current_record.notes or ''} Checked out. {notes or ''}"
+            updated_record = cls.update(
+                record_id,
+                {
+                    "status": "checked_out",
+                    "check_out_time": check_out_time,
+                    "notes": checkout_notes.strip(),
+                },
+                commit=False,
+            )
+            db.session.commit()
+        except Exception:
+            db.session.rollback()
+            raise
 
         if updated_record:
             try:
                 cls._update_event_occupancy(current_record.event_id)
-            except Exception as e:
-                logger.warning(f"Failed to update event occupancy for event {current_record.event_id}: {str(e)}")
-        
+            except Exception as error:
+                db.session.rollback()
+                logger.warning(
+                    "Checkout committed but event %s occupancy refresh failed (%s)",
+                    current_record.event_id,
+                    type(error).__name__,
+                )
         return updated_record
 
     @classmethod
     def check_out_multiple_individuals(
-        cls,
-        check_out_data: List[Dict[str, Any]]
+        cls, check_out_data: List[Dict[str, Any]]
     ) -> Dict[str, Any]:
-        """Check out multiple individuals in a batch operation by updating their current records."""
-        from app.models import db
-        
+        """Process each checkout in its own transaction and report partial results."""
         successful_checkouts = []
         failed_checkouts = []
-        
-        for i, data in enumerate(check_out_data):
-            try:
-                record_id = data["record_id"]
-                check_out_time = data.get("check_out_time")
-                notes = data.get("notes")
-                
-                # Get current record
-                current_record = cls.get_by_id(record_id)
-                if not current_record:
-                    failed_checkouts.append({
-                        "index": i,
-                        "record_id": record_id,
-                        "error": "Attendance record not found"
-                    })
-                    continue
 
-                # Check if individual is currently checked in
-                if current_record.status != 'checked_in' or current_record.check_out_time is not None:
-                    failed_checkouts.append({
-                        "index": i,
-                        "record_id": record_id,
-                        "error": "Individual is not currently checked in"
-                    })
-                    continue
-                
-                # Update the existing record to checked_out
-                update_data = {
-                    "status": "checked_out",
-                    "check_out_time": check_out_time or datetime.now().isoformat(),
-                    "notes": f"{current_record.notes or ''} Checked out. {notes or ''}".strip()
-                    # REMOVED: "updated_at": datetime.now() - This is automatically added in the update() method
-                }
-                
-                updated_record = cls.update(record_id, update_data)
-                
-                if updated_record:
-                    successful_checkouts.append({
-                        "record_id": updated_record.record_id,
-                        "individual_id": updated_record.individual_id,
-                        "original_record_id": record_id
-                    })
-                    
-                    # Update event occupancy
-                    try:
-                        cls._update_event_occupancy(current_record.event_id)
-                    except Exception as e:
-                        logger.warning(f"Failed to update event occupancy for event {current_record.event_id}: {str(e)}")
-                else:
-                    failed_checkouts.append({
-                        "index": i,
-                        "record_id": record_id,
-                        "error": "Failed to update check-out record"
-                    })
-                    
+        for index, data in enumerate(check_out_data):
+            record_id = data.get("record_id")
+            try:
+                updated_record = cls.check_out_individual(
+                    record_id,
+                    data.get("check_out_time") or datetime.now().isoformat(),
+                    data.get("notes"),
+                )
+            except ValueError as error:
+                error_message = str(error)
             except Exception as error:
-                failed_checkouts.append({
-                    "index": i,
-                    "record_id": data.get("record_id"),
-                    "error": str(error)
-                })
-                logger.error(f"Failed to check out record at index {i}: {str(error)}")
-        
+                error_message = "Failed to check out individual"
+                logger.error(
+                    "Batch checkout failed for record %s at index %s (%s)",
+                    record_id,
+                    index,
+                    type(error).__name__,
+                )
+            else:
+                if updated_record:
+                    successful_checkouts.append(
+                        {
+                            "record_id": updated_record.record_id,
+                            "individual_id": updated_record.individual_id,
+                            "original_record_id": record_id,
+                        }
+                    )
+                    continue
+                error_message = "Attendance record not found"
+
+            failed_checkouts.append(
+                {"index": index, "record_id": record_id, "error": error_message}
+            )
+
         return {
             "successful_checkouts": successful_checkouts,
-            "failed_checkouts": failed_checkouts
+            "failed_checkouts": failed_checkouts,
         }
 
 
