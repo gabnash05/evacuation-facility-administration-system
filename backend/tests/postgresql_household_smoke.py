@@ -218,6 +218,10 @@ class HouseholdPostgreSQLSmoke(unittest.TestCase):
             listed = Individual.get_all_paginated(center_id=center_id)
             self.assertEqual(len(listed), 1)
             self.assertEqual(Individual.get_count(center_id=center_id), 1)
+            found = Individual.search_by_name("Fixture", center_id=center_id)
+            self.assertEqual([person["individual_id"] for person in found], [member])
+            self.assertEqual(len(Individual.search_by_name("Fixture")), 1)
+            self.assertEqual(Individual.search_by_name("Fixture", center_id=-1), [])
 
 
 if __name__ == "__main__":

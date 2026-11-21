@@ -711,6 +711,10 @@ BACKEND-008 propagates individual list and count failures to the existing
 service error response. Model and service regressions and all 148 backend
 tests passed.
 
+BACKEND-009 qualifies the joined individual search projection and propagates
+search and summary failures. Scoped and unscoped searches passed on disposable
+PostgreSQL. All 149 backend tests and three PostgreSQL smoke suites passed.
+
 CONTRACT-001A corrects the backend environment example to document the fixed
 `/api` prefix and removes the unused `API_PREFIX` setting. The application
 route registration and frontend base configuration were checked directly.

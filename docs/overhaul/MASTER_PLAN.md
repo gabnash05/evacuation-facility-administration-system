@@ -554,6 +554,10 @@ The audit tickets are complete. The tickets below are the authoritative implemen
 
 - P2, S. Propagate individual list and count query failures to the service error handler instead of returning empty data. Test both model and service failure paths, run backend tests, strict mapping and diff review. Successful empty results remain unchanged. No migration is needed.
 
+### BACKEND-009 — Repair individual search and report query errors
+
+- P1, S. Qualify individual columns in the household-joined name search and propagate search and status-summary query failures. Verify scoped and unscoped search against disposable PostgreSQL, error propagation, backend tests, strict mapping and diff review. No migration is needed.
+
 ### DEVOPS-001 — Restore the production WSGI entry point
 
 - **Priority/risk:** P1 / XS; production start failure, reversible source change.

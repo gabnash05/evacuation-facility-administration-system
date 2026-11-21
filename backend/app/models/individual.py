@@ -478,9 +478,9 @@ class Individual(db.Model):
         sql = text(
             """
             SELECT 
-                individual_id, household_id, first_name, last_name, 
-                date_of_birth, gender, relationship_to_head,
-                current_status, created_at, updated_at
+                i.individual_id, i.household_id, i.first_name, i.last_name,
+                i.date_of_birth, i.gender, i.relationship_to_head,
+                i.current_status, i.created_at, i.updated_at
             FROM individuals i
             JOIN households h ON h.household_id = i.household_id
             WHERE 
@@ -508,8 +508,8 @@ class Individual(db.Model):
 
             return individuals
         except Exception as e:
-            logger.error(f"Error searching individuals by name '{name}': {str(e)}")
-            return []
+            logger.error("Individual name search failed (%s)", type(e).__name__)
+            raise
 
     @classmethod
     def get_individuals_with_status_summary(
@@ -603,7 +603,7 @@ class Individual(db.Model):
 
         except Exception as e:
             logger.error(f"Error getting individuals status summary: {str(e)}")
-            return {}
+            raise
 
     @classmethod
     def recalculate_all_statuses(cls):

@@ -109,6 +109,16 @@ class IndividualSearchScopeTests(ApiTestCase):
             with self.assertRaisesRegex(RuntimeError, "query failed"):
                 Individual.get_count()
 
+    def test_search_and_summary_propagate_query_errors(self):
+        with self.app.app_context(), patch(
+            "app.models.individual.db.session.execute",
+            side_effect=RuntimeError("query failed"),
+        ):
+            with self.assertRaisesRegex(RuntimeError, "query failed"):
+                Individual.search_by_name("Ana")
+            with self.assertRaisesRegex(RuntimeError, "query failed"):
+                Individual.get_individuals_with_status_summary()
+
     def test_status_summary_query_binds_assigned_center_scope(self):
         with self.app.app_context():
             with patch("app.models.individual.db.session.execute") as execute:
