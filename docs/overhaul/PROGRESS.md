@@ -587,3 +587,7 @@ fixture provisioning and PostGIS integration remain open.
 SECURITY-012 closes an unsafe center-model update boundary. The model rejects
 unsupported column names before executing SQL, while preserving fields used
 by the center schema and event lifecycle. All 122 backend tests passed.
+
+SECURITY-013 restricts attendance update identifiers to existing columns before
+database access. The invalid-identifier regression and all 123 backend tests
+passed. No schema or route changes were required.

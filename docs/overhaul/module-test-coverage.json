@@ -524,7 +524,7 @@
       "path": "backend/app/models/attendance_records.py",
       "status": "covered",
       "tests": ["backend/tests/test_attendance_checkout_identity.py"],
-      "behavior": "Locks and validates the requested checkout record, rolls back a failed transfer, and converts an active check-in conflict to a validation error."
+      "behavior": "Rejects unsupported update identifiers, locks checkout records, rolls back failed transfers, and converts active check-in conflicts to validation errors."
     },
     {
       "path": "frontend/src/utils/attendance.ts",

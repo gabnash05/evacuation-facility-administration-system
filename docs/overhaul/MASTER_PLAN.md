@@ -458,6 +458,10 @@ The audit tickets are complete. The tickets below are the authoritative implemen
 - P2, S. The center model interpolated update keys into SQL. Restrict keys to the existing update-schema fields and model coordinate inputs before executing a query. Preserve event-driven status updates.
 - Validate with `pipenv run test`, the mapped model regression, strict module verification, and diff review. No schema migration is involved. Revert the commit if a documented caller needs a field outside the allowlist, then add that field with a regression.
 
+### SECURITY-013 — Constrain attendance update identifiers
+
+- P2, S. Limit dynamic update identifiers to the existing attendance fields and reject unsupported keys before loading the record. Preserve the checkout and transfer callers. Run the backend suite, mapped regression, strict module verifier, and diff review. No migration is involved. Revert if a documented caller needs an additional field, then add it with a regression.
+
 ### DEVOPS-001 — Restore the production WSGI entry point
 
 - **Priority/risk:** P1 / XS; production start failure, reversible source change.

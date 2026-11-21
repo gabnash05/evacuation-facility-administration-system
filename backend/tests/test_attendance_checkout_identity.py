@@ -11,6 +11,15 @@ from app.services import attendance_records_service
 
 
 class AttendanceCheckoutIdentityTests(unittest.TestCase):
+    @patch.object(AttendanceRecord, "get_by_id")
+    def test_update_rejects_untrusted_identifier_before_database_access(
+        self, get_record
+    ):
+        with self.assertRaisesRegex(ValueError, "Unsupported attendance update field"):
+            AttendanceRecord.update(41, {"status = 'checked_out' --": "ignored"})
+
+        get_record.assert_not_called()
+
     @patch("app.models.attendance_records.db", new_callable=Mock)
     @patch.object(AttendanceRecord, "get_by_id")
     @patch.object(AttendanceRecord, "update")

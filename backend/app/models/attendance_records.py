@@ -358,6 +358,14 @@ class AttendanceRecord(db.Model):
     ) -> Optional["AttendanceRecord"]:
         """Update attendance record using raw SQL."""
 
+        allowed_fields = {
+            "record_id", "individual_id", "center_id", "event_id", "household_id",
+            "status", "check_in_time", "check_out_time", "transfer_from_center_id",
+            "transfer_to_center_id", "transfer_time", "recorded_by_user_id", "notes",
+        }
+        if set(update_data) - allowed_fields:
+            raise ValueError("Unsupported attendance update field")
+
         current_record = cls.get_by_id(record_id)
         if not current_record:
             return None
