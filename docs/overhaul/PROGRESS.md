@@ -663,3 +663,7 @@ DATABASE-006C fixes the status function return type in revision 0004 and commits
 successful recalculation. A separate PostgreSQL connection observed the corrected
 status. All three PostgreSQL smoke suites and 138 backend tests passed. Downgrade
 to the broken function is refused.
+
+CONTRACT-004A validates supplied household update fields with the existing
+schema and partial semantics. Invalid center IDs fail before persistence. All
+139 backend tests passed. Nested member update validation remains open.

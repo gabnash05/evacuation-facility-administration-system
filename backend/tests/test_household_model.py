@@ -9,6 +9,14 @@ from tests.api_test_case import ApiTestCase
 
 
 class HouseholdModelTests(ApiTestCase):
+    @patch("app.services.household_service.Household")
+    def test_invalid_household_fields_are_rejected_before_persistence(self, household):
+        result, status = HouseholdService.update_household(4, {"center_id": -1})
+
+        self.assertEqual(status, 400)
+        self.assertFalse(result["success"])
+        household.get_by_id.assert_not_called()
+
     @patch("app.services.household_service.db")
     @patch("app.services.household_service.Household")
     def test_update_rejects_head_from_another_household(self, household, database):

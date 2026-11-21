@@ -1,10 +1,11 @@
 import logging
 import math
+from marshmallow import ValidationError
 from sqlalchemy import text
 from app.models.household import Household
 from app.models.individual import Individual
 from app.models import db
-from app.schemas.household import HouseholdWithIndividualsCreateSchema
+from app.schemas.household import HouseholdUpdateSchema, HouseholdWithIndividualsCreateSchema
 from app.schemas.individual import IndividualMemberCreateSchema
 
 logger = logging.getLogger(__name__)
@@ -15,6 +16,16 @@ class HouseholdService:
     def update_household(household_id: int, data: dict):
         if "individuals" in data and not isinstance(data["individuals"], list):
             return {"success": False, "message": "Individuals must be a list."}, 400
+        try:
+            validated = HouseholdUpdateSchema(exclude=("individuals",)).load(
+                {key: value for key, value in data.items() if key != "individuals"},
+                partial=True,
+            )
+        except ValidationError as validation_error:
+            return {"success": False, "message": f"Validation error: {validation_error}"}, 400
+        if "individuals" in data:
+            validated["individuals"] = data["individuals"]
+        data = validated
         existing_household = Household.get_by_id(household_id)
         if not existing_household:
             return {"success": False, "message": "Household not found."}, 404

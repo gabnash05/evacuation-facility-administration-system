@@ -514,6 +514,10 @@ The audit tickets are complete. The tickets below are the authoritative implemen
 
 - P1, S. Revision 0004 corrects the legacy function return type. The service commits successful recalculation and rolls back failure. Verify the corrected status from a separate PostgreSQL connection, all smoke suites, backend tests, strict mapping and diff review. Deploy revision 0004 with the service change. Downgrade refuses to restore the broken function; recover using a reviewed forward migration or verified backup.
 
+### CONTRACT-004A — Validate household update fields
+
+- P2, S. Validate supplied household fields through the existing schema with partial semantics before persistence. Preserve the existing member-list path. Verify invalid input is rejected before database access, run backend tests and strict mapping. Nested member validation remains a separate ticket. No migration is required.
+
 ### DEVOPS-001 — Restore the production WSGI entry point
 
 - **Priority/risk:** P1 / XS; production start failure, reversible source change.
