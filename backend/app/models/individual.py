@@ -10,6 +10,37 @@ from app.models import db
 logger = logging.getLogger(__name__)
 
 
+CENTER_FILTER = """
+                (
+                    -- Individuals currently checked into this center
+                    EXISTS (
+                        SELECT 1 FROM attendance_records ar
+                        WHERE ar.individual_id = i.individual_id
+                        AND ar.status = 'checked_in'
+                        AND ar.check_out_time IS NULL
+                        AND ar.center_id = :center_id
+                    )
+                    -- OR individuals associated with a household registered to this center
+                    OR h.center_id = :center_id
+                    -- NEW: OR individuals transferred FROM this center AND NOT checked into the destination center yet
+                    OR EXISTS (
+                        SELECT 1 FROM attendance_records ar_transfer
+                        WHERE ar_transfer.individual_id = i.individual_id
+                        AND ar_transfer.status = 'transferred'
+                        AND ar_transfer.transfer_from_center_id = :center_id
+                        -- Ensure they haven't been checked into the destination center since transfer
+                        AND NOT EXISTS (
+                            SELECT 1 FROM attendance_records ar_checkin
+                            WHERE ar_checkin.individual_id = i.individual_id
+                            AND ar_checkin.status = 'checked_in'
+                            AND ar_checkin.check_out_time IS NULL
+                            AND ar_checkin.center_id = ar_transfer.transfer_to_center_id
+                        )
+                    )
+                )
+            """
+
+
 class Individual(db.Model):
     __tablename__ = "individuals"
 
@@ -282,39 +313,8 @@ class Individual(db.Model):
             if age_group in age_conditions:
                 conditions.append(age_conditions[age_group])
 
-        # MODIFIED: Center filter - show individuals with center_id OR currently checked into center
         if center_id:
-            conditions.append(
-                """
-                (
-                    -- Individuals currently checked into this center
-                    EXISTS (
-                        SELECT 1 FROM attendance_records ar
-                        WHERE ar.individual_id = i.individual_id
-                        AND ar.status = 'checked_in'
-                        AND ar.check_out_time IS NULL
-                        AND ar.center_id = :center_id
-                    )
-                    -- OR individuals associated with a household registered to this center
-                    OR h.center_id = :center_id
-                    -- NEW: OR individuals transferred FROM this center AND NOT checked into the destination center yet
-                    OR EXISTS (
-                        SELECT 1 FROM attendance_records ar_transfer
-                        WHERE ar_transfer.individual_id = i.individual_id
-                        AND ar_transfer.status = 'transferred'
-                        AND ar_transfer.transfer_from_center_id = :center_id
-                        -- Ensure they haven't been checked into the destination center since transfer
-                        AND NOT EXISTS (
-                            SELECT 1 FROM attendance_records ar_checkin
-                            WHERE ar_checkin.individual_id = i.individual_id
-                            AND ar_checkin.status = 'checked_in'
-                            AND ar_checkin.check_out_time IS NULL
-                            AND ar_checkin.center_id = ar_transfer.transfer_to_center_id
-                        )
-                    )
-                )
-            """
-            )
+            conditions.append(CENTER_FILTER)
             params["center_id"] = center_id
 
         where_clause = " AND ".join(conditions)
@@ -446,17 +446,7 @@ class Individual(db.Model):
                 conditions.append(age_conditions[age_group])
 
         if center_id:
-            conditions.append(
-                """
-                EXISTS (
-                    SELECT 1 FROM attendance_records ar
-                    WHERE ar.individual_id = i.individual_id
-                    AND ar.status = 'checked_in'
-                    AND ar.check_out_time IS NULL
-                    AND ar.center_id = :center_id
-                )
-            """
-            )
+            conditions.append(CENTER_FILTER)
             params["center_id"] = center_id
 
         where_clause = " AND ".join(conditions)

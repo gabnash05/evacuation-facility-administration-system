@@ -702,6 +702,11 @@ four database smoke suites passed on disposable PostgreSQL 18/PostGIS 3.6, and
 all 145 backend tests passed. README now documents the extension requirement.
 Deployment-specific provisioning and verification remain open.
 
+BACKEND-005A aligns the individual count with the list's center predicate.
+Disposable PostgreSQL verified an assigned, not checked-in individual appears
+in both list and count. All 146 backend tests and three PostgreSQL smoke suites
+passed. Age category differences remain open.
+
 CONTRACT-001A corrects the backend environment example to document the fixed
 `/api` prefix and removes the unused `API_PREFIX` setting. The application
 route registration and frontend base configuration were checked directly.

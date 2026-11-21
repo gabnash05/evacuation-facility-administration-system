@@ -546,6 +546,10 @@ The audit tickets are complete. The tickets below are the authoritative implemen
 
 - P2, XS. Remove the unused API prefix setting from the environment template and document the `/api` route prefix established by application registration. Verify against `backend/app/__init__.py` and the frontend API base. No runtime behavior or migration changes.
 
+### BACKEND-005A — Align individual count and list center filters
+
+- P2, S. Share the existing list center predicate with the count query, preserving list behavior. Verify bound predicates and an assigned-but-not-checked-in individual on disposable PostgreSQL. Run backend tests, PostgreSQL smoke suites, strict mapping and diff review. Age categories remain separate pending product evidence. No migration is needed.
+
 ### DEVOPS-001 — Restore the production WSGI entry point
 
 - **Priority/risk:** P1 / XS; production start failure, reversible source change.

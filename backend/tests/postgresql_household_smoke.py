@@ -210,6 +210,15 @@ class HouseholdPostgreSQLSmoke(unittest.TestCase):
                     "checked_out",
                 )
 
+            center_id = db.session.execute(
+                text(
+                    "SELECT center_id FROM evacuation_centers WHERE center_name = 'Fixture'"
+                )
+            ).scalar_one()
+            listed = Individual.get_all_paginated(center_id=center_id)
+            self.assertEqual(len(listed), 1)
+            self.assertEqual(Individual.get_count(center_id=center_id), 1)
+
 
 if __name__ == "__main__":
     unittest.main()

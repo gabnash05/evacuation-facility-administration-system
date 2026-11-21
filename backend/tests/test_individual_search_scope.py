@@ -72,6 +72,24 @@ class IndividualSearchScopeTests(ApiTestCase):
         self.assertIn("h.center_id = :assigned_center_id", str(count_query))
         self.assertEqual(count_parameters["assigned_center_id"], 2)
 
+    def test_paginated_and_count_queries_share_center_filter(self):
+        with self.app.app_context(), patch(
+            "app.models.individual.db.session.execute"
+        ) as execute:
+            execute.return_value.fetchall.return_value = []
+            Individual.get_all_paginated(center_id=2)
+            list_query = str(execute.call_args.args[0])
+            execute.return_value.scalar.return_value = 0
+            Individual.get_count(center_id=2)
+            count_query = str(execute.call_args.args[0])
+
+        for clause in (
+            "h.center_id = :center_id",
+            "ar_transfer.transfer_from_center_id = :center_id",
+        ):
+            self.assertIn(clause, list_query)
+            self.assertIn(clause, count_query)
+
     def test_status_summary_query_binds_assigned_center_scope(self):
         with self.app.app_context():
             with patch("app.models.individual.db.session.execute") as execute:
