@@ -9,6 +9,41 @@ from tests.api_test_case import ApiTestCase
 
 
 class HouseholdModelTests(ApiTestCase):
+    @patch("app.services.household_service.db")
+    @patch("app.services.household_service.Individual")
+    @patch("app.services.household_service.Household")
+    def test_update_accepts_existing_and_new_member_payloads(
+        self, household, individual, database
+    ):
+        household.get_by_id.return_value = {"household_name": "Santos household"}
+        household.get_by_name.return_value = None
+        household.update.return_value = {"household_id": 4}
+        individual.get_by_household_id.return_value = [{"individual_id": 8}]
+        individual.update.return_value = {"individual_id": 8}
+        individual.create.return_value = {"individual_id": 9}
+
+        result, status = HouseholdService.update_household(
+            4,
+            {
+                "individuals": [
+                    {"individual_id": 8, "first_name": "Ana"},
+                    {
+                        "first_name": "Ben",
+                        "last_name": "Santos",
+                        "relationship_to_head": "Child",
+                    },
+                ]
+            },
+        )
+
+        self.assertEqual(status, 200)
+        self.assertTrue(result["success"])
+        individual.update.assert_called_once_with(
+            8, {"individual_id": 8, "first_name": "Ana"}, household_id=4
+        )
+        self.assertEqual(individual.create.call_args.args[0]["household_id"], 4)
+        database.session.commit.assert_called_once_with()
+
     @patch("app.services.household_service.Household")
     def test_invalid_nested_member_is_rejected_before_persistence(self, household):
         result, status = HouseholdService.update_household(

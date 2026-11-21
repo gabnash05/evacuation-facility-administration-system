@@ -672,3 +672,7 @@ CONTRACT-004B validates nested household members with the existing create or
 partial-update schemas and rejects malformed IDs. All 140 backend tests and
 three disposable PostgreSQL smoke suites passed. Further cross-layer contract
 reconciliation remains open.
+
+CONTRACT-004B follow-up covers a mixed payload containing an existing member
+and a new member, matching the household editor's supported workflow. All 141
+backend tests passed.
