@@ -11,6 +11,25 @@ from tests.api_test_case import ApiTestCase
 
 class UserUpdateBoundaryTests(unittest.TestCase):
     @patch("app.models.user.db")
+    def test_write_rolls_back_after_commit_failure(self, database):
+        database.session.commit.side_effect = RuntimeError("commit failed")
+
+        with self.assertRaisesRegex(RuntimeError, "commit failed"):
+            User.update_user(1, {"is_active": False})
+
+        database.session.rollback.assert_called_once_with()
+
+    @patch("app.models.user.db")
+    def test_write_rolls_back_after_query_failure(self, database):
+        database.session.execute.side_effect = RuntimeError("query failed")
+
+        with self.assertRaisesRegex(RuntimeError, "query failed"):
+            User.delete(1)
+
+        database.session.commit.assert_not_called()
+        database.session.rollback.assert_called_once_with()
+
+    @patch("app.models.user.db")
     def test_rejects_untrusted_identifier_before_query(self, database):
         with self.assertRaisesRegex(ValueError, "Unsupported user update field"):
             User.update_user(1, {"role = 'super_admin' --": "ignored"})

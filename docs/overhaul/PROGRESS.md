@@ -605,3 +605,8 @@ passed. Transaction handling and user-list projections remain under DATABASE-001
 DATABASE-001A removes password hashes from the paginated user-list query.
 The query projection and authorization scope regression and all 126 backend
 tests passed. User-write transaction handling remains open.
+
+DATABASE-001B makes user writes roll back on query or commit failure. Unit
+tests cover both paths. On disposable PostgreSQL 17.2, a duplicate user insert
+failed and the same session then successfully queried and updated the user.
+All 128 backend tests passed. DATABASE-001 is resolved.

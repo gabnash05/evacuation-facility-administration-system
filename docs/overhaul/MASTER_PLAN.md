@@ -474,6 +474,10 @@ The audit tickets are complete. The tickets below are the authoritative implemen
 
 - P2, S. Remove the unused password hash from the paginated user-list query while preserving its response fields and filters. Validate the SQL projection, role scopes, and backend suite. No migration or authentication lookup changes. Revert the commit if an established list consumer requires the hash and investigate that use.
 
+### DATABASE-001B — Restore the session after user-write failures
+
+- P2, S. Keep each existing user write's commit boundary and roll back if execution or commit fails. Cover query and commit failures in unit tests and verify a duplicate insert followed by a successful query and update on disposable PostgreSQL. Run the backend suite, strict mapping and diff review. No migration is needed. Revert the focused commit to restore prior behavior if required.
+
 ### DEVOPS-001 — Restore the production WSGI entry point
 
 - **Priority/risk:** P1 / XS; production start failure, reversible source change.
