@@ -639,3 +639,9 @@ HOUSEHOLD-002B binds household ownership in member update and delete queries
 used by aggregate edits. Failed matches abort the aggregate. Unit regressions
 and all 135 backend tests passed. Database-backed concurrency verification
 remains open.
+
+HOUSEHOLD-002C adds a PostgreSQL regression in the fixture runner. A second
+connection moved a member after the original read. The scoped update failed,
+the household address rolled back, and the moved member remained unchanged.
+All three PostgreSQL smoke suites and all 135 backend tests passed. Delete
+concurrency and other aggregate invariants remain open.

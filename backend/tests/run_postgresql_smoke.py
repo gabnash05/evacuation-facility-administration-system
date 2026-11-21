@@ -32,7 +32,7 @@ def main():
     url = fixture_server_url(os.environ.get("EFAS_TEST_SERVER_URL", ""))
     engine = create_engine(url, isolation_level="AUTOCOMMIT")
     try:
-        for suite in ("attendance", "distribution"):
+        for suite in ("attendance", "distribution", "household"):
             name = f"efas_test_{suite}_{uuid.uuid4().hex}"
             with engine.connect() as connection:
                 connection.exec_driver_sql(f'CREATE DATABASE "{name}"')

@@ -1,12 +1,12 @@
 # PostgreSQL integration tests
 
-The attendance and distribution smoke suites require separate, empty databases.
+The attendance, distribution, and household smoke suites require separate, empty databases.
 They insert fixture data and leave it in place. Run them against a disposable
 PostgreSQL server bound to `127.0.0.1` on a non-default port. Each database
 name must begin with `efas_test_`. Supply credentials through your local
 environment and avoid printing the resulting database URL.
 
-To provision both databases automatically, set `EFAS_TEST_SERVER_URL` to the
+To provision the databases automatically, set `EFAS_TEST_SERVER_URL` to the
 local server's `postgres` maintenance database URL and run, from `backend`,
 `pipenv run python -m tests.run_postgresql_smoke`. The account needs permission
 to create databases. The runner gives each fixture a unique name and leaves
@@ -20,6 +20,7 @@ For each suite, create a new empty database and set `DATABASE_URL` and
 ```text
 pipenv run python -m tests.postgresql_attendance_smoke
 pipenv run python -m tests.postgresql_distribution_smoke
+pipenv run python -m tests.postgresql_household_smoke
 ```
 
 Use a fresh database for the second command. The tests reject a non-loopback

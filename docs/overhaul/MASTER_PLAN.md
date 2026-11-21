@@ -498,6 +498,10 @@ The audit tickets are complete. The tickets below are the authoritative implemen
 
 - P1, S. Bind the expected household to member updates and deletions performed by aggregate edits. Treat a missing matching row as a failed aggregate write. Preserve individual callers that do not specify a household. Run backend tests, mapped SQL-parameter regressions, strict mapping, and diff review. No migration is needed. Database-backed concurrency verification remains open.
 
+### HOUSEHOLD-002C — Verify concurrent ownership change
+
+- P1, S. Use a disposable migrated PostgreSQL database and a second connection to move a member after the service reads it. Verify the scoped update fails and the household edit rolls back. Run all PostgreSQL smoke suites, backend tests, strict mapping, and diff review. Delete concurrency and aggregate invariants remain follow-up work.
+
 ### DEVOPS-001 — Restore the production WSGI entry point
 
 - **Priority/risk:** P1 / XS; production start failure, reversible source change.

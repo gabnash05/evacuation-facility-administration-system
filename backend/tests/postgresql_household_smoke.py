@@ -1,0 +1,106 @@
+"""Exercise household ownership and rollback on a disposable database."""
+
+import os
+import unittest
+from unittest.mock import patch
+
+from sqlalchemy import text
+from sqlalchemy.engine import make_url
+
+from app import create_app
+from app.models import db
+from app.models.individual import Individual
+from app.services.household_service import HouseholdService
+from tests.api_test_case import ApiTestConfig
+
+
+class HouseholdPostgreSQLSmoke(unittest.TestCase):
+    def test_concurrent_member_move_rolls_back_household_edit(self):
+        url = make_url(os.environ["EFAS_TEST_DATABASE_URL"])
+        if (
+            url.drivername not in {"postgresql", "postgresql+psycopg2"}
+            or url.host != "127.0.0.1"
+            or not url.port
+            or url.port == 5432
+            or url.query
+            or not (url.database or "").startswith("efas_test_")
+        ):
+            self.fail("Use a local disposable fixture database.")
+
+        class FixtureConfig(ApiTestConfig):
+            SQLALCHEMY_DATABASE_URI = url
+
+        application = create_app(FixtureConfig)
+        with application.app_context():
+            self.assertEqual(
+                db.session.execute(text("SELECT COUNT(*) FROM users")).scalar(), 0
+            )
+            db.session.execute(
+                text(
+                    """
+                INSERT INTO evacuation_centers
+                    (center_name, address, coordinates, capacity, status)
+                VALUES ('Fixture', 'Fixture address', POINT(124, 8), 30, 'active');
+                INSERT INTO households (center_id, household_name, address)
+                SELECT center_id, name, 'Original address' FROM evacuation_centers,
+                       (VALUES ('First'), ('Second')) AS names(name);
+                INSERT INTO individuals (household_id, first_name, last_name, relationship_to_head)
+                SELECT household_id, 'Fixture', 'Person', 'Member' FROM households
+                WHERE household_name = 'First';
+            """
+                )
+            )
+            db.session.commit()
+            first, second = (
+                db.session.execute(
+                    text("SELECT household_id FROM households ORDER BY household_id")
+                )
+                .scalars()
+                .all()
+            )
+            member = db.session.execute(
+                text("SELECT individual_id FROM individuals")
+            ).scalar_one()
+            original_update = Individual.update
+
+            def move_then_update(individual_id, data, *, household_id):
+                with db.engine.begin() as connection:
+                    connection.execute(
+                        text(
+                            "UPDATE individuals SET household_id = :household "
+                            "WHERE individual_id = :id"
+                        ),
+                        {"household": second, "id": individual_id},
+                    )
+                return original_update(individual_id, data, household_id=household_id)
+
+            with patch.object(Individual, "update", side_effect=move_then_update):
+                result, status = HouseholdService.update_household(
+                    first,
+                    {
+                        "address": "Changed address",
+                        "individuals": [
+                            {"individual_id": member, "first_name": "Changed"}
+                        ],
+                    },
+                )
+            self.assertEqual(status, 500)
+            self.assertFalse(result["success"])
+            self.assertEqual(
+                db.session.execute(
+                    text("SELECT address FROM households WHERE household_id = :id"),
+                    {"id": first},
+                ).scalar_one(),
+                "Original address",
+            )
+            moved = db.session.execute(
+                text(
+                    "SELECT household_id, first_name FROM individuals WHERE individual_id = :id"
+                ),
+                {"id": member},
+            ).one()
+            self.assertEqual(tuple(moved), (second, "Fixture"))
+
+
+if __name__ == "__main__":
+    unittest.main()
