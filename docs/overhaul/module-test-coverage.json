@@ -511,19 +511,19 @@
     {
       "path": "frontend/src/pages/city-admin/CityAdminAttendancePageV2.tsx",
       "status": "covered",
-      "tests": ["frontend/src/utils/attendance.test.ts"],
+      "tests": ["frontend/src/pages/city-admin/CityAdminAttendancePageV2.test.tsx"],
       "behavior": "Resolves the active attendance record before a city-admin checkout action opens."
     },
     {
       "path": "frontend/src/pages/center-admin/CenterAdminAttendancePageV2.tsx",
       "status": "covered",
-      "tests": ["frontend/src/utils/attendance.test.ts"],
+      "tests": ["frontend/src/pages/center-admin/CenterAdminAttendancePageV2.test.tsx"],
       "behavior": "Resolves the active attendance record before a center-admin checkout action opens."
     },
     {
       "path": "frontend/src/pages/volunteer/VolunteerAttendancePageV2.tsx",
       "status": "covered",
-      "tests": ["frontend/src/utils/attendance.test.ts"],
+      "tests": ["frontend/src/pages/volunteer/VolunteerAttendancePageV2.test.tsx"],
       "behavior": "Resolves the active attendance record before a volunteer checkout action opens."
     },
     {

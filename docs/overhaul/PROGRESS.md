@@ -476,4 +476,13 @@ background allocation fetching while closed. Four focused cases and the
 production build passed. Source ESLint added no diagnostics, and the direct type
 check remained at 52 diagnostics. Full frontend suite passed (155 files, 246
 tests in 227.72 seconds). Reconciliation reports 203 covered, three unmapped,
-and six exempt.
+and six exempt. Published as `bfa03b0` in draft PR #6.
+
+`FRONTEND-010` retires three unreachable attendance page modules. The V2 pages
+were previously mapped to a shared helper test. Each now has a direct checkout
+test, and the app test independently exercises the three live route bindings.
+Focused validation passed (four files, eight tests), along with targeted lint,
+production build, and the full frontend suite (158 files, 252 tests in 222.14
+seconds). The application compiler still reports 52 existing diagnostics with
+none in the changed tests. Strict mapping reconciliation passes with 203
+mapped, zero unmapped, and six exempt.

@@ -12,15 +12,15 @@ Run the baseline ledger report from the repository root:
 py -3.13 backend/scripts/verify_module_test_coverage.py --report docs/overhaul/module-test-report.json
 ```
 
-Use `--strict` only once the deterministic coverage batches have closed all
-missing rows. It fails stale source rows, missing mapped test paths, duplicate
-rows, invalid exemptions, and all uncovered modules. The report is generated
-output and must not be committed; the mapping is reviewed with every ticket.
+Run `py -3.13 backend/scripts/verify_module_test_coverage.py --strict` for the
+coverage gate. It fails on uncovered modules, stale source rows, missing mapped
+test paths, duplicate rows, and exemptions without an explanation. Keep the
+generated report out of Git and review the mapping with every ticket.
 
-Current explicit mappings cover the existing WSGI, API boundary, configuration,
-allocation security, map rendering, and component regressions. All other
-discovered modules remain honestly `missing` until their owning TEST-003 batch
-supplies meaningful tests.
+Each mapping should point to a test that exercises the module or its exported
+contract. The verifier checks inventory and paths. Test review and actual runs
+establish behavioral coverage. Unit and component mappings do not establish
+live PostgreSQL, migration, deployment, or end-to-end coverage.
 
 ## Baseline — 2026-09-03
 
@@ -31,10 +31,17 @@ repository is sufficiently covered. `TEST-003B` through `TEST-003J` must close
 the missing rows in the published mapping; `--strict` is intentionally expected
 to fail until then.
 
-## Current progress — 2026-09-05
+## Historical progress — 2026-09-05
 
 The verifier now reports 109 covered modules, 101 missing modules, and five
 narrow exemptions for zero-byte backend markers. The count was executed from
 the repository root with the Pipenv environment on 2026-09-05. Configuration
 coverage characterizes the current explicit token and development CORS contract;
 it does not approve the insecure defaults tracked in `SECURITY-001`.
+
+## Strict reconciliation — 2026-11-21
+
+The current checkout has 203 mapped modules (43 backend and 160 frontend),
+zero unmapped modules, and six exemptions. This count excludes three retired
+unreachable attendance pages. Their three maintained V2 counterparts now have
+direct checkout tests and a separate route-binding regression.
