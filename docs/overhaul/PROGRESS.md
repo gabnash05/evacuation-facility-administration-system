@@ -415,4 +415,13 @@ attendance tab display the shared store's swallowed fetch error. Focused Vitest
 (1 file, 4 tests), targeted ESLint, TypeScript, production build, and the read-only
 module verifier pass. The verifier reports 212 executable modules, 194 covered,
 12 unmapped, and six valid exemptions. The final full frontend suite passed
-(146 files, 221 tests; 371.50 seconds). Publish after final diff review.
+(146 files, 221 tests; 371.50 seconds). Focused commit `30a787d` was pushed
+to `codex/overhaul-foundation` and is included in draft PR #6.
+
+`TEST-003H` now directly covers the shared sidebar
+primitive used by MainLayout and app navigation. Three focused tests protect
+desktop toggle/cookie/shortcut behavior, controlled state, and mobile open
+state. Targeted ESLint, Prettier, TypeScript, and the read-only module verifier
+pass; the verifier reports 212 executable modules, 195 covered, 11 unmapped,
+and six valid exemptions. The full frontend suite (147 files, 224 tests;
+378.68 seconds) and production build pass.

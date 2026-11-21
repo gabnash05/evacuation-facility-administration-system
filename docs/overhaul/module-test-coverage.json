@@ -1177,6 +1177,12 @@
       "behavior": "Displays zero-valued center coordinates, loads attendance on demand, announces event and attendance errors, and ignores stale event responses after center changes."
     },
     {
+      "path": "frontend/src/components/ui/sidebar.tsx",
+      "status": "covered",
+      "tests": ["frontend/src/components/ui/sidebar.test.tsx"],
+      "behavior": "Toggles desktop state via button and keyboard shortcut, respects controlled state, and opens mobile navigation without changing desktop state."
+    },
+    {
       "path": "frontend/src/components/features/map/MapLocationPicker.tsx",
       "status": "covered",
       "tests": ["frontend/src/components/features/map/MapLocationPicker.test.tsx"],
