@@ -416,6 +416,13 @@ The audit tickets are complete. The tickets below are the authoritative implemen
 - **Validation:** Run backend unit tests and the migrated PostgreSQL smoke test. Verify a rejected stock move rolls back its partial credit, same-allocation edits, moves between allocations, shared-session and voided guards, and successful single-item center reassignment. Run strict module reconciliation, touched test lint and formatting checks, and diff review.
 - **Rollout and recovery:** No new migration and no historical data changes. Deploy with revision 0002. A rollback to independent writes would reintroduce inconsistency, so restrict edits if a forward fix cannot be deployed. Creation-side lock ordering and historical repair remain separate.
 
+### DISTRIBUTION-001D — Coordinate competing stock reservations
+
+- **Priority, size, and dependencies:** P1, S. Follows DISTRIBUTION-001A and DISTRIBUTION-001C.
+- **Scope and invariant:** Acquire one update lock per requested allocation in ascending identifier order before validating its status and scope. Preserve request item order. Release locks on all error paths. Keep the existing trigger and service-owned transaction.
+- **Validation:** Assert lock order with a reversed payload. Race two connections for the last unit on disposable PostgreSQL and verify one success, one rejection, one new session/item, and zero remaining stock. Run the backend suite, strict mapping, and touched test checks.
+- **Recovery and non-goals:** Deploy alongside the verified stock mutations. No migration, retries, inventory reconstruction, or production data actions are part of this ticket.
+
 ### DEVOPS-001 — Restore the production WSGI entry point
 
 - **Priority/risk:** P1 / XS; production start failure, reversible source change.

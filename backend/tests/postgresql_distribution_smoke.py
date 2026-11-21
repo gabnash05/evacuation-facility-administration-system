@@ -2,6 +2,8 @@
 
 import os
 import unittest
+from concurrent.futures import ThreadPoolExecutor
+from threading import Barrier
 from types import SimpleNamespace
 
 from sqlalchemy import text
@@ -41,7 +43,8 @@ class DistributionPostgreSQLSmoke(unittest.TestCase):
         class FixtureConfig(ApiTestConfig):
             SQLALCHEMY_DATABASE_URI = url
 
-        with create_app(FixtureConfig).app_context():
+        application = create_app(FixtureConfig)
+        with application.app_context():
             self.assertEqual(
                 db.session.execute(text("SELECT COUNT(*) FROM users")).scalar(), 0
             )
@@ -308,6 +311,33 @@ class DistributionPostgreSQLSmoke(unittest.TestCase):
                     destination_household,
                 ),
             )
+
+            before = counts()
+            db.session.rollback()
+            barrier = Barrier(2, timeout=5)
+
+            def consume_last_unit():
+                with application.app_context():
+                    db.session.execute(text("SET LOCAL statement_timeout = '5s'"))
+                    barrier.wait()
+                    return DistributionService.record_distribution(
+                        actor,
+                        {
+                            **details,
+                            "items": [
+                                {"allocation_id": allocation_ids[0], "quantity": 1}
+                            ],
+                        },
+                    )[1]
+
+            with ThreadPoolExecutor(max_workers=2) as workers:
+                attempts = [workers.submit(consume_last_unit) for _ in range(2)]
+                self.assertEqual(
+                    sorted(attempt.result(timeout=10) for attempt in attempts),
+                    [201, 400],
+                )
+            self.assertEqual(counts(), (before[0] + 1, before[1] + 1))
+            self.assertEqual(stock(), [0, 3, 4])
 
 
 if __name__ == "__main__":

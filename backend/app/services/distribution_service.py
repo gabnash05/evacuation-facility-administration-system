@@ -14,6 +14,7 @@ class DistributionService:
 
     @staticmethod
     def record_distribution(user, data):
+        committed = False
         try:
             if not user or not user.is_active:
                 return {"success": False, "message": "Invalid token"}, 401
@@ -38,8 +39,10 @@ class DistributionService:
                 return {"success": False, "message": "Insufficient permissions"}, 403
 
             event_ids = set()
-            for item in data["items"]:
-                allocation = Allocation.get_by_id(item["allocation_id"])
+            for allocation_id in sorted(
+                {item["allocation_id"] for item in data["items"]}
+            ):
+                allocation = Allocation.get_by_id(allocation_id, for_update=True)
                 if not allocation:
                     return {"success": False, "message": "Allocation not found"}, 404
                 if allocation.center_id != distribution_center_id:
@@ -79,13 +82,13 @@ class DistributionService:
                     raise RuntimeError("Failed to insert a distribution item.")
 
             db.session.commit()
+            committed = True
             return {
                 "success": True,
                 "message": "Distribution recorded successfully",
             }, 201
 
         except SQLAlchemyError as error:
-            db.session.rollback()
             diagnostics = getattr(getattr(error, "orig", None), "diag", None)
             reason = getattr(diagnostics, "message_primary", "") or ""
             if reason.startswith("Insufficient quantity in allocation."):
@@ -96,9 +99,11 @@ class DistributionService:
             logger.error("Database rejected distribution creation")
             return {"success": False, "message": "Failed to record distribution."}, 400
         except Exception as e:
-            db.session.rollback()
             logger.error(f"Distribution error: {str(e)}")
             return {"success": False, "message": str(e)}, 400
+        finally:
+            if not committed:
+                db.session.rollback()
 
     @staticmethod
     def get_history(params):

@@ -539,4 +539,11 @@ mapped, zero missing, and six exempt. Published as `7d69dbd` in draft PR #6.
 The disposable PostgreSQL 17.2 lifecycle test passed, including failed stock
 moves, same-allocation corrections, a valid single-item center reassignment,
 and refusal of edits to voided items or destination changes on shared sessions.
-All 115 backend tests passed. Historical stock repair remains open.
+All 115 backend tests passed. Published as `455a124` in draft PR #6.
+
+`DISTRIBUTION-001D` locks requested allocations in ascending order before making
+creation decisions. A reversed-payload test verifies ordering. Two disposable
+PostgreSQL connections competing for the final unit produced one success, one
+rejection, and exactly one new session and item. Stock reached zero. All 115
+backend tests, touched test lint, strict mapping, and diff checks passed.
+Historical stock repair remains open.

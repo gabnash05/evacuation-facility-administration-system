@@ -1,5 +1,5 @@
 from types import SimpleNamespace
-from unittest.mock import patch
+from unittest.mock import call, patch
 
 from sqlalchemy.exc import SQLAlchemyError
 
@@ -128,14 +128,15 @@ class DistributionAuthorizationTests(ApiTestCase):
             center_id=3, event_id=1, status="active"
         )
 
-        result, status = DistributionService.record_distribution(
-            user(),
-            {
-                "household_id": 1,
-                "center_id": 2,
-                "items": [{"allocation_id": 1, "quantity": 1}],
-            },
-        )
+        with self.app.app_context():
+            result, status = DistributionService.record_distribution(
+                user(),
+                {
+                    "household_id": 1,
+                    "center_id": 2,
+                    "items": [{"allocation_id": 1, "quantity": 1}],
+                },
+            )
 
         self.assertEqual(status, 403)
         self.assertFalse(result["success"])
@@ -174,8 +175,8 @@ class DistributionAuthorizationTests(ApiTestCase):
             "household_id": 1,
             "center_id": 2,
             "items": [
-                {"allocation_id": 1, "quantity": 1},
                 {"allocation_id": 2, "quantity": 1},
+                {"allocation_id": 1, "quantity": 1},
             ],
         }
         with self.app.app_context():
@@ -191,6 +192,10 @@ class DistributionAuthorizationTests(ApiTestCase):
 
         self.assertEqual(status, 201)
         self.assertTrue(result["success"])
+        self.assertEqual(
+            allocation.call_args_list,
+            [call(1, for_update=True), call(2, for_update=True)],
+        )
         self.assertEqual(
             [method for method, _, _ in session.method_calls],
             ["execute", "execute", "execute", "commit"],
