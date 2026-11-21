@@ -61,7 +61,11 @@ def _may_access_individual_history(actor, individual_id):
         and household
         and (
             actor.role in {"super_admin", "city_admin"}
-            or actor.center_id == household["center_id"]
+            or (
+                actor.role in {"center_admin", "volunteer"}
+                and actor.center_id is not None
+                and actor.center_id == household["center_id"]
+            )
         )
     )
 

@@ -586,6 +586,10 @@ The audit tickets are complete. The tickets below are the authoritative implemen
 
 - P1, S. Reject unsupported and unassigned actors before singleton or batch check-in while retaining active-account checks and server-owned recorder IDs. Run route regressions, backend tests, strict mapping and diff review. No migration is needed. Individual ownership and automatic-transfer policy remain follow-up work.
 
+### SECURITY-022 — Require assigned center for individual history
+
+- P1, S. Permit individual history for citywide administrators or recognized lower roles with a non-null matching household center. Reject unassigned and unsupported actors. Run route regressions, backend tests, strict mapping and diff review. No migration is needed.
+
 ### DEVOPS-001 — Restore the production WSGI entry point
 
 - **Priority/risk:** P1 / XS; production start failure, reversible source change.

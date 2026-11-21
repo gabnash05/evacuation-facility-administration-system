@@ -11,6 +11,22 @@ def actor(role="volunteer", center_id=2, user_id=7):
 
 
 class AttendanceRouteAuthorizationTests(ApiTestCase):
+    @patch("app.routes.attendance_records.get_individual_attendance_history")
+    @patch("app.routes.attendance_records.Individual.get_by_id")
+    @patch("app.routes.attendance_records.get_current_user")
+    def test_history_rejects_unassigned_or_unsupported_actor(
+        self, get_user, get_individual, history
+    ):
+        get_individual.return_value = {"household": {"center_id": None}}
+        for user in (actor(center_id=None), actor(role="unknown", center_id=None)):
+            get_user.return_value = user
+            response = self.client.get(
+                "/api/attendance/history/individual/1",
+                headers=self.authorization_headers(7),
+            )
+            self.assertEqual(response.status_code, 403)
+        history.assert_not_called()
+
     @patch("app.routes.attendance_records.check_in_individual")
     @patch("app.routes.attendance_records.get_current_user")
     def test_checkin_rejects_unassigned_and_unsupported_actors(
