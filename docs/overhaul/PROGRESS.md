@@ -424,4 +424,15 @@ desktop toggle/cookie/shortcut behavior, controlled state, and mobile open
 state. Targeted ESLint, Prettier, TypeScript, and the read-only module verifier
 pass; the verifier reports 212 executable modules, 195 covered, 11 unmapped,
 and six valid exemptions. The full frontend suite (147 files, 224 tests;
-378.68 seconds) and production build pass.
+378.68 seconds) and production build passed. Published as `fd73983` in draft PR #6.
+
+`TEST-003I` now covers city allocation. Two focused tests pass
+with the bundled Node runtime. They exercise initial loading, the search
+pagination reset, and the status-only cancellation through the rendered menu.
+The test file passes ESLint and Prettier. The module verifier reports 196
+covered, 10 unmapped, and six exempt. The direct application compiler check
+reported 56 diagnostics outside the changed page and test (QUALITY-001).
+The production build passed. The source file's strict lint check reports 10
+existing warnings, down from 11 at the parent commit. The full frontend suite
+passed under Node 24.22.1 (148 files, 226 tests in 231.99 seconds). An earlier
+Node 24.19.0 rerun of the sidebar snapshot timed out starting two fork workers.

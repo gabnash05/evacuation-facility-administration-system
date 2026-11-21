@@ -1183,6 +1183,12 @@
       "behavior": "Toggles desktop state via button and keyboard shortcut, respects controlled state, and opens mobile navigation without changing desktop state."
     },
     {
+      "path": "frontend/src/pages/city-admin/CityAdminAidAllocationPage.tsx",
+      "status": "covered",
+      "tests": ["frontend/src/pages/city-admin/CityAdminAidAllocationPage.test.tsx"],
+      "behavior": "Loads allocations, resets pagination after search, and submits a status-only cancellation through the city administrator row menu."
+    },
+    {
       "path": "frontend/src/components/features/map/MapLocationPicker.tsx",
       "status": "covered",
       "tests": ["frontend/src/components/features/map/MapLocationPicker.test.tsx"],

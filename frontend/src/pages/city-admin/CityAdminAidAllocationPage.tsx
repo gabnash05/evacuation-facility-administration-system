@@ -136,10 +136,6 @@ export function CityAdminAidAllocationPage() {
         }
     };
 
-    const handleDistribute = (allocation: any) => {
-        console.log("Distribute allocation:", allocation);
-    };
-
     const handleEntriesPerPageChange = (entries: number) => {
         setEntriesPerPage(entries);
         setCurrentPage(1);
@@ -228,7 +224,6 @@ export function CityAdminAidAllocationPage() {
                                         sortDirection={sortConfig?.direction || undefined}
                                         onEdit={canEdit ? handleEditAllocation : undefined}
                                         onDelete={canDelete ? handleDeleteAllocation : undefined}
-                                        onDistribute={handleDistribute}
                                         onCancel={userRole === "city_admin" ? handleCancelAllocation : undefined} // NEW
                                         showActions={true}
                                         deleteLoading={isDeleting}
