@@ -615,3 +615,7 @@ HOUSEHOLD-001 prevents an omitted member list from deleting household members
 or clearing the head. Null and other non-list member payloads return 400.
 The regressions and all 130 backend tests passed. Explicit list replacement
 and recovery of previously deleted records remain separate concerns.
+
+HOUSEHOLD-002A rejects foreign and duplicate member IDs before household or
+individual writes. The regression and all 131 backend tests passed. Database
+concurrency and aggregate transaction review remain open.

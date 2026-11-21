@@ -8,6 +8,25 @@ from tests.api_test_case import ApiTestCase
 
 
 class HouseholdModelTests(ApiTestCase):
+    @patch("app.services.household_service.Individual")
+    @patch("app.services.household_service.Household")
+    def test_update_rejects_foreign_and_duplicate_members_before_writes(
+        self, household, individual
+    ):
+        household.get_by_name.return_value = None
+        individual.get_by_household_id.return_value = [{"individual_id": 8}]
+
+        for members in ([{"individual_id": 9}], [{"individual_id": 8}] * 2):
+            result, status = HouseholdService.update_household(
+                4, {"household_name": "Santos household", "individuals": members}
+            )
+            self.assertEqual(status, 400)
+            self.assertFalse(result["success"])
+
+        household.update.assert_not_called()
+        individual.update.assert_not_called()
+        individual.delete_by_ids.assert_not_called()
+
     @patch("app.services.household_service.db")
     @patch("app.services.household_service.Individual")
     @patch("app.services.household_service.Household")

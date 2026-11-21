@@ -482,6 +482,10 @@ The audit tickets are complete. The tickets below are the authoritative implemen
 
 - P1, S. Household updates previously treated an omitted member list as empty and deleted existing members. Preserve members and head when the field is absent, reject a null or non-list value, and retain explicit-list behavior. Test both omission and invalid input, run the backend suite, strict module mapping, and diff review. No migration is required. Existing deleted data requires separate recovery evidence and approval.
 
+### HOUSEHOLD-002A — Reject unrelated household member IDs
+
+- P1, S. Validate explicit member IDs against the target household and reject duplicates before writes. Preserve explicit replacement behavior for valid IDs. Run backend tests, strict mapping and diff review. Concurrent ownership changes and aggregate transaction behavior remain follow-up work. Revert the focused commit if compatibility recovery is required.
+
 ### DEVOPS-001 — Restore the production WSGI entry point
 
 - **Priority/risk:** P1 / XS; production start failure, reversible source change.

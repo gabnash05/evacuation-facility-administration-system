@@ -27,6 +27,28 @@ class HouseholdService:
         individuals_payload = data.pop("individuals", None)
 
         try:
+            if individuals_payload is not None:
+                existing_individuals = Individual.get_by_household_id(household_id)
+                existing_ids = {ind["individual_id"] for ind in existing_individuals}
+                incoming_ids = [
+                    ind["individual_id"]
+                    for ind in individuals_payload
+                    if isinstance(ind, dict) and "individual_id" in ind
+                ]
+                if (
+                    any(not isinstance(ind, dict) for ind in individuals_payload)
+                    or any(
+                        not isinstance(value, int) or isinstance(value, bool)
+                        for value in incoming_ids
+                    )
+                    or len(incoming_ids) != len(set(incoming_ids))
+                    or not set(incoming_ids).issubset(existing_ids)
+                ):
+                    return {
+                        "success": False,
+                        "message": "Invalid household member IDs.",
+                    }, 400
+
             # First update the household basic info
             updated_household = Household.update(household_id, data)
             if not updated_household:
@@ -35,9 +57,6 @@ class HouseholdService:
             if individuals_payload is None:
                 db.session.commit()
                 return {"success": True, "data": updated_household}, 200
-
-            existing_individuals = Individual.get_by_household_id(household_id)
-            existing_ids = {ind["individual_id"] for ind in existing_individuals}
 
             incoming_individuals = [
                 ind for ind in individuals_payload if "individual_id" in ind
