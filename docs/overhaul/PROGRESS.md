@@ -461,4 +461,10 @@ store's failure alert instead of the empty-history message. Two direct tests
 and targeted lint passed. Production build and the full frontend suite passed
 (151 files, 238 tests in 225.71 seconds). The direct compiler check dropped
 from 56 to 54 diagnostics. Module reconciliation reports 199 covered, seven
-unmapped, and six exempt.
+unmapped, and six exempt. Published as `d2d088e` in draft PR #6.
+
+`TEST-003I` now directly covers center and volunteer distribution pages.
+`FRONTEND-067` refreshes history when an assigned center changes. Four focused
+tests and targeted lint, production build, and the full frontend suite passed
+(153 files, 242 tests in 230.16 seconds). Direct app compiler diagnostics dropped
+from 54 to 52. Module reconciliation reports 201 covered, five unmapped, six exempt.

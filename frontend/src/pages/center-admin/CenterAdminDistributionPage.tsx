@@ -14,15 +14,15 @@ import type { DistributionRecord } from "@/types/distribution";
 
 export function CenterAdminDistributionPage() {
     const { user } = useAuthStore();
-    const { 
-        history, 
-        searchQuery, 
-        setSearchQuery, 
-        fetchData, 
+    const {
+        history,
+        searchQuery,
+        setSearchQuery,
+        fetchData,
         deleteDistribution,
-        currentPage, 
+        currentPage,
         setCurrentPage,
-        entriesPerPage, 
+        entriesPerPage,
         setEntriesPerPage,
         isLoading,
         pagination,
@@ -32,17 +32,18 @@ export function CenterAdminDistributionPage() {
         sortDirection,
         selectedCenterId,
         error,
-        clearError
+        clearError,
     } = useDistributionStore();
-    
+
     // Fetch center name from evacuation center store
     const { fetchCenterById } = useEvacuationCenterStore();
 
     // Local state for debounced search
     const [localSearch, setLocalSearch] = useState(searchQuery);
     // State to store fetched center name
-    const [centerAdminCenterName, setCenterAdminCenterName] = useState<string>("your evacuation center");
-    
+    const [centerAdminCenterName, setCenterAdminCenterName] =
+        useState<string>("your evacuation center");
+
     // Modals
     const [isCreateOpen, setIsCreateOpen] = useState(false);
     const [editRecord, setEditRecord] = useState<DistributionRecord | null>(null);
@@ -50,7 +51,7 @@ export function CenterAdminDistributionPage() {
 
     // Check if center admin has an assigned center
     const hasAssignedCenter = !!user?.center_id;
-    const isCenterAdmin = user?.role === 'center_admin';
+    const isCenterAdmin = user?.role === "center_admin";
 
     // Fetch center name when component mounts or user changes
     useEffect(() => {
@@ -93,24 +94,36 @@ export function CenterAdminDistributionPage() {
     }, [searchQuery]);
 
     // Handle sort
-    const handleSort = useCallback((column: string) => {
-        if (sortColumn === column) {
-            setSortDirection(sortDirection === "asc" ? "desc" : "asc");
-        } else {
-            setSortColumn(column);
-            setSortDirection("desc");
-        }
-    }, [sortColumn, sortDirection, setSortColumn, setSortDirection]);
+    const handleSort = useCallback(
+        (column: string) => {
+            if (sortColumn === column) {
+                setSortDirection(sortDirection === "asc" ? "desc" : "asc");
+            } else {
+                setSortColumn(column);
+                setSortDirection("desc");
+            }
+        },
+        [sortColumn, sortDirection, setSortColumn, setSortDirection]
+    );
 
     // Fetch data when dependencies change
     useEffect(() => {
         if (hasAssignedCenter && isCenterAdmin) {
             fetchData();
         }
-    }, [fetchData, hasAssignedCenter, isCenterAdmin, currentPage, entriesPerPage, searchQuery, sortColumn, sortDirection]);
+    }, [
+        fetchData,
+        user?.center_id,
+        hasAssignedCenter,
+        isCenterAdmin,
+        currentPage,
+        entriesPerPage,
+        searchQuery,
+        sortColumn,
+        sortDirection,
+    ]);
 
     // Server-side pagination data
-    const totalPages = pagination?.total_pages || 1;
     const totalEntries = pagination?.total_items || 0;
 
     const handleDelete = async () => {
@@ -138,7 +151,7 @@ export function CenterAdminDistributionPage() {
                             Manage distribution records for your evacuation center.
                         </p>
                     </div>
-                    
+
                     <Alert variant="destructive">
                         <AlertCircle className="h-4 w-4" />
                         <AlertDescription>
@@ -160,11 +173,13 @@ export function CenterAdminDistributionPage() {
                             Manage distribution records for your evacuation center.
                         </p>
                     </div>
-                    
+
                     <Alert variant="destructive">
                         <AlertCircle className="h-4 w-4" />
                         <AlertDescription>
-                            You have not been assigned to an evacuation center. Please contact a city administrator to get assigned to a center before you can manage distributions.
+                            You have not been assigned to an evacuation center. Please contact a
+                            city administrator to get assigned to a center before you can manage
+                            distributions.
                         </AlertDescription>
                     </Alert>
                 </div>
@@ -178,7 +193,10 @@ export function CenterAdminDistributionPage() {
                 <div>
                     <h1 className="text-2xl font-bold tracking-tight">Aid Distribution</h1>
                     <p className="text-muted-foreground">
-                        Manage distribution records for your evacuation center: <span className="font-semibold text-foreground">{centerAdminCenterName}</span>
+                        Manage distribution records for your evacuation center:{" "}
+                        <span className="font-semibold text-foreground">
+                            {centerAdminCenterName}
+                        </span>
                     </p>
                 </div>
 
@@ -206,7 +224,8 @@ export function CenterAdminDistributionPage() {
                         />
                         {selectedCenterId && (
                             <div className="mt-2 text-sm text-muted-foreground">
-                                Viewing and managing distributions for: <span className="font-medium text-foreground">
+                                Viewing and managing distributions for:{" "}
+                                <span className="font-medium text-foreground">
                                     {centerAdminCenterName}
                                 </span>
                                 <span className="ml-2 text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full">
@@ -218,7 +237,7 @@ export function CenterAdminDistributionPage() {
 
                     {/* Table */}
                     <div className="border-b border-border">
-                        <DistributionHistoryTable 
+                        <DistributionHistoryTable
                             data={history}
                             loading={isLoading}
                             userRole={user?.role}
@@ -246,10 +265,7 @@ export function CenterAdminDistributionPage() {
 
             {/* Create Modal - Only show if center admin has an assigned center */}
             {selectedCenterId && (
-                <DistributeAidModal 
-                    isOpen={isCreateOpen} 
-                    onClose={() => setIsCreateOpen(false)} 
-                />
+                <DistributeAidModal isOpen={isCreateOpen} onClose={() => setIsCreateOpen(false)} />
             )}
 
             {/* Edit Modal */}

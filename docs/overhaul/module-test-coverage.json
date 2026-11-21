@@ -1207,6 +1207,18 @@
       "behavior": "Loads citywide history on entry and distinguishes an empty result from an announced fetch failure."
     },
     {
+      "path": "frontend/src/pages/center-admin/CenterAdminDistributionPage.tsx",
+      "status": "covered",
+      "tests": ["frontend/src/pages/center-admin/CenterAdminDistributionPage.test.tsx"],
+      "behavior": "Blocks history reads without an assigned center and refreshes history when the assigned center changes."
+    },
+    {
+      "path": "frontend/src/pages/volunteer/VolunteerDistributionPage.tsx",
+      "status": "covered",
+      "tests": ["frontend/src/pages/volunteer/VolunteerDistributionPage.test.tsx"],
+      "behavior": "Blocks history reads without an assigned center and refreshes history when the assigned center changes."
+    },
+    {
       "path": "frontend/src/components/features/map/MapLocationPicker.tsx",
       "status": "covered",
       "tests": ["frontend/src/components/features/map/MapLocationPicker.test.tsx"],
