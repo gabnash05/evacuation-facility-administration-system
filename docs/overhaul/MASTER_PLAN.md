@@ -534,6 +534,10 @@ The audit tickets are complete. The tickets below are the authoritative implemen
 
 - P1, S. Convert native PostgreSQL points to SRID 4326 geometry at proximity and bounds query boundaries. Map the computed distance without passing it to the model constructor. Verify active, inactive, near and distant fixtures on disposable PostGIS, run backend tests, strict mapping and diff review. No data migration is needed. Deploy only with PostGIS provisioned. ORM type alignment remains open.
 
+### DATABASE-003D — Align ORM coordinates with native PostgreSQL points
+
+- P1, S. Map the center coordinate column to PostgreSQL POINT and preserve longitude/latitude tuple handling. Verify ORM reads and writes, proximity and bounds using disposable PostGIS, plus backend tests and strict mapping. No schema migration is needed. Deployment PostGIS provisioning remains open. Revert the focused commit if an ORM integration requires the former geometry mapping.
+
 ### DEVOPS-001 — Restore the production WSGI entry point
 
 - **Priority/risk:** P1 / XS; production start failure, reversible source change.

@@ -691,3 +691,8 @@ proximity and bounds queries and maps distance outside the model constructor.
 Both queries passed against disposable PostgreSQL 18 and PostGIS 3.6 in Ubuntu
 WSL, and all 145 backend tests passed. The fixture server was stopped. The ORM
 coordinate type and deployment PostGIS provisioning remain open.
+
+DATABASE-003D maps center coordinates to the native PostgreSQL point type.
+Disposable PostgreSQL 18/PostGIS 3.6 verified ORM tuple reads and writes as
+well as proximity and bounds. All 145 backend tests passed. Deployment PostGIS
+provisioning remains open.

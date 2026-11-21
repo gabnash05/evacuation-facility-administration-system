@@ -2,10 +2,36 @@
 
 from typing import Any, Dict, List, Optional
 from sqlalchemy import text, func
-from geoalchemy2.types import Geometry
+from sqlalchemy.types import UserDefinedType
 
 from app.models import db
 from app.schemas.evacuation_center import EvacuationCenterResponseSchema
+
+
+class PostgreSQLPoint(UserDefinedType):
+    """Native PostgreSQL point values stored as longitude and latitude."""
+
+    cache_ok = True
+
+    def get_col_spec(self, **kwargs):
+        return "POINT"
+
+    def bind_processor(self, dialect):
+        def process(value):
+            if isinstance(value, (tuple, list)):
+                return f"({value[0]},{value[1]})"
+            return value
+
+        return process
+
+    def result_processor(self, dialect, coltype):
+        def process(value):
+            if isinstance(value, str):
+                longitude, latitude = value.strip("()").split(",")
+                return float(longitude), float(latitude)
+            return value
+
+        return process
 
 
 class EvacuationCenter(db.Model):
@@ -16,7 +42,7 @@ class EvacuationCenter(db.Model):
     center_id = db.Column(db.Integer, primary_key=True)
     center_name = db.Column(db.String(255), nullable=False, index=True)
     address = db.Column(db.String(255), nullable=False)
-    coordinates = db.Column(Geometry(geometry_type='POINT', srid=4326), nullable=False)
+    coordinates = db.Column(PostgreSQLPoint(), nullable=False)
     capacity = db.Column(db.Integer, nullable=False)
     status = db.Column(db.String(20), nullable=False, default="active")
     current_occupancy = db.Column(db.Integer, nullable=False, default=0)
