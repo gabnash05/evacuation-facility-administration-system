@@ -538,6 +538,10 @@ The audit tickets are complete. The tickets below are the authoritative implemen
 
 - P1, S. Map the center coordinate column to PostgreSQL POINT and preserve longitude/latitude tuple handling. Verify ORM reads and writes, proximity and bounds using disposable PostGIS, plus backend tests and strict mapping. No schema migration is needed. Deployment PostGIS provisioning remains open. Revert the focused commit if an ORM integration requires the former geometry mapping.
 
+### TEST-002B — Automate the PostGIS fixture
+
+- P1, S. When explicitly enabled, create a separate local fixture database, install PostGIS and run the spatial suite. Preserve the PostgreSQL-only default for servers without PostGIS. Verify all four smoke suites on a disposable PostGIS server, backend tests, strict mapping and diff review. Document database-owner privileges and deployment provisioning. No production database is modified by the runner.
+
 ### DEVOPS-001 — Restore the production WSGI entry point
 
 - **Priority/risk:** P1 / XS; production start failure, reversible source change.

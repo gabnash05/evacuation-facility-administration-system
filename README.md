@@ -49,4 +49,10 @@ For a fresh PostgreSQL database, set `DATABASE_URL` and run
 refuses an existing EFAS schema. Follow the [migration and recovery plan](docs/overhaul/MASTER_PLAN.md#database-002a--version-the-existing-postgresql-schema)
 before adopting a legacy database.
 
+The spatial center endpoints require PostGIS in the application database.
+Install a PostgreSQL-compatible PostGIS package on the database server and
+have the database owner enable the `postgis` extension before deploying those
+endpoints. Confirm the deployment target and extension privileges with the
+database operator. The migration chain does not enable the extension.
+
 

@@ -32,11 +32,21 @@ def main():
     url = fixture_server_url(os.environ.get("EFAS_TEST_SERVER_URL", ""))
     engine = create_engine(url, isolation_level="AUTOCOMMIT")
     try:
-        for suite in ("attendance", "distribution", "household"):
+        suites = ["attendance", "distribution", "household"]
+        if os.environ.get("EFAS_TEST_POSTGIS") == "1":
+            suites.append("postgis")
+        for suite in suites:
             name = f"efas_test_{suite}_{uuid.uuid4().hex}"
             with engine.connect() as connection:
                 connection.exec_driver_sql(f'CREATE DATABASE "{name}"')
             database_url = url.set(database=name).render_as_string(hide_password=False)
+            if suite == "postgis":
+                spatial_engine = create_engine(url.set(database=name))
+                try:
+                    with spatial_engine.begin() as connection:
+                        connection.exec_driver_sql("CREATE EXTENSION postgis")
+                finally:
+                    spatial_engine.dispose()
             environment = os.environ.copy()
             environment.update(
                 DATABASE_URL=database_url,
@@ -61,8 +71,13 @@ def main():
                 env=environment,
                 check=True,
             )
+            module = (
+                "tests.postgis_center_smoke"
+                if suite == "postgis"
+                else f"tests.postgresql_{suite}_smoke"
+            )
             subprocess.run(
-                [sys.executable, "-m", f"tests.postgresql_{suite}_smoke"],
+                [sys.executable, "-m", module],
                 env=environment,
                 check=True,
             )

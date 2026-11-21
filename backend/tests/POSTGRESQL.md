@@ -34,3 +34,5 @@ PostGIS integration and automated provisioning remain part of TEST-002.
 For spatial checks, enable PostGIS in a separate fresh fixture database,
 run migrations, and run `pipenv run python -m tests.postgis_center_smoke`.
 The database must meet the same loopback, port and name restrictions.
+Alternatively, set `EFAS_TEST_POSTGIS=1` when running the fixture runner. Its
+database owner must have permission to create the installed PostGIS extension.

@@ -696,3 +696,8 @@ DATABASE-003D maps center coordinates to the native PostgreSQL point type.
 Disposable PostgreSQL 18/PostGIS 3.6 verified ORM tuple reads and writes as
 well as proximity and bounds. All 145 backend tests passed. Deployment PostGIS
 provisioning remains open.
+
+TEST-002B adds opt-in PostGIS provisioning to the isolated fixture runner. All
+four database smoke suites passed on disposable PostgreSQL 18/PostGIS 3.6, and
+all 145 backend tests passed. README now documents the extension requirement.
+Deployment-specific provisioning and verification remain open.
