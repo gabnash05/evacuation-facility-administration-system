@@ -3,11 +3,35 @@
 from unittest.mock import Mock, patch
 
 from app.models.household import Household
+from app.models.individual import Individual
 from app.services.household_service import HouseholdService
 from tests.api_test_case import ApiTestCase
 
 
 class HouseholdModelTests(ApiTestCase):
+    @patch("app.models.individual.db")
+    def test_member_read_propagates_database_failure(self, database):
+        database.session.execute.side_effect = RuntimeError("read failed")
+
+        with self.assertRaisesRegex(RuntimeError, "read failed"):
+            Individual.get_by_household_id(4)
+
+    @patch("app.services.household_service.db")
+    @patch("app.services.household_service.Individual")
+    @patch("app.services.household_service.Household")
+    def test_member_read_failure_aborts_update(self, household, individual, database):
+        household.get_by_id.return_value = {"household_name": "Santos household"}
+        household.get_by_name.return_value = None
+        individual.get_by_household_id.side_effect = RuntimeError("read failed")
+
+        result, status = HouseholdService.update_household(4, {"individuals": []})
+
+        self.assertEqual(status, 500)
+        self.assertFalse(result["success"])
+        household.update.assert_not_called()
+        database.session.commit.assert_not_called()
+        database.session.rollback.assert_called_once_with()
+
     @patch("app.services.household_service.db")
     @patch("app.services.household_service.Individual")
     @patch("app.services.household_service.Household")

@@ -490,6 +490,10 @@ The audit tickets are complete. The tickets below are the authoritative implemen
 
 - P1, S. Detect failed member deletion, update, and creation before committing the household aggregate. Preserve existing response behavior for successful edits. Cover all three failure paths, run the backend suite, strict module mapping and diff review. No migration is needed. Individual read failure semantics and concurrent ownership changes remain follow-up work.
 
+### DATABASE-006B — Propagate household member read failures
+
+- P1, S. Propagate database failures from member-list reads so household updates abort and read endpoints return errors instead of empty results. Validate model propagation, aggregate rollback, backend tests and strict mapping. No migration is needed. Revert the focused commit if recovery is required.
+
 ### DEVOPS-001 — Restore the production WSGI entry point
 
 - **Priority/risk:** P1 / XS; production start failure, reversible source change.

@@ -114,14 +114,8 @@ class Individual(db.Model):
         """
         )
 
-        try:
-            result = db.session.execute(sql, {"household_id": household_id}).fetchall()
-            return [dict(row._mapping) for row in result]
-        except Exception as e:
-            logger.error(
-                f"Error fetching individuals for household {household_id}: {str(e)}"
-            )
-            return []
+        result = db.session.execute(sql, {"household_id": household_id}).fetchall()
+        return [dict(row._mapping) for row in result]
 
     @classmethod
     def create(cls, data: dict):

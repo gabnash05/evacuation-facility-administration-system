@@ -629,3 +629,8 @@ DATABASE-006A aborts household edits when a member write reports failure.
 Regressions cover deletion, update and creation failures and assert rollback
 without commit. All 132 backend tests passed. Database-backed aggregate and
 concurrency verification and member-read failure semantics remain open.
+
+DATABASE-006B propagates member-read errors to existing service error handlers.
+The household update aborts and rolls back before writes when the read fails.
+Model and service regressions and all 134 backend tests passed. Database-backed
+aggregate and concurrency verification remain open.

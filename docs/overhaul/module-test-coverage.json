@@ -105,8 +105,8 @@
     {
       "path": "backend/app/models/individual.py",
       "status": "covered",
-      "tests": ["backend/tests/test_individual_search_scope.py"],
-      "behavior": "Binds assigned-center ownership predicates in individual list, count, search, and status-summary queries."
+      "tests": ["backend/tests/test_individual_search_scope.py", "backend/tests/test_household_model.py"],
+      "behavior": "Binds assigned-center predicates and propagates household member read failures."
     },
     {
       "path": "backend/app/routes/user.py",
