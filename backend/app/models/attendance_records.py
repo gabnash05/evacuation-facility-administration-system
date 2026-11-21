@@ -3,6 +3,7 @@
 from typing import Any, Dict, List, Optional, Tuple
 from datetime import datetime
 from sqlalchemy import text
+from sqlalchemy.exc import IntegrityError
 from app.models import db
 import logging
 
@@ -542,6 +543,14 @@ class AttendanceRecord(db.Model):
                 commit=False,
             )
             db.session.commit()
+        except IntegrityError as error:
+            db.session.rollback()
+            if (
+                getattr(getattr(error.orig, "diag", None), "constraint_name", None)
+                == "uq_attendance_active_individual"
+            ):
+                raise ValueError("Individual is already checked in") from None
+            raise
         except Exception:
             db.session.rollback()
             raise

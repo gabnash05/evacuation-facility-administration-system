@@ -1,3 +1,10 @@
 EFAS Alembic migration directory. See the DATABASE-002A section in
 docs/overhaul/MASTER_PLAN.md for upgrade, legacy adoption, and recovery.
 Write future revisions by hand. The initial SQL snapshot is immutable.
+
+Revision 0003 enforces one active attendance record per individual. Rehearse
+the upgrade on a restored copy and measure the time needed to build the index.
+The upgrade requires a write lock on attendance and waits up to five seconds
+to acquire it. Deploy during an appropriate maintenance window. Duplicate
+active records abort the upgrade and need a separately approved reconciliation.
+Downgrading to 0002 removes only the index and allows duplicates again.

@@ -446,6 +446,13 @@ The audit tickets are complete. The tickets below are the authoritative implemen
 - Run the full backend suite, strict module mapping, and the PostgreSQL attendance smoke from ATTENDANCE-002B. Acceptance requires a failed checkout followed by a successful one and a rejected repeat with the first successful timestamp preserved. Verify that a failed batch transfer can be retried by a later item and writes exactly one transfer.
 - No migration required. Keep recorder and route authorization unchanged. Revert the code commit for rollback. Escalate any proposal to change partial-success semantics.
 
+### ATTENDANCE-002D — Enforce one active check-in per person
+
+- P1, S. Depends on ATTENDANCE-002A–C. Application checks cannot enforce uniqueness when two requests start with no active attendance record.
+- Add a partial unique index in revision 0003 for the existing active-record predicate. Use a bounded lock wait and refuse existing duplicates without modifying rows. Translate an insert race into a check-in validation error after rolling back.
+- Validate clean migration, concurrent inserts, downgrade to 0002, duplicate refusal with rows and revision unchanged, and retry after correcting only the synthetic fixture. Run backend tests, strict mapping, and the disposable attendance smoke suite.
+- Deployment needs a verified backup and restored-copy rehearsal. Index creation blocks attendance writes while it runs. Confirm the acceptable maintenance window using restored-copy timing. Any historical reconciliation requires separate approval. Downgrade to 0002 drops the index and removes the uniqueness guarantee without rewriting records.
+
 ### DEVOPS-001 — Restore the production WSGI entry point
 
 - **Priority/risk:** P1 / XS; production start failure, reversible source change.

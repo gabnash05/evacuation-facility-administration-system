@@ -515,10 +515,16 @@
       "behavior": "Uses the requested attendance record ID for checkout and keeps private failed-write details out of transfer and check-in responses and logs."
     },
     {
+      "path": "backend/migrations/versions/0003_unique_active_attendance.py",
+      "status": "covered",
+      "tests": ["backend/tests/test_migrations.py"],
+      "behavior": "Checks for duplicate active attendance under a table lock and refuses to create the index if duplicates exist."
+    },
+    {
       "path": "backend/app/models/attendance_records.py",
       "status": "covered",
       "tests": ["backend/tests/test_attendance_checkout_identity.py"],
-      "behavior": "Uses and locks the requested checkout record, rejects completed checkouts under the lock, and rolls back a transfer when its destination insert fails."
+      "behavior": "Locks and validates the requested checkout record, rolls back a failed transfer, and converts an active check-in conflict to a validation error."
     },
     {
       "path": "frontend/src/utils/attendance.ts",

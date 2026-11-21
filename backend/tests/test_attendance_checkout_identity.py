@@ -4,6 +4,8 @@ import unittest
 from types import SimpleNamespace
 from unittest.mock import Mock, patch
 
+from sqlalchemy.exc import IntegrityError
+
 from app.models.attendance_records import AttendanceRecord
 from app.services import attendance_records_service
 
@@ -59,6 +61,26 @@ class AttendanceCheckoutIdentityTests(unittest.TestCase):
 
 
 class AttendanceTransferTests(unittest.TestCase):
+    @patch("app.models.attendance_records.db", new_callable=Mock)
+    @patch.object(AttendanceRecord, "get_current_event_for_center", return_value=2)
+    @patch.object(AttendanceRecord, "create")
+    def test_duplicate_active_insert_rolls_back_with_validation_error(
+        self, create, get_event, database
+    ):
+        database.session.execute.return_value.fetchone.side_effect = [(8,), None]
+        conflict = RuntimeError("private database diagnostic")
+        conflict.diag = SimpleNamespace(
+            constraint_name="uq_attendance_active_individual"
+        )
+        create.side_effect = IntegrityError("insert", {}, conflict)
+
+        with self.assertRaisesRegex(ValueError, "^Individual is already checked in$"):
+            AttendanceRecord.check_in_individual(21, 20, 1, "2026-01-02T12:00:00")
+
+        get_event.assert_called_once_with(20)
+        database.session.commit.assert_not_called()
+        database.session.rollback.assert_called_once_with()
+
     @patch.object(AttendanceRecord, "validate_attendance_conditions", return_value=True)
     @patch.object(AttendanceRecord, "check_in_individual")
     def test_check_in_service_keeps_failed_write_details_private(

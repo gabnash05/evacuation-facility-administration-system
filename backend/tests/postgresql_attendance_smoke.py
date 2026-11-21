@@ -6,6 +6,8 @@ from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
 from threading import Barrier
 
+from alembic import command
+from flask_migrate import downgrade, upgrade
 from sqlalchemy import text
 from sqlalchemy.engine import make_url
 from sqlalchemy.exc import ArgumentError, IntegrityError
@@ -293,6 +295,85 @@ class AttendancePostgreSQLSmoke(unittest.TestCase):
             self.assertEqual(sent["status"], "transferred")
             self.assertEqual(sent["center_id"], destination_id)
             self.assertEqual(occupancies(), [0, 0])
+
+            def insert_active():
+                return db.session.execute(
+                    text(
+                        """
+                        INSERT INTO attendance_records (
+                            individual_id, center_id, event_id, household_id,
+                            status, check_in_time, recorded_by_user_id
+                        )
+                        VALUES (
+                            :individual, :center, :event, :household,
+                            'checked_in', '2026-01-02T18:00:00', :recorder
+                        )
+                        RETURNING record_id
+                        """
+                    ),
+                    {
+                        "individual": individual_id,
+                        "center": source_id,
+                        "event": source.event_id,
+                        "household": household_id,
+                        "recorder": user_id,
+                    },
+                ).scalar_one()
+
+            start = Barrier(2, timeout=10)
+
+            def attempt_active_insert(_):
+                with application.app_context():
+                    db.session.execute(text("SET LOCAL lock_timeout = '5s'"))
+                    start.wait()
+                    try:
+                        inserted_id = insert_active()
+                        db.session.commit()
+                        return inserted_id
+                    except IntegrityError as error:
+                        db.session.rollback()
+                        self.assertEqual(
+                            error.orig.diag.constraint_name,
+                            "uq_attendance_active_individual",
+                        )
+                        return None
+
+            db.session.rollback()
+            with ThreadPoolExecutor(max_workers=2) as pool:
+                inserts = list(pool.map(attempt_active_insert, range(2)))
+            self.assertEqual(sum(record_id is not None for record_id in inserts), 1)
+            self.assertEqual(occupancies(), [1, 0])
+
+            db.session.rollback()
+            downgrade(revision="0002_distribution_delete_stock")
+            duplicate_id = insert_active()
+            db.session.commit()
+            migration_config = application.extensions["migrate"].migrate.get_config()
+            with self.assertRaisesRegex(RuntimeError, "Duplicate active attendance"):
+                command.upgrade(migration_config, "head")
+            self.assertEqual(
+                db.session.execute(
+                    text("SELECT version_num FROM alembic_version")
+                ).scalar_one(),
+                "0002_distribution_delete_stock",
+            )
+            self.assertEqual(
+                AttendanceRecord.get_by_id(duplicate_id).status, "checked_in"
+            )
+            self.assertEqual(occupancies(), [2, 0])
+            db.session.execute(
+                text("DELETE FROM attendance_records WHERE record_id = :record_id"),
+                {"record_id": duplicate_id},
+            )
+            db.session.commit()
+            upgrade()
+            self.assertEqual(
+                db.session.execute(
+                    text("SELECT version_num FROM alembic_version")
+                ).scalar_one(),
+                "0003_unique_active_attendance",
+            )
+            self.assertEqual(occupancies(), [1, 0])
 
 
 if __name__ == "__main__":

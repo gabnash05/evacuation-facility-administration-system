@@ -12,6 +12,9 @@ from app import create_app
 
 MIGRATIONS = Path(__file__).resolve().parents[1] / "migrations"
 baseline = importlib.import_module("migrations.versions.0001_legacy_schema")
+active_attendance = importlib.import_module(
+    "migrations.versions.0003_unique_active_attendance"
+)
 
 
 class MigrationEnvironmentTests(unittest.TestCase):
@@ -60,3 +63,17 @@ class MigrationBaselineTests(unittest.TestCase):
     def test_baseline_removal_requires_backup_recovery(self):
         with self.assertRaisesRegex(RuntimeError, "Restore a backup"):
             baseline.downgrade()
+
+
+class ActiveAttendanceMigrationTests(unittest.TestCase):
+    @patch.object(active_attendance.op, "get_bind")
+    def test_duplicate_rows_prevent_index_creation(self, get_bind):
+        connection = get_bind.return_value
+        connection.exec_driver_sql.return_value.scalar_one.return_value = True
+
+        with self.assertRaisesRegex(RuntimeError, "Duplicate active attendance"):
+            active_attendance.upgrade()
+
+        commands = [call.args[0] for call in connection.exec_driver_sql.call_args_list]
+        self.assertIn("LOCK TABLE attendance_records IN SHARE MODE", commands)
+        self.assertFalse(any("CREATE UNIQUE INDEX" in command for command in commands))

@@ -571,3 +571,11 @@ rejected an invalid checkout timestamp, committed a later batch item, and
 rejected a duplicate checkout without replacing the committed time. A separate
 mixed-transfer batch rejected one invalid recorder and saved one successful
 transfer. All 119 backend tests and test-file style checks passed.
+
+`ATTENDANCE-002D` enforces a single active check-in per person. Disposable
+PostgreSQL 17.2 accepted exactly one of two competing inserts. The same
+fixture verified clean installation, downgrade to 0002, duplicate refusal
+with records and revision intact, and a successful retry after removing the
+synthetic duplicate. All 121 backend tests passed. ATTENDANCE-002 now has
+implementation coverage for single and per-item batch writes. Production
+rollout still requires a restored-copy rehearsal under DATABASE-002.
