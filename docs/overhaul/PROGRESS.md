@@ -597,3 +597,7 @@ migrated each through revision 0003, and passed the attendance and distribution
 smoke suites on disposable PostgreSQL 17.2. All 125 backend tests passed.
 The runner leaves fixture databases on its disposable server. PostGIS fixture
 provisioning and integration coverage remain open.
+
+SECURITY-014 restricts user-update identifiers to fields used by the model's
+callers. Unsupported names are rejected before a query. All 126 backend tests
+passed. Transaction handling and user-list projections remain under DATABASE-001.

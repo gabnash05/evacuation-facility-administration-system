@@ -466,6 +466,10 @@ The audit tickets are complete. The tickets below are the authoritative implemen
 
 - P1, S. Create a unique database per existing PostgreSQL smoke suite on an explicitly configured loopback server. Reject unsafe connection targets, run migrations and each suite, and propagate failures. Retain fixture databases for inspection. Run the backend tests and both suites on a disposable local server. No application schema or runtime behavior changes. Revert the runner to roll back. PostGIS fixture coverage remains under TEST-002.
 
+### SECURITY-014 — Constrain user update identifiers
+
+- P2, S. Reject unsupported model update identifiers before executing SQL. Preserve service-supported email, password hash, role, center and active-state updates. Run the backend tests, mapped regression, strict module verifier and diff review. No schema changes are required. Revert if an established caller needs another field, then add it with a regression. Transaction handling remains DATABASE-001.
+
 ### DEVOPS-001 — Restore the production WSGI entry point
 
 - **Priority/risk:** P1 / XS; production start failure, reversible source change.

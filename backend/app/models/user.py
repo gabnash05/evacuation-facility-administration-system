@@ -197,6 +197,9 @@ class User(db.Model):
     @classmethod
     def update_user(cls, user_id: int, update_data: Dict[str, Any]) -> Optional["User"]:
         """Update user information using raw SQL."""
+        allowed_fields = {"user_id", "email", "password_hash", "role", "center_id", "is_active"}
+        if set(update_data) - allowed_fields:
+            raise ValueError("Unsupported user update field")
         # Build dynamic UPDATE query
         set_clauses = []
         params = {"user_id": user_id}

@@ -197,7 +197,7 @@
       "path": "backend/app/models/user.py",
       "status": "covered",
       "tests": ["backend/tests/test_user_authorization.py"],
-      "behavior": "Binds authorization role scopes as SQL parameters in list queries."
+      "behavior": "Binds authorization role scopes and rejects unsupported user update identifiers before database access."
     },
     {
       "path": "backend/app/routes/evacuation_centers.py",

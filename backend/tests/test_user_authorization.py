@@ -1,11 +1,21 @@
 """Regression tests for user-management role and center authorization."""
 
+import unittest
 from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 
 from app.models.user import User
 from app.services import user_service
 from tests.api_test_case import ApiTestCase
+
+
+class UserUpdateBoundaryTests(unittest.TestCase):
+    @patch("app.models.user.db")
+    def test_rejects_untrusted_identifier_before_query(self, database):
+        with self.assertRaisesRegex(ValueError, "Unsupported user update field"):
+            User.update_user(1, {"role = 'super_admin' --": "ignored"})
+
+        database.session.execute.assert_not_called()
 
 
 def user(user_id, role, center_id=None, is_active=True):
@@ -106,7 +116,9 @@ class UserAuthorizationHelperTests(ApiTestCase):
         )
 
         self.assertTrue(result["success"])
-        logger_info.assert_called_once_with("User registered successfully with role %s", "volunteer")
+        logger_info.assert_called_once_with(
+            "User registered successfully with role %s", "volunteer"
+        )
 
 
 class UserModelAuthorizationTests(ApiTestCase):
