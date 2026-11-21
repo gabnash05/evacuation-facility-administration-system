@@ -133,48 +133,103 @@ class DistributionService:
 
     @staticmethod
     def update_distribution(distribution_id, update_data):
+        committed = False
         try:
-            # 1. Fetch original record
-            original_dist = Distribution.get_by_id(distribution_id)
-            if not original_dist:
+            original = Distribution.get_by_id(distribution_id, for_update=True)
+            if not original:
                 return {"success": False, "message": "Record not found"}, 404
+            if original["status"] != "completed":
+                return {
+                    "success": False,
+                    "message": "Restore this record before editing it.",
+                }, 409
 
-            original_allocation_id = original_dist['allocation_id']
-            original_quantity = original_dist['quantity_distributed']
-            new_allocation_id = update_data['allocation_id']
-            new_quantity = update_data['quantity']
-            new_household_id = update_data['household_id']
+            old_id = original["allocation_id"]
+            new_id = update_data["allocation_id"]
+            household_id = update_data["household_id"]
+            center_id = update_data["center_id"]
+            session_id = original["session_id"]
+            changed_destination = (household_id, center_id) != (
+                original["household_id"],
+                original["center_id"],
+            )
+            if (
+                changed_destination
+                and Distribution.count_session_items(session_id) != 1
+            ):
+                return {
+                    "success": False,
+                    "message": "This session has multiple items.",
+                }, 409
 
-            # REMOVED: with db.session.begin():
-            # Don't use context manager since model methods manage their own transactions
+            household = Household.get_by_id(household_id)
+            if not household or household.get("center_id") != center_id:
+                return {
+                    "success": False,
+                    "message": "Household does not belong to this center.",
+                }, 400
 
-            try:
-                # 2. Return old stock
-                Allocation.update_quantity(original_allocation_id, original_quantity, 'add')
-                # 3. Take new stock
-                Allocation.update_quantity(new_allocation_id, new_quantity, 'subtract')
-                # 4. Update household if changed
-                if original_dist['household_id'] != new_household_id:
-                    DistributionSession.update_household(original_dist['session_id'], new_household_id)
-                # 5. Update record
-                Distribution.update(distribution_id, update_data)
+            allocations = {
+                allocation_id: Allocation.get_by_id(allocation_id, for_update=True)
+                for allocation_id in sorted({old_id, new_id})
+            }
+            old, new = allocations[old_id], allocations[new_id]
+            if (
+                not old
+                or old.center_id != original["center_id"]
+                or old.event_id != original["event_id"]
+            ):
+                return {
+                    "success": False,
+                    "message": "The original allocation scope is inconsistent.",
+                }, 409
+            if (
+                not new
+                or new.center_id != center_id
+                or new.event_id != original["event_id"]
+            ):
+                return {
+                    "success": False,
+                    "message": "Allocation must match the center and event.",
+                }, 400
+            if new_id != old_id and new.status != "active":
+                return {
+                    "success": False,
+                    "message": "Select an active allocation.",
+                }, 400
 
-                # Manually commit at the end
-                db.session.commit()
-
-            except Exception as e:
-                # Rollback if any of the operations fail
-                db.session.rollback()
-                raise e
-
+            quantity = update_data["quantity"]
+            if old_id == new_id:
+                delta = original["quantity_distributed"] - quantity
+                if delta:
+                    Allocation.update_quantity(
+                        old_id, abs(delta), "add" if delta > 0 else "subtract"
+                    )
+            else:
+                Allocation.update_quantity(
+                    old_id, original["quantity_distributed"], "add"
+                )
+                Allocation.update_quantity(new_id, quantity, "subtract")
+            if changed_destination:
+                DistributionSession.update_household(
+                    session_id, household_id, center_id
+                )
+            Distribution.update(distribution_id, update_data)
+            db.session.commit()
+            committed = True
             return {"success": True, "message": "Record updated successfully"}, 200
 
         except ValueError as ve:
-            # Don't need rollback here since model methods handle their own rollback
             return {"success": False, "message": str(ve)}, 400
         except Exception as e:
-            logger.error(f"Update distribution error: {str(e)}")
-            return {"success": False, "message": "An unexpected error occurred during the update."}, 500
+            logger.error("Distribution update failed (%s)", type(e).__name__)
+            return {
+                "success": False,
+                "message": "An unexpected error occurred during the update.",
+            }, 500
+        finally:
+            if not committed:
+                db.session.rollback()
 
     @staticmethod
     def delete_distribution(distribution_id):

@@ -533,4 +533,10 @@ record and a single transaction. Revision 0002 prevents double-credit when a
 voided item is deleted. PostgreSQL upgrade and lifecycle checks passed on a
 disposable PostgreSQL 17.2 database, including lock refusal from a second
 connection. All 115 backend tests passed. Strict reconciliation reports 206
-mapped, zero missing, and six exempt. Distribution edits remain open.
+mapped, zero missing, and six exempt. Published as `7d69dbd` in draft PR #6.
+
+`DISTRIBUTION-001C` makes edits atomic and protects shared-session destinations.
+The disposable PostgreSQL 17.2 lifecycle test passed, including failed stock
+moves, same-allocation corrections, a valid single-item center reassignment,
+and refusal of edits to voided items or destination changes on shared sessions.
+All 115 backend tests passed. Historical stock repair remains open.

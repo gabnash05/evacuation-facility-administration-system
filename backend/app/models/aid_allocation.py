@@ -142,11 +142,15 @@ class Allocation(db.Model):
         return cls(**row_dict)
 
     @classmethod
-    def get_by_id(cls, allocation_id: int) -> Optional["Allocation"]:
+    def get_by_id(
+        cls, allocation_id: int, *, for_update=False
+    ) -> Optional["Allocation"]:
         """Get allocation by ID."""
+        query = "SELECT * FROM allocations WHERE allocation_id = :allocation_id"
+        if for_update:
+            query += " FOR UPDATE"
         result = db.session.execute(
-            text("SELECT * FROM allocations WHERE allocation_id = :allocation_id"),
-            {"allocation_id": allocation_id}
+            text(query), {"allocation_id": allocation_id}
         ).fetchone()
 
         return cls._row_to_allocation(result)

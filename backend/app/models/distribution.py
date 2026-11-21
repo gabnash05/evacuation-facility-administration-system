@@ -34,21 +34,30 @@ class DistributionSession(db.Model):
         return result._asdict() if result else None
 
     @classmethod
-    def update_household(cls, session_id, household_id):
-        try:
-            sql = text("UPDATE distribution_sessions SET household_id = :household_id WHERE session_id = :session_id")
-            db.session.execute(sql, {"household_id": household_id, "session_id": session_id})
-            db.session.commit()
-        except Exception as e:
-            db.session.rollback()
-            raise e
+    def update_household(cls, session_id, household_id, center_id):
+        sql = text(
+            """
+            UPDATE distribution_sessions SET household_id = :household_id, center_id = :center_id
+            WHERE session_id = :session_id
+        """
+        )
+        db.session.execute(
+            sql,
+            {
+                "household_id": household_id,
+                "center_id": center_id,
+                "session_id": session_id,
+            },
+        )
 
 
 class Distribution(db.Model):
     __tablename__ = "distributions"
 
     distribution_id = db.Column(db.Integer, primary_key=True)
-    session_id = db.Column(db.Integer, db.ForeignKey("distribution_sessions.session_id"))
+    session_id = db.Column(
+        db.Integer, db.ForeignKey("distribution_sessions.session_id")
+    )
     allocation_id = db.Column(db.Integer, db.ForeignKey("allocations.allocation_id"))
     quantity_distributed = db.Column(db.Integer, nullable=False)
     status = db.Column(db.String(20), nullable=False, default='completed')
@@ -167,7 +176,7 @@ class Distribution(db.Model):
                 WHERE d.distribution_id = :id
             """
             if for_update:
-                query += " FOR UPDATE OF d"
+                query += " FOR UPDATE OF d, ds"
             result = db.session.execute(text(query), {"id": distribution_id}).fetchone()
             return result._asdict() if result else None
         except Exception as e:
@@ -176,19 +185,32 @@ class Distribution(db.Model):
 
     @classmethod
     def update(cls, distribution_id, data):
-        try:
-            sql = text("UPDATE distributions SET allocation_id = :allocation_id, quantity_distributed = :quantity WHERE distribution_id = :id")
-            params = {"id": distribution_id, "allocation_id": data["allocation_id"], "quantity": data["quantity"]}
-            db.session.execute(sql, params)
-            db.session.commit()
-        except Exception as e:
-            db.session.rollback()
-            raise e
+        sql = text(
+            """
+            UPDATE distributions SET allocation_id = :allocation_id, quantity_distributed = :quantity
+            WHERE distribution_id = :id
+        """
+        )
+        params = {
+            "id": distribution_id,
+            "allocation_id": data["allocation_id"],
+            "quantity": data["quantity"],
+        }
+        db.session.execute(sql, params)
+
+    @classmethod
+    def count_session_items(cls, session_id):
+        return db.session.execute(
+            text("SELECT COUNT(*) FROM distributions WHERE session_id = :id"),
+            {"id": session_id},
+        ).scalar_one()
 
     @classmethod
     def delete(cls, distribution_id):
         try:
-            sql = text("DELETE FROM distributions WHERE distribution_id = :id RETURNING distribution_id")
+            sql = text(
+                "DELETE FROM distributions WHERE distribution_id = :id RETURNING distribution_id"
+            )
             result = db.session.execute(sql, {"id": distribution_id}).fetchone()
             db.session.commit()
             return result is not None

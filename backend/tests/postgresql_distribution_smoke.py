@@ -168,6 +168,33 @@ class DistributionPostgreSQLSmoke(unittest.TestCase):
                 self.assertEqual(lock_refusal.exception.orig.pgcode, "55P03")
             db.session.rollback()
 
+            def edit(allocation_id, quantity, **changes):
+                return DistributionService.update_distribution(
+                    first,
+                    {
+                        **details,
+                        "allocation_id": allocation_id,
+                        "quantity": quantity,
+                        **changes,
+                    },
+                )
+
+            self.assertEqual(edit(allocation_ids[1], 6)[1], 400)
+            self.assertEqual(stock(), [3, 4])
+            self.assertEqual(
+                Distribution.get_by_id(first)["allocation_id"], allocation_ids[0]
+            )
+            self.assertEqual(edit(allocation_ids[0], 1)[1], 200)
+            self.assertEqual(stock(), [4, 4])
+            self.assertEqual(edit(allocation_ids[1], 2)[1], 200)
+            self.assertEqual(stock(), [5, 2])
+            self.assertEqual(edit(allocation_ids[0], 2)[1], 200)
+            self.assertEqual(stock(), [3, 4])
+            self.assertEqual(
+                edit(allocation_ids[0], 2, household_id=household_id + 1)[1], 409
+            )
+            self.assertEqual(stock(), [3, 4])
+
             def state(distribution_id):
                 return db.session.execute(
                     text(
@@ -178,6 +205,8 @@ class DistributionPostgreSQLSmoke(unittest.TestCase):
 
             self.assertEqual(DistributionService.toggle_status(first)[1], 200)
             self.assertEqual(state(first), "voided")
+            self.assertEqual(stock(), [5, 4])
+            self.assertEqual(edit(allocation_ids[0], 1)[1], 409)
             self.assertEqual(stock(), [5, 4])
 
             self.assertEqual(DistributionService.toggle_status(first)[1], 200)
@@ -210,6 +239,74 @@ class DistributionPostgreSQLSmoke(unittest.TestCase):
                     {"id": allocation_ids[1]},
                 ).scalar_one(),
                 "cancelled",
+            )
+
+            destination_center = db.session.execute(
+                text(
+                    """
+                INSERT INTO evacuation_centers (center_name, address, coordinates, capacity, status)
+                VALUES ('Second center', 'Fixture address', POINT(125, 8), 30, 'active')
+                RETURNING center_id
+            """
+                )
+            ).scalar_one()
+            destination_household = db.session.execute(
+                text(
+                    """
+                INSERT INTO households (center_id, household_name)
+                VALUES (:center_id, 'Second household') RETURNING household_id
+            """
+                ),
+                {"center_id": destination_center},
+            ).scalar_one()
+            destination_allocation = db.session.execute(
+                text(
+                    """
+                INSERT INTO allocations (
+                    category_id, center_id, event_id, resource_name, total_quantity,
+                    remaining_quantity, distribution_type, allocated_by_user_id
+                )
+                SELECT category_id, :center_id, event_id, 'Second stock', 5, 5,
+                       distribution_type, allocated_by_user_id
+                FROM allocations WHERE allocation_id = :old_id RETURNING allocation_id
+            """
+                ),
+                {"center_id": destination_center, "old_id": allocation_ids[0]},
+            ).scalar_one()
+            db.session.commit()
+            self.assertEqual(
+                DistributionService.record_distribution(
+                    actor,
+                    {
+                        **details,
+                        "items": [{"allocation_id": allocation_ids[0], "quantity": 1}],
+                    },
+                )[1],
+                201,
+            )
+            single = db.session.execute(
+                text("SELECT MAX(distribution_id) FROM distributions")
+            ).scalar_one()
+            self.assertEqual(
+                DistributionService.update_distribution(
+                    single,
+                    {
+                        "household_id": destination_household,
+                        "center_id": destination_center,
+                        "allocation_id": destination_allocation,
+                        "quantity": 1,
+                    },
+                )[1],
+                200,
+            )
+            self.assertEqual(stock(), [1, 3, 4])
+            moved = Distribution.get_by_id(single)
+            self.assertEqual(
+                (moved["center_id"], moved["household_id"]),
+                (
+                    destination_center,
+                    destination_household,
+                ),
             )
 
 

@@ -409,6 +409,13 @@ The audit tickets are complete. The tickets below are the authoritative implemen
 - **Validation:** Run the backend suite and `tests.postgresql_distribution_smoke` against a disposable database upgraded from revision 0001. Verify row lock exclusion from a second connection, void and restore, insufficient-stock refusal, deletion of both statuses, and cancellation preservation. Unit-test rollback on a status write failure.
 - **Rollout and recovery:** Apply revision 0002 before enabling or reopening distribution deletes after rollout. It affects future deletes and makes no historical repairs. The revision refuses to reinstall the double-credit trigger. Use a verified backup and approved recovery procedure if database rollback is needed. Edit transactions and historical discrepancies remain separate work.
 
+### DISTRIBUTION-001C — Keep distribution edits atomic and scoped
+
+- **Priority, size, and dependencies:** P1, M. Follows DISTRIBUTION-001B. Editing previously committed a shared session and an individual item separately, while inventory adjustments could affect voided records.
+- **Scope and invariant:** Lock the item and its session, validate the persisted event and submitted household/center/allocation relationship, acquire allocation locks in ascending ID order, and commit stock, item, and destination changes together. A same-allocation correction applies only the net change. Reject voided edits and destination changes to sessions with multiple items. A single-item session can move to a matching household and allocation in the same event.
+- **Validation:** Run backend unit tests and the migrated PostgreSQL smoke test. Verify a rejected stock move rolls back its partial credit, same-allocation edits, moves between allocations, shared-session and voided guards, and successful single-item center reassignment. Run strict module reconciliation, touched test lint and formatting checks, and diff review.
+- **Rollout and recovery:** No new migration and no historical data changes. Deploy with revision 0002. A rollback to independent writes would reintroduce inconsistency, so restrict edits if a forward fix cannot be deployed. Creation-side lock ordering and historical repair remain separate.
+
 ### DEVOPS-001 — Restore the production WSGI entry point
 
 - **Priority/risk:** P1 / XS; production start failure, reversible source change.
