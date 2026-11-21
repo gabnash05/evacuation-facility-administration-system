@@ -734,6 +734,10 @@ authorization and mutation remain under review.
 SECURITY-020 prevents disabled super-admin accounts from running attendance
 maintenance or deletion. The route regression and all 158 backend tests passed.
 
+SECURITY-021 rejects unassigned and unsupported check-in actors for singleton
+and batch requests. All 159 backend tests passed. Individual ownership and
+automatic-transfer policy remain under review.
+
 SECURITY-019 requires active scoped actors for singleton and batch transfers.
 All 157 backend tests passed. Concurrent ownership changes between route
 authorization and mutation remain under review.

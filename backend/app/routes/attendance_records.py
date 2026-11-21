@@ -467,6 +467,11 @@ def check_in_individual_route() -> Tuple:
         actor, response = _actor_or_response()
         if response:
             return response
+        if actor.role in {"center_admin", "volunteer"}:
+            if not actor.center_id:
+                return jsonify({"success": False, "message": "No assigned center"}), 403
+        elif actor.role not in {"super_admin", "city_admin"}:
+            return jsonify({"success": False, "message": "Access denied"}), 403
         data["recorded_by_user_id"] = actor.user_id
 
         # Validate required fields
@@ -570,6 +575,11 @@ def check_in_multiple_individuals_route() -> Tuple:
         current_user, response = _actor_or_response()
         if response:
             return response
+        if current_user.role in {"center_admin", "volunteer"}:
+            if not current_user.center_id:
+                return jsonify({"success": False, "message": "No assigned center"}), 403
+        elif current_user.role not in {"super_admin", "city_admin"}:
+            return jsonify({"success": False, "message": "Access denied"}), 403
         
         # Validate and prepare check-in data
         validated_data = []

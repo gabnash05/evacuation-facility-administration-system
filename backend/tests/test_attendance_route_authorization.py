@@ -11,6 +11,25 @@ def actor(role="volunteer", center_id=2, user_id=7):
 
 
 class AttendanceRouteAuthorizationTests(ApiTestCase):
+    @patch("app.routes.attendance_records.check_in_individual")
+    @patch("app.routes.attendance_records.get_current_user")
+    def test_checkin_rejects_unassigned_and_unsupported_actors(
+        self, get_user, check_in
+    ):
+        requests = (
+            ("/api/attendance/check-in", {"individual_id": 1, "center_id": 2}),
+            ("/api/attendance/check-in/batch", [{"individual_id": 1, "center_id": 2}]),
+        )
+        for path, payload in requests:
+            for user in (actor(center_id=None), actor(role="unknown")):
+                with self.subTest(path=path, user=user):
+                    get_user.return_value = user
+                    response = self.client.post(
+                        path, json=payload, headers=self.authorization_headers(7)
+                    )
+                    self.assertEqual(response.status_code, 403)
+        check_in.assert_not_called()
+
     @patch("app.routes.attendance_records.delete_attendance_record")
     @patch("app.routes.attendance_records.recalculate_all_center_occupancies")
     @patch("app.routes.attendance_records.recalculate_center_occupancy")
