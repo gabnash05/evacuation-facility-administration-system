@@ -59,7 +59,7 @@ export function DistributeAidModal({ isOpen, onClose }: Props) {
             clearError();
             resetSelectedCenter();
         }
-    }, [isOpen, clearError]);
+    }, [isOpen, clearError, resetSelectedCenter]);
 
     // Auto-select center for restricted users
     useEffect(() => {
@@ -68,30 +68,33 @@ export function DistributeAidModal({ isOpen, onClose }: Props) {
         } else if (!isOpen) {
             resetSelectedCenter();
         }
-    }, [user, setSelectedCenterId, isOpen]);
+    }, [user, setSelectedCenterId, isOpen, resetSelectedCenter]);
 
     // Fetch allocations when center changes
     useEffect(() => {
-        const fetchCenterAllocations = async () => {
-            if (!selectedCenterId) {
-                setCenterAllocations([]);
-                return;
-            }
+        setCenterAllocations([]);
+        if (!isOpen || !selectedCenterId) {
+            setLoadingAllocations(false);
+            return;
+        }
 
-            setLoadingAllocations(true);
-            try {
-                const allocations = await getCenterAllocations(selectedCenterId);
-                setCenterAllocations(allocations);
-            } catch (err) {
-                console.error("Failed to fetch center allocations:", err);
-                setCenterAllocations([]);
-            } finally {
-                setLoadingAllocations(false);
-            }
+        let current = true;
+        setLoadingAllocations(true);
+        void getCenterAllocations(selectedCenterId)
+            .then(allocations => {
+                if (current) setCenterAllocations(allocations);
+            })
+            .catch(() => {
+                if (current) setCenterAllocations([]);
+            })
+            .finally(() => {
+                if (current) setLoadingAllocations(false);
+            });
+
+        return () => {
+            current = false;
         };
-
-        fetchCenterAllocations();
-    }, [selectedCenterId, getCenterAllocations]);
+    }, [isOpen, selectedCenterId, getCenterAllocations]);
 
     // Clear operation error when form changes
     useEffect(() => {

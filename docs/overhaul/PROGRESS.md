@@ -468,3 +468,12 @@ unmapped, and six exempt. Published as `d2d088e` in draft PR #6.
 tests and targeted lint, production build, and the full frontend suite passed
 (153 files, 242 tests in 230.16 seconds). Direct app compiler diagnostics dropped
 from 54 to 52. Module reconciliation reports 201 covered, five unmapped, six exempt.
+Published as `d79901d` in draft PR #6.
+
+`TEST-003I` now covers both distribution dialogs. `FRONTEND-068` prevents stale
+allocation request results from updating a different center's dialog and blocks
+background allocation fetching while closed. Four focused cases and the
+production build passed. Source ESLint added no diagnostics, and the direct type
+check remained at 52 diagnostics. Full frontend suite passed (155 files, 246
+tests in 227.72 seconds). Reconciliation reports 203 covered, three unmapped,
+and six exempt.

@@ -93,27 +93,28 @@ export function EditDistributionModal({ isOpen, onClose, record }: Props) {
     }, [user, setSelectedCenterId, isOpen, resetSelectedCenter]);
 
     useEffect(() => {
-        const fetchCenterAllocations = async () => {
-            if (!selectedCenterId) {
-                setCenterAllocations([]);
-                return;
-            }
-
-            setLoadingAllocations(true);
-            try {
-                const allocations = await getCenterAllocations(selectedCenterId);
-                setCenterAllocations(allocations);
-            } catch (err) {
-                console.error("Failed to fetch center allocations:", err);
-                setCenterAllocations([]);
-            } finally {
-                setLoadingAllocations(false);
-            }
-        };
-
-        if (isOpen && selectedCenterId) {
-            fetchCenterAllocations();
+        setCenterAllocations([]);
+        if (!isOpen || !selectedCenterId) {
+            setLoadingAllocations(false);
+            return;
         }
+
+        let current = true;
+        setLoadingAllocations(true);
+        void getCenterAllocations(selectedCenterId)
+            .then(allocations => {
+                if (current) setCenterAllocations(allocations);
+            })
+            .catch(() => {
+                if (current) setCenterAllocations([]);
+            })
+            .finally(() => {
+                if (current) setLoadingAllocations(false);
+            });
+
+        return () => {
+            current = false;
+        };
     }, [isOpen, selectedCenterId, getCenterAllocations]);
 
     useEffect(() => {

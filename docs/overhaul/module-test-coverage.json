@@ -1195,6 +1195,18 @@
       "behavior": "Keeps history readable for lower roles and exposes status actions only to super administrators, dispatching the selected record ID."
     },
     {
+      "path": "frontend/src/components/features/distribution/DistributeAidModal.tsx",
+      "status": "covered",
+      "tests": ["frontend/src/components/features/distribution/DistributeAidModal.test.tsx"],
+      "behavior": "Loads options only while open, keeps incomplete submissions disabled, and ignores settled requests for an earlier center."
+    },
+    {
+      "path": "frontend/src/components/features/distribution/EditDistributionModal.tsx",
+      "status": "covered",
+      "tests": ["frontend/src/components/features/distribution/EditDistributionModal.test.tsx"],
+      "behavior": "Loads options only while open, keeps incomplete submissions disabled, and ignores settled requests for an earlier center."
+    },
+    {
       "path": "frontend/src/store/distributionStore.ts",
       "status": "covered",
       "tests": ["frontend/src/store/distributionStore.test.ts"],
