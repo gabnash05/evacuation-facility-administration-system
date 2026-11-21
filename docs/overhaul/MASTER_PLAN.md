@@ -542,6 +542,10 @@ The audit tickets are complete. The tickets below are the authoritative implemen
 
 - P1, S. When explicitly enabled, create a separate local fixture database, install PostGIS and run the spatial suite. Preserve the PostgreSQL-only default for servers without PostGIS. Verify all four smoke suites on a disposable PostGIS server, backend tests, strict mapping and diff review. Document database-owner privileges and deployment provisioning. No production database is modified by the runner.
 
+### CONTRACT-001A — Correct the backend API prefix example
+
+- P2, XS. Remove the unused API prefix setting from the environment template and document the `/api` route prefix established by application registration. Verify against `backend/app/__init__.py` and the frontend API base. No runtime behavior or migration changes.
+
 ### DEVOPS-001 — Restore the production WSGI entry point
 
 - **Priority/risk:** P1 / XS; production start failure, reversible source change.

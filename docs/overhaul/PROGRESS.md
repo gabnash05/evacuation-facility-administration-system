@@ -701,3 +701,7 @@ TEST-002B adds opt-in PostGIS provisioning to the isolated fixture runner. All
 four database smoke suites passed on disposable PostgreSQL 18/PostGIS 3.6, and
 all 145 backend tests passed. README now documents the extension requirement.
 Deployment-specific provisioning and verification remain open.
+
+CONTRACT-001A corrects the backend environment example to document the fixed
+`/api` prefix and removes the unused `API_PREFIX` setting. The application
+route registration and frontend base configuration were checked directly.

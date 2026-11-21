@@ -47,7 +47,7 @@
 | `.gitignore` | root | Git exclusions | human-authored | yes | reviewed | — | Ignores environments, frontend dependencies, generated static output, and local database files. |
 | `backend/Pipfile` | backend | backend dependency manifest | human-authored | yes | reviewed | TEST-001 | Requires Python 3.13; packages use unconstrained versions while lockfile is current. |
 | `frontend/package.json` | frontend | frontend dependency manifest | human-authored | yes | reviewed | TEST-001, QUALITY-001 | Defines format/lint/type/build commands; no test script. |
-| `backend/.env.example` | backend | environment template | human-authored | yes | reviewed | CONTRACT-001 | Advertises an API prefix not consumed by Flask configuration. |
+| `backend/.env.example` | backend | environment template | human-authored | yes | reviewed | CONTRACT-001 | Documents the fixed API prefix used by Flask routes. |
 | `backend/.flake8` | backend | lint configuration | human-authored | yes | reviewed | QUALITY-002 | Defines the 100-column rule used by the failed baseline. |
 | `backend/Pipfile.lock` | backend | dependency lockfile | generated lockfile | yes | reviewed | DEVOPS-004 | Hash-pinned dependency set verified by Pipenv. |
 | `frontend/.env.example` | frontend | environment template | human-authored | yes | reviewed | — | Provides the development API base URL and app metadata. |
