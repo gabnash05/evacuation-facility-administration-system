@@ -11,6 +11,41 @@ def actor(role="volunteer", center_id=2, user_id=7):
 
 
 class AttendanceRouteAuthorizationTests(ApiTestCase):
+    @patch("app.routes.attendance_records.get_current_user")
+    def test_attendance_lists_reject_unassigned_or_inactive_accounts(self, get_user):
+        paths = (
+            "/api/attendance/current",
+            "/api/attendance/event/1",
+            "/api/attendance/transfers",
+        )
+        for path in paths:
+            for user, expected in ((None, 401), (actor(center_id=None), 403)):
+                with self.subTest(path=path, user=user):
+                    get_user.return_value = user
+                    response = self.client.get(
+                        path, headers=self.authorization_headers(7)
+                    )
+                    self.assertEqual(response.status_code, expected)
+
+    @patch("app.routes.attendance_records.get_transfer_records")
+    @patch("app.routes.attendance_records.get_event_attendance")
+    @patch("app.routes.attendance_records.get_current_user")
+    def test_event_and_transfer_lists_force_assigned_center(
+        self, get_user, event, transfers
+    ):
+        get_user.return_value = actor()
+        event.return_value = {"success": True, "data": []}
+        transfers.return_value = {"success": True, "data": []}
+        for path in ("/api/attendance/event/1", "/api/attendance/transfers"):
+            self.assertEqual(
+                self.client.get(
+                    path, headers=self.authorization_headers(7)
+                ).status_code,
+                200,
+            )
+        self.assertEqual(event.call_args.kwargs["center_id"], 2)
+        self.assertEqual(transfers.call_args.kwargs["center_id"], 2)
+
     @patch("app.routes.attendance_records.get_attendance_records")
     @patch("app.routes.attendance_records.get_current_user")
     def test_attendance_list_requires_active_scoped_actor(self, get_user, get_records):

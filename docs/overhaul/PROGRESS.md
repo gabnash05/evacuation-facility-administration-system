@@ -719,6 +719,10 @@ SECURITY-015 requires an active persisted actor on the general attendance list
 and denies unassigned or cross-center lower-role access. Route regressions and
 all 151 backend tests passed. Remaining attendance routes need separate review.
 
+SECURITY-016 applies active-account and assigned-center checks to current,
+event, and transfer attendance lists. Route regressions and all 153 backend
+tests passed. Remaining attendance routes need separate review.
+
 CONTRACT-001A corrects the backend environment example to document the fixed
 `/api` prefix and removes the unused `API_PREFIX` setting. The application
 route registration and frontend base configuration were checked directly.
