@@ -765,25 +765,14 @@ def check_out_individual_route(record_id: int) -> Tuple:
     try:
         data = request.get_json() or {}
 
-        # Determine current user and enforce center-based restriction for center-bound roles
-        current_user_id = get_jwt_identity()
-        try:
-            current_user_id_int = int(current_user_id) if current_user_id is not None else None
-        except (TypeError, ValueError):
-            current_user_id_int = None
-
-        current_user = get_current_user(current_user_id_int) if current_user_id_int is not None else None
-
-        if not current_user:
-            return (
-                jsonify(
-                    {
-                        "success": False,
-                        "message": "Unauthorized: Unable to determine current user",
-                    }
-                ),
-                401,
-            )
+        current_user, response = _actor_or_response()
+        if response:
+            return response
+        if current_user.role in {"center_admin", "volunteer"}:
+            if not current_user.center_id:
+                return jsonify({"success": False, "message": "No assigned center"}), 403
+        elif current_user.role not in {"super_admin", "city_admin"}:
+            return jsonify({"success": False, "message": "Access denied"}), 403
 
         # Get the attendance record to check its center
         record_result = get_attendance_record_by_id(record_id)
@@ -882,20 +871,14 @@ def check_out_multiple_individuals_route() -> Tuple:
                 "message": "Maximum batch size is 50 check-outs per request"
             }), 400
 
-        # Determine current user for center-based restriction checks
-        current_user_id = get_jwt_identity()
-        try:
-            current_user_id_int = int(current_user_id) if current_user_id is not None else None
-        except (TypeError, ValueError):
-            current_user_id_int = None
-
-        current_user = get_current_user(current_user_id_int) if current_user_id_int is not None else None
-
-        if not current_user:
-            return jsonify({
-                "success": False,
-                "message": "Unauthorized: Unable to determine current user",
-            }), 401
+        current_user, response = _actor_or_response()
+        if response:
+            return response
+        if current_user.role in {"center_admin", "volunteer"}:
+            if not current_user.center_id:
+                return jsonify({"success": False, "message": "No assigned center"}), 403
+        elif current_user.role not in {"super_admin", "city_admin"}:
+            return jsonify({"success": False, "message": "Access denied"}), 403
 
         # Validate each check-out item
         required_fields = ["record_id"]

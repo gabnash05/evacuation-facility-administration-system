@@ -727,6 +727,10 @@ SECURITY-017 scopes attendance detail and center summary to active actors and
 assigned centers. Detail reads the record once. All 155 backend tests passed,
 and the updated focused route suite passed. Remaining routes need review.
 
+SECURITY-018 requires active scoped actors for singleton and batch checkout.
+All 156 backend tests passed. Concurrent ownership changes between route
+authorization and mutation remain under review.
+
 CONTRACT-001A corrects the backend environment example to document the fixed
 `/api` prefix and removes the unused `API_PREFIX` setting. The application
 route registration and frontend base configuration were checked directly.

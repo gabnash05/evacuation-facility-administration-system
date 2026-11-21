@@ -570,6 +570,10 @@ The audit tickets are complete. The tickets below are the authoritative implemen
 
 - P1, S. Require an active persisted actor and assigned-center authorization for detail and center summary reads. Fetch detail once and retain administrator access. Run route regressions, backend tests, strict mapping and diff review. No migration is needed. Review remaining routes separately.
 
+### SECURITY-018 — Require active scoped checkout actors
+
+- P1, S. Reject inactive, missing, unsupported and unassigned actors before singleton or batch checkout. Preserve existing center checks and administrator access. Run route regressions, backend tests, strict mapping and diff review. No migration is needed. Concurrent ownership changes between authorization and mutation remain follow-up work.
+
 ### DEVOPS-001 — Restore the production WSGI entry point
 
 - **Priority/risk:** P1 / XS; production start failure, reversible source change.
