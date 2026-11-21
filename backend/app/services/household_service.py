@@ -6,7 +6,7 @@ from app.models.household import Household
 from app.models.individual import Individual
 from app.models import db
 from app.schemas.household import HouseholdUpdateSchema, HouseholdWithIndividualsCreateSchema
-from app.schemas.individual import IndividualMemberCreateSchema
+from app.schemas.individual import IndividualMemberCreateSchema, IndividualUpdateSchema
 
 logger = logging.getLogger(__name__)
 
@@ -24,7 +24,25 @@ class HouseholdService:
         except ValidationError as validation_error:
             return {"success": False, "message": f"Validation error: {validation_error}"}, 400
         if "individuals" in data:
-            validated["individuals"] = data["individuals"]
+            members = []
+            try:
+                for member in data["individuals"]:
+                    if not isinstance(member, dict):
+                        raise ValidationError("Each individual must be an object.")
+                    member_id = member.get("individual_id")
+                    if "individual_id" in member and (
+                        not isinstance(member_id, int) or isinstance(member_id, bool)
+                    ):
+                        raise ValidationError("Individual ID must be an integer.")
+                    fields = {key: value for key, value in member.items() if key != "individual_id"}
+                    schema = IndividualUpdateSchema if member_id is not None else IndividualMemberCreateSchema
+                    cleaned = schema().load(fields)
+                    if member_id is not None:
+                        cleaned["individual_id"] = member_id
+                    members.append(cleaned)
+            except ValidationError as validation_error:
+                return {"success": False, "message": f"Validation error: {validation_error}"}, 400
+            validated["individuals"] = members
         data = validated
         existing_household = Household.get_by_id(household_id)
         if not existing_household:

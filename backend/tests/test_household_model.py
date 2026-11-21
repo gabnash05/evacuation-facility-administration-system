@@ -10,6 +10,15 @@ from tests.api_test_case import ApiTestCase
 
 class HouseholdModelTests(ApiTestCase):
     @patch("app.services.household_service.Household")
+    def test_invalid_nested_member_is_rejected_before_persistence(self, household):
+        result, status = HouseholdService.update_household(
+            4, {"individuals": [{"first_name": "Incomplete"}]}
+        )
+        self.assertEqual(status, 400)
+        self.assertFalse(result["success"])
+        household.get_by_id.assert_not_called()
+
+    @patch("app.services.household_service.Household")
     def test_invalid_household_fields_are_rejected_before_persistence(self, household):
         result, status = HouseholdService.update_household(4, {"center_id": -1})
 
@@ -82,7 +91,18 @@ class HouseholdModelTests(ApiTestCase):
         for members, method, failure in (
             ([], "delete_by_ids", 0),
             ([{"individual_id": 8}], "update", None),
-            ([{"individual_id": 8}, {"first_name": "New"}], "create", None),
+            (
+                [
+                    {"individual_id": 8},
+                    {
+                        "first_name": "New",
+                        "last_name": "Person",
+                        "relationship_to_head": "Child",
+                    },
+                ],
+                "create",
+                None,
+            ),
         ):
             individual.reset_mock()
             database.reset_mock()

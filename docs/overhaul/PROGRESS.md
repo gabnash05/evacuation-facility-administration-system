@@ -667,3 +667,8 @@ to the broken function is refused.
 CONTRACT-004A validates supplied household update fields with the existing
 schema and partial semantics. Invalid center IDs fail before persistence. All
 139 backend tests passed. Nested member update validation remains open.
+
+CONTRACT-004B validates nested household members with the existing create or
+partial-update schemas and rejects malformed IDs. All 140 backend tests and
+three disposable PostgreSQL smoke suites passed. Further cross-layer contract
+reconciliation remains open.

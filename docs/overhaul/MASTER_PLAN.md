@@ -518,6 +518,10 @@ The audit tickets are complete. The tickets below are the authoritative implemen
 
 - P2, S. Validate supplied household fields through the existing schema with partial semantics before persistence. Preserve the existing member-list path. Verify invalid input is rejected before database access, run backend tests and strict mapping. Nested member validation remains a separate ticket. No migration is required.
 
+### CONTRACT-004B — Validate nested household members
+
+- P2, S. Apply existing individual create validation to new nested members and partial-update validation to existing members. Reject malformed IDs and input before persistence. Run backend tests, PostgreSQL smoke suites, strict mapping and diff review. Invalid inputs that previously reached persistence now receive 400. No migration is required.
+
 ### DEVOPS-001 — Restore the production WSGI entry point
 
 - **Priority/risk:** P1 / XS; production start failure, reversible source change.
