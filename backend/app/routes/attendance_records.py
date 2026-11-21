@@ -119,17 +119,21 @@ def get_attendance_records_route() -> Tuple:
                 400,
             )
 
-        # Get current user for role-based access control
-        current_user_id = get_jwt_identity()
-        current_user = get_current_user(current_user_id)
-        
-        if current_user and current_user.role in ['center_admin', 'volunteer'] and current_user.center_id:
+        current_user, response = _actor_or_response()
+        if response:
+            return response
+
+        if current_user.role in ['center_admin', 'volunteer']:
+            if not current_user.center_id:
+                return jsonify({"success": False, "message": "No assigned center"}), 403
             if center_id and center_id != current_user.center_id:
                 return jsonify({
                     "success": False, 
                     "message": "Access denied: Cannot view attendance records for other centers"
                 }), 403
             center_id = current_user.center_id  # Force filter by user's center
+        elif current_user.role not in ['super_admin', 'city_admin']:
+            return jsonify({"success": False, "message": "Access denied"}), 403
 
         logger.info(
             "Fetching attendance records - search: %s, center_id: %s, event_id: %s, status: %s, page: %s, limit: %s, sort_by: %s, sort_order: %s",

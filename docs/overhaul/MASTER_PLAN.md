@@ -558,6 +558,10 @@ The audit tickets are complete. The tickets below are the authoritative implemen
 
 - P1, S. Qualify individual columns in the household-joined name search and propagate search and status-summary query failures. Verify scoped and unscoped search against disposable PostgreSQL, error propagation, backend tests, strict mapping and diff review. No migration is needed.
 
+### SECURITY-015 — Scope the general attendance list
+
+- P1, S. Resolve an active persisted actor before querying the general attendance list. Require an assigned center for lower roles, retain citywide access for administrators, and deny unsupported roles and cross-center requests. Run route authorization regressions, backend tests, strict mapping and diff review. No schema change is needed. Review remaining attendance routes separately.
+
 ### DEVOPS-001 — Restore the production WSGI entry point
 
 - **Priority/risk:** P1 / XS; production start failure, reversible source change.
