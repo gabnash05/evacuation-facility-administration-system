@@ -423,6 +423,14 @@ The audit tickets are complete. The tickets below are the authoritative implemen
 - **Validation:** Assert lock order with a reversed payload. Race two connections for the last unit on disposable PostgreSQL and verify one success, one rejection, one new session/item, and zero remaining stock. Run the backend suite, strict mapping, and touched test checks.
 - **Recovery and non-goals:** Deploy alongside the verified stock mutations. No migration, retries, inventory reconstruction, or production data actions are part of this ticket.
 
+### ATTENDANCE-002A — Commit singleton transfers atomically
+
+- P1, S. Depends on DATABASE-002A. The singleton transfer in `backend/app/models/attendance_records.py` committed source checkout before destination insert, leaving a failed transfer with no active source record. Parallel transfers could both accept the same source.
+- Lock the requested attendance record, revalidate its status after the lock, and commit checkout and transfer insertion together. Roll back on any failed write. PostgreSQL owns the center occupancy and individual-status changes in that transaction. Event peak statistics retain their best-effort refresh after commit.
+- Preserve the transfer event, timestamp, notes, recorder, and destination status. Arrival still requires explicit check-in. Automatic transfers during check-in, batch semantics, and enforcing one active check-in per individual are follow-up scopes.
+- Run `py -3.13 -m pipenv run test` from `backend`, the strict module verifier from the root, and `py -3.13 -m pipenv run python -m tests.postgresql_attendance_smoke` against a fresh disposable migrated fixture. Verify the source and occupancy survive a rejected destination insert and that concurrent requests persist exactly one transfer.
+- Preserve route authorization and server-selected recorder attribution. Review that raw database errors use the existing generic failure path. No migration is needed. Revert the code commit to roll back, preserving recorded history. Escalate if arrival semantics or existing records must change incompatibly.
+
 ### DEVOPS-001 — Restore the production WSGI entry point
 
 - **Priority/risk:** P1 / XS; production start failure, reversible source change.

@@ -628,7 +628,9 @@ def transfer_individual(
         logger.warning("Transfer validation error for record %s: %s", record_id, str(e))
         return {"success": False, "message": str(e)}
     except Exception as error:
-        logger.error("Error transferring individual from record %s: %s", record_id, str(error))
+        logger.error(
+            "Transfer failed for record %s (%s)", record_id, type(error).__name__
+        )
         return {"success": False, "message": "Failed to transfer individual"}
 
 

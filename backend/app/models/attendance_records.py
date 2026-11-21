@@ -71,12 +71,14 @@ class AttendanceRecord(db.Model):
 
 
     @classmethod
-    def get_by_id(cls, record_id: int) -> Optional["AttendanceRecord"]:
+    def get_by_id(
+        cls, record_id: int, *, for_update: bool = False
+    ) -> Optional["AttendanceRecord"]:
         """Get attendance record by ID using raw SQL."""
-        result = db.session.execute(
-            text("SELECT * FROM attendance_records WHERE record_id = :record_id"),
-            {"record_id": record_id},
-        ).fetchone()
+        query = "SELECT * FROM attendance_records WHERE record_id = :record_id"
+        if for_update:
+            query += " FOR UPDATE"
+        result = db.session.execute(text(query), {"record_id": record_id}).fetchone()
 
         return cls._row_to_record(result)
 
@@ -241,9 +243,15 @@ class AttendanceRecord(db.Model):
 
 
     @classmethod
-    def create(cls, data: Dict[str, Any]) -> "AttendanceRecord":
-        """Create a new attendance record using raw SQL."""
-        required_fields = ["individual_id", "center_id", "household_id", "status", "recorded_by_user_id"]
+    def create(cls, data: Dict[str, Any], *, commit: bool = True) -> "AttendanceRecord":
+        """Create an attendance record, optionally within a caller-owned transaction."""
+        required_fields = [
+            "individual_id",
+            "center_id",
+            "household_id",
+            "status",
+            "recorded_by_user_id",
+        ]
         
         for field in required_fields:
             if field not in data:
@@ -323,13 +331,18 @@ class AttendanceRecord(db.Model):
 
         try:
             result = db.session.execute(query, params).fetchone()
+            record = cls._row_to_record(result)
+            if not commit:
+                return record
             db.session.commit()
             
             if data.get("status") == "checked_in" and "event_id" in data:
                 cls._update_event_occupancy(data["event_id"])
                 
-            return cls._row_to_record(result)
+            return record
         except Exception as e:
+            if not commit:
+                raise
             db.session.rollback()
             # Re-raise the exception to preserve the original error message
             if "Individual is already checked in" in str(e):
@@ -340,7 +353,7 @@ class AttendanceRecord(db.Model):
 
     @classmethod
     def update(
-        cls, record_id: int, update_data: Dict[str, Any]
+        cls, record_id: int, update_data: Dict[str, Any], *, commit: bool = True
     ) -> Optional["AttendanceRecord"]:
         """Update attendance record using raw SQL."""
 
@@ -384,9 +397,10 @@ class AttendanceRecord(db.Model):
         )
 
         result = db.session.execute(query, params).fetchone()
-        db.session.commit()
-
         updated_record = cls._row_to_record(result)
+        if not commit:
+            return updated_record
+        db.session.commit()
     
         # Update event occupancy if status changed to/from checked_in
         if updated_record and "status" in update_data:
@@ -667,7 +681,7 @@ class AttendanceRecord(db.Model):
         transfer_to_center_id: int,
         transfer_time: str,
         recorded_by_user_id: int,
-        notes: Optional[str] = None
+        notes: Optional[str] = None,
     ) -> Optional["AttendanceRecord"]:
         """
         Transfer an individual to a different center by:
@@ -677,57 +691,70 @@ class AttendanceRecord(db.Model):
         NOTE: This does NOT automatically check the individual in to the destination center.
         A separate, explicit check-in is required once their arrival is confirmed.
         """
-        # Get current record
-        current_record = cls.get_by_id(record_id)
-        if not current_record:
-            return None
+        try:
+            current_record = cls.get_by_id(record_id, for_update=True)
+            if not current_record:
+                db.session.rollback()
+                return None
+            if current_record.center_id == transfer_to_center_id:
+                raise ValueError("Cannot transfer to the same center")
+            if (
+                current_record.status != "checked_in"
+                or current_record.check_out_time is not None
+            ):
+                raise ValueError("Individual is not currently checked in")
 
-        # Check if transferring to same center
-        if current_record.center_id == transfer_to_center_id:
-            raise ValueError("Cannot transfer to the same center")
+            destination_event_id = cls.get_current_event_for_center(
+                transfer_to_center_id
+            )
+            if destination_event_id is None:
+                raise ValueError(
+                    f"No active event found for destination center {transfer_to_center_id}"
+                )
 
-        # Check if individual is currently checked in
-        if current_record.status != "checked_in" or current_record.check_out_time is not None:
-            raise ValueError("Individual is not currently checked in")
-
-        # Validate destination center has an active event
-        destination_event_id = cls.get_current_event_for_center(transfer_to_center_id)
-        if destination_event_id is None:
-            raise ValueError(f"No active event found for destination center {transfer_to_center_id}")
-
-        # Check out from current center first
-        check_out_data = {
-            "status": "checked_out",
-            "check_out_time": transfer_time,
-            "notes": f"Checked out for transfer to center {transfer_to_center_id}. {notes or ''}"
-        }
-        
-        cls.update(record_id, check_out_data)
-
-        # Create new transfer record
-        transfer_data = {
-            "individual_id": current_record.individual_id,
-            "center_id": transfer_to_center_id,  # Destination center
-            "event_id": destination_event_id,  # Destination center's event
-            "household_id": current_record.household_id,
-            "status": "transferred",
-            "transfer_from_center_id": current_record.center_id,  # Source center
-            "transfer_to_center_id": transfer_to_center_id,  # Destination center
-            "transfer_time": transfer_time,
-            "recorded_by_user_id": recorded_by_user_id,
-            "notes": f"Transferred from center {current_record.center_id}. {notes or ''}"
-        }
-
-        # Create the transfer record
-        transfer_record = cls.create(transfer_data)
+            cls.update(
+                record_id,
+                {
+                    "status": "checked_out",
+                    "check_out_time": transfer_time,
+                    "notes": (
+                        f"Checked out for transfer to center {transfer_to_center_id}. "
+                        f"{notes or ''}"
+                    ),
+                },
+                commit=False,
+            )
+            transfer_record = cls.create(
+                {
+                    "individual_id": current_record.individual_id,
+                    "center_id": transfer_to_center_id,
+                    "event_id": destination_event_id,
+                    "household_id": current_record.household_id,
+                    "status": "transferred",
+                    "transfer_from_center_id": current_record.center_id,
+                    "transfer_to_center_id": transfer_to_center_id,
+                    "transfer_time": transfer_time,
+                    "recorded_by_user_id": recorded_by_user_id,
+                    "notes": f"Transferred from center {current_record.center_id}. {notes or ''}",
+                },
+                commit=False,
+            )
+            db.session.commit()
+        except Exception:
+            db.session.rollback()
+            raise
 
         try:
+            cls._update_event_occupancy(current_record.event_id)
             # Update events associated with the old center
             cls._update_associated_events_occupancy(current_record.center_id)
             # Update events associated with the new center  
             cls._update_associated_events_occupancy(transfer_to_center_id)
         except Exception as e:
-            logger.warning(f"Failed to update event occupancies during transfer: {str(e)}")
+            db.session.rollback()
+            logger.warning(
+                f"Failed to update event occupancies during transfer: {str(e)}"
+            )
 
         return transfer_record
 

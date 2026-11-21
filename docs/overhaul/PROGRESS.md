@@ -547,3 +547,12 @@ PostgreSQL connections competing for the final unit produced one success, one
 rejection, and exactly one new session and item. Stock reached zero. All 115
 backend tests, touched test lint, strict mapping, and diff checks passed.
 Historical stock repair remains open.
+
+`ATTENDANCE-002A` is verified. Singleton transfer locks the source attendance
+record and commits checkout and destination transfer together. On disposable
+PostgreSQL 17.2, a destination foreign-key rejection preserved the source check-in
+and its center's occupancy. Two concurrent attempts produced exactly one transfer,
+with a checked-out source and no automatic destination check-in. The service
+keeps failed-write details out of responses and logs. All 117 backend tests
+passed, and strict module verification found zero missing mappings. Automatic
+transfer during check-in and batch workflows remain open.

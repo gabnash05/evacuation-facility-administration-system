@@ -1,8 +1,8 @@
-"""Regression coverage for attendance checkout record identity."""
+"""Regression coverage for attendance checkout identity and transfer writes."""
 
 import unittest
 from types import SimpleNamespace
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 from app.models.attendance_records import AttendanceRecord
 from app.services import attendance_records_service
@@ -38,3 +38,54 @@ class AttendanceCheckoutIdentityTests(unittest.TestCase):
         AttendanceRecord.check_out_individual(41, "2026-09-04T00:00:00", "Done")
 
         checkout.assert_called_once_with(41, "2026-09-04T00:00:00", "Done")
+
+
+class AttendanceTransferTests(unittest.TestCase):
+    @patch.object(AttendanceRecord, "get_by_id")
+    @patch.object(AttendanceRecord, "validate_attendance_conditions", return_value=True)
+    @patch.object(AttendanceRecord, "transfer_individual")
+    def test_service_keeps_failed_transfer_details_private(
+        self, transfer, validate, get_record
+    ):
+        get_record.return_value = SimpleNamespace(
+            center_id=10, status="checked_in", check_out_time=None
+        )
+        transfer.side_effect = RuntimeError("Private transfer note")
+
+        with self.assertLogs(attendance_records_service.logger, level="ERROR") as logs:
+            result = attendance_records_service.transfer_individual(
+                41, 20, "2026-01-02T12:00:00", recorded_by_user_id=1
+            )
+
+        validate.assert_called_once_with(20)
+        self.assertEqual(
+            result, {"success": False, "message": "Failed to transfer individual"}
+        )
+        self.assertNotIn("Private transfer note", "\n".join(logs.output))
+
+    @patch("app.models.attendance_records.db", new_callable=Mock)
+    @patch.object(AttendanceRecord, "get_by_id")
+    @patch.object(AttendanceRecord, "get_current_event_for_center")
+    @patch.object(AttendanceRecord, "update")
+    @patch.object(AttendanceRecord, "create")
+    def test_failed_destination_write_rolls_back_source(
+        self, create, update, get_event, get_record, database
+    ):
+        get_record.return_value = SimpleNamespace(
+            individual_id=21,
+            household_id=8,
+            center_id=10,
+            status="checked_in",
+            check_out_time=None,
+        )
+        get_event.return_value = 2
+        create.side_effect = RuntimeError("Destination write failed")
+
+        with self.assertRaisesRegex(RuntimeError, "Destination write failed"):
+            AttendanceRecord.transfer_individual(41, 20, "2026-01-02T12:00:00", 1)
+
+        get_record.assert_called_once_with(41, for_update=True)
+        self.assertFalse(update.call_args.kwargs["commit"])
+        self.assertFalse(create.call_args.kwargs["commit"])
+        database.session.commit.assert_not_called()
+        database.session.rollback.assert_called_once_with()

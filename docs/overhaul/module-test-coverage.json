@@ -518,7 +518,7 @@
       "path": "backend/app/models/attendance_records.py",
       "status": "covered",
       "tests": ["backend/tests/test_attendance_checkout_identity.py"],
-      "behavior": "Delegates checkout directly to the requested attendance record ID."
+      "behavior": "Uses the requested record ID for checkout and rolls back a singleton transfer when the destination insert fails."
     },
     {
       "path": "frontend/src/utils/attendance.ts",
