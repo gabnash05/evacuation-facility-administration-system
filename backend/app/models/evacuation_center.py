@@ -336,8 +336,8 @@ class EvacuationCenter(db.Model):
         if latitude is not None and longitude is not None:
             # Create POINT from lat/lng using PostgreSQL POINT() function
             fields.append("coordinates")
-            # Format POINT directly in SQL string
-            values.append(f"POINT({longitude}, {latitude})")
+            values.append("POINT(:longitude, :latitude)")
+            params.update(longitude=longitude, latitude=latitude)
             # Remove from data dictionary
             data.pop('latitude', None)
             data.pop('longitude', None)
@@ -409,8 +409,8 @@ class EvacuationCenter(db.Model):
         
         # If we have valid coordinates, add them to the query
         if latitude is not None and longitude is not None:
-            # Direct string formatting for POINT
-            set_clauses.append(f"coordinates = POINT({longitude}, {latitude})")
+            set_clauses.append("coordinates = POINT(:longitude, :latitude)")
+            params.update(longitude=longitude, latitude=latitude)
             update_data.pop('latitude', None)
             update_data.pop('longitude', None)
             update_data.pop('coordinates', None)

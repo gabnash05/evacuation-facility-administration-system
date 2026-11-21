@@ -680,3 +680,8 @@ backend tests passed.
 HOUSEHOLD-004 preserves the current household head when its partial member
 update omits the relationship. The focused regression and all 142 backend tests
 passed. Other head-selection ambiguities remain under DATABASE-006.
+
+DATABASE-003B binds center coordinates on create and update. Disposable
+PostgreSQL verified the stored longitude and latitude after both writes. All
+three PostgreSQL smoke suites and 143 backend tests passed. PostGIS proximity
+and ORM alignment remain open.

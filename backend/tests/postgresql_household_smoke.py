@@ -9,6 +9,7 @@ from sqlalchemy.engine import make_url
 
 from app import create_app
 from app.models import db
+from app.models.evacuation_center import EvacuationCenter
 from app.models.individual import Individual
 from app.services.household_service import HouseholdService
 from app.services.individual_service import IndividualService
@@ -36,6 +37,27 @@ class HouseholdPostgreSQLSmoke(unittest.TestCase):
             self.assertEqual(
                 db.session.execute(text("SELECT COUNT(*) FROM users")).scalar(), 0
             )
+            created_center = EvacuationCenter.create(
+                {
+                    "center_name": "Coordinates",
+                    "address": "Fixture address",
+                    "capacity": 20,
+                    "status": "active",
+                    "longitude": 124.6,
+                    "latitude": 8.2,
+                }
+            )
+            EvacuationCenter.update(
+                created_center.center_id, {"longitude": 125.1, "latitude": 9.3}
+            )
+            coordinates = db.session.execute(
+                text(
+                    "SELECT coordinates[0], coordinates[1] FROM evacuation_centers "
+                    "WHERE center_id = :id"
+                ),
+                {"id": created_center.center_id},
+            ).one()
+            self.assertEqual(tuple(coordinates), (125.1, 9.3))
             db.session.execute(
                 text(
                     """
@@ -44,7 +66,8 @@ class HouseholdPostgreSQLSmoke(unittest.TestCase):
                 VALUES ('Fixture', 'Fixture address', POINT(124, 8), 30, 'active');
                 INSERT INTO households (center_id, household_name, address)
                 SELECT center_id, name, 'Original address' FROM evacuation_centers,
-                       (VALUES ('First'), ('Second')) AS names(name);
+                       (VALUES ('First'), ('Second')) AS names(name)
+                WHERE center_name = 'Fixture';
                 INSERT INTO individuals (household_id, first_name, last_name, relationship_to_head)
                 SELECT household_id, 'Fixture', 'Person', 'Member' FROM households
                 WHERE household_name = 'First';

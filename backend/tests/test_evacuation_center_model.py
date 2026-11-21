@@ -8,6 +8,17 @@ from app.models.evacuation_center import EvacuationCenter
 
 class EvacuationCenterModelTests(unittest.TestCase):
     @patch("app.models.evacuation_center.db")
+    @patch.object(EvacuationCenter, "_row_to_center")
+    def test_update_binds_coordinate_values(self, convert, database):
+        EvacuationCenter.update(4, {"longitude": 124.6, "latitude": 8.2})
+
+        query, params = database.session.execute.call_args.args
+        self.assertIn("POINT(:longitude, :latitude)", str(query))
+        self.assertEqual(params["longitude"], 124.6)
+        self.assertEqual(params["latitude"], 8.2)
+        database.session.commit.assert_called_once_with()
+
+    @patch("app.models.evacuation_center.db")
     def test_update_rejects_untrusted_sql_identifier_before_database_access(
         self, database
     ):

@@ -526,6 +526,10 @@ The audit tickets are complete. The tickets below are the authoritative implemen
 
 - P2, S. Preserve the existing head when its included member update omits the relationship field. Retain explicit relationship changes. Run the mapped regression, backend suite, strict mapping and diff review. No migration is needed.
 
+### DATABASE-003B — Bind center coordinate writes
+
+- P2, S. Bind latitude and longitude as SQL values for PostgreSQL point creation and updates. Verify both on a disposable migrated database and run backend tests, strict mapping and diff review. No migration is needed. PostGIS proximity and ORM alignment remain under DATABASE-003.
+
 ### DEVOPS-001 — Restore the production WSGI entry point
 
 - **Priority/risk:** P1 / XS; production start failure, reversible source change.
